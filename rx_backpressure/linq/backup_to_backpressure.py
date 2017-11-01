@@ -3,10 +3,10 @@ from rx.concurrency import immediate_scheduler
 from rx.internal import extensionmethod
 from rx.subjects import Subject
 
-from rx_backpressure.internal.blocking_future import BlockingFuture
-from rx_backpressure.backpressure_base import BackpressureBase
 from rx_backpressure.core.anonymous_backpressure_observable import \
     AnonymousBackpressureObservable
+from rx_backpressure.core.backpressure_base import BackpressureBase
+from rx_backpressure.internal.blocking_future import BlockingFuture
 
 Subject()
 
