@@ -2,7 +2,34 @@
 RxPy backpressure extension
 ===========================
 
-An extension to the rx python library, that takes the idea of backpressure a bit further.
+An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python library, that takes the idea of backpressure a bit further.
+
+Creating backpressured observables
+----------------------------------
+
+- to_backpressure - create the backpressured observable from a normal rx observable
+
+
+Transforming backpressured observables
+--------------------------------------
+
+- flat_map
+- map
+- pairwise
+- to_observable
+
+
+Filtering backpressured observables
+--------------------------------------
+
+- first
+
+
+Combining backpressured observables
+--------------------------------------
+
+- window - windows another backpressured observable via is_lower and is_higher functions and elements from this backpressured observable
+- zip
 
 
 Example

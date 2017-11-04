@@ -1,3 +1,5 @@
+from typing import Callable, Any
+
 from rx import config
 from rx.concurrency import current_thread_scheduler
 from rx.disposables import CompositeDisposable
@@ -12,7 +14,27 @@ from rx_backpressure.subjects.synced_backpressure_subject import SyncedBackpress
 
 
 @extensionmethod(BackpressureObservable)
-def window(self, other, is_lower, is_higher):
+def window(self,
+           other: BackpressureObservable,
+           is_lower: Callable[[Any, Any], bool],
+           is_higherCallable: [[Any, Any], bool]) -> BackpressureObservable:
+    """ For each element of the backpressured observable sequence create
+    a window with elements of the other backpressured observable that are
+    neither lower nor higher.
+
+    Example:
+        t1 = Observable.range(1, 10).map(lambda v, i: v*0.1).pairwise().to_backpressure()
+        t2 = Observable.range(1, 100).map(lambda v, i: v*0.03-0.01).to_backpressure()
+
+        t1.window(t2, lambda v1, v2: v2 < v1[0], lambda v1, v2: v1[1] <= v2) \
+            .to_observable().subscribe(lambda v: v[1].to_observable().to_list().subscribe(print))
+
+    :param other: backpressued observable
+    :param is_lower: ignore elements from other as long as they are lower than the current element from self
+    :param is_higher: create empty window as long as the current element from other is higher than elements from self
+    :returns: A backpressure observable emitting tuples (element from self, synced backpressure subject)
+    """
+
     source = self
 
     class WindowBackpressure(BackpressureBase):
@@ -144,11 +166,13 @@ def window(self, other, is_lower, is_higher):
                 # print(opening)
 
                 if is_lower(opening, element):
+                    # print('is lower')
                     # remove first element
                     element_list.pop(0)
 
                     element_backpressure[0].remove_element()
                 elif is_higher(opening, element):
+                    # print('is higher')
                     # complete subject
                     current_subject[0].on_completed()
                     current_subject[0] = None
