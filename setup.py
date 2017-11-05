@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='rx_backpressure',
+    name='rxbackpressure',
     version='0.0.0',
     packages=find_packages(
         exclude=[]),

@@ -6,9 +6,9 @@ from rx.core import Disposable, ObserverBase
 from rx.core.notification import OnNext, OnCompleted
 from rx.internal import DisposedException
 
-from rx_backpressure.buffers.dequeuable_buffer import DequeuableBuffer
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
-from rx_backpressure.internal.blocking_future import BlockingFuture
+from rxbackpressure.buffers.dequeuablebuffer import DequeuableBuffer
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
+from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class BufferedSubject(BackpressureObservable, Observer):

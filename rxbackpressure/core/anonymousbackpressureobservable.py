@@ -1,4 +1,4 @@
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
 
 
 class AnonymousBackpressureObservable(BackpressureObservable):

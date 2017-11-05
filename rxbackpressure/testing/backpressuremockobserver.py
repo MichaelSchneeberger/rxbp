@@ -4,7 +4,7 @@ from rx.core.notification import OnNext, OnError, OnCompleted
 from rx.testing.recorded import Recorded
 from rx.testing.reactive_assert import AssertList
 
-from rx_backpressure.core.backpressure_observer import BackpressureObserver
+from rxbackpressure.core.backpressureobserver import BackpressureObserver
 
 
 class BackpressureMockObserver:

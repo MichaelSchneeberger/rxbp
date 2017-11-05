@@ -3,10 +3,10 @@ from rx.core import Disposable
 from rx.internal import DisposedException
 from rx.subjects.innersubscription import InnerSubscription
 
-from rx_backpressure.backpressure_types.synced_backpressure import SyncedBackpressure, \
+from rxbackpressure.backpressuretypes.syncedbackpressure import SyncedBackpressure, \
     SyncedBackpressureProxy
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
-from rx_backpressure.core.backpressure_observer import BackpressureObserver
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
+from rxbackpressure.core.backpressureobserver import BackpressureObserver
 
 
 class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):

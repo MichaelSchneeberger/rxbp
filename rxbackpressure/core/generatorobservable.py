@@ -1,9 +1,9 @@
 from rx import config
 from rx.concurrency import current_thread_scheduler
 
-from rx_backpressure.core.backpressure_base import BackpressureBase
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
-from rx_backpressure.internal.blocking_future import BlockingFuture
+from rxbackpressure.core.backpressurebase import BackpressureBase
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
+from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class GeneratorBackpressure(BackpressureBase):

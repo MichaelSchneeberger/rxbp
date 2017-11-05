@@ -1,8 +1,8 @@
 from rx import AnonymousObservable
 from rx.internal import extensionmethod
 
-from rx_backpressure.backpressure_types.backpressure_greadily import BackpressureGreadily
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
+from rxbackpressure.backpressuretypes.backpressuregreadily import BackpressureGreadily
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
 
 
 @extensionmethod(BackpressureObservable)

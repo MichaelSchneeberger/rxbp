@@ -1,4 +1,4 @@
-from rx_backpressure.internal.blocking_future import BlockingFuture
+from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class BackpressureBase:

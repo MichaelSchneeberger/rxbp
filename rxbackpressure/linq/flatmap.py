@@ -2,13 +2,13 @@ from rx.concurrency import immediate_scheduler
 from rx.disposables import CompositeDisposable, SingleAssignmentDisposable
 from rx.internal import extensionmethod
 
-from rx_backpressure.backpressure_types.backpressure_greadily import \
+from rxbackpressure.backpressuretypes.backpressuregreadily import \
     BackpressureGreadily
-from rx_backpressure.core.anonymous_backpressure_observable import \
+from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
-from rx_backpressure.core.backpressure_base import BackpressureBase
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
-from rx_backpressure.internal.blocking_future import BlockingFuture
+from rxbackpressure.core.backpressurebase import BackpressureBase
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
+from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 @extensionmethod(BackpressureObservable)

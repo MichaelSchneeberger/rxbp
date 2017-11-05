@@ -1,8 +1,8 @@
 from rx import config
 from rx.concurrency import immediate_scheduler
 
-from rx_backpressure.core.backpressure_base import BackpressureBase
-from rx_backpressure.internal.blocking_future import BlockingFuture
+from rxbackpressure.core.backpressurebase import BackpressureBase
+from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class SyncedBackpressureProxy(BackpressureBase):

@@ -3,8 +3,8 @@ from unittest import TestCase
 from rx.testing import TestScheduler, ReactiveTest
 from rx.testing.recorded import Recorded
 
-from rx_backpressure.subjects.buffered_subject import BufferedSubject
-from rx_backpressure.testing.backpressuremockobserver import BackpressureMockObserver
+from rxbackpressure.subjects.bufferedsubject import BufferedSubject
+from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
 
 on_next = ReactiveTest.on_next
 on_completed = ReactiveTest.on_completed

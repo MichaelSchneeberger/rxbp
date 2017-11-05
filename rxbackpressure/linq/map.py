@@ -1,9 +1,9 @@
 from rx import Observable
 from rx.internal import extensionmethod
 
-from rx_backpressure.core.anonymous_backpressure_observable import \
+from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
-from rx_backpressure.core.backpressure_observable import BackpressureObservable
+from rxbackpressure.core.backpressureobservable import BackpressureObservable
 
 
 @extensionmethod(BackpressureObservable)

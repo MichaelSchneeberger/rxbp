@@ -1,7 +1,7 @@
 from rx import Observable
 from rx.internal import extensionmethod
 
-from rx_backpressure.subjects.buffered_subject import BufferedSubject
+from rxbackpressure.subjects.bufferedsubject import BufferedSubject
 
 
 @extensionmethod(Observable)

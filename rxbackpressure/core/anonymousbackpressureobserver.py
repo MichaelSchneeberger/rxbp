@@ -1,6 +1,6 @@
 from rx.internal import noop, default_error
 
-from rx_backpressure.core.backpressure_observer import BackpressureObserver
+from rxbackpressure.core.backpressureobserver import BackpressureObserver
 
 
 class AnonymousBackpressureObserver(BackpressureObserver):

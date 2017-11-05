@@ -1,6 +1,6 @@
 from rx.disposables import SingleAssignmentDisposable
 
-from rx_backpressure.core.backpressure_observer import BackpressureObserver
+from rxbackpressure.core.backpressureobserver import BackpressureObserver
 
 
 class AutoDetachBackpressureObserver(BackpressureObserver):
