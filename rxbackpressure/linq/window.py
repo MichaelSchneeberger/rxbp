@@ -17,7 +17,7 @@ from rxbackpressure.subjects.syncedbackpressuresubject import SyncedBackpressure
 def window(self,
            other: BackpressureObservable,
            is_lower: Callable[[Any, Any], bool],
-           is_higherCallable: [[Any, Any], bool]) -> BackpressureObservable:
+           is_higher: Callable [[Any, Any], bool]) -> BackpressureObservable:
     """ For each element of the backpressured observable sequence create
     a window with elements of the other backpressured observable that are
     neither lower nor higher.

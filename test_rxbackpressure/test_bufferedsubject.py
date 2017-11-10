@@ -16,7 +16,7 @@ created = ReactiveTest.created
 
 
 class TestSubscriptionBase(TestCase):
-    def test_request_one_element(self):
+    def test_request_one_element_in_infinit_sequence(self):
         subscription = [None]
         s = [None]
         scheduler = TestScheduler()
@@ -62,6 +62,53 @@ class TestSubscriptionBase(TestCase):
             on_next(390, 4),
             on_next(420, 5),
             on_next(520, 6),
+        )
+
+    def test_request_one_element_in_finit_sequence(self):
+        subscription = [None]
+        s = [None]
+        scheduler = TestScheduler()
+
+        xs = scheduler.create_hot_observable(
+            on_next(70, 1),
+            on_next(110, 2),
+            on_next(220, 3),
+            on_next(340, 4),
+            on_next(420, 5),
+            on_completed(510),
+        )
+
+        results1 = BackpressureMockObserver(
+            scheduler,
+            [Recorded(250, 1),
+             Recorded(380, 1),
+             Recorded(390, 1),
+             Recorded(400, 1),
+             Recorded(530, 1)]
+        )
+
+        def action1(scheduler, state=None):
+            s[0] = BufferedSubject()
+        scheduler.schedule_absolute(100, action1)
+
+        def action2(scheduler, state=None):
+            subscription[0] = xs.subscribe(s[0])
+        scheduler.schedule_absolute(200, action2)
+
+        def action4(scheduler, state=None):
+            subscription[0] = s[0].subscribe(observer=results1, subscribe_bp=results1.subscribe_backpressure)
+        scheduler.schedule_absolute(300, action4)
+        scheduler.start()
+
+        def action3(scheduler, state=None):
+            subscription[0].dispose()
+        scheduler.schedule_absolute(600, action3)
+
+        results1.messages.assert_equal(
+            on_next(380, 3),
+            on_next(390, 4),
+            on_next(420, 5),
+            on_completed(530)
         )
 
     def test_request_multible_elements(self):
