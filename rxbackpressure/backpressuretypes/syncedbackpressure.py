@@ -62,17 +62,25 @@ class SyncedBackpressure:
 
                 future = self.backpressure.request(number_of_items)
                 def update_request(v):
-                    for _ in range(v):
-                        for proxy, list1 in self.requests.items():
-                            future, req_num_of_items, counter = list1[0]
-                            counter += 1
-                            if req_num_of_items == counter:
-                                future.set(req_num_of_items)
-                                self.requests[proxy].pop(0)
-                            else:
-                                self.requests[proxy][0][3] = counter
+                    # print('zero received')
                     self.is_running = False
-                    self._request_source()
+                    if v == 0:
+                        for proxy, list1 in self.requests.items():
+                            for request in list1:
+                                future, req_num_of_items, counter = request
+                                future.set(0)
+                                self.requests[proxy].pop(0)
+                    else:
+                        for _ in range(v):
+                            for proxy, list1 in self.requests.items():
+                                future, req_num_of_items, counter = list1[0]
+                                counter += 1
+                                if req_num_of_items == counter:
+                                    future.set(req_num_of_items)
+                                    self.requests[proxy].pop(0)
+                                else:
+                                    self.requests[proxy][0][3] = counter
+                        self._request_source()
                 future.map(update_request)
 
             self.scheduler.schedule(scheduled_action)

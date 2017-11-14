@@ -1,7 +1,7 @@
 from rx.core.notification import Notification
 
 
-class Backpressure(Notification):
+class BPResponse(Notification):
     def __init__(self, number_of_items):
         """Constructs a notification of a new value."""
 
@@ -11,10 +11,10 @@ class Backpressure(Notification):
         self.kind = 'B'
 
     def _accept(self, on_next, on_error=None, on_completed=None):
-        return on_next(self.value)
+        return on_next(self.number_of_items)
 
     def _accept_observable(self, observer):
-        return observer.on_next(self.value)
+        return observer.on_next(self.number_of_items)
 
     def __str__(self):
-        return "OnNext(%s)" % str(self.value)
+        return "BPResponse(%s)" % str(self.number_of_items)

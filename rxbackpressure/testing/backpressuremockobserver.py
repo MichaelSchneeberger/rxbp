@@ -5,6 +5,7 @@ from rx.testing.recorded import Recorded
 from rx.testing.reactive_assert import AssertList
 
 from rxbackpressure.core.backpressureobserver import BackpressureObserver
+from rxbackpressure.testing.notification import BPResponse
 
 
 class BackpressureMockObserver:
@@ -18,7 +19,8 @@ class BackpressureMockObserver:
         def get_action(value):
             def action(scheduler, state):
                 if self.backpressure:
-                    self.backpressure.request(value)
+                    future = self.backpressure.request(value)
+                    future.subscribe(lambda value: self.messages.append(Recorded(self.scheduler.clock, BPResponse(value))))
                 return Disposable.empty()
             return action
 
@@ -27,7 +29,6 @@ class BackpressureMockObserver:
             scheduler.schedule_absolute(message.time, action)
 
     def subscribe_backpressure(self, backpressure):
-        # print('backpressure received')
         self.backpressure = backpressure
 
     def on_next(self, value):

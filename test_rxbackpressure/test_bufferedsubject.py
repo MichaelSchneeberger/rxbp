@@ -40,10 +40,12 @@ class TestSubscriptionBase(TestCase):
              Recorded(410, 1)]
         )
 
+        # create
         def action1(scheduler, state=None):
             s[0] = BufferedSubject()
         scheduler.schedule_absolute(100, action1)
 
+        # subscribe
         def action2(scheduler, state=None):
             subscription[0] = xs.subscribe(s[0])
         scheduler.schedule_absolute(200, action2)
@@ -53,6 +55,7 @@ class TestSubscriptionBase(TestCase):
         scheduler.schedule_absolute(300, action4)
         scheduler.start()
 
+        # dispose
         def action3(scheduler, state=None):
             subscription[0].dispose()
         scheduler.schedule_absolute(600, action3)
