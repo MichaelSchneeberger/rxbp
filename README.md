@@ -1,8 +1,13 @@
 
 RxPy back-pressure extension
-===========================
+============================
 
-An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python library, that takes the idea of back pressure a bit further.
+An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
+library, that takes the idea of back-pressure a bit further.
+
+
+Implemented operators
+---------------------
 
 ### Creating backpressured observables
 
@@ -49,7 +54,7 @@ Depending on the task, one might be more appropriate than the other.
 The `to_observable` will greadily request for more items as soon as 
 it got them.
 
-# time synchronization example
+### time synchronization example
 
 A recorded time-value-pair sequence needs to be synchronized 
 to two different timebases. We might have recorded it from a device, 
@@ -98,8 +103,8 @@ Now, let us implement this with rxbackpressure observables.
 As the back-pressure takes care of buffering,
 the implementation becomes rather easy.
 First, we turn the observable to a BackpressureObservable 
-via the `to_backpressure` and `repeat_first` operator. Then we zip the
-time observable with the first and second tim esychronization observable 
+via the `to_backpressure` and `repeat_first` operator. Then, we zip the
+time observable with the first and second time sychronization observable 
 respectively.
 
 ```python
