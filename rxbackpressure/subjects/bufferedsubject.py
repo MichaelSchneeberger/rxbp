@@ -13,7 +13,7 @@ from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 class BufferedSubject(BackpressureObservable, Observer):
     class ProxyBufferingFirst(ObserverBase, BackpressureObservable):
-        def __init__(self, buffer, last_idx, observer, update_source, dispose_proxy, scheduler=None):
+        def __init__(self, buffer, last_idx, observer, update_source, scheduler=None):
             super().__init__()
 
             self.observer = observer
@@ -25,7 +25,6 @@ class BufferedSubject(BackpressureObservable, Observer):
             self.scheduler = scheduler or current_thread_scheduler
             self.is_disposed = False
             self.update_source = update_source
-            self.dispose_proxy = dispose_proxy
 
         def check_disposed(self):
             if self.is_disposed:
@@ -36,7 +35,7 @@ class BufferedSubject(BackpressureObservable, Observer):
                 # dispose Proxy
                 self.dispose()
 
-            self.check_disposed()
+            # self.check_disposed()
             future = BlockingFuture()
             # print('request %s' % number_of_items)
             def action(a, s):
@@ -60,9 +59,10 @@ class BufferedSubject(BackpressureObservable, Observer):
                 self.requests = []
 
             def action(a, s):
-                for future, _, __ in requests:
-                    future.set(0)
-                    # print('ok')
+                if requests:
+                    for future, _, __ in requests:
+                        future.set(0)
+                        # print('ok')
             self.scheduler.schedule(action)
 
         def update(self) -> int:
@@ -146,9 +146,9 @@ class BufferedSubject(BackpressureObservable, Observer):
         def dispose(self):
             with self._lock:
                 self.is_disposed = True
+                self.is_stopped = True
                 self.requests = None
                 self.observer = None
-            self.dispose_proxy(self)
 
     def __init__(self, scheduler=None, release_buffer=None):
         super().__init__()
@@ -206,7 +206,7 @@ class BufferedSubject(BackpressureObservable, Observer):
                 with self.lock:
                     if not self.subject.is_disposed and self.proxy:
                         if self.proxy in self.subject.proxies:
-                            self.subject.proxies.pop(self.proxy)
+                            self.subject.proxies.pop(self.proxy, None)
                             self.proxy.dispose()
                         self.proxy = None
 
@@ -220,11 +220,8 @@ class BufferedSubject(BackpressureObservable, Observer):
                         self.proxies[proxy] = idx
                     self._dequeue_buffer()
 
-                def dispose_proxy(proxy):
-                    with self.lock:
-                        self.proxies.pop(proxy)
                 proxy = BufferedSubject.ProxyBufferingFirst(buffer=self.buffer, last_idx=first_idx, observer=observer,
-                                                            update_source=update_source, dispose_proxy=dispose_proxy)
+                                                            update_source=update_source)
                 self.proxies[proxy] = first_idx
             self._request_source()
             return proxy
@@ -232,10 +229,10 @@ class BufferedSubject(BackpressureObservable, Observer):
         with self.lock:
             self.check_disposed()
             if not self.is_stopped:
-                proxy_backpressure = add_proxy(observer=observer)
-                observer.subscribe_backpressure(proxy_backpressure)
+                proxy = add_proxy(observer=observer)
+                observer.subscribe_backpressure(proxy)
                 # print(observer)
-                disposable = InnerSubscription(self, observer)
+                disposable = InnerSubscription(self, proxy)
                 return disposable
 
             if self.exception:
@@ -249,9 +246,7 @@ class BufferedSubject(BackpressureObservable, Observer):
         with self.lock:
             self.check_disposed()
             if not self.is_stopped:
-                # print('add to buffer')
                 self._add_to_buffer(OnCompleted())
-                # self.is_stopped = True
 
     def on_error(self, exception):
         """Notifies all subscribed observers with the exception.
@@ -282,6 +277,7 @@ class BufferedSubject(BackpressureObservable, Observer):
     def dispose(self):
         """Unsubscribe all observers and release resources."""
 
+        # print('dispose called')
         with self.lock:
             self.is_disposed = True
             # self.observers = None

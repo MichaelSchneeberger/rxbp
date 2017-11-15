@@ -14,13 +14,15 @@ class BackpressureMockObserver:
         self.scheduler = scheduler
         self.backpressure_messages = backpressure_messages
         self.messages = AssertList()
+        self.bp_messages = AssertList()
         self.backpressure = None
 
         def get_action(value):
             def action(scheduler, state):
                 if self.backpressure:
                     future = self.backpressure.request(value)
-                    future.subscribe(lambda value: self.messages.append(Recorded(self.scheduler.clock, BPResponse(value))))
+                    future.subscribe(
+                        lambda value: self.bp_messages.append(Recorded(self.scheduler.clock, BPResponse(value))))
                 return Disposable.empty()
             return action
 

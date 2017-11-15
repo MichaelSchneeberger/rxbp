@@ -20,12 +20,6 @@ class BackpressureObservable:
             for name, method in self._methods:
                 setattr(self, name, types.MethodType(method, self))
 
-    # def get_subscribe_func(self):
-    #     # todo: do this more elegantly
-    #     def f1(on_next=None, on_error=None, on_completed=None, observer=None):
-    #         self.subscribe(on_next, on_error, on_completed, observer)
-    #     return f1
-
     def subscribe(self, on_next=None, on_error=None, on_completed=None, observer=None, subscribe_bp=None):
         # Accept observer as first parameter
         # if isinstance(on_next, BackpressureObserver):
@@ -39,7 +33,6 @@ class BackpressureObservable:
                                                  observer=observer)
 
         auto_detach_observer = AutoDetachBackpressureObserver(observer)
-        # auto_detach_observer = observer
 
         def set_disposable(scheduler=None, value=None):
             # try:

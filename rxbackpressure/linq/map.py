@@ -25,15 +25,13 @@ def map(self, selector):
     """
 
     def subscribe_func(observer):
-        count = [0]
 
         def on_next(value):
             try:
-                result = selector(value, count[0])
+                result = selector(value)
             except Exception as err:
                 observer.on_error(err)
             else:
-                count[0] += 1
                 observer.on_next(result)
 
         def subscribe_bp(backpressure):
