@@ -11,7 +11,7 @@ from rxbackpressure.core.backpressureobservable import BackpressureObservable
 from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
-class BufferedSubject(BackpressureObservable, Observer):
+class ControlledSubject(BackpressureObservable, Observer):
     class ProxyBufferingFirst(ObserverBase, BackpressureObservable):
         def __init__(self, buffer, last_idx, observer, update_source, scheduler=None):
             super().__init__()
@@ -220,8 +220,8 @@ class BufferedSubject(BackpressureObservable, Observer):
                         self.proxies[proxy] = idx
                     self._dequeue_buffer()
 
-                proxy = BufferedSubject.ProxyBufferingFirst(buffer=self.buffer, last_idx=first_idx, observer=observer,
-                                                            update_source=update_source)
+                proxy = ControlledSubject.ProxyBufferingFirst(buffer=self.buffer, last_idx=first_idx, observer=observer,
+                                                              update_source=update_source)
                 self.proxies[proxy] = first_idx
             self._request_source()
             return proxy

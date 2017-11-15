@@ -3,7 +3,7 @@ from unittest import TestCase
 from rx.testing import TestScheduler, ReactiveTest
 from rx.testing.recorded import Recorded
 
-from rxbackpressure.subjects.bufferedsubject import BufferedSubject
+from rxbackpressure.subjects.controlledsubject import ControlledSubject
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
 from rxbackpressure.testing.notification import bp_response
 
@@ -43,7 +43,7 @@ class TestSubscriptionBase(TestCase):
 
         # create
         def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
+            s[0] = ControlledSubject()
         scheduler.schedule_absolute(100, action1)
 
         # subscribe
@@ -93,7 +93,7 @@ class TestSubscriptionBase(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
+            s[0] = ControlledSubject()
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
@@ -146,7 +146,7 @@ class TestSubscriptionBase(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
+            s[0] = ControlledSubject()
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
@@ -195,7 +195,7 @@ class TestSubscriptionBase(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
+            s[0] = ControlledSubject()
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
@@ -249,7 +249,7 @@ class TestSubscriptionBase(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
+            s[0] = ControlledSubject()
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):

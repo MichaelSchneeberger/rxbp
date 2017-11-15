@@ -27,7 +27,7 @@ def pairwise(self):
             parent_backpressure = PairwiseBackpressure(backpressure)
             observer.subscribe_backpressure(parent_backpressure)
 
-        obs1 = AnonymousObservable(subscribe=lambda observer: self.subscribe(observer=observer, subscribe_bp=subscribe_bp))
+        obs1 = AnonymousObservable(subscribe=lambda o1: self.subscribe(observer=o1, subscribe_bp=subscribe_bp))
         disposable = obs1.pairwise().subscribe(observer)
         # print(disposable)
         return disposable

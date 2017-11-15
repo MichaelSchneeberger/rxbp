@@ -1,11 +1,11 @@
 from rx import Observable
 from rx.internal import extensionmethod
 
-from rxbackpressure.subjects.bufferedsubject import BufferedSubject
+from rxbackpressure.subjects.controlledsubject import ControlledSubject
 
 
 @extensionmethod(Observable)
 def to_backpressure(self):
-    subject = BufferedSubject()
+    subject = ControlledSubject()
     disposable = self.subscribe(subject)
     return subject
