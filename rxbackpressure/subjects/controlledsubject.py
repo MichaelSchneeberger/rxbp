@@ -220,8 +220,11 @@ class ControlledSubject(BackpressureObservable, Observer):
                         self.proxies[proxy] = idx
                     self._dequeue_buffer()
 
-                proxy = ControlledSubject.ProxyBufferingFirst(buffer=self.buffer, last_idx=first_idx, observer=observer,
-                                                              update_source=update_source)
+                proxy = ControlledSubject.ProxyBufferingFirst(buffer=self.buffer,
+                                                              last_idx=first_idx,
+                                                              observer=observer,
+                                                              update_source=update_source,
+                                                              scheduler=self.scheduler)
                 self.proxies[proxy] = first_idx
             self._request_source()
             return proxy

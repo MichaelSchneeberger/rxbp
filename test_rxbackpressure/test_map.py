@@ -4,6 +4,7 @@ from rx.testing import TestScheduler, ReactiveTest
 from rx.testing.recorded import Recorded
 
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
+from rxbackpressure.testing.bphotobservable import BPHotObservable
 from rxbackpressure.testing.notification import bp_response
 
 on_next = ReactiveTest.on_next
@@ -21,14 +22,16 @@ class TestSubscriptionBase(TestCase):
         s = [None]
         scheduler = TestScheduler()
 
-        xs = scheduler.create_hot_observable(
+        # xs = scheduler.create_hot_observable(
+        messages = [
             on_next(70, 1),
             on_next(110, 2),
             on_next(420, 3),
             on_completed(430),
             on_next(670, 4),
             on_completed(690),
-        )
+        ]
+        xs = BPHotObservable(scheduler, messages)
 
         results1 = BackpressureMockObserver(
             scheduler,
@@ -40,7 +43,7 @@ class TestSubscriptionBase(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = xs.to_backpressure().map(lambda v: v+100)
+            s[0] = xs.map(lambda v: v+100)
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
@@ -50,17 +53,20 @@ class TestSubscriptionBase(TestCase):
 
         # dispose
         def action3(scheduler, state=None):
+            print('dispose')
             subscription[0].dispose()
         scheduler.schedule_absolute(600, action3)
 
+        print(results1.bp_messages)
+
         results1.messages.assert_equal(
-            on_next(260, 102),
             on_next(420, 103),
             on_completed(430),
         )
 
         results1.bp_messages.assert_equal(
-            bp_response(260, 1),
             bp_response(420, 1),
-            bp_response(430, 1),
+            bp_response(430, 1),        # why?
         )
+
+        xs.subscriptions.assert_equal(subscribe(200, 430))
