@@ -89,7 +89,6 @@ class BPHotObservable(BackpressureObservable):
             self.observer = None
             start = observable.subscriptions[index].subscribe
             end = observable.scheduler.clock
-            print(end)
             observable.subscriptions[index] = Subscription(start, end)
 
         return Disposable.create(dispose_action)

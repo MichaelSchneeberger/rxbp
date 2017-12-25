@@ -33,7 +33,7 @@ def flat_map(self, selector):
         #     self._request_source()
 
         def request(self, number_of_items) -> BlockingFuture:
-            # print('2 request received, num = %s' %number_of_items)
+            # print('request received, num = %s' %number_of_items)
             future = BlockingFuture()
             self.requests.append((future, number_of_items))
             self._request_source()
@@ -73,7 +73,7 @@ def flat_map(self, selector):
     sub_backpressure = FlatMapBackpressure()
 
     def subscribe_func(observer):
-        count = [0]
+        # count = [0]
         group = CompositeDisposable()
         is_stopped = [False]
         m = SingleAssignmentDisposable()
@@ -81,7 +81,8 @@ def flat_map(self, selector):
 
         def on_next(value):
             try:
-                source = selector(value, count[0])
+                source = selector(value)
+                # source = selector(value, count[0])
                 # sub_backpressure.add_source(source)
             except Exception as err:
                 observer.on_error(err)
@@ -94,7 +95,7 @@ def flat_map(self, selector):
                     if is_stopped[0] and len(group) == 1:
                         observer.on_completed()
 
-                count[0] += 1
+                # count[0] += 1
                 def subscribe_bp_func(backpressure):
                     # print('subscribe backpressure to inner element')
                     sub_backpressure.add_backpressure(backpressure)

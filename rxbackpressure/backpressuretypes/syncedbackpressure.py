@@ -27,8 +27,8 @@ class SyncedBackpressure:
         with self._lock:
             # print('add observer %s' % observer)
             self.requests[proxy] = []
-            return proxy
         self._request_source()
+        return proxy
 
     def add_backpressure(self, backpressure):
         # print('add backpressure')
@@ -74,7 +74,7 @@ class SyncedBackpressure:
                         for _ in range(v):
                             for proxy, list1 in self.requests.items():
                                 future, req_num_of_items, counter = list1[0]
-                                counter += 1
+                                counter += v
                                 if req_num_of_items == counter:
                                     future.set(req_num_of_items)
                                     self.requests[proxy].pop(0)

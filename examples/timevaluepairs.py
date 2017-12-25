@@ -1,9 +1,10 @@
 import math
 
-from typing import List
 from rx import Observable
 from rx.subjects import Subject
-from rxbackpressure.core.generatorobservable import GeneratorObservable
+
+# import needed for to_backpressure operator
+import rxbackpressure
 
 # time value samples recorded by some device
 time_value_record = Subject()

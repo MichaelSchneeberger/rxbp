@@ -94,6 +94,7 @@ def window(self,
             future = BlockingFuture()
             self.requests.append((future, number_of_items, 0))
             self.update()
+            # print(future)
             return future
 
         def update(self):
@@ -117,12 +118,16 @@ def window(self,
 
         def update_current_request(self):
             future, num_of_items, current_num = self.current_request
+            # print('current_num={}'.format(current_num))
+            # print('num_elements_removed={}'.format(self.num_elements_removed))
+            # print('num_of_items={}'.format(num_of_items))
             if current_num + self.num_elements_removed == num_of_items:
                 if self.num_elements_removed > 0:
                     self.backpressure.request(self.num_elements_removed)
                     self.num_elements_removed = 0
                 else:
                     future.set(num_of_items)
+                    # print(future)
                     self.current_request = None
                     self.update()
 
@@ -136,6 +141,7 @@ def window(self,
                 future, num_of_items, current_num = self.current_request
                 current_num += num
                 self.current_request = (future, num_of_items, current_num)
+                # print('current_num={}'.format(current_num))
                 self.update_current_request()
 
         def finish_current_request(self):
