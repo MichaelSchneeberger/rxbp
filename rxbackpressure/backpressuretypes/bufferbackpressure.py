@@ -7,7 +7,7 @@ from rxbackpressure import BlockingFuture
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 
 
-class ControlledBackpressure():
+class BufferBackpressure():
     def __init__(self, buffer, last_idx, observer, update_source, dispose, scheduler=None):
         super().__init__()
 

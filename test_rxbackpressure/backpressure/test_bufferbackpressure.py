@@ -6,7 +6,7 @@ from rx.core.notification import OnNext
 from rx.testing import TestScheduler, ReactiveTest
 from rx.testing.recorded import Recorded
 
-from rxbackpressure.backpressuretypes.controlledbackpressure import ControlledBackpressure
+from rxbackpressure.backpressuretypes.bufferbackpressure import BufferBackpressure
 from rxbackpressure.buffers.dequeuablebuffer import DequeuableBuffer
 from rxbackpressure.subjects.controlledsubject import ControlledSubject
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
@@ -51,11 +51,11 @@ class TestControlledBackpressure(TestCase):
         def dispose(proxy):
             pass
 
-        backpressure = ControlledBackpressure(buffer=buffer,
-                                              last_idx=0,
-                                              observer=observer,
-                                              update_source=update_source,
-                                              dispose=dispose)
+        backpressure = BufferBackpressure(buffer=buffer,
+                                          last_idx=0,
+                                          observer=observer,
+                                          update_source=update_source,
+                                          dispose=dispose)
 
         scheduler.start()
 

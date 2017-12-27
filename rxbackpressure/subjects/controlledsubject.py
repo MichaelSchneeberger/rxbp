@@ -6,7 +6,7 @@ from rx.core import Disposable, ObserverBase
 from rx.core.notification import OnNext, OnCompleted
 from rx.internal import DisposedException
 
-from rxbackpressure.backpressuretypes.controlledbackpressure import ControlledBackpressure
+from rxbackpressure.backpressuretypes.bufferbackpressure import BufferBackpressure
 from rxbackpressure.buffers.dequeuablebuffer import DequeuableBuffer
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
 from rxbackpressure.internal.blockingfuture import BlockingFuture
@@ -95,12 +95,12 @@ class ControlledSubject(BackpressureObservable, Observer):
                     with self.lock:
                         self.proxies.pop(proxy)
 
-                proxy = ControlledBackpressure(buffer=self.buffer,
-                                                              last_idx=first_idx,
-                                                              observer=observer,
-                                                              update_source=update_source,
-                                                              dispose=remove_proxy,
-                                                              scheduler=self.scheduler)
+                proxy = BufferBackpressure(buffer=self.buffer,
+                                           last_idx=first_idx,
+                                           observer=observer,
+                                           update_source=update_source,
+                                           dispose=remove_proxy,
+                                           scheduler=self.scheduler)
                 self.proxies[proxy] = first_idx
             self.request_source()
             return proxy

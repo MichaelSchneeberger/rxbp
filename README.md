@@ -40,19 +40,18 @@ Back-pressure vs. no back-pressure
 
 [RxPY](https://github.com/ReactiveX/RxPY) offers a back-pressure 
 observable called ControlledSubject, which implements a method 
-request(number). Only after requesting a number of items, the 
+`request(number)`. Only after requesting a number of items, the 
 ControlledSubject will emit them.
 
 The equivalent Subject in rxbackpressure is also called ControlledSubject. 
-The back-pressure logic, however, is integrated into the back-pressure 
+The back-pressure logic, however, is integrated into the
 observable. It is therefore possible to construct a back-pressure 
 observable sequence without having to touch the back-pressure part. 
 
-The operators `to_backpressure` and `to_observable` let you change 
-easily from back-pressured observables to non-back-pressured observables. 
+The operators `to_backpressure` and `to_observable` let you change from
+ back-pressured observables to non-back-pressured observables. 
 Depending on the task, one might be more appropriate than the other. 
-The `to_observable` will greadily request for more items as soon as 
-it got them.
+The `to_observable` will greadily request for more items.
 
 ### time synchronization example
 

@@ -1,5 +1,6 @@
 from rx.internal import extensionmethod, SequenceContainsNoElementsError
 
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
 from rxbackpressure.core.backpressurebase import BackpressureBase
@@ -15,7 +16,9 @@ class FirstBackpressure(BackpressureBase):
     def request(self, number_of_items) -> BlockingFuture:
         if not self.is_send and number_of_items > 0:
             self.is_send = False
-            return self.backpressure.request(1)
+            future = self.backpressure.request(1)
+            self.backpressure.request(StopRequest)
+            return future
         else:
             f1 = BlockingFuture()
             f1.set(0)
