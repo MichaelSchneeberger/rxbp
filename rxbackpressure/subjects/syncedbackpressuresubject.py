@@ -33,9 +33,9 @@ class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):
             self.check_disposed()
             if not self.is_stopped:
                 self.observers.append(observer)
-                proxy_backpressure = SyncedBackpressureProxy(backpressure=self.backpressure)
-                self.backpressure.add_proxy(proxy_backpressure)
-                observer.subscribe_backpressure(proxy_backpressure)
+                # proxy_backpressure = SyncedBackpressureProxy(backpressure=self.backpressure)
+                self.backpressure.add_observer(observer)
+                # observer.subscribe_backpressure(proxy_backpressure)
                 return InnerSubscription(self, observer)
 
             if self.exception:

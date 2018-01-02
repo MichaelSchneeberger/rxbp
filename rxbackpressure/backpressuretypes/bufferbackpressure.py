@@ -33,13 +33,9 @@ class BufferBackpressure():
 
         def action(a, s):
             if not self.is_stopped:
-                if isinstance(number_of_items, StopRequest):
-                    self.dispose()
-                    future.set(StopRequest)
-                else:
-                    with self._lock:
-                        self.requests.append((future, number_of_items, 0))
-                    self.update()
+                with self._lock:
+                    self.requests.append((future, number_of_items, 0))
+                self.update()
 
                 # inform source about update
                 self.update_source(self, self.current_idx)
@@ -68,16 +64,28 @@ class BufferBackpressure():
         """
 
         def take_requests_gen():
-            """Returns an updated request list by checking the buffer
+            """Updates the request list by checking new items in the buffer.
+
+            Returns:
+            A tuple3:
+            - updated request list
+            - items from buffer
+            - fullfilled (, deleted) requests
 
             :return:
             """
-            for future, number_of_items, counter in self.requests:
-                if self.current_idx < self.buffer.last_idx:
-                    # there are new items in buffer
 
-                    def get_value_from_buffer():
-                        for _ in range(d_number_of_items):
+            for future, number_of_items, counter in self.requests:
+
+                if self.current_idx < self.buffer.last_idx:
+                    # there are still new items in buffer
+
+                    if isinstance(number_of_items, StopRequest):
+                        yield None, None, (future, number_of_items)
+                        break
+
+                    def get_value_from_buffer(num):
+                        for _ in range(num):
                             value = self.buffer.get(self.current_idx)
                             self.current_idx += 1
                             yield value
@@ -85,12 +93,14 @@ class BufferBackpressure():
                     if self.current_idx + number_of_items - counter <= self.buffer.last_idx:
                         # request fully fullfilled
                         d_number_of_items = number_of_items - counter
-                        yield None, list(get_value_from_buffer()), (future, number_of_items)
+                        values = list(get_value_from_buffer(d_number_of_items))
+                        num_of_items = number_of_items - len(values) + sum(1 for v in values if isinstance(v, OnNext))
+                        yield None, values, (future, num_of_items)
                     else:
                         # request not fully fullfilled
                         d_number_of_items = self.buffer.last_idx - self.current_idx
-                        yield (future, number_of_items, counter + d_number_of_items), list(
-                            get_value_from_buffer()), None
+                        values = list(get_value_from_buffer(d_number_of_items))
+                        yield (future, number_of_items, counter + d_number_of_items), values, None
                 else:
                     # there are no new items in buffer
                     yield (future, number_of_items, counter), None, None
@@ -108,14 +118,10 @@ class BufferBackpressure():
             if has_elements is True:
                 def action(a, s):
 
-                    # set future from request
-                    future_tuple_list_ = [e for e in future_tuple_list if e is not None]
-                    for future, number_of_items in future_tuple_list_:
-                        future.set(number_of_items)
-
-                    # send values taken from buffer
+                    # send items taken from buffer
                     value_to_send = [e for value_list in buffer_value_list if value_list is not None for e in
                                      value_list]
+
                     for value in value_to_send:
                         if isinstance(value, OnNext):
                             self.observer.on_next(value.value)
@@ -123,6 +129,15 @@ class BufferBackpressure():
                             self.is_stopped = True
                             self.observer.on_completed()
                             self._empty_requests()
+
+                    # set future from request
+                    future_tuple_list_ = [e for e in future_tuple_list if e is not None]
+                    for future, number_of_items in future_tuple_list_:
+                        future.set(number_of_items)
+                        if isinstance(number_of_items, StopRequest):
+                            self.observer.on_completed()
+                            self.check_disposed()
+                            self.dispose()
 
                 self.scheduler.schedule(action)
 

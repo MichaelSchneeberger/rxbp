@@ -62,7 +62,7 @@ class TestMap(TestCase):
 
         results1.bp_messages.assert_equal(
             bp_response(420, 1),
-            bp_response(430, 1),
+            bp_response(430, 0),
         )
 
         xs.subscriptions.assert_equal(subscribe(200, 430))
@@ -110,7 +110,7 @@ class TestMap(TestCase):
 
         results1.bp_messages.assert_equal(
             bp_response(310, 2),
-            bp_response(430, 1),
+            bp_response(430, 0),
         )
 
         xs.subscriptions.assert_equal(subscribe(200, 430))

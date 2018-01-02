@@ -109,7 +109,8 @@ class ControlledSubject(BackpressureObservable, Observer):
             self.check_disposed()
             if not self.is_stopped:
                 proxy = add_proxy(observer=observer)
-                observer.subscribe_backpressure(proxy)
+                # print(proxy)
+                # observer.subscribe_backpressure(proxy)
                 # print(observer)
                 disposable = InnerSubscription(self, proxy)
                 return disposable

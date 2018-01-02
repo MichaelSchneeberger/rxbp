@@ -15,9 +15,10 @@ class FirstBackpressure(BackpressureBase):
 
     def request(self, number_of_items) -> BlockingFuture:
         if not self.is_send and number_of_items > 0:
-            self.is_send = False
+            self.is_send = True
             future = self.backpressure.request(1)
-            self.backpressure.request(StopRequest)
+            # print('stop request')
+            self.backpressure.request(StopRequest())
             return future
         else:
             f1 = BlockingFuture()
@@ -35,7 +36,8 @@ def first_or_default_async(source, has_default=False, default_value=None):
             if not has_default:
                 observer.on_error(SequenceContainsNoElementsError())
             else:
-                observer.on_next(default_value)
+                if False:
+                    observer.on_next(default_value)
                 observer.on_completed()
 
         def subscribe_pb(backpressure):

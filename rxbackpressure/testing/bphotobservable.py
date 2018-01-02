@@ -4,6 +4,7 @@ from rx.testing.reactive_assert import AssertList
 from rx.testing.subscription import Subscription
 
 from rxbackpressure import BlockingFuture
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.anonymousbackpressureobserver import AnonymousBackpressureObserver
 from rxbackpressure.core.backpressurebase import BackpressureBase
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
@@ -27,11 +28,11 @@ class BPHotObservable(BackpressureObservable):
             def request(self, number_of_items):
                 # print('number of items {}'.format(number_of_items))
                 future = BlockingFuture()
-                if number_of_items > 0:
-                    self.requests.append((future, number_of_items, number_of_items))
-                    update_requests()
-                else:
-                    raise NameError('Error')
+                # if number_of_items > 0:
+                self.requests.append((future, number_of_items, number_of_items))
+                update_requests()
+                # else:
+                #     raise NameError('Error')
                 return future
 
         backpressure = HotBackpressure()
@@ -39,20 +40,29 @@ class BPHotObservable(BackpressureObservable):
         self.is_stopped = False
 
         def update_requests():
-            if backpressure.requests and self.buffer and not self.is_stopped:
+            if backpressure.requests and not self.is_stopped:
                 first_request = backpressure.requests[0]
-                first_notification = self.buffer.pop(0)
-                first_notification.accept(self.observer)
-                if not isinstance(first_notification, OnNext):
+
+                if isinstance(first_request[2], StopRequest):
                     self.is_stopped = True
-                    future = first_request[0]
-                    future.set(first_request[2] - first_request[1])
-                elif first_request[1] <= 1:
-                    future = first_request[0]
-                    future.set(first_request[2])
-                    backpressure.requests.pop(0)
-                else:
-                    backpressure.requests[0] = (first_request[0], first_request[1] - 1, first_request[2])
+                    first_request[0].set(first_request[2])
+                    backpressure.requests = []
+
+                elif self.buffer:
+                    first_notification = self.buffer.pop(0)
+                    first_notification.accept(self.observer)
+
+                    if not isinstance(first_notification, OnNext):
+                        self.is_stopped = True
+                        future = first_request[0]
+                        future.set(first_request[2] - first_request[1])
+                    elif first_request[1] <= 1:
+                        future = first_request[0]
+                        future.set(first_request[2])
+                        backpressure.requests.pop(0)
+                        update_requests()
+                    else:
+                        backpressure.requests[0] = (first_request[0], first_request[1] - 1, first_request[2])
 
         def get_action(notification):
             def action(scheduler, state):

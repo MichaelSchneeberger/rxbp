@@ -5,6 +5,8 @@ from rx.concurrency import current_thread_scheduler
 from rx.disposables import CompositeDisposable
 from rx.internal import extensionmethod
 
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
+from rxbackpressure.backpressuretypes.windowbackpressure import WindowBackpressure
 from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
 from rxbackpressure.core.backpressurebase import BackpressureBase
@@ -37,7 +39,8 @@ def window(self,
 
     source = self
 
-    class WindowBackpressure(BackpressureBase):
+    # todo: delete this?
+    class WindowBackpressure2(BackpressureBase):
         def __init__(self, backpressure):
             self.backpressure = backpressure
 
@@ -78,81 +81,6 @@ def window(self,
                         self.requests[0] = new_request
             self.scheduler.schedule(action)
 
-    class ElementBackpressure(BackpressureBase):
-        def __init__(self, backpressure):
-            self.backpressure = backpressure
-
-            self._lock = config["concurrency"].RLock()
-            self.scheduler = current_thread_scheduler
-            self.requests = []
-            self.current_request = None
-            self.num_elements_removed = 0
-            self.num_elements_req = 0
-
-        def request(self, number_of_items):
-            # print('request arrived')
-            future = BlockingFuture()
-            self.requests.append((future, number_of_items, 0))
-            self.update()
-            # print(future)
-            return future
-
-        def update(self):
-            def action(a, s):
-                open_new_request = False
-                with self._lock:
-                    # print(len(self.requests))
-                    if self.current_request is None and len(self.requests) > 0:
-                        open_new_request = True
-                        self.current_request = self.requests.pop()
-                if open_new_request:
-                    future, number_of_items, current = self.current_request
-                    delta = self.num_elements_req - number_of_items
-                    # print(delta)
-                    if delta < 0:
-                        self.num_elements_req = 0
-                        self.backpressure.request(-delta)
-                    else:
-                        self.num_elements_req = delta
-            self.scheduler.schedule(action)
-
-        def update_current_request(self):
-            future, num_of_items, current_num = self.current_request
-            # print('current_num={}'.format(current_num))
-            # print('num_elements_removed={}'.format(self.num_elements_removed))
-            # print('num_of_items={}'.format(num_of_items))
-            if current_num + self.num_elements_removed == num_of_items:
-                if self.num_elements_removed > 0:
-                    self.backpressure.request(self.num_elements_removed)
-                    self.num_elements_removed = 0
-                else:
-                    future.set(num_of_items)
-                    # print(future)
-                    self.current_request = None
-                    self.update()
-
-        def remove_element(self, num=1):
-            # print('remove')
-            self.num_elements_removed += num
-            self.update_current_request()
-
-        def next_element(self, num=1):
-            if self.current_request:
-                future, num_of_items, current_num = self.current_request
-                current_num += num
-                self.current_request = (future, num_of_items, current_num)
-                # print('current_num={}'.format(current_num))
-                self.update_current_request()
-
-        def finish_current_request(self):
-            if self.current_request is not None:
-                with self._lock:
-                    self.requests = []
-                    future, num_of_items, current_num = self.current_request
-                    future.set(current_num)
-                    self.num_elements_req = num_of_items - current_num
-                    self.current_request = None
-
     def subscribe_func(observer):
         lock = config["concurrency"].RLock()
         element_list = []
@@ -167,18 +95,12 @@ def window(self,
                 element = element_list[0]
                 opening = opening_list[0]
 
-                # print(is_lower(opening, element))
-                # print(element)
-                # print(opening)
-
                 if is_lower(opening, element):
-                    # print('is lower')
                     # remove first element
                     element_list.pop(0)
 
                     element_backpressure[0].remove_element()
                 elif is_higher(opening, element):
-                    # print('is higher')
                     # complete subject
                     current_subject[0].on_completed()
                     current_subject[0] = None
@@ -186,10 +108,9 @@ def window(self,
                     opening_list.pop(0)
 
                     element_backpressure[0].finish_current_request()
-                    backpressure[0].update()
+                    # backpressure[0].update()
                 else:
                     # send element to inner subject
-                    # print('on next')
                     current_subject[0].on_next(element)
 
                     # remove first element
@@ -203,15 +124,17 @@ def window(self,
 
             scheduler.schedule(action)
 
+        def send_new_subject(value):
+            current_subject[0] = SyncedBackpressureSubject()
+            current_subject[0].subscribe_backpressure(element_backpressure[0])
+            observer.on_next((value, current_subject[0]))
+
         def on_next_opening(value):
-            # print('opening received value=%s' % list(value))
+            # print('opening received value={}'.format(value))
 
             with lock:
                 if current_subject[0] is None:
-                    current_subject[0] = SyncedBackpressureSubject()
-                    current_subject[0].subscribe_backpressure(element_backpressure[0])
-                    observer.on_next((value, current_subject[0]))
-                    # print('subscribe now')
+                    send_new_subject(value)
 
                 if len(opening_list) == 0 and len(element_list) > 0:
                     opening_list.append(value)
@@ -220,8 +143,7 @@ def window(self,
                     opening_list.append(value)
 
         def on_next_element(value):
-            # print('element received value')
-            # print(value)
+            # print('element received value {}'.format(value))
             with lock:
                 if len(element_list) == 0 and len(opening_list) > 0:
                     element_list.append(value)
@@ -230,15 +152,14 @@ def window(self,
                     # len(element_list) > 0, then the process has already been started
                     element_list.append(value)
 
-        def subscribe_pb_opening(parent_backpressure):
-            # print('subscribe opening backpressure')
-            backpressure[0] = WindowBackpressure(parent_backpressure)
-            observer.subscribe_backpressure(backpressure[0])
-            return backpressure[0]
+        def subscribe_pb_opening(backpressure):
+            # backpressure[0] = WindowBackpressure2(backpressure)
+            # observer.subscribe_backpressure(backpressure[0])
+            observer.subscribe_backpressure(backpressure)
+            # return backpressure[0]
 
         def subscribe_pb_element(backpressure):
-            element_backpressure[0] = ElementBackpressure(backpressure)
-            # element_backpressure[0] = backpressure
+            element_backpressure[0] = WindowBackpressure(backpressure)
 
         def on_completed():
             with lock:
