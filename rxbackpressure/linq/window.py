@@ -39,8 +39,7 @@ def window(self,
 
     source = self
 
-    # todo: delete this?
-    class WindowBackpressure2(BackpressureBase):
+    class ControlledBackpressure(BackpressureBase):
         def __init__(self, backpressure):
             self.backpressure = backpressure
 
@@ -108,7 +107,7 @@ def window(self,
                     opening_list.pop(0)
 
                     element_backpressure[0].finish_current_request()
-                    # backpressure[0].update()
+                    backpressure[0].update()
                 else:
                     # send element to inner subject
                     current_subject[0].on_next(element)
@@ -152,10 +151,10 @@ def window(self,
                     # len(element_list) > 0, then the process has already been started
                     element_list.append(value)
 
-        def subscribe_pb_opening(backpressure):
-            # backpressure[0] = WindowBackpressure2(backpressure)
-            # observer.subscribe_backpressure(backpressure[0])
-            observer.subscribe_backpressure(backpressure)
+        def subscribe_pb_opening(parent_backpressure):
+            backpressure[0] = ControlledBackpressure(parent_backpressure)
+            observer.subscribe_backpressure(backpressure[0])
+            # observer.subscribe_backpressure(parent_backpressure)
             # return backpressure[0]
 
         def subscribe_pb_element(backpressure):
