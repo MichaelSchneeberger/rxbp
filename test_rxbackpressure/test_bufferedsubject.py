@@ -17,7 +17,7 @@ disposed = ReactiveTest.disposed
 created = ReactiveTest.created
 
 
-class TestControlledSubject(TestCase):
+class TestBufferedSubject(TestCase):
     def test_request_one_element_in_infinit_sequence(self):
         subscription = [None]
         s = [None]

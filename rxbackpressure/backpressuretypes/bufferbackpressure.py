@@ -45,18 +45,6 @@ class BufferBackpressure():
         self.scheduler.schedule(action)
         return future
 
-    def _empty_requests(self):
-        with self._lock:
-            requests = self.requests
-            self.requests = []
-
-        def action(a, s):
-            if requests:
-                for future, _, __ in requests:
-                    future.set(0)
-
-        self.scheduler.schedule(action)
-
     def update(self) -> int:
         """ Sends buffered items to the observer
 
@@ -74,8 +62,15 @@ class BufferBackpressure():
 
             :return:
             """
+            check_stop_request = False
 
             for future, number_of_items, counter in self.requests:
+
+                if check_stop_request:
+                    if isinstance(number_of_items, StopRequest):
+                        yield None, None, (future, number_of_items)
+                        break
+                    check_stop_request = False
 
                 if self.current_idx < self.buffer.last_idx:
                     # there are still new items in buffer
@@ -101,6 +96,9 @@ class BufferBackpressure():
                         d_number_of_items = self.buffer.last_idx - self.current_idx
                         values = list(get_value_from_buffer(d_number_of_items))
                         yield (future, number_of_items, counter + d_number_of_items), values, None
+
+                    if self.current_idx == self.buffer.last_idx:
+                        check_stop_request = True
                 else:
                     # there are no new items in buffer
                     yield (future, number_of_items, counter), None, None
@@ -128,7 +126,17 @@ class BufferBackpressure():
                         else:
                             self.is_stopped = True
                             self.observer.on_completed()
-                            self._empty_requests()
+
+                            with self._lock:
+                                requests = self.requests
+                                self.requests = []
+
+                            def action(a, s):
+                                if requests:
+                                    for future, _, __ in requests:
+                                        future.set(0)
+
+                            self.scheduler.schedule(action)
 
                     # set future from request
                     future_tuple_list_ = [e for e in future_tuple_list if e is not None]

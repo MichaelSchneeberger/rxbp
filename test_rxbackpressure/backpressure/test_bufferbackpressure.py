@@ -23,7 +23,7 @@ created = ReactiveTest.created
 
 
 
-class TestControlledBackpressure(TestCase):
+class TestBufferBackpressure(TestCase):
     def test1(self):
         scheduler = TestScheduler()
 
@@ -38,16 +38,16 @@ class TestControlledBackpressure(TestCase):
 
         buffer = DequeuableBuffer()
         scheduler.create_hot_observable(
-            on_next(120, 1),
+            on_next(110, 1),
             on_next(210, 2),
-            on_next(240, 3),
+            on_next(220, 3),
             on_next(260, 4),
             on_completed(300)
         ).subscribe(update, on_completed=complete)
 
         observer = BackpressureMockObserver(
             scheduler,
-            [Recorded(110, 1),
+            [Recorded(120, 1),
              Recorded(230, 3),
              Recorded(310, 1),
              ]
@@ -73,7 +73,7 @@ class TestControlledBackpressure(TestCase):
         observer.messages.assert_equal(
             on_next(120, 1),
             on_next(230, 2),
-            on_next(240, 3),
+            on_next(230, 3),
             on_next(260, 4),
             on_completed(310),
         )
@@ -86,53 +86,60 @@ class TestControlledBackpressure(TestCase):
 
         # assert(backpressure.update() is 4)
 
-    # def test2(self):
-    #     scheduler = TestScheduler()
-    #
-    #     def update(v):
-    #         # print('append {}'.format(v))
-    #         buffer.append(OnNext(v))
-    #         backpressure.update()
-    #
-    #     buffer = DequeuableBuffer()
-    #     scheduler.create_hot_observable(
-    #         on_next(120, 1),
-    #         on_next(210, 2),
-    #         on_next(240, 3),
-    #     ).subscribe(update)
-    #
-    #     stop_request = StopRequest()
-    #     observer = BackpressureMockObserver(
-    #         scheduler,
-    #         [Recorded(110, 1),
-    #          Recorded(230, stop_request),
-    #          ]
-    #     )
-    #
-    #     def update_source(proxy, idx):
-    #         pass
-    #
-    #     def dispose(proxy):
-    #         pass
-    #
-    #     backpressure = BufferBackpressure(buffer=buffer,
-    #                                       last_idx=0,
-    #                                       observer=observer,
-    #                                       update_source=update_source,
-    #                                       dispose=dispose)
-    #
-    #     scheduler.start()
-    #
-    #     observer.messages.assert_equal(
-    #         on_next(120, 1),
-    #         on_completed(230)
-    #     )
-    #
-    #     observer.bp_messages.assert_equal(
-    #         bp_response(120, 1),
-    #         bp_response(230, stop_request),
-    #     )
-    #
-    #     assert(backpressure.update() is 1)
+    def test2(self):
+        scheduler = TestScheduler()
 
-TestControlledBackpressure().test1()
+        def update(v):
+            # print('append {}'.format(v))
+            buffer.append(OnNext(v))
+            backpressure.update()
+
+        buffer = DequeuableBuffer()
+        scheduler.create_hot_observable(
+            on_next(120, 1),
+            on_next(210, 2),
+            on_next(240, 3),
+        ).subscribe(update)
+
+        stop_request = StopRequest()
+        observer = BackpressureMockObserver(
+            scheduler,
+            [Recorded(110, 1),
+             Recorded(220, 2),
+             Recorded(230, stop_request),
+             ]
+        )
+
+        def update_source(proxy, idx):
+            pass
+
+        def dispose(proxy):
+            pass
+
+        backpressure = BufferBackpressure(buffer=buffer,
+                                          last_idx=0,
+                                          observer=observer,
+                                          update_source=update_source,
+                                          dispose=dispose)
+
+        scheduler.start()
+
+        print(observer.messages)
+        print(observer.bp_messages)
+
+        observer.messages.assert_equal(
+            on_next(120, 1),
+            on_next(220, 2),
+            on_next(240, 3),
+            on_completed(240)
+        )
+
+        observer.bp_messages.assert_equal(
+            bp_response(120, 1),
+            bp_response(240, 2),
+            bp_response(240, stop_request),
+        )
+
+        assert(backpressure.update() is 3)
+
+TestBufferBackpressure().test1()
