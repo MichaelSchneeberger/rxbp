@@ -4,7 +4,7 @@ import math
 from rx.testing import TestScheduler, ReactiveTest
 from rx.testing.recorded import Recorded
 
-from rxbackpressure.subjects.controlledsubject import ControlledSubject
+from rxbackpressure.subjects.bufferedsubject import BufferedSubject
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
 from rxbackpressure.testing.notification import bp_response
 
@@ -44,7 +44,7 @@ class TestControlledSubject(TestCase):
 
         # create
         def action1(scheduler, state=None):
-            s[0] = ControlledSubject()
+            s[0] = BufferedSubject()
         scheduler.schedule_absolute(100, action1)
 
         # subscribe
@@ -93,7 +93,7 @@ class TestControlledSubject(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = ControlledSubject()
+            s[0] = BufferedSubject()
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
@@ -196,7 +196,7 @@ class TestControlledSubject(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = ControlledSubject()
+            s[0] = BufferedSubject()
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):

@@ -12,7 +12,7 @@ from rxbackpressure.core.backpressureobservable import BackpressureObservable
 from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
-class ControlledSubject(BackpressureObservable, Observer):
+class BufferedSubject(BackpressureObservable, Observer):
 
     def __init__(self, name=None, scheduler=None, release_buffer=None):
         super().__init__()

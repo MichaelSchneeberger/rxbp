@@ -11,7 +11,7 @@ from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.backpressuretypes.syncedbackpressure import SyncedBackpressure
 from rxbackpressure.buffers.dequeuablebuffer import DequeuableBuffer
 from rxbackpressure.core.backpressurebase import BackpressureBase
-from rxbackpressure.subjects.controlledsubject import ControlledSubject
+from rxbackpressure.subjects.bufferedsubject import BufferedSubject
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
 from rxbackpressure.testing.bphotobservable import BPHotObservable
 from rxbackpressure.testing.notification import bp_response

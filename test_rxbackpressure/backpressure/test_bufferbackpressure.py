@@ -9,7 +9,7 @@ from rx.testing.recorded import Recorded
 from rxbackpressure.backpressuretypes.bufferbackpressure import BufferBackpressure
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.buffers.dequeuablebuffer import DequeuableBuffer
-from rxbackpressure.subjects.controlledsubject import ControlledSubject
+from rxbackpressure.subjects.bufferedsubject import BufferedSubject
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
 from rxbackpressure.testing.notification import bp_response
 

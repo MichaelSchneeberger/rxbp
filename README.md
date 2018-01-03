@@ -43,7 +43,7 @@ observable called ControlledSubject, which implements a method
 `request(number)`. Only after requesting a number of items, the 
 ControlledSubject will emit them.
 
-The equivalent Subject in rxbackpressure is also called ControlledSubject. 
+The equivalent Subject in rxbackpressure is called BufferedSubject. 
 The back-pressure logic, however, is integrated into the
 observable. It is therefore possible to construct a back-pressure 
 observable sequence without having to touch the back-pressure part. 
