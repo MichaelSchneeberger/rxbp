@@ -2,15 +2,15 @@
 
 from rx import Observable
 
-from rxbackpressure.subjects.controlledsubject import ControlledSubject
+from rxbackpressure.subjects.bufferedsubject import BufferedSubject
 
 # create some buffered subjects
-s1 = ControlledSubject()
-s2 = ControlledSubject()
-s3 = ControlledSubject()
+s1 = BufferedSubject()
+s2 = BufferedSubject()
+s3 = BufferedSubject()
 
 # flat map operation
-s2.flat_map(lambda v1, idx: s1.map(lambda v2: v2*v1)) \
+s2.flat_map(lambda v1: s1.map(lambda v2: v2*v1)) \
     .to_observable() \
     .filter(lambda v: 800 < v) \
     .subscribe(print, on_completed=lambda: print('completed'))
