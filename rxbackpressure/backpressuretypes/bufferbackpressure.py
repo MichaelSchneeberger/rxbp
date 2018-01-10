@@ -143,9 +143,10 @@ class BufferBackpressure():
                     for future, number_of_items in future_tuple_list_:
                         future.set(number_of_items)
                         if isinstance(number_of_items, StopRequest):
-                            self.observer.on_completed()
-                            self.check_disposed()
-                            self.dispose()
+                            if not self.is_disposed:
+                                self.observer.on_completed()
+                                # self.check_disposed()
+                                self.dispose()
 
                 self.scheduler.schedule(action)
 

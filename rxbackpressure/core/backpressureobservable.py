@@ -32,6 +32,7 @@ class BackpressureObservable:
                                                  on_next=on_next, on_error=on_error, on_completed=on_completed,
                                                  observer=observer)
 
+        # if complete, then automatically dispose observer
         auto_detach_observer = AutoDetachBackpressureObserver(observer)
 
         def set_disposable(scheduler=None, value=None):

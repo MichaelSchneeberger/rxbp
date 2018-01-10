@@ -17,7 +17,6 @@ class FirstBackpressure(BackpressureBase):
         if not self.is_send and number_of_items > 0:
             self.is_send = True
             future = self.backpressure.request(1)
-            # print('stop request')
             self.backpressure.request(StopRequest())
             return future
         else:

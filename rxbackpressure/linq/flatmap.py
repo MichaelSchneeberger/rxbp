@@ -21,6 +21,7 @@ def flat_map(self, selector):
         group.add(m)
 
         def on_next(value):
+            # print('flat map on next {}'.format(value))
             try:
                 source = selector(value)
             except Exception as err:

@@ -14,6 +14,7 @@ class ControlledBackpressure(BackpressureBase):
         self.requests = []
 
     def request(self, number_of_items):
+        # print('request opening {}'.format(number_of_items))
         future = BlockingFuture()
 
         def action(a, s):
@@ -33,7 +34,6 @@ class ControlledBackpressure(BackpressureBase):
             future, number_of_items, current_number = self.requests[0]
             new_request = (future, number_of_items, current_number + 1)
             if new_request[2] == number_of_items:
-                # print('set future')
                 future.set(number_of_items)
                 has_requests = False
                 with self._lock:

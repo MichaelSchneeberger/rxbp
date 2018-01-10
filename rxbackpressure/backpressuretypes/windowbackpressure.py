@@ -7,7 +7,7 @@ from rxbackpressure.core.backpressurebase import BackpressureBase
 
 
 class WindowBackpressure(BackpressureBase):
-    def __init__(self, backpressure):
+    def __init__(self, backpressure, request_from_buffer):
         self.backpressure = backpressure
 
         self._lock = config["concurrency"].RLock()
@@ -16,8 +16,10 @@ class WindowBackpressure(BackpressureBase):
         self.current_request = None
         self.num_elements_removed = 0
         self.num_elements_req = 0
+        self._request_from_buffer = request_from_buffer
 
     def request(self, number_of_items):
+        # print('request element {}'.format(number_of_items))
         future = BlockingFuture()
         self.requests.append((future, number_of_items, 0))
         self.update()
@@ -38,9 +40,12 @@ class WindowBackpressure(BackpressureBase):
                 else:
                     delta = self.num_elements_req - number_of_items
                     if delta < 0:
+                        if 0 < self.num_elements_req:
+                            self._request_from_buffer(self.num_elements_req)
                         self.num_elements_req = 0
                         self.backpressure.request(-delta)
                     else:
+                        self._request_from_buffer(number_of_items)
                         self.num_elements_req = delta
                         self.update()
 
@@ -73,6 +78,11 @@ class WindowBackpressure(BackpressureBase):
             with self._lock:
                 self.requests = []
                 future, num_of_items, current_num = self.current_request
+                self.num_elements_req += num_of_items - current_num
+                # print('finish current req {}'.format(self.num_elements_req))
                 future.set(current_num)
-                self.num_elements_req = num_of_items - current_num
                 self.current_request = None
+
+            return self.num_elements_req
+        else:
+            return 0

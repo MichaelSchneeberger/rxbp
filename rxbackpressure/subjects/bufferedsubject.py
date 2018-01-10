@@ -55,8 +55,8 @@ class BufferedSubject(BackpressureObservable, Observer):
         except ValueError:
             min_idx = math.inf
 
-        if self.release_buffer is None or self.release_buffer.is_completed():
-            # print('min idx %s' % min_idx)
+        # if (self.release_buffer is None or self.release_buffer.is_completed()) > 0:
+        if (self.release_buffer is None or self.release_buffer.is_completed()) and len(self.proxies) > 0:
             self.buffer.dequeue(min_idx - 1)
 
     def check_disposed(self):
@@ -109,9 +109,6 @@ class BufferedSubject(BackpressureObservable, Observer):
             self.check_disposed()
             if not self.is_stopped:
                 proxy = add_proxy(observer=observer)
-                # print(proxy)
-                # observer.subscribe_backpressure(proxy)
-                # print(observer)
                 disposable = InnerSubscription(self, proxy)
                 return disposable
 

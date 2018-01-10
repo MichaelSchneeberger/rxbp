@@ -25,7 +25,7 @@ class FlatMapBackpressure(BackpressureBase):
         self._request_source()
 
     def request(self, number_of_items) -> BlockingFuture:
-        # print('request received, num = %s' %number_of_items)
+        # print('request flatmap {}'.format(number_of_items))
         future = BlockingFuture()
         self.requests.append((future, number_of_items))
         self._request_source()

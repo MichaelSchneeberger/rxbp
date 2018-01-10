@@ -48,9 +48,13 @@ def window(self,
         current_subject = [None]
         backpressure = [None]
         element_backpressure = [None]
+        to_be_buffered = [0]
+        is_running = [False]
 
         def start_process():
+            # print('start process actually started')
             def action(a, s):
+                # print('process {}'.format(element_list))
                 element = element_list[0]
                 opening = opening_list[0]
 
@@ -66,7 +70,9 @@ def window(self,
                     # remove first opening
                     opening_list.pop(0)
 
-                    element_backpressure[0].finish_current_request()
+                    num = element_backpressure[0].finish_current_request()
+                    to_be_buffered[0] += num
+
                     backpressure[0].update()
                 else:
                     # send element to inner subject
@@ -79,13 +85,18 @@ def window(self,
 
                 with lock:
                     if len(opening_list) > 0 and len(element_list) > 0:
+                        # print('start process again')
                         start_process()
+                    else:
+                        is_running[0] = False
 
+            # print('schedule start process')
             scheduler.schedule(action)
 
         def send_new_subject(value):
             current_subject[0] = SyncedBackpressureSubject()
             current_subject[0].subscribe_backpressure(element_backpressure[0])
+            # print('send opening {}'.format(value))
             observer.on_next((value, current_subject[0]))
 
         def on_next_opening(value):
@@ -97,19 +108,21 @@ def window(self,
 
                 if len(opening_list) == 0 and len(element_list) > 0:
                     opening_list.append(value)
-                    start_process()
+                    if not is_running[0]:
+                        is_running[0] = True
+                        start_process()
                 else:
                     opening_list.append(value)
 
         def on_next_element(value):
             # print('element received value {}'.format(value))
+
             with lock:
-                if len(element_list) == 0 and len(opening_list) > 0:
-                    element_list.append(value)
-                    start_process()
-                else:
-                    # len(element_list) > 0, then the process has already been started
-                    element_list.append(value)
+                element_list.append(value)
+                if len(element_list) == 1 + to_be_buffered[0] and len(opening_list) > 0:
+                    if not is_running[0]:
+                        is_running[0] = True
+                        start_process()
 
         def subscribe_pb_opening(parent_backpressure):
             backpressure[0] = ControlledBackpressure(parent_backpressure)
@@ -118,7 +131,17 @@ def window(self,
             # return backpressure[0]
 
         def subscribe_pb_element(backpressure):
-            element_backpressure[0] = WindowBackpressure(backpressure)
+            def request_from_buffer(num):
+                with lock:
+                    to_be_buffered[0] -= num
+                    # print('request from buffer {}'.format(to_be_buffered[0]))
+                    if len(element_list) == 1 + to_be_buffered[0] and len(opening_list) > 0:
+                        if not is_running[0]:
+                            is_running[0] = True
+                            # print('start process')
+                            start_process()
+
+            element_backpressure[0] = WindowBackpressure(backpressure, request_from_buffer=request_from_buffer)
 
         def on_completed():
             with lock:
