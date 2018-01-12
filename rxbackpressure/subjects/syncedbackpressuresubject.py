@@ -10,7 +10,7 @@ from rxbackpressure.core.backpressureobserver import BackpressureObserver
 
 
 class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):
-    def __init__(self):
+    def __init__(self, release=None):
         super().__init__()
 
         self.is_disposed = False
@@ -19,7 +19,7 @@ class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):
         self.exception = None
 
         self.lock = config["concurrency"].RLock()
-        self.backpressure = SyncedBackpressure()
+        self.backpressure = SyncedBackpressure(release=release)
 
     def check_disposed(self):
         if self.is_disposed:

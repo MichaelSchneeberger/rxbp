@@ -8,3 +8,4 @@ from . import pairwise
 from . import first
 from . import repeatfirst
 from . import doaction
+from . import mapcount

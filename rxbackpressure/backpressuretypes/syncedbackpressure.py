@@ -1,6 +1,6 @@
 import math
 from rx import config
-from rx.concurrency import immediate_scheduler
+from rx.concurrency import immediate_scheduler, current_thread_scheduler
 
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.backpressurebase import BackpressureBase
@@ -17,13 +17,17 @@ class SyncedBackpressureProxy(BackpressureBase):
 
 
 class SyncedBackpressure:
-    def __init__(self, scheduler=None):
+    def __init__(self, scheduler=None, release=None):
         self.backpressure = None
         self.scheduler = scheduler or immediate_scheduler
         self.buffer = []
         self.requests = {}
         self.is_running = False
         self._lock = config["concurrency"].RLock()
+        self.release_signal = release
+
+        if release is not None:
+            release.subscribe(lambda v: self._request_source())
 
     def add_observer(self, observer):
         proxy_backpressure = SyncedBackpressureProxy(backpressure=self)
@@ -45,7 +49,8 @@ class SyncedBackpressure:
         # print('1 request received, num = %s' %number_of_items)
         future = BlockingFuture()
         self.requests[proxy].append((future, number_of_items, 0))
-        self._request_source()
+        if self.release_signal is None or self.release_signal.is_completed():
+            self._request_source()
         return future
 
     def _request_source(self):

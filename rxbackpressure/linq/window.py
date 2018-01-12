@@ -94,10 +94,13 @@ def window(self,
             scheduler.schedule(action)
 
         def send_new_subject(value):
-            current_subject[0] = SyncedBackpressureSubject()
+            release = BlockingFuture()
+            current_subject[0] = SyncedBackpressureSubject(release=release)
             current_subject[0].subscribe_backpressure(element_backpressure[0])
             # print('send opening {}'.format(value))
+            release.set(True)
             observer.on_next((value, current_subject[0]))
+
 
         def on_next_opening(value):
             # print('opening received value={}'.format(value))
@@ -106,7 +109,7 @@ def window(self,
                 if current_subject[0] is None:
                     send_new_subject(value)
 
-                if len(opening_list) == 0 and len(element_list) > 0:
+                if len(opening_list) == 0 and len(element_list) > to_be_buffered[0]:
                     opening_list.append(value)
                     if not is_running[0]:
                         is_running[0] = True
