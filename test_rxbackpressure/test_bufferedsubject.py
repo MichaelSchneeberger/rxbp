@@ -67,63 +67,64 @@ class TestBufferedSubject(TestCase):
             on_next(380, 4),
             on_next(420, 5),
             on_next(520, 6),
+            on_next(630, 7),
         )
 
-    def test_request_one_element_in_finit_sequence(self):
-        subscription = [None]
-        s = [None]
-        scheduler = TestScheduler()
-
-        xs = scheduler.create_hot_observable(
-            on_next(70, 1),
-            on_next(110, 2),
-            on_next(220, 3),
-            on_next(340, 4),
-            on_next(420, 5),
-            on_completed(510),
-        )
-
-        results1 = BackpressureMockObserver(
-            scheduler,
-            [Recorded(250, 1),
-             Recorded(380, 1),
-             Recorded(400, 1),
-             Recorded(530, 1),
-             Recorded(580, 1)]
-        )
-
-        def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
-        scheduler.schedule_absolute(100, action1)
-
-        def action2(scheduler, state=None):
-            subscription[0] = xs.subscribe(s[0])
-        scheduler.schedule_absolute(200, action2)
-
-        def action4(scheduler, state=None):
-            subscription[0] = s[0].subscribe(observer=results1, subscribe_bp=results1.subscribe_backpressure)
-        scheduler.schedule_absolute(300, action4)
-        scheduler.start()
-
-        def action3(scheduler, state=None):
-            subscription[0].dispose()
-        scheduler.schedule_absolute(600, action3)
-
-        print(results1.messages)
-        print(results1.bp_messages)
-
-        results1.messages.assert_equal(
-            on_next(380, 4),
-            on_next(420, 5),
-            on_completed(530)
-        )
-
-        results1.bp_messages.assert_equal(
-            bp_response(380, 1),
-            bp_response(420, 1),
-            bp_response(530, 0),
-            bp_response(580, 0),
-        )
+    # def test_request_one_element_in_finit_sequence(self):
+    #     subscription = [None]
+    #     s = [None]
+    #     scheduler = TestScheduler()
+    #
+    #     xs = scheduler.create_hot_observable(
+    #         on_next(70, 1),
+    #         on_next(110, 2),
+    #         on_next(220, 3),
+    #         on_next(340, 4),
+    #         on_next(420, 5),
+    #         on_completed(510),
+    #     )
+    #
+    #     results1 = BackpressureMockObserver(
+    #         scheduler,
+    #         [Recorded(250, 1),
+    #          Recorded(380, 1),
+    #          Recorded(400, 1),
+    #          Recorded(530, 1),
+    #          Recorded(580, 1)]
+    #     )
+    #
+    #     def action1(scheduler, state=None):
+    #         s[0] = BufferedSubject()
+    #     scheduler.schedule_absolute(100, action1)
+    #
+    #     def action2(scheduler, state=None):
+    #         subscription[0] = xs.subscribe(s[0])
+    #     scheduler.schedule_absolute(200, action2)
+    #
+    #     def action4(scheduler, state=None):
+    #         subscription[0] = s[0].subscribe(observer=results1, subscribe_bp=results1.subscribe_backpressure)
+    #     scheduler.schedule_absolute(300, action4)
+    #     scheduler.start()
+    #
+    #     def action3(scheduler, state=None):
+    #         subscription[0].dispose()
+    #     scheduler.schedule_absolute(600, action3)
+    #
+    #     print(results1.messages)
+    #     print(results1.bp_messages)
+    #
+    #     results1.messages.assert_equal(
+    #         on_next(380, 4),
+    #         on_next(420, 5),
+    #         on_completed(530)
+    #     )
+    #
+    #     results1.bp_messages.assert_equal(
+    #         bp_response(380, 1),
+    #         bp_response(420, 1),
+    #         bp_response(530, 0),
+    #         bp_response(580, 0),
+    #     )
     #
     #
     # def test_request_one_element_and_disposing_sequence(self):
@@ -173,55 +174,54 @@ class TestBufferedSubject(TestCase):
     #         bp_response(610, 0),
     #     )
     #
+    # def test_request_multible_elements(self):
+    #     subscription = [None]
+    #     s = [None]
+    #     scheduler = TestScheduler()
     #
-    def test_request_multible_elements(self):
-        subscription = [None]
-        s = [None]
-        scheduler = TestScheduler()
-
-        xs = scheduler.create_hot_observable(
-            on_next(70, 1),
-            on_next(110, 2),
-            on_next(220, 3),
-            on_next(340, 4),
-            on_next(420, 5),
-            on_next(520, 6),
-            on_next(630, 7),
-        )
-
-        results1 = BackpressureMockObserver(
-            scheduler,
-            [Recorded(320, 3),
-             Recorded(330, 1)]
-        )
-
-        def action1(scheduler, state=None):
-            s[0] = BufferedSubject()
-        scheduler.schedule_absolute(100, action1)
-
-        def action2(scheduler, state=None):
-            subscription[0] = xs.subscribe(s[0])
-        scheduler.schedule_absolute(200, action2)
-
-        def action4(scheduler, state=None):
-            subscription[0] = s[0].subscribe(observer=results1, subscribe_bp=results1.subscribe_backpressure)
-        scheduler.schedule_absolute(300, action4)
-
-        def action3(scheduler, state=None):
-            subscription[0].dispose()
-        scheduler.schedule_absolute(600, action3)
-
-        scheduler.start()
-
-        results1.messages.assert_equal(
-            on_next(340, 4),
-            on_next(420, 5),
-            on_next(520, 6),
-        )
-
-        results1.bp_messages.assert_equal(
-            bp_response(520, 3),
-        )
+    #     xs = scheduler.create_hot_observable(
+    #         on_next(70, 1),
+    #         on_next(110, 2),
+    #         on_next(220, 3),
+    #         on_next(340, 4),
+    #         on_next(420, 5),
+    #         on_next(520, 6),
+    #         on_next(630, 7),
+    #     )
+    #
+    #     results1 = BackpressureMockObserver(
+    #         scheduler,
+    #         [Recorded(320, 3),
+    #          Recorded(330, 1)]
+    #     )
+    #
+    #     def action1(scheduler, state=None):
+    #         s[0] = BufferedSubject()
+    #     scheduler.schedule_absolute(100, action1)
+    #
+    #     def action2(scheduler, state=None):
+    #         subscription[0] = xs.subscribe(s[0])
+    #     scheduler.schedule_absolute(200, action2)
+    #
+    #     def action4(scheduler, state=None):
+    #         subscription[0] = s[0].subscribe(observer=results1, subscribe_bp=results1.subscribe_backpressure)
+    #     scheduler.schedule_absolute(300, action4)
+    #
+    #     def action3(scheduler, state=None):
+    #         subscription[0].dispose()
+    #     scheduler.schedule_absolute(600, action3)
+    #
+    #     scheduler.start()
+    #
+    #     results1.messages.assert_equal(
+    #         on_next(340, 4),
+    #         on_next(420, 5),
+    #         on_next(520, 6),
+    #     )
+    #
+    #     results1.bp_messages.assert_equal(
+    #         bp_response(520, 3),
+    #     )
 
     #
     #

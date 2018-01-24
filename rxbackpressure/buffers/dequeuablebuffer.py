@@ -1,7 +1,11 @@
+from rx.concurrency import current_thread_scheduler
+
+
 class DequeuableBuffer:
-    def __init__(self):
+    def __init__(self, scheduler=current_thread_scheduler):
         self.first_idx = 0
         self.queue = []
+        self._scheduler = scheduler
 
     @property
     def last_idx(self):
@@ -32,4 +36,7 @@ class DequeuableBuffer:
             self.first_idx += 1
             self.queue.pop(0)
 
-            self.dequeue(idx)
+            def dequeue_next(scheduler, state):
+                self.dequeue(idx)
+
+            self._scheduler.schedule(dequeue_next)
