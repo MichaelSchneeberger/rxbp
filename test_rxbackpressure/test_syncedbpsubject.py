@@ -4,7 +4,7 @@ from rx.testing import TestScheduler, ReactiveTest
 from rx.testing.recorded import Recorded
 
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
-from rxbackpressure.subjects.syncedbackpressuresubject import SyncedBackpressureSubject
+from rxbackpressure.subjects.syncedsubject import SyncedSubject
 from rxbackpressure.testing.backpressuremockobserver import BackpressureMockObserver
 from rxbackpressure.testing.backpressuremocksubject import BackpressureMockSubject
 from rxbackpressure.testing.bphotobservable import BPHotObservable
@@ -24,7 +24,7 @@ class TestSyncedBPSubject(TestCase):
     def test_synced_subject_1(self):
         subscription = [None]
         s = [None]
-        subject = SyncedBackpressureSubject()
+        subject = SyncedSubject()
         scheduler = TestScheduler()
 
         messages1 = [
@@ -64,7 +64,7 @@ class TestSyncedBPSubject(TestCase):
     def test_synced_subject_2(self):
         subscription = [None]
         s = [None]
-        subject = SyncedBackpressureSubject()
+        subject = SyncedSubject()
         scheduler = TestScheduler()
 
         stop_request = StopRequest()

@@ -5,7 +5,7 @@ setup(
     version='0.0.3',
     packages=find_packages(
         exclude=[]),
-    install_requires=['rx==1.6.0'],
+    install_requires=['rx==1.6.1'],
     description='An rxpy extension with back-pressure',
     author='Michael Schneeberger',
     author_email='michael.schneeb@outlook.com',

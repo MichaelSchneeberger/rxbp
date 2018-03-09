@@ -1,9 +1,9 @@
 from rx import config
 from rx.concurrency import current_thread_scheduler
+from rx.subjects import Subject
 
 from rxbackpressure.core.backpressurebase import BackpressureBase
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
-from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class GeneratorBackpressure(BackpressureBase):
@@ -14,8 +14,8 @@ class GeneratorBackpressure(BackpressureBase):
         self.lock = config["concurrency"].RLock()
         self.scheduler = scheduler or current_thread_scheduler
 
-    def request(self, number_of_items) -> BlockingFuture:
-        future = BlockingFuture()
+    def request(self, number_of_items):
+        future = Subject()
         self.requests.append((future, number_of_items))
         consume_requests = False
         with self.lock:
@@ -40,7 +40,8 @@ class GeneratorBackpressure(BackpressureBase):
                 future, number_of_items = request
                 for _ in range(number_of_items):
                     self.observer.on_next(self.future_value)
-                future.set(number_of_items)
+                future.on_next(number_of_items)
+                future.on_completed()
                 self.consume_requests()
 
         self.scheduler.schedule(action)
@@ -50,7 +51,7 @@ class GeneratorObservable(BackpressureObservable):
     def __init__(self, future):
         self.future = future
 
-    def _subscribe_core(self, observer):
-        backpressure = GeneratorBackpressure(observer)
-        observer.subscribe_backpressure(backpressure)
+    def _subscribe_core(self, observer, scheduler):
+        backpressure = GeneratorBackpressure(observer, scheduler=scheduler)
+        observer.subscribe_backpressure(backpressure, scheduler)
         self.future.subscribe(lambda v: backpressure.set_future_value(v))

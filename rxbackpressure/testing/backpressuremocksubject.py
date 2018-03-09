@@ -26,6 +26,7 @@ class BackpressureMockSubject(BackpressureObserver, BackpressureObservable):
             def action(scheduler, state):
                 if self.backpressure:
                     future = self.backpressure.request(value)
+                    # print(future)
                     future.subscribe(
                         lambda value: self.bp_messages.append(Recorded(self.scheduler.clock, BPResponse(value))))
                 return Disposable.empty()
@@ -40,6 +41,7 @@ class BackpressureMockSubject(BackpressureObserver, BackpressureObservable):
 
     def subscribe_backpressure(self, backpressure):
         self.backpressure = backpressure
+        return Disposable.empty()
 
     def on_next(self, value):
         sel_value = self.selector(value)

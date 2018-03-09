@@ -9,10 +9,9 @@ from rxbackpressure.core.autodetachbackpressureobserver import AutoDetachBackpre
 
 
 class BackpressureObservable:
-    """Represents a push-style collection."""
+    """Represents a pull-style collection."""
 
     def __init__(self):
-        # self._subscribe_backpressure_func = subscribe_backpressure_func
         self.lock = config["concurrency"].RLock()
 
         if hasattr(self, '_methods'):
@@ -20,14 +19,8 @@ class BackpressureObservable:
             for name, method in self._methods:
                 setattr(self, name, types.MethodType(method, self))
 
-    def subscribe(self, on_next=None, on_error=None, on_completed=None, observer=None, subscribe_bp=None):
-        # Accept observer as first parameter
-        # if isinstance(on_next, BackpressureObserver):
-        #     observer = on_next
-        # elif hasattr(on_next, "on_next") and callable(on_next.on_next):
-        #     observer = on_next
-        # elif not observer:
-        # if isinstance(on_next, BackpressureObserver):
+    def subscribe(self, on_next=None, on_error=None, on_completed=None, observer=None, subscribe_bp=None,
+                  scheduler=None):
         observer = AnonymousBackpressureObserver(subscribe_bp=subscribe_bp,
                                                  on_next=on_next, on_error=on_error, on_completed=on_completed,
                                                  observer=observer)
@@ -35,9 +28,9 @@ class BackpressureObservable:
         # if complete, then automatically dispose observer
         auto_detach_observer = AutoDetachBackpressureObserver(observer)
 
-        def set_disposable(scheduler=None, value=None):
+        def set_disposable(_=None, __=None):
             # try:
-            subscriber = self._subscribe_core(auto_detach_observer)
+            subscriber = self._subscribe_core(auto_detach_observer, scheduler=scheduler)
             # except Exception as ex:
             #     if not auto_detach_observer.fail(ex):
             #         raise
@@ -53,5 +46,5 @@ class BackpressureObservable:
         return auto_detach_observer
 
     @abstractmethod
-    def _subscribe_core(self, observer):
+    def _subscribe_core(self, observer, scheduler=None):
         return NotImplemented

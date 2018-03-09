@@ -2,18 +2,17 @@ from typing import Callable, Any
 
 from rx import config
 from rx.concurrency import current_thread_scheduler
-from rx.disposables import CompositeDisposable
+from rx.core import Disposable
+from rx.disposables import CompositeDisposable, MultipleAssignmentDisposable
 from rx.internal import extensionmethod
+from rx.subjects import AsyncSubject
 
 from rxbackpressure.backpressuretypes.controlledbackpressure import ControlledBackpressure
-from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.backpressuretypes.windowbackpressure import WindowBackpressure
 from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
-from rxbackpressure.core.backpressurebase import BackpressureBase
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
-from rxbackpressure.internal.blockingfuture import BlockingFuture
-from rxbackpressure.subjects.syncedbackpressuresubject import SyncedBackpressureSubject
+from rxbackpressure.subjects.syncedsubject import SyncedSubject
 
 
 @extensionmethod(BackpressureObservable)
@@ -40,16 +39,17 @@ def window(self,
 
     source = self
 
-    def subscribe_func(observer):
+    def subscribe_func(observer, scheduler):
         lock = config["concurrency"].RLock()
         element_list = []
         opening_list = []
-        scheduler = current_thread_scheduler
+        scheduler = scheduler or current_thread_scheduler
         current_subject = [None]
         backpressure = [None]
         element_backpressure = [None]
         to_be_buffered = [0]
         is_running = [False]
+        multiple_assignment_disposable = MultipleAssignmentDisposable()
 
         def start_process():
             # print('start process actually started')
@@ -94,13 +94,14 @@ def window(self,
             scheduler.schedule(action)
 
         def send_new_subject(value):
-            release = BlockingFuture()
-            current_subject[0] = SyncedBackpressureSubject(release=release)
-            current_subject[0].subscribe_backpressure(element_backpressure[0])
+            release = AsyncSubject()
+            current_subject[0] = SyncedSubject(release=release)
+            disposable = current_subject[0].subscribe_backpressure(element_backpressure[0])
+            multiple_assignment_disposable.disposable = disposable
             # print('send opening {}'.format(value))
-            release.set(True)
+            release.on_next(True)
+            release.on_completed()
             observer.on_next((value, current_subject[0]))
-
 
         def on_next_opening(value):
             # print('opening received value={}'.format(value))
@@ -127,13 +128,12 @@ def window(self,
                         is_running[0] = True
                         start_process()
 
-        def subscribe_pb_opening(parent_backpressure):
-            backpressure[0] = ControlledBackpressure(parent_backpressure)
-            observer.subscribe_backpressure(backpressure[0])
-            # observer.subscribe_backpressure(parent_backpressure)
-            # return backpressure[0]
+        def subscribe_pb_opening(parent_backpressure, scheduler):
+            backpressure[0] = ControlledBackpressure(parent_backpressure, scheduler=scheduler)
+            disposable = observer.subscribe_backpressure(backpressure[0])
+            return CompositeDisposable(disposable, multiple_assignment_disposable)
 
-        def subscribe_pb_element(backpressure):
+        def subscribe_pb_element(backpressure, scheduler):
             def request_from_buffer(num):
                 with lock:
                     to_be_buffered[0] -= num
@@ -144,7 +144,9 @@ def window(self,
                             # print('start process')
                             start_process()
 
-            element_backpressure[0] = WindowBackpressure(backpressure, request_from_buffer=request_from_buffer)
+            element_backpressure[0] = WindowBackpressure(backpressure, request_from_buffer=request_from_buffer,
+                                                         scheduler=scheduler)
+            return Disposable.empty()
 
         def on_completed():
             with lock:

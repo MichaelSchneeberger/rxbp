@@ -14,8 +14,7 @@ class AnonymousBackpressureObservable(BackpressureObservable):
         """
 
         self._subscribe_func = subscribe_func
-        # self._subscribe_backpressure_func = subscribe_backpressure_func
         super().__init__()
 
-    def _subscribe_core(self, observer):
-        return self._subscribe_func(observer)
+    def _subscribe_core(self, observer, scheduler=None):
+        return self._subscribe_func(observer, scheduler)

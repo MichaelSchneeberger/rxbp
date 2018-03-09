@@ -24,7 +24,7 @@ def map(self, selector):
     invoking the transform function on each element of source.
     """
 
-    def subscribe_func(observer):
+    def subscribe_func(observer, scheduler=None):
 
         def on_next(value):
             try:
@@ -34,9 +34,10 @@ def map(self, selector):
             else:
                 observer.on_next(result)
 
-        def subscribe_bp(backpressure):
-            return observer.subscribe_backpressure(backpressure)
+        def subscribe_bp(backpressure, scheduler):
+            return observer.subscribe_backpressure(backpressure, scheduler)
 
-        return self.subscribe(on_next, observer.on_error, observer.on_completed, subscribe_bp=subscribe_bp)
+        return self.subscribe(on_next, observer.on_error, observer.on_completed, subscribe_bp=subscribe_bp,
+                              scheduler=scheduler)
 
     return AnonymousBackpressureObservable(subscribe_func=subscribe_func)

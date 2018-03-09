@@ -5,7 +5,6 @@ from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
 from rxbackpressure.core.backpressurebase import BackpressureBase
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
-from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 @extensionmethod(BackpressureObservable)
@@ -15,19 +14,20 @@ def pairwise(self):
             self.backpressure = backpressure
             self.is_first = True
 
-        def request(self, number_of_items) -> BlockingFuture:
+        def request(self, number_of_items):
             if self.is_first:
                 self.backpressure.request(1)
                 self.is_first = False
             f1 = self.backpressure.request(number_of_items)
             return f1
 
-    def subscribe_func(observer):
-        def subscribe_bp(backpressure):
+    def subscribe_func(observer, scheduler):
+        def subscribe_bp(backpressure, scheduler):
             parent_backpressure = PairwiseBackpressure(backpressure)
-            observer.subscribe_backpressure(parent_backpressure)
+            return observer.subscribe_backpressure(parent_backpressure, scheduler)
 
-        obs1 = AnonymousObservable(subscribe=lambda o1: self.subscribe(observer=o1, subscribe_bp=subscribe_bp))
+        obs1 = AnonymousObservable(subscribe=lambda o1: self.subscribe(observer=o1, subscribe_bp=subscribe_bp,
+                                                                       scheduler=scheduler))
         disposable = obs1.pairwise().subscribe(observer)
         # print(disposable)
         return disposable

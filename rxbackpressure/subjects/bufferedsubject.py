@@ -1,15 +1,14 @@
 import math
 
 from rx import config, Observer
-from rx.concurrency import immediate_scheduler, current_thread_scheduler
-from rx.core import Disposable, ObserverBase
+from rx.concurrency import current_thread_scheduler
+from rx.core import Disposable
 from rx.core.notification import OnNext, OnCompleted
 from rx.internal import DisposedException
 
 from rxbackpressure.backpressuretypes.bufferbackpressure import BufferBackpressure
 from rxbackpressure.buffers.dequeuablebuffer import DequeuableBuffer
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
-from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class BufferedSubject(BackpressureObservable, Observer):
@@ -18,7 +17,7 @@ class BufferedSubject(BackpressureObservable, Observer):
         super().__init__()
 
         self.name = name
-        self.scheduler = scheduler or current_thread_scheduler
+        self.scheduler = scheduler #or current_thread_scheduler
         self.is_disposed = False
         self.is_stopped = False
         self.proxies = {}
@@ -35,7 +34,8 @@ class BufferedSubject(BackpressureObservable, Observer):
         # print('add to buffer %s' % v)
         if not self.is_disposed:
             self.buffer.append(v)
-            self.request_source()
+            if self.proxies:
+                self.request_source()
         else:
             print('disposed')
 
@@ -56,14 +56,14 @@ class BufferedSubject(BackpressureObservable, Observer):
             min_idx = math.inf
 
         # if (self.release_buffer is None or self.release_buffer.is_completed()) > 0:
-        if (self.release_buffer is None or self.release_buffer.is_completed()) and len(self.proxies) > 0:
+        if (self.release_buffer is None or self.release_buffer.has_value) and len(self.proxies) > 0:
             self.buffer.dequeue(min_idx - 1)
 
     def check_disposed(self):
         if self.is_disposed:
             raise DisposedException()
 
-    def _subscribe_core(self, observer):
+    def _subscribe_core(self, observer, scheduler=None):
         # print('subscribe')
         class InnerSubscription:
             def __init__(self, subject, proxy):
@@ -73,10 +73,12 @@ class BufferedSubject(BackpressureObservable, Observer):
                 self.lock = config["concurrency"].RLock()
 
             def dispose(self):
+                # print('dispose')
                 with self.lock:
                     if not self.subject.is_disposed and self.proxy:
                         if self.proxy in self.subject.proxies:
                             # self.subject.proxies.pop(self.proxy, None)
+                            # print('dipose proxy')
                             self.proxy.dispose()
                             self.subject.request_source()
                         self.proxy = None
@@ -93,7 +95,11 @@ class BufferedSubject(BackpressureObservable, Observer):
 
                 def remove_proxy(proxy):
                     with self.lock:
-                        self.proxies.pop(proxy)
+                        # print('remove proxy {}'.format(proxy))
+                        if proxy in self.proxies:
+                            self.proxies.pop(proxy)
+
+                self.scheduler = self.scheduler or scheduler or current_thread_scheduler
 
                 proxy = BufferBackpressure(buffer=self.buffer,
                                            last_idx=first_idx,
@@ -155,5 +161,6 @@ class BufferedSubject(BackpressureObservable, Observer):
         """Unsubscribe all observers and release resources."""
 
         with self.lock:
+            # print('diposed')
             self.is_disposed = True
             self.proxies = None

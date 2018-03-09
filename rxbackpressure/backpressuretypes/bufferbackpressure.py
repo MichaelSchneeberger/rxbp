@@ -2,13 +2,22 @@ from rx import config
 from rx.concurrency import current_thread_scheduler
 from rx.core.notification import OnNext
 from rx.internal import DisposedException
+from rx.subjects import AsyncSubject, Subject
 
-from rxbackpressure import BlockingFuture
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 
 
 class BufferBackpressure():
     def __init__(self, buffer, last_idx, observer, update_source, dispose, scheduler=None):
+        """
+
+        :param buffer:
+        :param last_idx:
+        :param observer:
+        :param update_source: function that is called, if items from buffer is consumed
+        :param dispose:
+        :param scheduler:
+        """
         super().__init__()
 
         self.observer = observer
@@ -22,25 +31,26 @@ class BufferBackpressure():
         self.is_disposed = False
         self.update_source = update_source
 
-        observer.subscribe_backpressure(self)
+        self.child_disposable = observer.subscribe_backpressure(self, scheduler)
+
+        assert self.child_disposable is not None
 
     def check_disposed(self):
         if self.is_disposed:
             raise DisposedException()
 
-    def request(self, number_of_items) -> BlockingFuture:
-        future = BlockingFuture()
+    def request(self, number_of_items):
+        # print('request {}'.format(number_of_items))
+        future = Subject()
 
         def action(a, s):
             if not self.is_stopped:
                 with self._lock:
                     self.requests.append((future, number_of_items, 0))
                 self.update()
-
-                # inform source about update
-                self.update_source(self, self.current_idx)
             else:
-                future.set(0)
+                future.on_next(0)
+                future.on_completed()
 
         self.scheduler.schedule(action)
         return future
@@ -114,6 +124,9 @@ class BufferBackpressure():
 
             # send values at some later time
             if has_elements is True:
+                # inform source about update
+                self.update_source(self, self.current_idx)
+
                 def action(a, s):
 
                     # send items taken from buffer
@@ -134,19 +147,23 @@ class BufferBackpressure():
                             def action(a, s):
                                 if requests:
                                     for future, _, __ in requests:
-                                        future.set(0)
+                                        future.on_next(0)
+                                        future.on_completed()
 
                             self.scheduler.schedule(action)
 
                     # set future from request
                     future_tuple_list_ = [e for e in future_tuple_list if e is not None]
                     for future, number_of_items in future_tuple_list_:
-                        future.set(number_of_items)
+                        # print(future)
+                        future.on_next(number_of_items)
+                        future.on_completed()
                         if isinstance(number_of_items, StopRequest):
                             if not self.is_disposed:
                                 self.observer.on_completed()
                                 # self.check_disposed()
-                                self.dispose()
+                                # print('disposed')
+                                # self.dispose()
 
                 self.scheduler.schedule(action)
 
@@ -160,3 +177,4 @@ class BufferBackpressure():
             self.requests = None
             self.observer = None
             self.dispose_func(self)
+            self.child_disposable.dispose()

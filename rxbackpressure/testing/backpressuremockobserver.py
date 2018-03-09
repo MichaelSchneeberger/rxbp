@@ -25,8 +25,8 @@ class BackpressureMockObserver(BackpressureObserver):
                     future = self.backpressure.request(value)
                     # print(future)
                     def request_done(value):
-                        # print(value)
                         self.bp_messages.append(Recorded(self.scheduler.clock, BPResponse(value)))
+                    # print('subscribe')
                     future.subscribe(request_done)
                 return Disposable.empty()
             return action
@@ -37,6 +37,7 @@ class BackpressureMockObserver(BackpressureObserver):
 
     def subscribe_backpressure(self, backpressure):
         self.backpressure = backpressure
+        return Disposable.empty()
 
     def on_next(self, value):
         self.messages.append(Recorded(self.scheduler.clock, OnNext(value)))

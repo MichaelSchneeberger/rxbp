@@ -1,16 +1,16 @@
 from rx import config
 from rx.core import Disposable
+from rx.disposables import CompositeDisposable
 from rx.internal import DisposedException
 from rx.subjects.innersubscription import InnerSubscription
 
-from rxbackpressure.backpressuretypes.syncedbackpressure import SyncedBackpressure, \
-    SyncedBackpressureProxy
+from rxbackpressure.backpressuretypes.syncedbackpressure import SyncedBackpressure
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
 from rxbackpressure.core.backpressureobserver import BackpressureObserver
 
 
-class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):
-    def __init__(self, release=None):
+class SyncedSubject(BackpressureObservable, BackpressureObserver):
+    def __init__(self, release=None, scheduler=None):
         super().__init__()
 
         self.is_disposed = False
@@ -19,24 +19,22 @@ class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):
         self.exception = None
 
         self.lock = config["concurrency"].RLock()
-        self.backpressure = SyncedBackpressure(release=release)
+        self.backpressure = SyncedBackpressure(release=release, scheduler=scheduler)
 
     def check_disposed(self):
         if self.is_disposed:
             raise DisposedException()
 
-    def subscribe_backpressure(self, backpressure):
-        self.backpressure.add_backpressure(backpressure)
+    def subscribe_backpressure(self, backpressure, scheduler=None):
+        return self.backpressure.add_backpressure(backpressure, scheduler)
 
-    def _subscribe_core(self, observer):
+    def _subscribe_core(self, observer, scheduler=None):
         with self.lock:
             self.check_disposed()
             if not self.is_stopped:
                 self.observers.append(observer)
-                # proxy_backpressure = SyncedBackpressureProxy(backpressure=self.backpressure)
-                self.backpressure.add_observer(observer)
-                # observer.subscribe_backpressure(proxy_backpressure)
-                return InnerSubscription(self, observer)
+                disposable = self.backpressure.add_observer(observer, scheduler)
+                return CompositeDisposable(InnerSubscription(self, observer), disposable)
 
             if self.exception:
                 observer.on_error(self.exception)
@@ -106,3 +104,4 @@ class SyncedBackpressureSubject(BackpressureObservable, BackpressureObserver):
         with self.lock:
             self.is_disposed = True
             self.observers = None
+            self.backpressure.dispose()

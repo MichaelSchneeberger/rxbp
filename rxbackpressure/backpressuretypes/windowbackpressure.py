@@ -1,17 +1,17 @@
 from rx import config
 from rx.concurrency import current_thread_scheduler
+from rx.subjects import Subject
 
-from rxbackpressure import BlockingFuture
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.backpressurebase import BackpressureBase
 
 
 class WindowBackpressure(BackpressureBase):
-    def __init__(self, backpressure, request_from_buffer):
+    def __init__(self, backpressure, request_from_buffer, scheduler):
         self.backpressure = backpressure
 
         self._lock = config["concurrency"].RLock()
-        self.scheduler = current_thread_scheduler
+        self.scheduler = scheduler or current_thread_scheduler
         self.requests = []
         self.current_request = None
         self.num_elements_removed = 0
@@ -20,7 +20,7 @@ class WindowBackpressure(BackpressureBase):
 
     def request(self, number_of_items):
         # print('request element {}'.format(number_of_items))
-        future = BlockingFuture()
+        future = Subject()
         self.requests.append((future, number_of_items, 0))
         self.update()
         return future
@@ -58,7 +58,9 @@ class WindowBackpressure(BackpressureBase):
                 self.backpressure.request(self.num_elements_removed)
                 self.num_elements_removed = 0
             else:
-                future.set(num_of_items)
+                # future.set(num_of_items)
+                future.on_next(num_of_items)
+                future.on_completed()
                 self.current_request = None
                 self.update()
 
@@ -80,9 +82,14 @@ class WindowBackpressure(BackpressureBase):
                 future, num_of_items, current_num = self.current_request
                 self.num_elements_req += num_of_items - current_num
                 # print('finish current req {}'.format(self.num_elements_req))
-                future.set(current_num)
+                # future.set(current_num)
+                future.on_next(current_num)
+                future.on_completed()
                 self.current_request = None
 
             return self.num_elements_req
         else:
             return 0
+
+    def dispose(self):
+        pass

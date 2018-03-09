@@ -1,4 +1,5 @@
 from rx.concurrency import current_thread_scheduler
+from rx.core import Disposable
 
 
 class BackpressureGreadily:
@@ -12,6 +13,11 @@ class BackpressureGreadily:
                 if num_of_items > 0:
                     scheduler.schedule(scheduled_action)
 
-            backpressure.request(1).map(handle_msg)
+            backpressure.request(1).subscribe(handle_msg)
 
         scheduler.schedule(scheduled_action)
+
+        def dispose():
+            print('dispsed!')
+
+        return Disposable.create(dispose)

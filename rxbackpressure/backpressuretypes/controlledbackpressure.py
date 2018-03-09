@@ -1,21 +1,21 @@
 from rx import config
 from rx.concurrency import current_thread_scheduler
+from rx.subjects import Subject
 
-from rxbackpressure import BlockingFuture
 from rxbackpressure.core.backpressurebase import BackpressureBase
 
 
 class ControlledBackpressure(BackpressureBase):
-    def __init__(self, backpressure):
+    def __init__(self, backpressure, scheduler):
         self.backpressure = backpressure
 
         self._lock = config["concurrency"].RLock()
-        self.scheduler = current_thread_scheduler
+        self.scheduler = scheduler or current_thread_scheduler
         self.requests = []
 
     def request(self, number_of_items):
         # print('request opening {}'.format(number_of_items))
-        future = BlockingFuture()
+        future = Subject()
 
         def action(a, s):
             is_first = False
@@ -34,7 +34,9 @@ class ControlledBackpressure(BackpressureBase):
             future, number_of_items, current_number = self.requests[0]
             new_request = (future, number_of_items, current_number + 1)
             if new_request[2] == number_of_items:
-                future.set(number_of_items)
+                # future.set(number_of_items)
+                future.on_next(number_of_items)
+                future.on_completed()
                 has_requests = False
                 with self._lock:
                     self.requests.pop()

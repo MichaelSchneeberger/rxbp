@@ -1,11 +1,11 @@
 from rx.internal import extensionmethod, SequenceContainsNoElementsError
+from rx.subjects import AsyncSubject
 
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
 from rxbackpressure.core.backpressurebase import BackpressureBase
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
-from rxbackpressure.internal.blockingfuture import BlockingFuture
 
 
 class FirstBackpressure(BackpressureBase):
@@ -13,20 +13,21 @@ class FirstBackpressure(BackpressureBase):
         self.backpressure = backpressure
         self.is_send = False
 
-    def request(self, number_of_items) -> BlockingFuture:
+    def request(self, number_of_items):
         if not self.is_send and number_of_items > 0:
             self.is_send = True
             future = self.backpressure.request(1)
             self.backpressure.request(StopRequest())
             return future
         else:
-            f1 = BlockingFuture()
-            f1.set(0)
+            f1 = AsyncSubject()
+            f1.on_next(0)
+            f1.on_completed()
             return f1
 
 
 def first_or_default_async(source, has_default=False, default_value=None):
-    def subscribe(observer):
+    def subscribe(observer, scheduler):
         def on_next(x):
             observer.on_next(x)
             observer.on_completed()
@@ -39,10 +40,11 @@ def first_or_default_async(source, has_default=False, default_value=None):
                     observer.on_next(default_value)
                 observer.on_completed()
 
-        def subscribe_pb(backpressure):
-            observer.subscribe_backpressure(FirstBackpressure(backpressure))
+        def subscribe_pb(backpressure, scheduler):
+            observer.subscribe_backpressure(FirstBackpressure(backpressure), scheduler)
 
-        return source.subscribe(on_next, observer.on_error, on_completed, subscribe_bp=subscribe_pb)
+        return source.subscribe(on_next, observer.on_error, on_completed, subscribe_bp=subscribe_pb,
+                                scheduler=scheduler)
     return AnonymousBackpressureObservable(subscribe)
 
 
