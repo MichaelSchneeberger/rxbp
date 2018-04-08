@@ -8,4 +8,9 @@ from . import pairwise
 from . import first
 from . import repeatfirst
 from . import doaction
+from . import doonnext
+from . import dooncompleted
+from . import doonbackpressure
 from . import mapcount
+from . import multicast
+from . import tolist

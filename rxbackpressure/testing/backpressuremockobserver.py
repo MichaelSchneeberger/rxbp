@@ -35,7 +35,7 @@ class BackpressureMockObserver(BackpressureObserver):
             action = get_action(message.value)
             scheduler.schedule_absolute(message.time, action)
 
-    def subscribe_backpressure(self, backpressure):
+    def subscribe_backpressure(self, backpressure, scheduler=None):
         self.backpressure = backpressure
         return Disposable.empty()
 

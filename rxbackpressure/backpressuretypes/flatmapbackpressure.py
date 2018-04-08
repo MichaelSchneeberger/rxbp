@@ -4,6 +4,7 @@ from rx.core import Disposable
 from rx.disposables import SingleAssignmentDisposable, RefCountDisposable
 from rx.subjects import Subject
 
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.backpressurebase import BackpressureBase
 
 
@@ -36,6 +37,9 @@ class FlatMapBackpressure(BackpressureBase):
 
     def request(self, number_of_items):
         # print('request flatmap {}'.format(number_of_items))
+        if isinstance(number_of_items, StopRequest):
+            # print('ok')
+            self.is_completed = True
         future = Subject()
         self.requests.append((future, number_of_items))
         self._request_source()
@@ -61,6 +65,7 @@ class FlatMapBackpressure(BackpressureBase):
                     self.is_running = True
 
         scheduler = self.scheduler or current_thread_scheduler
+        # print(start_running)
         if start_running:
             def scheduled_action(a, s):
                 future, number_of_items = self.requests[0]
@@ -86,6 +91,7 @@ class FlatMapBackpressure(BackpressureBase):
                 self.source_backpressure_list[0] \
                     .request(number_of_items) \
                     .subscribe(handle_request)
+                # print(number_of_items)
 
             scheduler.schedule(scheduled_action)
         elif complete_requests:

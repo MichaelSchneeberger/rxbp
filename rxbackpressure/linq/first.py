@@ -28,6 +28,8 @@ class FirstBackpressure(BackpressureBase):
 
 def first_or_default_async(source, has_default=False, default_value=None):
     def subscribe(observer, scheduler):
+        parent_scheduler = scheduler
+
         def on_next(x):
             observer.on_next(x)
             observer.on_completed()
@@ -40,8 +42,8 @@ def first_or_default_async(source, has_default=False, default_value=None):
                     observer.on_next(default_value)
                 observer.on_completed()
 
-        def subscribe_pb(backpressure, scheduler):
-            observer.subscribe_backpressure(FirstBackpressure(backpressure), scheduler)
+        def subscribe_pb(backpressure, scheduler=None):
+            observer.subscribe_backpressure(FirstBackpressure(backpressure), parent_scheduler)
 
         return source.subscribe(on_next, observer.on_error, on_completed, subscribe_bp=subscribe_pb,
                                 scheduler=scheduler)

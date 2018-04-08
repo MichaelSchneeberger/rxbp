@@ -18,6 +18,7 @@ class BackpressureGreadily:
         scheduler.schedule(scheduled_action)
 
         def dispose():
-            print('dispsed!')
+        #     print('dispsed!')
+            pass
 
         return Disposable.create(dispose)

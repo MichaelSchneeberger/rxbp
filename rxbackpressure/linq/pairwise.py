@@ -15,6 +15,7 @@ def pairwise(self):
             self.is_first = True
 
         def request(self, number_of_items):
+            # print('request pariwise {}'.format(number_of_items))
             if self.is_first:
                 self.backpressure.request(1)
                 self.is_first = False
@@ -22,9 +23,10 @@ def pairwise(self):
             return f1
 
     def subscribe_func(observer, scheduler):
-        def subscribe_bp(backpressure, scheduler):
+        parent_scheduler = scheduler
+        def subscribe_bp(backpressure, scheduler=None):
             parent_backpressure = PairwiseBackpressure(backpressure)
-            return observer.subscribe_backpressure(parent_backpressure, scheduler)
+            return observer.subscribe_backpressure(parent_backpressure, parent_scheduler)
 
         obs1 = AnonymousObservable(subscribe=lambda o1: self.subscribe(observer=o1, subscribe_bp=subscribe_bp,
                                                                        scheduler=scheduler))

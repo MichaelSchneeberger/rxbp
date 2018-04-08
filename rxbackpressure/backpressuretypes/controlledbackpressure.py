@@ -2,6 +2,7 @@ from rx import config
 from rx.concurrency import current_thread_scheduler
 from rx.subjects import Subject
 
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.backpressurebase import BackpressureBase
 
 
@@ -12,9 +13,15 @@ class ControlledBackpressure(BackpressureBase):
         self._lock = config["concurrency"].RLock()
         self.scheduler = scheduler or current_thread_scheduler
         self.requests = []
+        self.is_completed = False
 
     def request(self, number_of_items):
         # print('request opening {}'.format(number_of_items))
+        if isinstance(number_of_items, StopRequest):
+            self.is_completed = True
+            self.backpressure.request(number_of_items)
+            return
+
         future = Subject()
 
         def action(a, s):

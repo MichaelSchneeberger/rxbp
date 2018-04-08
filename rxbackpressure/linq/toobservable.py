@@ -7,14 +7,15 @@ from rxbackpressure.core.backpressureobservable import BackpressureObservable
 
 
 @extensionmethod(BackpressureObservable)
-def to_observable(self):
+def to_observable(self, scheduler=None):
+    parent_scheduler = scheduler
 
     def subscribe(observer):
-        def subscribe_bp(backpressure, scheduler):
+        def subscribe_bp(backpressure, scheduler=None):
             # print('subscribe backpressure in to_observable')
-            return BackpressureGreadily.apply(backpressure=backpressure, scheduler=scheduler)
+            return BackpressureGreadily.apply(backpressure=backpressure, scheduler=parent_scheduler)
 
-        disposable = self.subscribe(subscribe_bp=subscribe_bp, observer=observer)
+        disposable = self.subscribe(subscribe_bp=subscribe_bp, observer=observer, scheduler=scheduler)
         return disposable
 
     return AnonymousObservable(subscribe=subscribe)

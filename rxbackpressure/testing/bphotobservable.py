@@ -4,7 +4,6 @@ from rx.subjects import Subject
 from rx.testing.reactive_assert import AssertList
 from rx.testing.subscription import Subscription
 
-from rxbackpressure import BlockingFuture
 from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.anonymousbackpressureobserver import AnonymousBackpressureObserver
 from rxbackpressure.core.backpressurebase import BackpressureBase
@@ -84,20 +83,21 @@ class BPHotObservable(BackpressureObservable):
             action = get_action(notification)
             scheduler.schedule_absolute(message.time, action)
 
-    def subscribe(self, on_next=None, on_error=None, on_completed=None, observer=None, subscribe_bp=None):
+    def subscribe(self, on_next=None, on_error=None, on_completed=None, observer=None, subscribe_bp=None,
+                  scheduler=None):
         # Be forgiving and accept an un-named observer as first parameter
         if isinstance(on_next, BackpressureObserver):
             observer = on_next
-        elif not observer:
+        elif not observer or not isinstance(observer, BackpressureObserver):
             observer = AnonymousBackpressureObserver(on_next=on_next,
                                                      on_error=on_error,
                                                      on_completed = on_completed,
                                                      observer=observer,
                                                      subscribe_bp=subscribe_bp)
 
-        return self._subscribe_core(observer)
+        return self._subscribe_core(observer, scheduler)
 
-    def _subscribe_core(self, observer):
+    def _subscribe_core(self, observer, scheduler):
 
         self.observer = observer
         observer.subscribe_backpressure(self.backpressure)

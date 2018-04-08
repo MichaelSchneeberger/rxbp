@@ -19,7 +19,7 @@ class WindowBackpressure(BackpressureBase):
         self._request_from_buffer = request_from_buffer
 
     def request(self, number_of_items):
-        # print('request element {}'.format(number_of_items))
+        # print('request window element {}'.format(number_of_items))
         future = Subject()
         self.requests.append((future, number_of_items, 0))
         self.update()
@@ -32,6 +32,7 @@ class WindowBackpressure(BackpressureBase):
                 if self.current_request is None and len(self.requests) > 0:
                     open_new_request = True
                     self.current_request = self.requests.pop()
+            # print('open new request {}'.format(open_new_request))
             if open_new_request:
                 future, number_of_items, current = self.current_request
                 if isinstance(number_of_items, StopRequest):
@@ -43,6 +44,8 @@ class WindowBackpressure(BackpressureBase):
                         if 0 < self.num_elements_req:
                             self._request_from_buffer(self.num_elements_req)
                         self.num_elements_req = 0
+                        # print('request {}'.format(-delta))
+                        # print(self.backpressure)
                         self.backpressure.request(-delta)
                     else:
                         self._request_from_buffer(number_of_items)

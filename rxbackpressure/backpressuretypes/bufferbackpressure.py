@@ -33,6 +33,8 @@ class BufferBackpressure():
 
         self.child_disposable = observer.subscribe_backpressure(self, scheduler)
 
+        # print(observer.observer)
+
         assert self.child_disposable is not None
 
     def check_disposed(self):
@@ -134,6 +136,7 @@ class BufferBackpressure():
                                      value_list]
 
                     for value in value_to_send:
+                        # print(value)
                         if isinstance(value, OnNext):
                             self.observer.on_next(value.value)
                         else:

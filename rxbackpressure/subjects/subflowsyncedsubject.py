@@ -9,6 +9,7 @@ from rx.internal import DisposedException
 from rxbackpressure.backpressuretypes.syncedbackpressure import SyncedBackpressure
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
 from rxbackpressure.core.backpressureobserver import BackpressureObserver
+from rxbackpressure.core.subflowobservable import SubFlowObservable
 
 
 class InnerSubscription(SingleAssignmentDisposable):
@@ -30,7 +31,7 @@ class InnerSubscription(SingleAssignmentDisposable):
         super().dispose()
 
 
-class SyncedSubject(BackpressureObservable, BackpressureObserver):
+class SubFlowSyncedSubject(SubFlowObservable, BackpressureObserver):
     def __init__(self, scheduler=None):
         super().__init__()
 

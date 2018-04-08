@@ -25,6 +25,7 @@ def map(self, selector):
     """
 
     def subscribe_func(observer, scheduler=None):
+        parent_scheduler = scheduler
 
         def on_next(value):
             try:
@@ -34,8 +35,8 @@ def map(self, selector):
             else:
                 observer.on_next(result)
 
-        def subscribe_bp(backpressure, scheduler):
-            return observer.subscribe_backpressure(backpressure, scheduler)
+        def subscribe_bp(backpressure, scheduler=None):
+            return observer.subscribe_backpressure(backpressure, parent_scheduler)
 
         return self.subscribe(on_next, observer.on_error, observer.on_completed, subscribe_bp=subscribe_bp,
                               scheduler=scheduler)

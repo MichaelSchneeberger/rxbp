@@ -8,10 +8,13 @@ from rx.internal import extensionmethod
 from rx.subjects import AsyncSubject
 
 from rxbackpressure.backpressuretypes.controlledbackpressure import ControlledBackpressure
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.backpressuretypes.windowbackpressure import WindowBackpressure
 from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
+from rxbackpressure.core.anonymoussubflowobservable import AnonymousSubFlowObservable
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
+from rxbackpressure.subjects.subflowsyncedsubject import SubFlowSyncedSubject
 from rxbackpressure.subjects.syncedsubject import SyncedSubject
 
 
@@ -39,16 +42,17 @@ def window(self,
 
     source = self
 
-    def subscribe_func(observer, scheduler):
+    def subscribe_func(observer, parent_scheduler):
         lock = config["concurrency"].RLock()
         element_list = []
         opening_list = []
-        scheduler = scheduler or current_thread_scheduler
+        parent_scheduler = parent_scheduler or current_thread_scheduler
         current_subject = [None]
         backpressure = [None]
         element_backpressure = [None]
         to_be_buffered = [0]
         is_running = [False]
+        is_stopped = [False]
         multiple_assignment_disposable = MultipleAssignmentDisposable()
 
         def start_process():
@@ -64,9 +68,11 @@ def window(self,
 
                     element_backpressure[0].remove_element()
                 elif is_higher(opening, element):
-                    # complete subject
-                    current_subject[0].on_completed()
-                    current_subject[0] = None
+                    if current_subject[0] is not None:
+                        # complete subject
+                        current_subject[0].on_completed()
+                        current_subject[0] = None
+
                     # remove first opening
                     opening_list.pop(0)
 
@@ -75,6 +81,9 @@ def window(self,
 
                     backpressure[0].update()
                 else:
+                    if current_subject[0] is None:
+                        send_new_subject(value = opening)
+
                     # send element to inner subject
                     current_subject[0].on_next(element)
 
@@ -91,17 +100,25 @@ def window(self,
                         is_running[0] = False
 
             # print('schedule start process')
-            scheduler.schedule(action)
+            parent_scheduler.schedule(action)
 
         def send_new_subject(value):
-            release = AsyncSubject()
-            current_subject[0] = SyncedSubject(release=release)
-            disposable = current_subject[0].subscribe_backpressure(element_backpressure[0])
-            multiple_assignment_disposable.disposable = disposable
+            synced_subject = SyncedSubject(scheduler=parent_scheduler)
+            current_subject[0] = synced_subject
+            # def action(_, __):
+            # release = AsyncSubject()
+            # current_subject[0] = SyncedSubject(release=release)
+            # disposable = synced_subject.subscribe_backpressure(element_backpressure[0], scheduler)
+            # multiple_assignment_disposable.disposable = disposable
             # print('send opening {}'.format(value))
-            release.on_next(True)
-            release.on_completed()
-            observer.on_next((value, current_subject[0]))
+            # release.on_next(True)
+            # release.on_completed()
+            observer.on_next((value, synced_subject))
+            # print('subscribe backpressure')
+            disposable = synced_subject.subscribe_backpressure(element_backpressure[0], parent_scheduler)
+            multiple_assignment_disposable.disposable = disposable
+            # current_thread_scheduler.schedule(action)
+            # print(scheduler)
 
         def on_next_opening(value):
             # print('opening received value={}'.format(value))
@@ -128,12 +145,12 @@ def window(self,
                         is_running[0] = True
                         start_process()
 
-        def subscribe_pb_opening(parent_backpressure, scheduler):
-            backpressure[0] = ControlledBackpressure(parent_backpressure, scheduler=scheduler)
+        def subscribe_pb_opening(parent_backpressure, scheduler=None):
+            backpressure[0] = ControlledBackpressure(parent_backpressure, scheduler=parent_scheduler)
             disposable = observer.subscribe_backpressure(backpressure[0])
             return CompositeDisposable(disposable, multiple_assignment_disposable)
 
-        def subscribe_pb_element(backpressure, scheduler):
+        def subscribe_pb_element(backpressure, scheduler=None):
             def request_from_buffer(num):
                 with lock:
                     to_be_buffered[0] -= num
@@ -145,14 +162,23 @@ def window(self,
                             start_process()
 
             element_backpressure[0] = WindowBackpressure(backpressure, request_from_buffer=request_from_buffer,
-                                                         scheduler=scheduler)
+                                                         scheduler=parent_scheduler)
             return Disposable.empty()
 
         def on_completed():
+            complete = False
             with lock:
+                if is_stopped[0] == False:
+                    complete = True
+                    is_stopped[0] = True
+            if complete:
+                observer.on_completed()
                 if current_subject[0]:
                     current_subject[0].on_completed()
-            observer.on_completed()
+                backpressure[0].request(StopRequest())
+                # print(backpressure[0])
+                element_backpressure[0].request(StopRequest())
+                # print('completed')
 
         d1 = other.subscribe(on_next=on_next_element, on_completed=on_completed, on_error=observer.on_error,
                         subscribe_bp=subscribe_pb_element)
@@ -160,5 +186,5 @@ def window(self,
                          subscribe_bp=subscribe_pb_opening)
         return CompositeDisposable(d1, d2)
 
-    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func)
+    obs = AnonymousSubFlowObservable(subscribe_func=subscribe_func)
     return obs

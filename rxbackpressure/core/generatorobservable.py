@@ -2,6 +2,7 @@ from rx import config
 from rx.concurrency import current_thread_scheduler
 from rx.subjects import Subject
 
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.backpressurebase import BackpressureBase
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
 
@@ -15,6 +16,10 @@ class GeneratorBackpressure(BackpressureBase):
         self.scheduler = scheduler or current_thread_scheduler
 
     def request(self, number_of_items):
+        if isinstance(number_of_items, StopRequest):
+            self.requests = []
+            return
+
         future = Subject()
         self.requests.append((future, number_of_items))
         consume_requests = False

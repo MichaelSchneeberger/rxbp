@@ -47,8 +47,8 @@ class TestSyncedBackpressure(TestCase):
         )
 
         backpressure = SyncedBackpressure(scheduler=scheduler)
-        backpressure.add_backpressure(observable.backpressure)
-        backpressure.add_observer(observer)
+        backpressure.add_backpressure(observable.backpressure, scheduler)
+        backpressure.add_observer(observer, scheduler)
 
         scheduler.start()
 
@@ -94,9 +94,9 @@ class TestSyncedBackpressure(TestCase):
         )
 
         backpressure = SyncedBackpressure(scheduler=scheduler)
-        backpressure.add_backpressure(observable.backpressure)
-        backpressure.add_observer(observer1)
-        backpressure.add_observer(observer2)
+        backpressure.add_backpressure(observable.backpressure, scheduler)
+        backpressure.add_observer(observer1, scheduler)
+        backpressure.add_observer(observer2, scheduler)
 
         scheduler.start()
 

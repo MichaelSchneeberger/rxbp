@@ -14,59 +14,61 @@ class SyncedBackpressureProxy(BackpressureBase):
         self.backpressure = backpressure
 
     def request(self, number_of_items):
+        # print('request synced backpressure {}'.format(number_of_items))
         future = self.backpressure.request(number_of_items, self)
         return future
 
 
 class SyncedBackpressure:
-    def __init__(self, scheduler=None, release=None):
-        self.backpressure = None
-        self.scheduler = scheduler
+    def __init__(self, backpressure, scheduler=None):
+        self.backpressure = backpressure
+        self.scheduler = scheduler #or current_thread_scheduler
         self.buffer = []
         self.requests = {}
         self.is_running = False
         self._lock = config["concurrency"].RLock()
-        self.release_signal = release
+        # self.release_signal = release
         self.is_disposed = False
 
-        if release is not None:
-            release.subscribe(lambda v: self._request_source())
+        # if release is not None:
+        #     release.subscribe(lambda v: self._request_source())
 
-    def add_observer(self, observer, scheduler):
+    def add_observer(self, observer, scheduler=None):
         # print(observer.observer)
         proxy_backpressure = SyncedBackpressureProxy(backpressure=self)
         with self._lock:
             # print('add observer %s' % observer)
             self.requests[proxy_backpressure] = []
-        self._request_source()
-        self.scheduler = self.scheduler or scheduler
-        disposable = observer.subscribe_backpressure(proxy_backpressure, self.scheduler)
+        # self._request_source()
+        self.scheduler = self.scheduler or current_thread_scheduler
+        disposable = observer.subscribe_backpressure(proxy_backpressure, scheduler)
         # self.child_disposable.add(disposable)
         return disposable
 
-    def add_backpressure(self, backpressure, scheduler):
-        # called once
-        with self._lock:
-            if self.backpressure is None:
-                self.backpressure = backpressure
-        self.scheduler = self.scheduler or scheduler
-        self._request_source()
-        return Disposable.empty()
+    # def add_backpressure(self, backpressure, scheduler):
+    #     # called once
+    #     with self._lock:
+    #         if self.backpressure is None:
+    #             self.backpressure = backpressure
+    #     self.scheduler = self.scheduler or scheduler
+    #     # self._request_source()
+    #     return Disposable.empty()
 
     def dispose(self):
         # print('dispose sync')
         self.is_disposed = True
-        self.child_disposable.dispose()
+        # self.child_disposable.dispose()
 
     def request(self, number_of_items, proxy):
         # print('1 request received, num = %s' %number_of_items)
         future = Subject()
         self.requests[proxy].append((future, number_of_items, 0))
-        if self.release_signal is None or self.release_signal.has_value:
-            self._request_source()
+        # if self.release_signal is None or self.release_signal.has_value:
+        self._request_source()
         return future
 
     def _request_source(self):
+        # def action(_, __):
         send_item = False
         with self._lock:
             if self.backpressure is not None \
@@ -80,6 +82,7 @@ class SyncedBackpressure:
             def scheduled_action(a, s):
 
                 def update_request(v):
+                    # print('update request {}'.format(v))
                     self.is_running = False
 
                     for _ in range(v):
@@ -141,5 +144,6 @@ class SyncedBackpressure:
                     number_of_items = max(number_of_items_list)
                     update_request(0)
 
-            scheduler = self.scheduler or current_thread_scheduler
-            scheduler.schedule(scheduled_action)
+            # scheduler = self.scheduler or current_thread_scheduler
+            self.scheduler.schedule(scheduled_action)
+        # self.scheduler.scheduler(action)
