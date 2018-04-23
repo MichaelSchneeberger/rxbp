@@ -1,6 +1,6 @@
 from rx.core import Observer, AnonymousObserver, ObservableBase, Disposable, ObserverBase
 from rx.core.notification import OnNext
-from rx.subjects import Subject
+from rx.subjects import Subject, AsyncSubject
 from rx.testing.reactive_assert import AssertList
 from rx.testing.subscription import Subscription
 
@@ -27,7 +27,7 @@ class BPHotObservable(BackpressureObservable):
 
             def request(self, number_of_items):
                 # print('number of items {}'.format(number_of_items))
-                future = Subject()
+                future = AsyncSubject()
                 # if number_of_items > 0:
                 self.requests.append((future, number_of_items, number_of_items))
                 update_requests()
@@ -52,6 +52,7 @@ class BPHotObservable(BackpressureObservable):
                 elif self.buffer:
                     first_notification = self.buffer.pop(0)
                     first_notification.accept(self.observer)
+
 
                     if not isinstance(first_notification, OnNext):
                         self.is_stopped = True

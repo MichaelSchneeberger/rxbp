@@ -1,6 +1,7 @@
 from rx import AnonymousObservable
 from rx.internal import extensionmethod
 
+from rxbackpressure.backpressuretypes.stoprequest import StopRequest
 from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
 from rxbackpressure.core.backpressurebase import BackpressureBase
@@ -16,10 +17,13 @@ def pairwise(self):
 
         def request(self, number_of_items):
             # print('request pariwise {}'.format(number_of_items))
-            if self.is_first:
-                self.backpressure.request(1)
-                self.is_first = False
-            f1 = self.backpressure.request(number_of_items)
+            if isinstance(number_of_items, StopRequest):
+                f1 = self.backpressure.request(number_of_items)
+            else:
+                if self.is_first:
+                    self.backpressure.request(1)
+                    self.is_first = False
+                f1 = self.backpressure.request(number_of_items)
             return f1
 
     def subscribe_func(observer, scheduler):
@@ -34,5 +38,5 @@ def pairwise(self):
         # print(disposable)
         return disposable
 
-    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func)
+    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func, name='pairwise')
     return obs

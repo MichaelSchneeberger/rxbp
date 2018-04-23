@@ -17,8 +17,8 @@ class FirstBackpressure(BackpressureBase):
         if not self.is_send and number_of_items > 0:
             self.is_send = True
             future = self.backpressure.request(1)
-            self.backpressure.request(StopRequest())
-            return future
+            result = future.flat_map(lambda v, idx: self.backpressure.request(StopRequest()))
+            return result
         else:
             f1 = AsyncSubject()
             f1.on_next(0)

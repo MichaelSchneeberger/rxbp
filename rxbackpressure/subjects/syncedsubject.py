@@ -40,7 +40,7 @@ class SyncedSubject(BackpressureObservable, BackpressureObserver):
         self.schedulers = []
         self.inner_subscripitons = {}
         self.exception = None
-        self.scheduler = scheduler or current_thread_scheduler
+        # self.scheduler = scheduler or current_thread_scheduler
 
         self.lock = config["concurrency"].RLock()
         self.backpressure = None
@@ -50,16 +50,15 @@ class SyncedSubject(BackpressureObservable, BackpressureObserver):
             raise DisposedException()
 
     def subscribe_backpressure(self, backpressure, scheduler=None):
-        self.backpressure = SyncedBackpressure(backpressure=backpressure,
-                                               scheduler=scheduler)
+        self.backpressure = SyncedBackpressure(backpressure=backpressure, scheduler=scheduler)
 
         for inner_subscription, scheduler in zip(self.inner_subscripitons.values(), self.schedulers):
 
-            def action(_, __, inner_subscription=inner_subscription):
-                inner_subscription.disposable = self.backpressure.add_observer(inner_subscription.observer, scheduler)
+            # def action(_, __, inner_subscription=inner_subscription):
+            inner_subscription.disposable = self.backpressure.add_observer(inner_subscription.observer, scheduler)
 
             # try:
-            current_thread_scheduler.schedule(action)
+            # current_thread_scheduler.schedule(action)
             # except:
             #     traceback.print_exc()
 

@@ -24,7 +24,7 @@ def map(self, selector):
     invoking the transform function on each element of source.
     """
 
-    def subscribe_func(observer, scheduler=None):
+    def subscribe_func(observer, scheduler):
         parent_scheduler = scheduler
 
         def on_next(value):

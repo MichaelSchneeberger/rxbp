@@ -10,12 +10,17 @@ from rxbackpressure.core.backpressurebase import BackpressureBase
 
 
 class SyncedBackpressureProxy(BackpressureBase):
-    def __init__(self, backpressure):
+    def __init__(self, backpressure, stop_observer):
         self.backpressure = backpressure
+        self.stop_observer = stop_observer
 
     def request(self, number_of_items):
         # print('request synced backpressure {}'.format(number_of_items))
         future = self.backpressure.request(number_of_items, self)
+
+        if isinstance(number_of_items, StopRequest):
+            self.stop_observer()
+
         return future
 
 
@@ -35,7 +40,10 @@ class SyncedBackpressure:
 
     def add_observer(self, observer, scheduler=None):
         # print(observer.observer)
-        proxy_backpressure = SyncedBackpressureProxy(backpressure=self)
+        def stop_observer():
+            observer.on_completed()
+
+        proxy_backpressure = SyncedBackpressureProxy(backpressure=self, stop_observer=stop_observer)
         with self._lock:
             # print('add observer %s' % observer)
             self.requests[proxy_backpressure] = []
@@ -61,89 +69,85 @@ class SyncedBackpressure:
 
     def request(self, number_of_items, proxy):
         # print('1 request received, num = %s' %number_of_items)
-        future = Subject()
-        self.requests[proxy].append((future, number_of_items, 0))
-        # if self.release_signal is None or self.release_signal.has_value:
+
+
+        if isinstance(number_of_items, StopRequest):
+            future = AsyncSubject()
+
+            del self.requests[proxy]
+            if len(self.requests) == 0:
+                self.backpressure.request(number_of_items)
+            future.on_next(number_of_items)
+            future.on_completed()
+        else:
+            future = Subject()
+            self.requests[proxy].append((future, number_of_items, 0))
+
         self._request_source()
+
         return future
 
     def _request_source(self):
-        # def action(_, __):
-        send_item = False
-        with self._lock:
-            if self.backpressure is not None \
-                    and not self.is_running \
-                    and len(self.requests) > 0 \
-                    and all(len(e) for e in self.requests.values()):
-                self.is_running = True
-                send_item = True
+        def action(_, __):
+            send_item = False
+            with self._lock:
+                if self.backpressure is not None \
+                        and not self.is_running \
+                        and len(self.requests) > 0 \
+                        and all(len(e) for e in self.requests.values()):
+                    self.is_running = True
+                    send_item = True
 
-        if send_item:
-            def scheduled_action(a, s):
+            if send_item:
+                def scheduled_action(a, s):
 
-                def update_request(v):
-                    # print('update request {}'.format(v))
-                    self.is_running = False
+                    def update_request(v):
+                        # print('update request {}'.format(v))
+                        self.is_running = False
 
-                    for _ in range(v):
-                        def gen1():
-                            for proxy, list1 in self.requests.items():
-                                future, req_num_of_items, counter = list1[0]
+                        for _ in range(v):
+                            def gen1():
+                                for proxy, list1 in self.requests.items():
+                                    future, req_num_of_items, counter = list1[0]
 
-                                if isinstance(req_num_of_items, StopRequest):
-                                    future.on_next(req_num_of_items)
-                                    future.on_completed()
-                                else:
-                                    counter += v
+                                    counter += 1
                                     if req_num_of_items == counter:
                                         future.on_next(req_num_of_items)
                                         future.on_completed()
                                         list1.pop(0)
+                                        # list1 = list1[1:]
                                     else:
-                                        list1[0][3] = counter
+                                        list1[0] = (future, req_num_of_items, counter)
                                     yield proxy, list1
-                        self.requests = dict(gen1())
-                        if not self.requests:
-                            self.backpressure.request(StopRequest())
+                            self.requests = dict(gen1())
 
-                    if v < number_of_items:
-                        # source couldn't serve request, delete all requests
-                        for proxy, list1 in self.requests.items():
-                            for request in list1:
-                                future, req_num_of_items, counter = request
-                                future.on_next(0)
-                                future.on_completed()
-                        self.requests = {}
-                    else:
-                        # check if next request is a stop request
-                        def gen1():
+                        if v < number_of_items:
+                            # source couldn't serve request, delete all requests
                             for proxy, list1 in self.requests.items():
-                                if list1:
-                                    future, req_num_of_items, counter = list1[0]
-                                    if isinstance(req_num_of_items, StopRequest):
-                                        future.on_next(req_num_of_items)
-                                        future.on_completed()
-                                    else:
-                                        yield proxy, list1
-                                else:
-                                    yield proxy, list1
-                        self.requests = dict(gen1())
-                        if not self.requests:
-                            self.backpressure.request(StopRequest())
+                                for request in list1:
+                                    future, req_num_of_items, counter = request
+                                    # print('send zero')
+                                    future.on_next(0)
+                                    future.on_completed()
+                            self.requests = {}
+                        else:
+                            self.is_running = False
+                            self._request_source()
 
-                        self.is_running = False
-                        self._request_source()
+                    number_of_items_list = [sum(e[1] for e in list1) for list1 in self.requests.values()]
+                    number_of_items = min(min(number_of_items_list), 1)
 
-                number_of_items_list = [sum(e[1] for e in list1) for list1 in self.requests.values()]
-                number_of_items = min(number_of_items_list)
+                    # if number_of_items != math.inf:
+                    # print('send {}'.format(number_of_items))
+                    subject = self.backpressure.request(number_of_items)
+                    subject.subscribe(update_request)
+                    # else:
+                    #     number_of_items_list = [sum(e[1] for e in list1 if not isinstance(e[1], StopRequest)) for list1 in self.requests.values()]
+                    #     number_of_items = max(number_of_items_list)
+                    #     update_request(0)
 
-                if number_of_items != math.inf:
-                    self.backpressure.request(number_of_items).subscribe(update_request)
-                else:
-                    number_of_items_list = [sum(e[1] for e in list1 if not isinstance(e[1], StopRequest)) for list1 in self.requests.values()]
-                    number_of_items = max(number_of_items_list)
-                    update_request(0)
+                # scheduler = self.scheduler or current_thread_scheduler
+                immediate_scheduler.schedule(scheduled_action)
 
-            # scheduler = self.scheduler or current_thread_scheduler
-            self.scheduler.schedule(scheduled_action)
-        # self.scheduler.scheduler(action)
+        # scheduler = self.scheduler or current_thread_scheduler
+        immediate_scheduler.schedule(action)

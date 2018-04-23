@@ -13,3 +13,7 @@ class StopRequest:
 
     def __radd__(self, other):
         return math.inf
+
+
+# class ImmediateStopRequest:
+#     pass

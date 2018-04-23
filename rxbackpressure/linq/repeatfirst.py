@@ -15,5 +15,5 @@ def repeat_first(self):
         self.subscribe(on_next=lambda v: backpressure.set_future_value(v),
                        on_error=observer.on_error)
 
-    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func)
+    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func, name='repeat_first')
     return obs

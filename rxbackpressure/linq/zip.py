@@ -148,9 +148,15 @@ def zip(self, other, selector=lambda v1, v2: (v1, v2)):
                                                                              scheduler=scheduler))
         obs2 = AnonymousObservable(subscribe=lambda observer: other.subscribe(observer=observer,
                                                                               subscribe_bp=subscribe_bp_2))
-        disposable = _zip(obs1, obs2, selector).subscribe(observer)
+
+        def on_completed():
+            stop_request = StopRequest()
+            backpressure1[0].request(stop_request)
+            backpressure2[0].request(stop_request)
+
+        disposable = _zip(obs1, obs2, selector).do_action(on_completed=on_completed).subscribe(observer)
         # print(disposable)
         return disposable
 
-    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func)
+    obs = AnonymousBackpressureObservable(subscribe_func=subscribe_func, name='zip')
     return obs

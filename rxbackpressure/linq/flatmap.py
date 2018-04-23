@@ -12,7 +12,7 @@ from rxbackpressure.core.subflowobservable import SubFlowObservable
 @extensionmethod(SubFlowObservable)
 def flat_map(self, selector):
 
-    def subscribe_func(observer, scheduler=None):
+    def subscribe_func(observer, scheduler):
         sub_backpressure = FlatMapBackpressure(scheduler=scheduler)
         group = CompositeDisposable()
         is_stopped = [False]
@@ -35,6 +35,8 @@ def flat_map(self, selector):
                     if is_stopped[0] and len(group) == 1:
                         observer.on_completed()
                         sub_backpressure.on_completed()
+                    # else:
+                    #     pass
 
                 def subscribe_bp_func(backpressure, scheduler=None):
                     disposable = sub_backpressure.add_backpressure(backpressure, parent_scheduler)
@@ -51,10 +53,11 @@ def flat_map(self, selector):
                 sub_backpressure.on_completed()
 
         def subscribe_bp_func(backpressure, scheduler=None):
+            sub_backpressure.backpressure = backpressure
             disposable = observer.subscribe_backpressure(sub_backpressure, parent_scheduler)
             sub_backpressure.disposable.disposable = disposable
 
-            disposable = BackpressureGreadily.apply(backpressure, scheduler=parent_scheduler)
+            disposable = BackpressureGreadily.apply(backpressure, scheduler2=parent_scheduler)
             return disposable
 
         m.disposable = self.subscribe(subscribe_bp=subscribe_bp_func,

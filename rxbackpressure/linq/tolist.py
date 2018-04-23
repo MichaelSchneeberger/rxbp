@@ -52,7 +52,7 @@ def to_list(self):
                 subject.on_completed()
                 return subject
 
-    def subscribe_func(observer, scheduler=None):
+    def subscribe_func(observer, scheduler):
         parent_scheduler = scheduler
 
         def subscribe_bp(backpressure, scheduler=None):
@@ -69,4 +69,4 @@ def to_list(self):
         # print(disposable)
         return disposable
 
-    return AnonymousBackpressureObservable(subscribe_func=subscribe_func)
+    return AnonymousBackpressureObservable(subscribe_func=subscribe_func, name='to_list')

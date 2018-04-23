@@ -31,7 +31,8 @@ class WindowBackpressure(BackpressureBase):
             with self._lock:
                 if self.current_request is None and len(self.requests) > 0:
                     open_new_request = True
-                    self.current_request = self.requests.pop()
+                    self.current_request = self.requests.pop(0)
+
             # print('open new request {}'.format(open_new_request))
             if open_new_request:
                 future, number_of_items, current = self.current_request
@@ -61,13 +62,14 @@ class WindowBackpressure(BackpressureBase):
                 self.backpressure.request(self.num_elements_removed)
                 self.num_elements_removed = 0
             else:
-                # future.set(num_of_items)
+                # print('send {}'.format(num_of_items))
                 future.on_next(num_of_items)
                 future.on_completed()
                 self.current_request = None
+                # print('reset current request')
                 self.update()
 
-    def remove_element(self, num=1):
+    def remove_element_and_update(self, num=1):
         self.num_elements_removed += num
         self.update_current_request()
 
@@ -82,10 +84,11 @@ class WindowBackpressure(BackpressureBase):
         if self.current_request is not None:
             with self._lock:
                 self.requests = []
+                # print(self.current_request)
                 future, num_of_items, current_num = self.current_request
                 self.num_elements_req += num_of_items - current_num
                 # print('finish current req {}'.format(self.num_elements_req))
-                # future.set(current_num)
+                # print('window - finish current request = {}'.format(current_num))
                 future.on_next(current_num)
                 future.on_completed()
                 self.current_request = None

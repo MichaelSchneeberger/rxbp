@@ -1,7 +1,7 @@
 import math
 
 from rx import config, Observer
-from rx.concurrency import current_thread_scheduler
+from rx.concurrency import current_thread_scheduler, immediate_scheduler
 from rx.core import Disposable
 from rx.core.notification import OnNext, OnCompleted
 from rx.internal import DisposedException
@@ -17,7 +17,7 @@ class BufferedSubject(BackpressureObservable, Observer):
         super().__init__()
 
         self.name = name
-        self.scheduler = scheduler #or current_thread_scheduler
+        self.scheduler = scheduler or immediate_scheduler
         self.is_disposed = False
         self.is_stopped = False
         self.proxies = {}
@@ -99,14 +99,13 @@ class BufferedSubject(BackpressureObservable, Observer):
                         if proxy in self.proxies:
                             self.proxies.pop(proxy)
 
-                self.scheduler = self.scheduler or scheduler or current_thread_scheduler
+                # self.scheduler = self.scheduler or scheduler or current_thread_scheduler
 
                 proxy = BufferBackpressure(buffer=self.buffer,
                                            last_idx=first_idx,
                                            observer=observer,
                                            update_source=update_source,
-                                           dispose=remove_proxy,
-                                           scheduler=self.scheduler)
+                                           dispose=remove_proxy)
                 self.proxies[proxy] = first_idx
             self.request_source()
             return proxy
@@ -138,7 +137,7 @@ class BufferedSubject(BackpressureObservable, Observer):
                 self._add_to_buffer(OnCompleted())
 
     def on_error(self, exception):
-        """Notifies all subscribed observers with the exception.
+        """Notifies all subscribed obserelease_bufferrvers with the exception.
 
         Keyword arguments:
         error -- The exception to send to all subscribed observers.

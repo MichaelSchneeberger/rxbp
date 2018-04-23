@@ -41,12 +41,13 @@ class TestSyncedBPSubject(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = xs1.subscribe(subject)
+            subject.subscribe(results1)
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
-            subject.subscribe(results1)
+            s[0] = xs1.subscribe(subject)
         scheduler.schedule_absolute(200, action2)
+
         scheduler.start()
 
         print(results1.messages)
@@ -85,11 +86,13 @@ class TestSyncedBPSubject(TestCase):
         )
 
         def action1(scheduler, state=None):
-            s[0] = xs1.subscribe(subject)
+            subject.subscribe(results1)
+
         scheduler.schedule_absolute(100, action1)
 
         def action2(scheduler, state=None):
-            subject.subscribe(results1)
+            s[0] = xs1.subscribe(subject)
+
         scheduler.schedule_absolute(200, action2)
         scheduler.start()
 
@@ -98,6 +101,7 @@ class TestSyncedBPSubject(TestCase):
 
         results1.messages.assert_equal(
             on_next(250, 1),
+            on_completed(280)
         )
 
         results1.bp_messages.assert_equal(
