@@ -20,17 +20,17 @@ class GeneratorBackpressure(BackpressureBase):
             self.requests = []
             return
 
-        future = Subject()
-        self.requests.append((future, number_of_items))
+        subject = Subject()
+        self.requests.append((subject, number_of_items))
         consume_requests = False
         with self.lock:
             if self.future_value:
                 consume_requests = True
         if consume_requests:
             self.consume_requests()
-        return future
+        return subject
 
-    def set_future_value(self, val):
+    def set_value(self, val):
         with self.lock:
             self.future_value = val
         self.consume_requests()
@@ -53,10 +53,16 @@ class GeneratorBackpressure(BackpressureBase):
 
 
 class GeneratorObservable(BackpressureObservable):
-    def __init__(self, future):
-        self.future = future
+    def __init__(self, obs, scheduler=None):
+        super().__init__()
+
+        self._obs = obs
+        self._scheduler = scheduler
 
     def _subscribe_core(self, observer, scheduler):
+        scheduler = self._scheduler or scheduler
+
         backpressure = GeneratorBackpressure(observer, scheduler=scheduler)
-        observer.subscribe_backpressure(backpressure, scheduler)
-        self.future.subscribe(lambda v: backpressure.set_future_value(v))
+        observer.subscribe_backpressure(backpressure)
+        self._obs.first().subscribe(lambda v: backpressure.set_value(v))
+

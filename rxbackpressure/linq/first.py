@@ -42,8 +42,8 @@ def first_or_default_async(source, has_default=False, default_value=None):
                     observer.on_next(default_value)
                 observer.on_completed()
 
-        def subscribe_pb(backpressure, scheduler=None):
-            observer.subscribe_backpressure(FirstBackpressure(backpressure), parent_scheduler)
+        def subscribe_pb(backpressure):
+            observer.subscribe_backpressure(FirstBackpressure(backpressure))
 
         return source.subscribe(on_next, observer.on_error, on_completed, subscribe_bp=subscribe_pb,
                                 scheduler=scheduler)

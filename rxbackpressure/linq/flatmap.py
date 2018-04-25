@@ -38,8 +38,8 @@ def flat_map(self, selector):
                     # else:
                     #     pass
 
-                def subscribe_bp_func(backpressure, scheduler=None):
-                    disposable = sub_backpressure.add_backpressure(backpressure, parent_scheduler)
+                def subscribe_bp_func(backpressure):
+                    disposable = sub_backpressure.add_backpressure(backpressure)
                     return disposable
 
                 # print('subscribe inner')
@@ -52,9 +52,9 @@ def flat_map(self, selector):
                 observer.on_completed()
                 sub_backpressure.on_completed()
 
-        def subscribe_bp_func(backpressure, scheduler=None):
+        def subscribe_bp_func(backpressure):
             sub_backpressure.backpressure = backpressure
-            disposable = observer.subscribe_backpressure(sub_backpressure, parent_scheduler)
+            disposable = observer.subscribe_backpressure(sub_backpressure)
             sub_backpressure.disposable.disposable = disposable
 
             disposable = BackpressureGreadily.apply(backpressure, scheduler2=parent_scheduler)

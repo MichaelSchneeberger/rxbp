@@ -25,15 +25,13 @@ class FlatMapBackpressure(BackpressureBase):
         self.ref_count_disposable = RefCountDisposable(self)
         self.ref_count_disposable.is_primary_disposed = True
 
-    def add_backpressure(self, backpressure, scheduler):
+    def add_backpressure(self, backpressure):
         """ every element that a flatmap unit receives provides the backpressure interface
 
         :param backpressure:
         :param scheduler:
         :return:
         """
-
-        self.scheduler = self.scheduler or scheduler
 
         self.source_backpressure_list.append(backpressure)
         self._request_source()

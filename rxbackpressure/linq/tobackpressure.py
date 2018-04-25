@@ -10,6 +10,7 @@ def to_backpressure(self, release_buffer=None, scheduler=None):
     parent_scheduler = scheduler
 
     def subscribe_func(observer, scheduler):
+
         scheduler_to_use = parent_scheduler or scheduler
         subject = BufferedSubject(scheduler=scheduler_to_use, release_buffer=release_buffer)
         subject.subscribe(observer)

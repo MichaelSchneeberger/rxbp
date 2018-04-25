@@ -108,11 +108,11 @@ def zip(self, other, selector=lambda v1, v2: (v1, v2)):
 
         def subscribe_bp():
             parent_backpressure = ZipBackpressure(backpressure1[0], backpressure2[0])
-            disposable = observer.subscribe_backpressure(parent_backpressure, parent_scheduler)
+            disposable = observer.subscribe_backpressure(parent_backpressure)
 
             return CompositeDisposable(disposable, Disposable.create(parent_backpressure.dispose))
 
-        def subscribe_bp_1(backpressure, scheduler=None):
+        def subscribe_bp_1(backpressure):
             # print('subscribe backpressure 1')
             backpressure1[0] = backpressure
             count[0] += 1
@@ -127,7 +127,7 @@ def zip(self, other, selector=lambda v1, v2: (v1, v2)):
 
             return Disposable.create(dispose)
 
-        def subscribe_bp_2(backpressure, scheduler=None):
+        def subscribe_bp_2(backpressure):
             # print('subscribe backpressure 2')
             backpressure2[0] = backpressure
             count[0] += 1

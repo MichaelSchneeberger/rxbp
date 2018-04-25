@@ -12,13 +12,17 @@ from rxbackpressure.core.subflowobservable import SubFlowObservable
 
 def do_ondispose_subscribe_func(self, observer, scheduler, func=None):
 
-    def subscribe_bp(backpressure, scheduler=None):
-        return observer.subscribe_backpressure(backpressure, scheduler)
+    def subscribe_bp(backpressure):
+        return observer.subscribe_backpressure(backpressure)
 
     disposable = self.subscribe(on_next=observer.on_next, on_error=observer.on_error, on_completed=observer.on_completed,
                           subscribe_bp=subscribe_bp,
                           scheduler=scheduler)
-    return CompositeDisposable(disposable, Disposable.create(func))
+
+    if func:
+        return CompositeDisposable(disposable, Disposable.create(func))
+    else:
+        disposable
 
 @extensionmethod(BackpressureObservable)
 def do_ondispose(self, func=None):

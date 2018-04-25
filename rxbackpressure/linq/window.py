@@ -15,7 +15,6 @@ from rxbackpressure.core.anonymousbackpressureobservable import \
     AnonymousBackpressureObservable
 from rxbackpressure.core.anonymoussubflowobservable import AnonymousSubFlowObservable
 from rxbackpressure.core.backpressureobservable import BackpressureObservable
-from rxbackpressure.subjects.subflowsyncedsubject import SubFlowSyncedSubject
 from rxbackpressure.subjects.syncedsubject import SyncedSubject
 
 
@@ -121,7 +120,7 @@ def window(self,
             synced_subject = SyncedSubject(scheduler=parent_scheduler)
             current_subject[0] = synced_subject
             observer.on_next((value, synced_subject))
-            disposable = synced_subject.subscribe_backpressure(element_backpressure[0], parent_scheduler)
+            disposable = synced_subject.subscribe_backpressure(element_backpressure[0])
 
             # todo: what to do with disposable?
             multiple_assignment_disposable.disposable = disposable
@@ -160,7 +159,7 @@ def window(self,
             # return CompositeDisposable(disposable, multiple_assignment_disposable)
             return ref_count_disposable.disposable
 
-        def subscribe_pb_element(backpressure, scheduler=None):
+        def subscribe_pb_element(backpressure):
             def request_from_buffer(num):
                 with lock:
                     to_be_buffered[0] -= num

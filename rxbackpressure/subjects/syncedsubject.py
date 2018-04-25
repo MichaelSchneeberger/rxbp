@@ -49,13 +49,13 @@ class SyncedSubject(BackpressureObservable, BackpressureObserver):
         if self.is_disposed:
             raise DisposedException()
 
-    def subscribe_backpressure(self, backpressure, scheduler=None):
-        self.backpressure = SyncedBackpressure(backpressure=backpressure, scheduler=scheduler)
+    def subscribe_backpressure(self, backpressure):
+        self.backpressure = SyncedBackpressure(backpressure=backpressure)
 
         for inner_subscription, scheduler in zip(self.inner_subscripitons.values(), self.schedulers):
 
             # def action(_, __, inner_subscription=inner_subscription):
-            inner_subscription.disposable = self.backpressure.add_observer(inner_subscription.observer, scheduler)
+            inner_subscription.disposable = self.backpressure.add_observer(inner_subscription.observer)
 
             # try:
             # current_thread_scheduler.schedule(action)

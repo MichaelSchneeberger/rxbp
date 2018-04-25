@@ -31,7 +31,7 @@ class BufferBackpressure():
         self.is_disposed = False
         self.update_source = update_source
 
-        self.child_disposable = observer.subscribe_backpressure(self, scheduler)
+        self.child_disposable = observer.subscribe_backpressure(self)
 
         # print(observer.observer)
 
@@ -202,7 +202,7 @@ class BufferBackpressure():
 
             self.is_disposed = True
             self.is_stopped = True
-            self.requests = None
+            self.requests = []
             self.observer = None
 
         self.dispose_func(self)

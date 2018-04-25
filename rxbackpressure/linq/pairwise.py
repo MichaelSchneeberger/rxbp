@@ -28,9 +28,9 @@ def pairwise(self):
 
     def subscribe_func(observer, scheduler):
         parent_scheduler = scheduler
-        def subscribe_bp(backpressure, scheduler=None):
+        def subscribe_bp(backpressure):
             parent_backpressure = PairwiseBackpressure(backpressure)
-            return observer.subscribe_backpressure(parent_backpressure, parent_scheduler)
+            return observer.subscribe_backpressure(parent_backpressure)
 
         obs1 = AnonymousObservable(subscribe=lambda o1: self.subscribe(observer=o1, subscribe_bp=subscribe_bp,
                                                                        scheduler=scheduler))

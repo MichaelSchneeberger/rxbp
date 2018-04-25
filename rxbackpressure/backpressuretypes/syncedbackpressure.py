@@ -38,7 +38,7 @@ class SyncedBackpressure:
         # if release is not None:
         #     release.subscribe(lambda v: self._request_source())
 
-    def add_observer(self, observer, scheduler=None):
+    def add_observer(self, observer):
         # print(observer.observer)
         def stop_observer():
             observer.on_completed()
@@ -49,7 +49,7 @@ class SyncedBackpressure:
             self.requests[proxy_backpressure] = []
         # self._request_source()
         self.scheduler = self.scheduler or current_thread_scheduler
-        disposable = observer.subscribe_backpressure(proxy_backpressure, scheduler)
+        disposable = observer.subscribe_backpressure(proxy_backpressure)
         # self.child_disposable.add(disposable)
         return disposable
 

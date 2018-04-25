@@ -23,8 +23,8 @@ class AnonymousBackpressureObserver(BackpressureObserver):
             self._completed = on_completed or noop
             self._subscribe_bp = subscribe_bp
 
-    def subscribe_backpressure(self, backpressure, scheduler=None):
-        return self._subscribe_bp(backpressure, scheduler=scheduler)
+    def subscribe_backpressure(self, backpressure):
+        return self._subscribe_bp(backpressure)
 
     def _on_next_core(self, value):
         self._next(value)

@@ -18,9 +18,12 @@ Implemented operators
 
 ### Transforming backpressured observables
 
-- `flat_map` - flatten inner BackpressureObservables emissioned by the outer BackpressureObservable into a single BackpressureObservable
+- `flat_map` - flatten inner BackpressureObservables emissioned by the outer SubFlowObservable into a single BackpressureObservable
 - `map` - transform the items emitted by an BackpressureObservable by applying a function to each item
+- `map_count` - The same as `map`, except that the selector function takes index in addition to the value
 - `pairwise` - pairing two consecutive items emitted by an BackpressureObservable
+- `to_list` - Returns an observable sequence emitting a single element of type list containing all the elements of the source sequence
+- `multicast` - Multicasts the source sequence notifications through an instantiated subject. Each subscription to the resulting sequence causes a separate multicast invocation
 
 
 ### Filtering back-pressured observables
@@ -30,7 +33,7 @@ Implemented operators
 
 ### Combining back-pressured observables
 
-- `window` - for each item from one BackpressureObservable, subdivide items from another BackpressureObservable via is_lower and is_higher functions into BackpressureObservable windows and emit these windows rather than emitting the items one at a time
+- `window` - for each item from one BackpressureObservable, subdivide items from another BackpressureObservable via is_lower and is_higher functions into BackpressureObservable windows and emit these windows in a SubFlowObservable
 - `zip` - combine the emissions of multiple BackpressureObservables together via a specified function and emit single items for each combination based on the results of this function
 
 

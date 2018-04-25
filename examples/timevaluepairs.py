@@ -23,7 +23,7 @@ time_sync1_bp = time.to_backpressure().zip(sync1.repeat_first(), lambda t, sync_
 
 # pairing time value observables
 time_sync1_bp.to_observable().zip(signal, lambda t, v: (t, v)).subscribe()
-time_sync2_bp.to_observable().zip(signal, lambda t, v: (t, v)).subscribe(print)
+time_sync2_bp.to_observable().zip(signal, lambda t, v: (t, v)).subscribe(print, on_completed=lambda: print('completed'))
 
 # emulating hot observable
 Observable.range(0,100) \

@@ -10,8 +10,6 @@ from rxbackpressure.core.subflowobservable import SubFlowObservable
 
 def do_action_subscribe_func(self, observer, scheduler, on_next=None, on_error=None, on_completed=None):
 
-    # def subscribe_func(observer, scheduler):
-
     def on_next2(value):
         if on_next:
             on_next(value)
@@ -27,13 +25,11 @@ def do_action_subscribe_func(self, observer, scheduler, on_next=None, on_error=N
             on_completed()
         observer.on_completed()
 
-    def subscribe_bp(backpressure, scheduler=None):
-        return observer.subscribe_backpressure(backpressure, scheduler)
+    def subscribe_bp(backpressure):
+        return observer.subscribe_backpressure(backpressure)
 
     return self.subscribe(on_next2, on_error2, on_completed=on_completed2, subscribe_bp=subscribe_bp,
                           scheduler=scheduler)
-
-    # return AnonymousBackpressureObservable(subscribe_func=subscribe_func)
 
 
 @extensionmethod(BackpressureObservable)
@@ -41,7 +37,7 @@ def do_action(self, on_next=None, on_error=None, on_completed=None):
     def subscribe_func(observer, scheduler):
         return do_action_subscribe_func(self, observer, scheduler, on_next, on_error, on_completed)
 
-    return AnonymousBackpressureObservable(subscribe_func=subscribe_func, name='do action')
+    return AnonymousBackpressureObservable(subscribe_func=subscribe_func, name='do_action')
 
 
 @extensionmethod(SubFlowObservable)
@@ -49,4 +45,4 @@ def do_action(self, on_next=None, on_error=None, on_completed=None):
     def subscribe_func(observer, scheduler):
         return do_action_subscribe_func(self, observer, scheduler, on_next, on_error, on_completed)
 
-    return AnonymousSubFlowObservable(subscribe_func=subscribe_func, name='do action')
+    return AnonymousSubFlowObservable(subscribe_func=subscribe_func, name='do_action')

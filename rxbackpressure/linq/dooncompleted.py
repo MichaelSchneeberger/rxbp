@@ -12,13 +12,12 @@ def do_oncompleted_func(self, func=None):
     def subscribe_func(observer, scheduler):
 
         def on_completed2():
-            # print(on_next)
             if func:
                 func()
             observer.on_completed()
 
-        def subscribe_bp(backpressure, scheduler=None):
-            return observer.subscribe_backpressure(backpressure, scheduler)
+        def subscribe_bp(backpressure):
+            return observer.subscribe_backpressure(backpressure)
 
         return self.subscribe(observer.on_next, observer.on_error, on_completed=on_completed2, subscribe_bp=subscribe_bp,
                               scheduler=scheduler)

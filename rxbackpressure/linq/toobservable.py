@@ -11,7 +11,7 @@ def to_observable(self, scheduler=None):
     parent_scheduler = scheduler
 
     def subscribe(observer):
-        def subscribe_bp(backpressure, scheduler=None):
+        def subscribe_bp(backpressure):
             # print('subscribe backpressure in to_observable')
             return BackpressureGreadily.apply(backpressure=backpressure, scheduler2=parent_scheduler)
 

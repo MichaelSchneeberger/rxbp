@@ -30,9 +30,9 @@ class AutoDetachBackpressureObserver(BackpressureObserver):
         finally:
             self.dispose()
 
-    def subscribe_backpressure(self, backpressure, scheduler=None):
+    def subscribe_backpressure(self, backpressure):
         # try:
-        return self.observer.subscribe_backpressure(backpressure, scheduler)
+        return self.observer.subscribe_backpressure(backpressure)
         # except Exception:
         #     self.dispose()
 

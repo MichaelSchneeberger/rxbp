@@ -15,7 +15,7 @@ class BackpressureObserver(Observer, Disposable):
         self.is_stopped = False
 
     @abstractmethod
-    def subscribe_backpressure(self, backpressure, scheduler=None):
+    def subscribe_backpressure(self, backpressure):
         return NotImplemented
 
     def on_next(self, value):

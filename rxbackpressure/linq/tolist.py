@@ -55,9 +55,9 @@ def to_list(self):
     def subscribe_func(observer, scheduler):
         parent_scheduler = scheduler
 
-        def subscribe_bp(backpressure, scheduler=None):
+        def subscribe_bp(backpressure):
             tolist_backpressure = ToListBackpressure(backpressure, scheduler=parent_scheduler)
-            return observer.subscribe_backpressure(tolist_backpressure, parent_scheduler)
+            return observer.subscribe_backpressure(tolist_backpressure)
 
         def subscribe_func(o1):
             disposable = self.subscribe(observer=o1, subscribe_bp=subscribe_bp,

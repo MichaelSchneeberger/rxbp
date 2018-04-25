@@ -10,23 +10,18 @@ from rxbackpressure.core.subflowobservable import SubFlowObservable
 
 def do_onnext_subscribe_func(self, observer, scheduler, func=None):
 
-    # def subscribe_func(observer, scheduler):
-    parent_scheduler = scheduler
-
     def on_next2(value):
         if func:
             func(value)
         observer.on_next(value)
 
 
-    def subscribe_bp(backpressure, scheduler=None):
-        return observer.subscribe_backpressure(backpressure, parent_scheduler)
+    def subscribe_bp(backpressure):
+        return observer.subscribe_backpressure(backpressure)
 
     return self.subscribe(on_next2, observer.on_error, on_completed=observer.on_completed,
                           subscribe_bp=subscribe_bp,
                           scheduler=scheduler)
-
-    # return AnonymousBackpressureObservable(subscribe_func=subscribe_func)
 
 
 @extensionmethod(BackpressureObservable)

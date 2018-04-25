@@ -9,24 +9,21 @@ from rxbackpressure.core.backpressureobservable import BackpressureObservable
 from rxbackpressure.core.subflowobservable import SubFlowObservable
 
 
-def do_onbackpressure_func(self, observer, scheduler, func):
+def do_onbackpressure_func(self, observer, scheduler, func=None):
 
-    # def subscribe_func(observer, scheduler):
-
-    def subscribe_bp(backpressure, scheduler=None):
+    def subscribe_bp(backpressure):
 
         class Backpressure(BackpressureBase):
             def request(self, number_of_items):
-                func(number_of_items)
+                if func:
+                    func(number_of_items)
                 return backpressure.request(number_of_items)
 
-        return observer.subscribe_backpressure(Backpressure(), scheduler)
+        return observer.subscribe_backpressure(Backpressure())
 
     return self.subscribe(observer.on_next, observer.on_error, on_completed=observer.on_completed,
                           subscribe_bp=subscribe_bp,
                           scheduler=scheduler)
-
-    # return AnonymousBackpressureObservable(subscribe_func=subscribe_func)
 
 
 @extensionmethod(BackpressureObservable)
