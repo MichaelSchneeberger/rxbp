@@ -20,9 +20,9 @@ from rxbackpressure.subjects.syncedsubject import SyncedSubject
 
 @extensionmethod(BackpressureObservable)
 def window(self,
-           other: BackpressureObservable,
-           is_lower: Callable[[Any, Any], bool],
-           is_higher: Callable [[Any, Any], bool]) -> BackpressureObservable:
+                    other: BackpressureObservable,
+                    is_lower: Callable[[Any, Any], bool],
+                    is_higher: Callable [[Any, Any], bool]) -> BackpressureObservable:
     """ For each element of the backpressured observable sequence create
     a window with elements of the other backpressured observable that are
     neither lower nor higher.

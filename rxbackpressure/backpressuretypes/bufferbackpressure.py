@@ -27,13 +27,11 @@ class BufferBackpressure():
         self.is_stopped = False
         self._lock = config["concurrency"].RLock()
         self.dispose_func = dispose
-        self.scheduler = scheduler or current_thread_scheduler #immediate_scheduler
+        self.scheduler = scheduler or immediate_scheduler
         self.is_disposed = False
         self.update_source = update_source
 
         self.child_disposable = observer.subscribe_backpressure(self)
-
-        # print(observer.observer)
 
         assert self.child_disposable is not None
 
@@ -52,14 +50,13 @@ class BufferBackpressure():
 
             observer = self.observer
             if observer:
-                # print('on complete')
-                # print(observer)
                 observer.on_completed()
 
             future.on_next(number_of_items)
             future.on_completed()
+
         elif not self.is_stopped:
-            def action(a, s):
+            def action(_, __):
                 with self._lock:
                     self.requests.append((future, number_of_items, 0))
                 self.update()
@@ -73,7 +70,7 @@ class BufferBackpressure():
         return future
 
     def update(self) -> int:
-        """ Sends buffered items to the observer
+        """ Sends available items in buffer to the observer
 
         :return: current buffer index
         """
@@ -81,23 +78,15 @@ class BufferBackpressure():
         def take_requests_gen():
             """Updates the request list by checking new items in the buffer.
 
-            Returns:
-            A tuple3:
-            - updated request list
-            - items from buffer
-            - fullfilled (, deleted) requests
+            :return: A tuple3
 
-            :return:
+            - updated request or None
+            - items from buffer to be send to observer or None
+            - requests to be completed
             """
             # check_stop_request = False
 
             for future, number_of_items, counter in self.requests:
-
-                # if check_stop_request:
-                #     if isinstance(number_of_items, StopRequest):
-                #         yield None, None, (future, number_of_items)
-                #         break
-                #     check_stop_request = False
 
                 if self.current_idx < self.buffer.last_idx:
                     # there are still new items in buffer
@@ -123,9 +112,6 @@ class BufferBackpressure():
                         d_number_of_items = self.buffer.last_idx - self.current_idx
                         values = list(get_value_from_buffer(d_number_of_items))
                         yield (future, number_of_items, counter + d_number_of_items), values, None
-
-                    # if self.current_idx == self.buffer.last_idx:
-                    #     check_stop_request = True
                 else:
                     # there are no new items in buffer
                     yield (future, number_of_items, counter), None, None

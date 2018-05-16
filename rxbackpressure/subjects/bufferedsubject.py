@@ -3,7 +3,7 @@ import math
 from rx import config, Observer
 from rx.concurrency import current_thread_scheduler, immediate_scheduler
 from rx.core import Disposable
-from rx.core.notification import OnNext, OnCompleted
+from rx.core.notification import OnNext, OnCompleted, Notification
 from rx.internal import DisposedException
 
 from rxbackpressure.backpressuretypes.bufferbackpressure import BufferBackpressure
@@ -17,7 +17,7 @@ class BufferedSubject(BackpressureObservable, Observer):
         super().__init__()
 
         self.name = name
-        self.scheduler = scheduler or immediate_scheduler
+        self.scheduler = scheduler
         self.is_disposed = False
         self.is_stopped = False
         self.proxies = {}
@@ -26,37 +26,54 @@ class BufferedSubject(BackpressureObservable, Observer):
         self.release_buffer = release_buffer
 
         if release_buffer:
-            release_buffer.subscribe(lambda v: self.request_source())
+            release_buffer.subscribe(lambda v: self.dequeue_buffer())
 
         self.lock = config["concurrency"].RLock()
 
-    def _add_to_buffer(self, v):
-        # print('add to buffer %s' % v)
-        if not self.is_disposed:
-            self.buffer.append(v)
-            if self.proxies:
-                self.request_source()
-        else:
-            print('disposed')
+    def _add_to_buffer(self, n: Notification) -> None:
+        """ Add a received item to the underlying buffer
 
-    def request_source(self):
-        def scheduled_action(a, s):
-            if self.proxies and len(self.proxies.items()):
-                with self.lock:
-                    for proxy in self.proxies.keys():
-                        self.proxies[proxy] = proxy.update()
-            self._dequeue_buffer()
+        :param n: notification
+        :return: None
+        """
 
-        self.scheduler.schedule(scheduled_action)
+        # if not self.is_disposed:
+        self.buffer.append(n)
 
-    def _dequeue_buffer(self):
-        try:
-            min_idx = min(self.proxies.values())
-        except ValueError:
-            min_idx = math.inf
+        if self.proxies and len(self.proxies.items()):
+            with self.lock:
+                for proxy in self.proxies.keys():
+                    self.proxies[proxy] = proxy.update()
+        self.dequeue_buffer()
 
-        # if (self.release_buffer is None or self.release_buffer.is_completed()) > 0:
+    # def request_source(self):
+    #     """ Update proxies
+    #
+    #     :return:
+    #     """
+    #
+    #     # def scheduled_action(a, s):
+    #     if self.proxies and len(self.proxies.items()):
+    #         with self.lock:
+    #             for proxy in self.proxies.keys():
+    #                 self.proxies[proxy] = proxy.update()
+    #     self.dequeue_buffer()
+    #
+    #     # scheduler = self.scheduler or immediate_scheduler
+    #     # scheduler.schedule(scheduled_action)
+
+    def dequeue_buffer(self) -> None:
+        """ Dequeue underlying buffer as much as possible
+
+        :return: None
+        """
+
         if (self.release_buffer is None or self.release_buffer.has_value) and len(self.proxies) > 0:
+            try:
+                min_idx = min(self.proxies.values())
+            except ValueError:
+                min_idx = math.inf
+
             self.buffer.dequeue(min_idx - 1)
 
     def check_disposed(self):
@@ -64,7 +81,8 @@ class BufferedSubject(BackpressureObservable, Observer):
             raise DisposedException()
 
     def _subscribe_core(self, observer, scheduler=None):
-        # print('subscribe')
+        self.scheduler = self.scheduler or scheduler
+
         class InnerSubscription:
             def __init__(self, subject, proxy):
                 self.subject = subject
@@ -73,25 +91,24 @@ class BufferedSubject(BackpressureObservable, Observer):
                 self.lock = config["concurrency"].RLock()
 
             def dispose(self):
-                # print('dispose')
                 with self.lock:
                     if not self.subject.is_disposed and self.proxy:
                         if self.proxy in self.subject.proxies:
                             # self.subject.proxies.pop(self.proxy, None)
-                            # print('dipose proxy')
                             self.proxy.dispose()
-                            self.subject.request_source()
+                            # # why?
+                            # self.subject.request_source()
+                            self.subject.dequeue_buffer()
                         self.proxy = None
 
         def add_proxy(observer):
             with self.lock:
-                # print('add proxy')
                 first_idx = self.buffer.first_idx
 
                 def update_source(proxy, idx):
                     with self.lock:
                         self.proxies[proxy] = idx
-                    self._dequeue_buffer()
+                    self.dequeue_buffer()
 
                 def remove_proxy(proxy):
                     with self.lock:
@@ -99,15 +116,14 @@ class BufferedSubject(BackpressureObservable, Observer):
                         if proxy in self.proxies:
                             self.proxies.pop(proxy)
 
-                # self.scheduler = self.scheduler or scheduler or current_thread_scheduler
-
                 proxy = BufferBackpressure(buffer=self.buffer,
                                            last_idx=first_idx,
                                            observer=observer,
                                            update_source=update_source,
-                                           dispose=remove_proxy)
-                self.proxies[proxy] = first_idx
-            self.request_source()
+                                           dispose=remove_proxy,
+                                           scheduler=scheduler)
+                self.proxies[proxy] = proxy.update()
+            # self.request_source()
             return proxy
 
         with self.lock:
@@ -160,6 +176,5 @@ class BufferedSubject(BackpressureObservable, Observer):
         """Unsubscribe all observers and release resources."""
 
         with self.lock:
-            # print('diposed')
             self.is_disposed = True
             self.proxies = None

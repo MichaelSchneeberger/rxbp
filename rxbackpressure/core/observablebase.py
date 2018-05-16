@@ -47,3 +47,4 @@ class ObservableBase:
     @abstractmethod
     def _subscribe_core(self, observer, scheduler):
         return NotImplemented
+
