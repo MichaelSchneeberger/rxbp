@@ -16,12 +16,12 @@ class SyncedBackpressureProxy(BackpressureBase):
 
     def request(self, number_of_items):
         # print('request synced backpressure {}'.format(number_of_items))
-        future = self.backpressure.request(number_of_items, self)
+        response = self.backpressure.request(number_of_items, self)
 
         if isinstance(number_of_items, StopRequest):
             self.stop_observer()
 
-        return future
+        return response
 
 
 class SyncedBackpressure:
@@ -69,23 +69,23 @@ class SyncedBackpressure:
 
     def request(self, number_of_items, proxy):
         # print('1 request received, num = %s' %number_of_items)
+        response = AsyncSubject()
 
 
         if isinstance(number_of_items, StopRequest):
-            future = AsyncSubject()
+
 
             del self.requests[proxy]
             if len(self.requests) == 0:
                 self.backpressure.request(number_of_items)
-            future.on_next(number_of_items)
-            future.on_completed()
+            response.on_next(number_of_items)
+            response.on_completed()
         else:
-            future = Subject()
-            self.requests[proxy].append((future, number_of_items, 0))
+            self.requests[proxy].append((response, number_of_items, 0))
 
         self._request_source()
 
-        return future
+        return response
 
     def _request_source(self):
         def action(_, __):

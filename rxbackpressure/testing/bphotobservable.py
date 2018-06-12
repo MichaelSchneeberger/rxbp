@@ -1,5 +1,5 @@
 from rx.core import Observer, AnonymousObserver, ObservableBase, Disposable, ObserverBase
-from rx.core.notification import OnNext
+from rx.core.notification import OnNext, OnCompleted
 from rx.subjects import Subject, AsyncSubject
 from rx.testing.reactive_assert import AssertList
 from rx.testing.subscription import Subscription
@@ -41,12 +41,12 @@ class BPHotObservable(BackpressureObservable):
 
         def update_requests():
             if backpressure.requests and not self.is_stopped:
-                first_request = backpressure.requests[0]
+                response, current_nr, requested_nr = backpressure.requests[0]
 
-                if isinstance(first_request[2], StopRequest):
+                if isinstance(requested_nr, StopRequest):
                     self.is_stopped = True
-                    first_request[0].on_next(first_request[2])
-                    first_request[0].on_completed()
+                    response.on_next(requested_nr)
+                    response.on_completed()
                     backpressure.requests = []
 
                 elif self.buffer:
@@ -54,19 +54,18 @@ class BPHotObservable(BackpressureObservable):
                     first_notification.accept(self.observer)
 
 
-                    if not isinstance(first_notification, OnNext):
+                    if isinstance(first_notification, OnCompleted):
                         self.is_stopped = True
-                        future = first_request[0]
-                        future.on_next(first_request[2] - first_request[1])
-                        future.on_completed()
-                    elif first_request[1] <= 1:
-                        future = first_request[0]
-                        future.on_next(first_request[2])
-                        future.on_completed()
+                        response.on_next(requested_nr - current_nr)
+                        response.on_completed()
+                    elif current_nr <= 1:
+                        # finish current request
+                        response.on_next(requested_nr)
+                        response.on_completed()
                         backpressure.requests.pop(0)
                         update_requests()
                     else:
-                        backpressure.requests[0] = (first_request[0], first_request[1] - 1, first_request[2])
+                        backpressure.requests[0] = (response, current_nr - 1, requested_nr)
 
         def get_action(notification):
             def action(scheduler, state):

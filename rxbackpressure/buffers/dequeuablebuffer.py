@@ -2,10 +2,9 @@ from rx.concurrency import immediate_scheduler
 
 
 class DequeuableBuffer:
-    def __init__(self, scheduler=None):
+    def __init__(self):
         self.first_idx = 0
         self.queue = []
-        self._scheduler = scheduler or immediate_scheduler
 
     @property
     def last_idx(self):
@@ -30,11 +29,6 @@ class DequeuableBuffer:
 
     def dequeue(self, idx):
         if self.first_idx <= idx and len(self.queue) > 0:
-            # print('dequeue %s' % self.queue[0])
-            self.first_idx += 1
-            self.queue.pop(0)
-
-            def dequeue_next(scheduler, state):
-                self.dequeue(idx)
-
-            self._scheduler.schedule(dequeue_next)
+            while self.first_idx <= idx and len(self.queue) > 0:
+                self.first_idx += 1
+                self.queue.pop(0)
