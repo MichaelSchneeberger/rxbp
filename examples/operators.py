@@ -19,9 +19,9 @@ s3 = BufferedSubject()
 s1.zip(s3, lambda v1, v2: (v1, v2)) \
     .to_observable() \
     .filter(lambda v: 90 < v[0]) \
-    .subscribe(print, on_completed=lambda: print('completed'))
+    .unsafe_subscribe(print, on_completed=lambda: print('completed'))
 
 # trigger hot observables
-Observable.range(0, 100).subscribe(s1)
+Observable.range(0, 100).unsafe_subscribe(s1)
 # Observable.range(0, 10).subscribe(s2)
-Observable.range(0, 100).subscribe(s3)
+Observable.range(0, 100).unsafe_subscribe(s3)

@@ -22,13 +22,13 @@ time_sync2_bp = time.to_backpressure().zip(sync2.repeat_first(), lambda t, sync_
 time_sync1_bp = time.to_backpressure().zip(sync1.repeat_first(), lambda t, sync_time: t + sync_time)
 
 # pairing time value observables
-time_sync1_bp.to_observable().zip(signal, lambda t, v: (t, v)).subscribe()
-time_sync2_bp.to_observable().zip(signal, lambda t, v: (t, v)).subscribe(print, on_completed=lambda: print('completed'))
+time_sync1_bp.to_observable().zip(signal, lambda t, v: (t, v)).unsafe_subscribe()
+time_sync2_bp.to_observable().zip(signal, lambda t, v: (t, v)).unsafe_subscribe(print, on_completed=lambda: print('completed'))
 
 # emulating hot observable
 Observable.range(0,100) \
     .map(lambda v: (float(v)+3.2)/1000) \
     .map(lambda t: (t, math.sin(t/0.05*2*math.pi))) \
-    .subscribe(time_value_record)
-Observable.just(-3.2/1000).subscribe(sync1)
-Observable.just(2/1000).subscribe(sync2)
+    .unsafe_subscribe(time_value_record)
+Observable.just(-3.2/1000).unsafe_subscribe(sync1)
+Observable.just(2/1000).unsafe_subscribe(sync2)
