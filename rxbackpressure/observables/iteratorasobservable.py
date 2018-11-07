@@ -1,3 +1,5 @@
+from typing import Iterator
+
 from rx import config
 from rx.concurrency.schedulerbase import SchedulerBase
 from rx.core import Disposable
@@ -10,8 +12,8 @@ from rxbackpressure.scheduler import SchedulerBase, ExecutionModel
 
 
 class IteratorAsObservable(Observable):
-    def __init__(self, iterator, on_finish: Disposable = Disposable.empty()):
-        self.iterator = iter(iterator)
+    def __init__(self, iterator: Iterator, on_finish: Disposable = Disposable.empty()):
+        self.iterator = iterator
         self.on_finish = on_finish
 
         self.lock = config['concurrency'].RLock()

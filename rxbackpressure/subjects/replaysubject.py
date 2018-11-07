@@ -84,7 +84,7 @@ class ReplaySubject(Observable, Observer):
                         observer.on_completed()
 
 
-            return IteratorAsObservable(buffer) \
+            return IteratorAsObservable(iter(buffer)) \
                 .subscribe(TObserver(), scheduler, CurrentThreadScheduler())
 
         state = self.state

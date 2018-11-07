@@ -1,27 +1,49 @@
 # Performing operations on hot observables with back-pressure results in better memory handling.
+import datetime
+import time
 
-from rx import Observable
+import rx
 
-from rxbackpressure.subjects.bufferedsubject import BufferedSubject
+from rxbackpressure.observableop import ObservableOp
+from rxbackpressure.schedulers.eventloopscheduler import EventLoopScheduler
 
-# create some buffered subjects
-s1 = BufferedSubject()
-s2 = BufferedSubject()
-s3 = BufferedSubject()
+scheduler1 = EventLoopScheduler()
+scheduler2 = EventLoopScheduler()
 
-# # flat map operation
-# s2.flat_map(lambda v1: s1.map(lambda v2: v2*v1)) \
-#     .to_observable() \
-#     .filter(lambda v: 800 < v) \
-#     .subscribe(print, on_completed=lambda: print('completed'))
+n_samples = 10000
+
+def on_completed():
+    done[0] = True
+
+s1 = ObservableOp.from_(range(n_samples)).execute_on(scheduler1)
+s2 = ObservableOp.from_(range(n_samples)).execute_on(scheduler2)
+
+done = [False]
+
+start_time = datetime.datetime.now()
 
 # zip operation
-s1.zip(s3, lambda v1, v2: (v1, v2)) \
-    .to_observable() \
-    .filter(lambda v: 90 < v[0]) \
-    .unsafe_subscribe(print, on_completed=lambda: print('completed'))
+s1.zip2(s2).subscribe_with(on_completed=on_completed)
 
-# trigger hot observables
-Observable.range(0, 100).unsafe_subscribe(s1)
-# Observable.range(0, 10).subscribe(s2)
-Observable.range(0, 100).unsafe_subscribe(s3)
+while True:
+    if done[0] is True:
+        break
+    time.sleep(0.5)
+
+print((datetime.datetime.now() - start_time).total_seconds())
+
+# s1 = rx.Observable.from_(range(n_samples), scheduler=scheduler1)
+# s2 = rx.Observable.from_(range(n_samples), scheduler=scheduler1)
+#
+# done = [False]
+#
+# start_time = datetime.datetime.now()
+#
+# s1.zip(s2, lambda *v: v).subscribe(on_completed=on_completed)
+#
+# while True:
+#     if done[0] is True:
+#         break
+#     time.sleep(0.5)
+#
+# print((datetime.datetime.now() - start_time).total_seconds())

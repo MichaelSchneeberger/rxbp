@@ -65,6 +65,8 @@ class Continue(Ack):
         ack2.subscribe(out_ack)
 
 
+continue_ack = Continue()
+
 class Stop(Ack):
     def __init__(self):
         super().__init__()
@@ -78,3 +80,5 @@ class Stop(Ack):
 
     def connect_ack_2(self, ack2: 'Ack', out_ack: 'Ack'):
         self.subscribe(out_ack)
+
+stop_ack = Continue()

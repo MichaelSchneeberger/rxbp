@@ -4,7 +4,7 @@ from rx import config
 from rx.concurrency.schedulerbase import SchedulerBase
 from rx.disposables import CompositeDisposable
 
-from rxbackpressure.ack import Stop, Continue, Ack
+from rxbackpressure.ack import Stop, Continue, Ack, continue_ack
 from rxbackpressure.observable import Observable
 from rxbackpressure.observer import Observer
 from rxbackpressure.subjects.publishsubject import PublishSubject
@@ -180,7 +180,7 @@ def window(left: Observable, right: Observable,
                     # complete inner observable
                     publish_subject[0].on_completed()
 
-                    left_ack[0].on_next(Continue())
+                    left_ack[0].on_next(continue_ack)
                     left_ack[0].on_completed()
 
                     return right_ack[0]

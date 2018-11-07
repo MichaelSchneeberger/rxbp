@@ -127,7 +127,7 @@ class ConcatMapObservable(Observable):
                             state[0] = WaitOnActiveChild()
 
                         child_observer = ChildObserver(observer, scheduler, async_upstream_ack, self)
-                        disposable = child.subscribe(child_observer, scheduler, CurrentThreadScheduler())
+                        disposable = child.subscribe(child_observer, scheduler, subscribe_scheduler)
 
                         with source.lock:
                             current_state = state[0]

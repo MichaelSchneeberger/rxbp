@@ -3,7 +3,7 @@ from typing import Callable, Any
 from rx import config
 from rx.disposables import CompositeDisposable
 
-from rxbackpressure.ack import Continue, Stop, Ack
+from rxbackpressure.ack import Continue, Stop, Ack, stop_ack, continue_ack
 from rxbackpressure.observers.anonymousobserver import AnonymousObserver
 from rxbackpressure.observable import Observable
 
@@ -18,7 +18,7 @@ class Zip2Observable(Observable):
 
     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
         is_done = [None]
-        last_ack = [Continue()]
+        last_ack = [continue_ack]
         elem_a1 = [None]
         has_elem_a1 = [None]
         elem_a2 = [None]
@@ -109,7 +109,7 @@ class Zip2Observable(Observable):
                         last_ack[0].observe_on(scheduler).subscribe(on_next=_)
 
 
-                    continue_p[0].on_next(Stop())
+                    continue_p[0].on_next(stop_ack)
                     last_ack[0] = Stop()
                 else:
                     complete_with_next[0] = True

@@ -34,7 +34,7 @@ class SchedulerBase(Scheduler):
     def __init__(self, r: UncaughtExceptionReport = None, execution_model: ExecutionModel = None):
         super().__init__()
         self.r = r or UncaughtExceptionReport()
-        self.execution_model = execution_model or BatchedExecution(16)
+        self.execution_model = execution_model or BatchedExecution(256)
 
     def report_failure(self, exc: Exception):
         return self.r.report_failure(exc)

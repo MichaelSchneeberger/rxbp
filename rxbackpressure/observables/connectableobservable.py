@@ -7,7 +7,7 @@ from rxbackpressure.subjects.publishsubject import PublishSubject
 
 class ConnectableObservable:
 
-    def __init__(self, source, subject = None):
+    def __init__(self, source, subject=None):
         super().__init__()
         self.source = source
         self.subject = subject or PublishSubject()

@@ -1,3 +1,5 @@
+from typing import Callable, Any
+
 from rx.concurrency.schedulerbase import SchedulerBase
 
 from rxbackpressure.observable import Observable
@@ -5,7 +7,7 @@ from rxbackpressure.observer import Observer
 
 
 class MapObservable(Observable):
-    def __init__(self, source, selector):
+    def __init__(self, source, selector: Callable[[Any], Any]):
         self.source = source
         self.func = selector
 

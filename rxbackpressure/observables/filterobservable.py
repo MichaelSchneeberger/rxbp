@@ -1,3 +1,5 @@
+from typing import Callable, Any
+
 from rx.concurrency.schedulerbase import SchedulerBase
 
 from rxbackpressure.ack import Continue
@@ -6,7 +8,7 @@ from rxbackpressure.observer import Observer
 
 
 class FilterObservable(Observable):
-    def __init__(self, source, predicate):
+    def __init__(self, source: Observable, predicate: Callable[[Any], bool]):
         self.source = source
         self.predicate = predicate
 
