@@ -7,7 +7,8 @@ from rxbackpressure.observer import Observer
 
 
 class DebugObservable(Observable):
-    def __init__(self, source, name, on_next=None, on_completed=None, on_ack=None, on_subscribe=None, print_ack=False):
+    def __init__(self, source, name, on_next=None, on_completed=None, on_ack=None, on_subscribe=None, print_ack=False,
+                 on_ack_msg=None):
         self.source = source
         self.print_ack = print_ack
         self.name = name
@@ -16,6 +17,7 @@ class DebugObservable(Observable):
         self.on_completed_func = on_completed or (lambda: print('{}.on_completed'.format(name)))
         self.on_subscribe_func = on_subscribe or (lambda v: print('{}.on_subscribe {}'.format(name, v)))
         self.on_ack_func = on_ack or (lambda v: print('{}.on_ack {}'.format(name, v)))
+        self.on_ack_msg = on_ack_msg or self.on_ack_func
 
     def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
                          subscribe_scheduler: SchedulerBase):
@@ -30,7 +32,7 @@ class DebugObservable(Observable):
             else:
                 if self.print_ack:
                     print('{}.on_raw_ack {}'.format(self.name, ack))
-                ack.subscribe(self.on_ack_func)
+                ack.subscribe(self.on_ack_msg)
             return ack
 
         def on_completed():

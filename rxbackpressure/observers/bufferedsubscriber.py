@@ -3,7 +3,7 @@ from queue import Queue
 
 from rx import config
 
-from rxbackpressure.ack import Stop, Continue, Ack
+from rxbackpressure.ack import Stop, Continue, Ack, continue_ack
 from rxbackpressure.observer import Observer
 from rxbackpressure.scheduler import SchedulerBase
 
@@ -43,7 +43,7 @@ class BufferedSubscriber(Observer):
                 if to_push < self.buffer_size:
                     self.queue.put(item=elem)
                     self.push_to_consumer(to_push)
-                    return Continue()
+                    return continue_ack
                 else:
                     ack = Ack()
                     with self.lock:
@@ -122,7 +122,7 @@ class BufferedSubscriber(Observer):
                 self.downstream_is_complete = True
                 pass
 
-            ack = Continue() if prev_ack is None else prev_ack
+            ack = continue_ack if prev_ack is None else prev_ack
             is_first_iteration = isinstance(ack, Continue)
             processed = last_processed
             next_index = start_index
@@ -181,7 +181,7 @@ class BufferedSubscriber(Observer):
                             bp = self.back_pressured
                             self.back_pressured = None
                         if bp is not None:
-                            bp.on_next(Continue())
+                            bp.on_next(continue_ack)
                             bp.on_completed()
                         return
 

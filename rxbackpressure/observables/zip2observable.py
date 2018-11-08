@@ -28,7 +28,7 @@ class Zip2Observable(Observable):
 
         def raw_on_next(a1, a2):
             if is_done[0]:
-                return Stop()
+                return stop_ack
             else:
                 stream_error = True
 
@@ -52,9 +52,11 @@ class Zip2Observable(Observable):
                 return ack
 
         def signal_on_next(a1, a2):
-            if isinstance(last_ack[0], Continue):
-                last_ack[0] = raw_on_next(a1, a2)
-            elif isinstance(last_ack[0], Stop):
+            prev_last_ack = last_ack[0]
+
+            if isinstance(prev_last_ack, Continue):
+                new_last_ack = raw_on_next(a1, a2)
+            elif isinstance(prev_last_ack, Stop):
                 raise NotImplementedError
             else:
                 def _(v, _):
@@ -66,25 +68,30 @@ class Zip2Observable(Observable):
                         raise NotImplementedError
 
                 ack = Ack()
-                last_ack[0].flat_map(_).subscribe(ack)
-                last_ack[0] = ack
+                prev_last_ack.flat_map(_).subscribe(ack)
+                new_last_ack = ack
 
-            if isinstance(last_ack[0], Continue):
-                continue_p[0].on_next(last_ack[0])
+            last_ack[0] = new_last_ack
+
+            if isinstance(new_last_ack, Continue):
+                continue_p[0].on_next(new_last_ack)
                 continue_p[0].on_completed()
-            elif isinstance(last_ack[0], Stop):
+            elif isinstance(new_last_ack, Stop):
                 raise NotImplementedError
             else:
-                last_ack[0].subscribe(continue_p[0])
+                new_last_ack.subscribe(continue_p[0])
+
+            # acknowledgment used by input that receives first
             continue_p[0] = Ack()
-            return last_ack[0]
+
+            return new_last_ack
 
         def signal_on_error(ex):
             with self.lock:
                 if not is_done[0]:
                     is_done[0] = True
                     observer.on_error(ex)
-                    last_ack[0] = Stop()
+                    last_ack[0] = stop_ack
 
         def signal_on_complete(has_elem):
             def raw_on_completed():
@@ -110,36 +117,39 @@ class Zip2Observable(Observable):
 
 
                     continue_p[0].on_next(stop_ack)
-                    last_ack[0] = Stop()
+                    last_ack[0] = stop_ack
                 else:
                     complete_with_next[0] = True
 
         def on_next_left(elem):
-            if is_done[0]:
-                return Stop()
-            else:
-                elem_a1[0] = elem
-                if not has_elem_a1[0]:
-                    has_elem_a1[0] = True
-
-                if has_elem_a2[0]:
-                    return signal_on_next(elem_a1[0], elem_a2[0])
+            with self.lock:
+                if is_done[0]:
+                    return_ack = stop_ack
                 else:
-                    return continue_p[0]
+                    elem_a1[0] = elem
+                    if not has_elem_a1[0]:
+                        has_elem_a1[0] = True
+
+                    if has_elem_a2[0]:
+                        return_ack = signal_on_next(elem_a1[0], elem_a2[0])
+                    else:
+                        return_ack = continue_p[0]
+                return return_ack
 
         def on_next_right(elem):
-            if is_done[0]:
-                return_ack = Stop()
-            else:
-                elem_a2[0] = elem
-                if not has_elem_a2[0]:
-                    has_elem_a2[0] = True
-
-                if has_elem_a1[0]:
-                    return_ack = signal_on_next(elem_a1[0], elem_a2[0])
+            with self.lock:
+                if is_done[0]:
+                    return_ack = stop_ack
                 else:
-                    return_ack = continue_p[0]
-            return return_ack
+                    elem_a2[0] = elem
+                    if not has_elem_a2[0]:
+                        has_elem_a2[0] = True
+
+                    if has_elem_a1[0]:
+                        return_ack = signal_on_next(elem_a1[0], elem_a2[0])
+                    else:
+                        return_ack = continue_p[0]
+                return return_ack
 
         def on_error(ex):
             signal_on_error(ex)

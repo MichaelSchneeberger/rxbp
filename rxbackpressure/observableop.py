@@ -5,6 +5,7 @@ from rx.concurrency.schedulerbase import SchedulerBase
 from rx.disposables import CompositeDisposable
 
 from rxbackpressure.ack import Continue
+from rxbackpressure.observables.RepeatFirstobservable import RepeatFirstObservable
 from rxbackpressure.observers.bufferedsubscriber import BufferedSubscriber
 from rxbackpressure.schedulers.currentthreadscheduler import current_thread_scheduler
 from rxbackpressure.subjects.cachedservefirstsubject import CachedServeFirstSubject
@@ -71,9 +72,9 @@ class ObservableOp(Observable):
                                          selector=selector)
         return ObservableOp(observable)
 
-    def debug(self, name, on_next=None, on_subscribe=None, on_ack=None, print_ack=None):
+    def debug(self, name, on_next=None, on_subscribe=None, on_ack=None, print_ack=None, on_ack_msg=None):
         observable = DebugObservable(self, name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack,
-                                     print_ack=print_ack)
+                                     print_ack=print_ack, on_ack_msg=on_ack_msg)
         return ObservableOp(observable)
 
     def execute_on(self, scheduler: Scheduler):
@@ -168,6 +169,10 @@ class ObservableOp(Observable):
         :return: single item observable
         """
         observable = NowObservable(source=self, elem=elem)
+        return ObservableOp(observable)
+
+    def repeat_first(self):
+        observable = RepeatFirstObservable(source=self)
         return ObservableOp(observable)
 
     def replay(self):

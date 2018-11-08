@@ -31,8 +31,8 @@ class CachedServeFirstSubject(Observable, Observer):
         self.inactive_subsriptions: List[CachedServeFirstSubject.InnerSubscription] = []
 
         self.buffer = self.DequeuableBuffer()
-        self.exception = None
 
+        self.exception = None
         self.current_ack = None
 
         self.lock = config["concurrency"].RLock()
@@ -42,7 +42,7 @@ class CachedServeFirstSubject(Observable, Observer):
             self.first_idx = 0
             self.queue = []
 
-            self.lock = config["concurrency"].RLock()
+            # self.lock = config["concurrency"].RLock()
 
         @property
         def last_idx(self):
@@ -52,7 +52,7 @@ class CachedServeFirstSubject(Observable, Observer):
             return len(self.queue)
 
         def has_element_at(self, idx):
-            return idx <= self.last_idx
+            return idx < self.last_idx
 
         def append(self, value):
             self.queue.append(value)
@@ -67,10 +67,10 @@ class CachedServeFirstSubject(Observable, Observer):
 
         def dequeue(self, idx):
             # empty buffer up until some index
-            with self.lock:
-                while self.first_idx <= idx and len(self.queue) > 0:
-                    self.first_idx += 1
-                    self.queue.pop(0)
+            # with self.lock:
+            while self.first_idx <= idx and len(self.queue) > 0:
+                self.first_idx += 1
+                self.queue.pop(0)
 
     class InnerSubscription:
         def __init__(self, source: 'CachedServeFirstSubject', observer: Observer,
@@ -86,7 +86,8 @@ class CachedServeFirstSubject(Observable, Observer):
             with self.source.lock:
                 # increase current index
                 self.source.current_index[self] += 1
-                current_index = self.source.current_index[self]
+
+            current_index = self.source.current_index[self]
 
             ack = self.observer.on_next(value)
 
@@ -97,26 +98,28 @@ class CachedServeFirstSubject(Observable, Observer):
                 del self.source.current_index[self]
                 return ack
             else:
+                inner_ack = Ack()
+
                 def _(v):
                     if isinstance(v, Continue):
                         with self.source.lock:
-                            if current_index < self.source.buffer.last_idx:
+                            if current_index + 1 < self.source.buffer.last_idx:
                                 has_elem = True
                             else:
+                                # no new item has been added since call to 'notify_on_next'
                                 has_elem = False
+                                self.source.inactive_subsriptions.append(self)
 
                         if has_elem:
                             disposable = BooleanDisposable()
                             self.fast_loop(current_index, 0, disposable)
-                        else:
-                            self.source.inactive_subsriptions.append(self)
                     else:
                         raise NotImplementedError
 
-                inner_ack = Ack()
-                async_ack = ack.observe_on(scheduler=self.scheduler).share()
-                async_ack.subscribe(_)
-                async_ack.subscribe(inner_ack)
+                    inner_ack.on_next(v)
+                    inner_ack.on_completed()
+
+                ack.observe_on(scheduler=self.scheduler).subscribe(_)
                 return inner_ack
 
         def notify_on_completed(self):
@@ -124,9 +127,10 @@ class CachedServeFirstSubject(Observable, Observer):
 
         def fast_loop(self, current_idx: int, sync_index: int, disposable: BooleanDisposable):
             while True:
+                current_idx += 1
+
                 # buffer has an element at current_idx
                 notification = self.source.buffer.get(current_idx)
-                current_idx += 1
 
                 is_last = False
                 with self.source.lock:
@@ -152,7 +156,7 @@ class CachedServeFirstSubject(Observable, Observer):
                     has_next = False
                     with self.source.lock:
                         # does it has element in the buffer?
-                        if current_idx < self.source.buffer.last_idx:
+                        if current_idx + 1 < self.source.buffer.last_idx:
                             has_next = True
                         else:
                             if isinstance(ack, Continue):
@@ -164,20 +168,24 @@ class CachedServeFirstSubject(Observable, Observer):
                                 break
                             else:
                                 def _(v):
-                                    with self.source.lock:
-                                        if current_idx < self.source.buffer.last_idx:
-                                            has_elem = True
-                                        else:
-                                            has_elem = False
-                                            self.source.inactive_subsriptions.append(self)
-                                            self.source.current_ack.on_next(v)
-                                            self.source.current_ack.on_completed()
+                                    if isinstance(v, Continue):
+                                        with self.source.lock:
+                                            if current_idx + 1 < self.source.buffer.last_idx:
+                                                has_elem = True
+                                            else:
+                                                has_elem = False
+                                                self.source.inactive_subsriptions.append(self)
+                                                self.source.current_ack.on_next(v)
+                                                self.source.current_ack.on_completed()
 
-                                    if has_elem:
-                                        disposable = BooleanDisposable()
-                                        self.fast_loop(current_idx, 0, disposable)
+                                        if has_elem:
+                                            disposable = BooleanDisposable()
+                                            self.fast_loop(current_idx, 0, disposable)
+                                    elif isinstance(v, Stop):
+                                        del self.source.current_index[self]
                                     else:
-                                        pass
+                                        raise NotImplementedError
+
 
                                 ack.observe_on(self.scheduler).subscribe(_)
 
@@ -194,8 +202,8 @@ class CachedServeFirstSubject(Observable, Observer):
                         if next_index > 0:
                             sync_index = next_index
                         elif next_index == 0 and not disposable.is_disposed:
-                            def on_next(next):
-                                if isinstance(next, Continue):
+                            def on_next(v):
+                                if isinstance(v, Continue):
                                     try:
                                         self.fast_loop(current_idx, sync_index=0, disposable=disposable)
                                     except Exception as e:
@@ -223,9 +231,8 @@ class CachedServeFirstSubject(Observable, Observer):
         with self.lock:
             if not self.is_stopped:
                 # get current buffer index
-                current_idx = self.buffer.first_idx
+                current_idx = self.buffer.last_idx - 1
                 self.current_index[inner_subscription] = current_idx
-                # todo: is that ok?
                 self.inactive_subsriptions.append(inner_subscription)
                 return Disposable.empty()
 
@@ -252,7 +259,7 @@ class CachedServeFirstSubject(Observable, Observer):
             current_ack = Ack()
             self.current_ack = current_ack
 
-            last_index = self.buffer.last_idx
+            # last_index = self.buffer.last_idx
 
         def gen_inner_ack():
             # send notification to inactive subscriptions

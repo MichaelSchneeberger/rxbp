@@ -81,4 +81,4 @@ class Stop(Ack):
     def connect_ack_2(self, ack2: 'Ack', out_ack: 'Ack'):
         self.subscribe(out_ack)
 
-stop_ack = Continue()
+stop_ack = Stop()
