@@ -112,7 +112,7 @@ class ReplaySubject(Observable, Observer):
                 try:
                     self.remove_subscriber(c)
                 finally:
-                    disposable.dispose()
+                    disposable.signal_stop()
             return Disposable.create(_)
 
     def on_complete_or_error(self, ex: Exception = None):

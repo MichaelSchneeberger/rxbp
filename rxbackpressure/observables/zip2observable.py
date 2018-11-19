@@ -37,14 +37,17 @@ class Zip2Observable(Observable):
                     stream_error = False
                     ack = observer.on_next(c)
                     if complete_with_next[0]:
-                        if isinstance(ack, Continue):
+                        if isinstance(ack, Continue) or isinstance(ack, Stop):
                             signal_on_complete(False)
-                        elif isinstance(ack, Stop):
-                            raise NotImplementedError
                         else:
                             ack.observe_on(scheduler).subscribe(on_completed=lambda: signal_on_complete(False))
-                except:
-                    raise NotImplementedError
+                except Exception as ex:
+                    if stream_error:
+                        is_done[0] = True
+                        observer.on_error(ex)
+                        return stop_ack
+                    else:
+                        raise
                 finally:
                     has_elem_a1[0] = False
                     has_elem_a2[0] = False
@@ -57,7 +60,7 @@ class Zip2Observable(Observable):
             if isinstance(prev_last_ack, Continue):
                 new_last_ack = raw_on_next(a1, a2)
             elif isinstance(prev_last_ack, Stop):
-                raise NotImplementedError
+                return stop_ack
             else:
                 def _(v, _):
                     if isinstance(v, Continue):
@@ -65,7 +68,7 @@ class Zip2Observable(Observable):
                             ack = raw_on_next(a1, a2)
                         return ack
                     else:
-                        raise NotImplementedError
+                        return stop_ack
 
                 ack = Ack()
                 prev_last_ack.flat_map(_).subscribe(ack)
@@ -73,11 +76,9 @@ class Zip2Observable(Observable):
 
             last_ack[0] = new_last_ack
 
-            if isinstance(new_last_ack, Continue):
+            if isinstance(new_last_ack, Continue) or isinstance(new_last_ack, Stop):
                 continue_p[0].on_next(new_last_ack)
                 continue_p[0].on_completed()
-            elif isinstance(new_last_ack, Stop):
-                raise NotImplementedError
             else:
                 new_last_ack.subscribe(continue_p[0])
 

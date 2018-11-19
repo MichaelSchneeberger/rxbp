@@ -8,7 +8,7 @@ from rx.core.notification import OnNext, OnCompleted, OnError, Notification
 from rx.disposables import BooleanDisposable
 from rx.internal.concurrency import RLock
 
-from rxbackpressure.ack import Continue, Stop, Ack
+from rxbackpressure.ack import Continue, Stop, Ack, stop_ack
 from rxbackpressure.observable import Observable
 from rxbackpressure.observer import Observer
 from rxbackpressure.scheduler import SchedulerBase, ExecutionModel, Scheduler
@@ -34,6 +34,8 @@ class CachedServeFirstSubject(Observable, Observer):
 
         self.exception = None
         self.current_ack = None
+
+        self.is_done = False
 
         self.lock = config["concurrency"].RLock()
 
@@ -95,7 +97,11 @@ class CachedServeFirstSubject(Observable, Observer):
                 self.source.inactive_subsriptions.append(self)
                 return ack
             elif isinstance(ack, Stop):
-                del self.source.current_index[self]
+                # with self.source.lock:
+                #     del self.source.current_index[self]
+                #     if len(self.source.current_ack) == 0:
+                #         self.source.is_done = True
+                self.signal_stop()
                 return ack
             else:
                 inner_ack = Ack()
@@ -113,8 +119,10 @@ class CachedServeFirstSubject(Observable, Observer):
                         if has_elem:
                             disposable = BooleanDisposable()
                             self.fast_loop(current_index, 0, disposable)
+                    elif isinstance(v, Stop):
+                        self.signal_stop()
                     else:
-                        raise NotImplementedError
+                        raise Exception('no recognized acknowledgment {}'.format(v))
 
                     inner_ack.on_next(v)
                     inner_ack.on_completed()
@@ -124,6 +132,15 @@ class CachedServeFirstSubject(Observable, Observer):
 
         def notify_on_completed(self):
             self.observer.on_completed()
+
+        def notify_on_error(self, exc):
+            self.observer.on_error(exc)
+
+        def signal_stop(self):
+            with self.source.lock:
+                del self.source.current_index[self]
+                if len(self.source.current_ack) == 0:
+                    self.source.is_done = True
 
         def fast_loop(self, current_idx: int, sync_index: int, disposable: BooleanDisposable):
             while True:
@@ -164,7 +181,7 @@ class CachedServeFirstSubject(Observable, Observer):
                                 self.source.current_ack.on_next(ack)
                                 self.source.current_ack.on_completed()
                             elif isinstance(ack, Stop):
-                                del self.source.current_index[self]
+                                self.signal_stop()
                                 break
                             else:
                                 def _(v):
@@ -182,9 +199,9 @@ class CachedServeFirstSubject(Observable, Observer):
                                             disposable = BooleanDisposable()
                                             self.fast_loop(current_idx, 0, disposable)
                                     elif isinstance(v, Stop):
-                                        del self.source.current_index[self]
+                                        self.signal_stop()
                                     else:
-                                        raise NotImplementedError
+                                        raise Exception('no recognized acknowledgment {}'.format(v))
 
 
                                 ack.observe_on(self.scheduler).subscribe(_)
@@ -204,20 +221,24 @@ class CachedServeFirstSubject(Observable, Observer):
                         elif next_index == 0 and not disposable.is_disposed:
                             def on_next(v):
                                 if isinstance(v, Continue):
-                                    try:
-                                        self.fast_loop(current_idx, sync_index=0, disposable=disposable)
-                                    except Exception as e:
-                                        raise NotImplementedError
+                                    # try:
+                                    self.fast_loop(current_idx, sync_index=0, disposable=disposable)
+                                    # except Exception as e:
+                                    #     raise NotImplementedError
+                                elif isinstance(v, Stop):
+                                    self.signal_stop()
                                 else:
-                                    raise NotImplementedError
+                                    raise Exception('no recognized acknowledgment {}'.format(v))
 
                             def on_error(err):
-                                raise NotImplementedError
+                                self.signal_stop()
+                                self.observer.on_error(err)
 
                             ack.observe_on(self.scheduler).subscribe(on_next=on_next, on_error=on_error)
                             break
                         else:
-                            raise NotImplementedError
+                            self.signal_stop()
+                            break
                 except:
                     raise Exception('fatal error')
 
@@ -259,7 +280,10 @@ class CachedServeFirstSubject(Observable, Observer):
             current_ack = Ack()
             self.current_ack = current_ack
 
-            # last_index = self.buffer.last_idx
+            is_done = self.is_done
+
+        if is_done:
+            return stop_ack
 
         def gen_inner_ack():
             # send notification to inactive subscriptions
@@ -270,19 +294,7 @@ class CachedServeFirstSubject(Observable, Observer):
         inner_ack_list = list(gen_inner_ack())
 
         continue_ack = [ack for ack in inner_ack_list if isinstance(ack, Continue)]
-        # stop_ack = [ack for ack in inner_ack_list if isinstance(ack, Stop)]
 
-        # with self.lock:
-        #     # dequeue buffer if all inner subscriptions returned Continue
-        #     dequeue_buffer = len(continue_ack) == len(inactive_subsriptions)
-        #
-        #     if dequeue_buffer:
-        #         # dequeue single item
-        #         self.buffer.dequeue(last_index - 1)
-
-        # if 0 < len(stop_ack):
-        #     # return any Stop ack
-        #     return stop_ack[0]
         if 0 < len(continue_ack):
             # return any Continue ack
             return continue_ack[0]
@@ -311,7 +323,19 @@ class CachedServeFirstSubject(Observable, Observer):
             inner_subscription.notify_on_completed()
 
     def on_error(self, exception):
-        raise NotImplementedError
+        with self.lock:
+            # concurrent situation with acknowledgment in inner subscription or new subscriptions
+
+            # inner subscriptions that return Continue or Stop need to be added to inactive subscriptions again
+            inactive_subsriptions = self.inactive_subsriptions
+            self.inactive_subsriptions = []
+
+            # add item to buffer
+            self.buffer.append(OnError(exception))
+
+        # send notification to inactive subscriptions
+        for inner_subscription in inactive_subsriptions:
+            inner_subscription.notify_on_error(exception)
 
     def dispose(self):
         """Unsubscribe all observers and release resources."""

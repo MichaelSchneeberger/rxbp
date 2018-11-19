@@ -18,7 +18,7 @@ class BatchedExecution(ExecutionModel):
 
 
 class UncaughtExceptionReport:
-    def report_failure(self, exc):
+    def report_failure(self, exc: Exception):
         raise exc
 
 

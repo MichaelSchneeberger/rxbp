@@ -10,6 +10,7 @@ class TestObserver(Observer):
     def __init__(self):
         self.received = []
         self.is_completed = False
+        self.was_thrown = None
         self.immediate_continue = 0
         self.ack = None
 
@@ -23,7 +24,7 @@ class TestObserver(Observer):
             return self.ack
 
     def on_error(self, err):
-        pass
+        self.was_thrown = err
 
     def on_completed(self):
         self.is_completed = True

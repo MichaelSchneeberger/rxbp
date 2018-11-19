@@ -44,10 +44,10 @@ class ConnectableObservable:
                     self.connectable_subscription = self.source.connect(scheduler, subscribe_scheduler)
 
                 def dispose():
-                    subscription.dispose()
+                    subscription.signal_stop()
                     self.count -= 1
                     if not self.count:
-                        self.connectable_subscription.dispose()
+                        self.connectable_subscription.signal_stop()
 
                 return Disposable.create(dispose)
 

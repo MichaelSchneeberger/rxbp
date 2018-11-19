@@ -12,12 +12,15 @@ class Observable:
                          subscribe_scheduler: Scheduler):
         raise NotImplementedError
 
-    def subscribe(self, observer: Observer, scheduler: Scheduler,
-                  subscribe_scheduler: Scheduler):
-        def action(_, __):
-            self.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
+    def subscribe(self, observer: Observer, scheduler: Scheduler = None,
+                  subscribe_scheduler: Scheduler = None):
+        subscribe_scheduler_ = subscribe_scheduler or CurrentThreadScheduler()
+        scheduler_ = scheduler or subscribe_scheduler_
 
-        subscribe_scheduler.schedule(action)
+        def action(_, __):
+            self.unsafe_subscribe(observer, scheduler_, subscribe_scheduler_)
+
+        subscribe_scheduler_.schedule(action)
 
     def subscribe_with(self,
                        on_next: Callable[[Any], None] = None,
@@ -34,7 +37,5 @@ class Observable:
         on_completed_ = on_completed or (lambda: None)
 
         observer = AnonymousObserver(on_next=on_next_, on_error=on_error_, on_completed=on_completed_)
-        subscribe_scheduler_ = subscribe_scheduler or CurrentThreadScheduler()
-        scheduler_ = scheduler or subscribe_scheduler_
 
-        return self.subscribe(observer=observer, scheduler=scheduler_, subscribe_scheduler=subscribe_scheduler_)
+        return self.subscribe(observer=observer, scheduler=scheduler, subscribe_scheduler=subscribe_scheduler)
