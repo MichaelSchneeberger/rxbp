@@ -9,8 +9,7 @@ from rxbackpressure.scheduler import SchedulerBase
 
 
 class NowObservable(Observable):
-    def __init__(self, source: Observable, elem: Any):
-        self.child = source
+    def __init__(self, elem: Any):
         self.elem = elem
 
     def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):

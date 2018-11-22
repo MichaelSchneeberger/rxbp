@@ -9,7 +9,7 @@ from rxbackpressure.observables.RepeatFirstobservable import RepeatFirstObservab
 from rxbackpressure.observers.bufferedsubscriber import BufferedSubscriber
 from rxbackpressure.schedulers.currentthreadscheduler import current_thread_scheduler
 from rxbackpressure.subjects.cachedservefirstsubject import CachedServeFirstSubject
-from rxbackpressure.observables.concatmapobservable import ConcatMapObservable
+from rxbackpressure.observables.flatmapobservable import FlatMapObservable
 from rxbackpressure.observables.connectableobservable import ConnectableObservable
 from rxbackpressure.observables.flatzipobservable import FlatZipObservable
 from rxbackpressure.subjects.publishsubject import PublishSubject
@@ -68,8 +68,8 @@ class ObservableOp(Observable):
         :return: a flattened observable
         """
 
-        observable = ConcatMapObservable(source=self,
-                                         selector=selector)
+        observable = FlatMapObservable(source=self,
+                                       selector=selector)
         return ObservableOp(observable)
 
     def debug(self, name, on_next=None, on_subscribe=None, on_ack=None, print_ack=None, on_ack_msg=None):
@@ -122,7 +122,8 @@ class ObservableOp(Observable):
 
         return ObservableOp(ToIterableObservable())
 
-    def from_iterator(self, iterator: Iterator):
+    @classmethod
+    def from_iterator(cls, iterator: Iterator):
         """ Converts an iterator into an observable
 
         :param iterator:
@@ -140,6 +141,16 @@ class ObservableOp(Observable):
         """
 
         observable = MapObservable(source=self, selector=selector)
+        return ObservableOp(observable)
+
+    def map_count(self, selector: Callable[[Any, int], Any] = None):
+        """ Zips each item emmited by the source with their indices
+
+        :param selector: a mapping function applied over the generated pairs
+        :return: zipped with index observable
+        """
+
+        observable = ZipWithIndexObservable(source=self, selector=selector)
         return ObservableOp(observable)
 
     def observe_on(self, scheduler):
@@ -162,16 +173,21 @@ class ObservableOp(Observable):
         observable = PairwiseObservable(source=self, selector=selector)
         return ObservableOp(observable)
 
-    def now(self, elem):
+    @classmethod
+    def now(cls, elem):
         """ Converts an element into an observable
 
         :param elem: the single item sent by the observable
         :return: single item observable
         """
-        observable = NowObservable(source=self, elem=elem)
+        observable = NowObservable(elem=elem)
         return ObservableOp(observable)
 
     def repeat_first(self):
+        """ Repeat the first item forever
+
+        :return:
+        """
         observable = RepeatFirstObservable(source=self)
         return ObservableOp(observable)
 
@@ -222,21 +238,21 @@ class ObservableOp(Observable):
 
         return AnonymousObservable(subscribe)
 
-    def window(self, right, is_lower, is_higher):
+    def window(self, right: Observable, is_lower, is_higher):
+        """ Forward each item from the left Observable by attaching an inner Observable to it. Subdivide or reject
+        items from the right Observable via is_lower and is_higher functions, and emit each item of a subdivision (or window)
+        in the inner Observable
+
+        :param right:
+        :param is_lower:
+        :param is_higher:
+        :return:
+        """
+
         o1, o2 = window(self, right, is_lower, is_higher)
         return ObservableOp(o1).map(lambda t2: (t2[0], ObservableOp(t2[1]))), ObservableOp(o2)
 
-    def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
-        """ Zips each item emmited by the source with their indices
-
-        :param selector: a mapping function applied over the generated pairs
-        :return: zipped with index observable
-        """
-
-        observable = ZipWithIndexObservable(source=self, selector=selector)
-        return ObservableOp(observable)
-
-    def zip2(self, right, selector=None):
+    def zip(self, right, selector=None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs

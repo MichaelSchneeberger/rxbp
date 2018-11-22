@@ -1,15 +1,15 @@
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 from rx import config
 from rx.concurrency import CurrentThreadScheduler
 from rx.core import Disposable
 
-from rxbackpressure.ack import Ack, Continue, Stop
+from rxbackpressure.ack import Ack, Continue, Stop, stop_ack
 from rxbackpressure.observable import Observable
 from rxbackpressure.observer import Observer
 
 
-class ConcatMapObservable(Observable):
+class FlatMapObservable(Observable):
     def __init__(self, source, selector: Callable[[Any], Observable], delay_errors=False):
         self.source = source
         self.selector = selector
@@ -36,7 +36,7 @@ class ConcatMapObservable(Observable):
                 self.disposable = disposable
 
         class WaitComplete(State):
-            def __init__(self, ex, disposable=Disposable):
+            def __init__(self, ex, disposable: Optional[Disposable]):
                 self.ex = ex
                 self.disposable = disposable
 
@@ -55,7 +55,25 @@ class ConcatMapObservable(Observable):
                 self.ack = Continue()
 
             def signal_child_on_error(self, ex):
-                raise NotImplementedError
+                with source.lock:
+                    current_state = state[0]
+                    state[0] = WaitComplete(ex, None)
+
+                if isinstance(current_state, WaitOnActiveChild) or isinstance(current_state, WaitOnNextChild) \
+                        or isinstance(current_state, Active):
+                    observer.on_error(ex)
+                    self.async_upstream_ack.on_next(stop_ack)
+                    self.async_upstream_ack.on_completed()
+                elif isinstance(current_state, WaitComplete):
+                    current_state: WaitComplete = current_state
+                    scheduler.report_failure(current_state.ex)
+                    observer.on_error(ex)
+                    self.async_upstream_ack.on_next(stop_ack)
+                    self.async_upstream_ack.on_completed()
+                elif isinstance(current_state, Cancelled):
+                    scheduler.report_failure(ex)
+                else:
+                    raise Exception('observer is in a unrecognized state: {}'.format(current_state))
 
             def send_on_complete(self):
                 # todo: complete here
@@ -79,7 +97,7 @@ class ConcatMapObservable(Observable):
                         else:
                             observer.on_error(state_.ex)
                     else:
-                        raise NotImplementedError
+                        scheduler.report_failure(state_.ex)
 
             def on_stop_or_failure_ref(self, err=None):
                 if err:
@@ -100,7 +118,7 @@ class ConcatMapObservable(Observable):
                 return ack
 
             def on_error(self, err):
-                raise NotImplementedError
+                self.signal_child_on_error(err)
 
             def on_completed(self):
                 # self.async_upstream_ack.on_next(Continue())
@@ -109,54 +127,64 @@ class ConcatMapObservable(Observable):
 
         class ConcatMapObserver(Observer):
 
+            def __init__(self):
+                self.errors = [] if source.delay_errors else None
+
             def cancel_state(self):
                 pass
+
+            def report_invalid_state(self, state: State, method: str):
+                self.cancel_state()
+                scheduler.report_failure(Exception('State {} in the ConcatMap.{} implementation is invalid'.format(state, method)))
 
             def on_next(self, elem):
                 stream_error = True
 
                 if not is_active[0]:
-                    raise NotImplementedError
+                    return stop_ack
                 else:
-                    try:
-                        async_upstream_ack = Ack()
-                        child = source.selector(elem)
-                        stream_error = False
+                    async_upstream_ack = Ack()
+                    child = source.selector(elem)
+                    stream_error = False
 
+                    with source.lock:
+                        state[0] = WaitOnActiveChild()
+
+                    child_observer = ChildObserver(observer, scheduler, async_upstream_ack, self)
+                    disposable = child.subscribe(child_observer, scheduler, subscribe_scheduler)
+
+                    with source.lock:
+                        current_state = state[0]
+                        state[0] = Active(disposable)
+
+                    if isinstance(current_state, WaitOnNextChild):
                         with source.lock:
-                            state[0] = WaitOnActiveChild()
+                            state[0] = current_state
 
-                        child_observer = ChildObserver(observer, scheduler, async_upstream_ack, self)
-                        disposable = child.subscribe(child_observer, scheduler, subscribe_scheduler)
-
-                        with source.lock:
-                            current_state = state[0]
-                            state[0] = Active(disposable)
-
-                        if isinstance(current_state, WaitOnNextChild):
-                            with source.lock:
-                                state[0] = current_state
-
-                            state_: WaitOnNextChild = current_state
-                            return state_.ack
-                        elif isinstance(current_state, WaitOnActiveChild):
-                            if is_active[0]:
-                                return async_upstream_ack
-                            else:
-                                self.cancel_state()
-                                return Stop()
-                        elif isinstance(current_state, Cancelled):
-                            self.cancel_state()
-                            return Stop()
+                        state_: WaitOnNextChild = current_state
+                        return state_.ack
+                    elif isinstance(current_state, WaitOnActiveChild):
+                        if is_active[0]:
+                            return async_upstream_ack
                         else:
-                            raise NotImplementedError
+                            self.cancel_state()
+                            return stop_ack
+                    elif isinstance(current_state, Cancelled):
+                        self.cancel_state()
+                        return stop_ack
+                    else:
+                        self.report_invalid_state(current_state, 'on_next')
+                        return stop_ack
 
-                    except:
-                        raise NotImplementedError
-
-            def send_complete(self):
+            def send_on_complete(self):
+                # if not source.delay_errors:
                 observer.on_completed()
-                #todo: complete here
+                # else:
+                #     errors = self.errors
+                #     if len(errors) == 0:
+                #         observer.on_completed()
+                #     else:
+                #         observer.on_error(errors[0])
 
             def signal_finish(self, ex: Exception = None):
                 current_state = state[0]
@@ -174,7 +202,7 @@ class ConcatMapObservable(Observable):
                     state[0] = WaitComplete(ex, child_ref)
                 if isinstance(current_state, WaitOnNextChild):
                     if ex is None:
-                        self.send_complete()
+                        self.send_on_complete()
                     else:
                         observer.on_error(ex)
 
@@ -191,11 +219,10 @@ class ConcatMapObservable(Observable):
                     with source.lock:
                         state[0] = Cancelled()
                 else:
-                    raise NotImplementedError
+                    self.report_invalid_state(current_state, 'signal_finish')
 
             def on_error(self, exc):
                 self.signal_finish(exc)
-                raise NotImplementedError
 
             def on_completed(self):
                 self.signal_finish()
