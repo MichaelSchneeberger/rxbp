@@ -18,9 +18,9 @@ class Observable:
         scheduler_ = scheduler or subscribe_scheduler_
 
         def action(_, __):
-            self.unsafe_subscribe(observer, scheduler_, subscribe_scheduler_)
+            return self.unsafe_subscribe(observer, scheduler_, subscribe_scheduler_)
 
-        subscribe_scheduler_.schedule(action)
+        return subscribe_scheduler_.schedule(action)
 
     def subscribe_with(self,
                        on_next: Callable[[Any], None] = None,

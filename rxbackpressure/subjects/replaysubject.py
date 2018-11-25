@@ -50,11 +50,13 @@ class ReplaySubject(Observable, Observer):
             subscribers = self.subscribers.copy()
             subscribers = subscribers | {s}
 
-            return self.copy(subscribers=subscribers)
+            new_state = self.copy(subscribers=subscribers)
+            return new_state
 
         def remove_subscriber(self, to_remove):
             subscribers = self.subscribers.copy()
-            subscribers.remove(to_remove)
+            if to_remove in subscribers:  # todo: remove this
+                subscribers.remove(to_remove)
 
             return self.copy(subscribers=subscribers)
 
@@ -68,11 +70,17 @@ class ReplaySubject(Observable, Observer):
         self.lock = config["concurrency"].RLock()
 
     def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
+        """ Creates a new ConnectableSubscriber for each subscription, pushes the current buffer to the
+        ConnectableSubscriber and connects it immediately
+
+        """
+
         def stream_on_done(buffer: Iterable, error_thrown: Exception = None) -> Disposable:
             class TObserver(Observer):
 
                 def on_next(self, v):
-                    return observer.on_next(v)
+                    ack = observer.on_next(v)
+                    return ack
 
                 def on_error(self, err):
                     observer.on_error(err)
@@ -91,7 +99,7 @@ class ReplaySubject(Observable, Observer):
         buffer = state.buffer
 
         if state.is_done:
-            stream_on_done(buffer, state.error_thrown)
+            return stream_on_done(buffer, state.error_thrown)
         else:
             c = ConnectableSubscriber(observer, scheduler=scheduler)
             with self.lock:
@@ -105,7 +113,8 @@ class ReplaySubject(Observable, Observer):
                 self.remove_subscriber(c)
             elif not isinstance(ack, Continue):
                 def on_next(v):
-                    self.remove_subscriber(c)
+                    if isinstance(v, Stop):
+                        self.remove_subscriber(c)
                 ack.subscribe(on_next=on_next)
 
             def _():
@@ -131,6 +140,7 @@ class ReplaySubject(Observable, Observer):
 
     def remove_subscriber(self, s: ConnectableSubscriber):
         with self.lock:
+            # print('remove subscriber')
             state = self.state
             new_state = state.remove_subscriber(s)
             self.state = new_state
@@ -138,7 +148,6 @@ class ReplaySubject(Observable, Observer):
     def on_next(self, elem):
         with self.lock:
             state = self.state
-
             if not state.is_done:
                 self.state = state.append_elem(elem)
 
@@ -151,11 +160,8 @@ class ReplaySubject(Observable, Observer):
             except:
                 raise NotImplementedError
 
-            if isinstance(ack, Continue):
+            if isinstance(ack, Stop):
                 self.remove_subscriber(obs)
-            elif ack.has_value:
-                if isinstance(ack.value, Continue):
-                    self.remove_subscriber(obs)
             else:
                 if result is None:
                     result = PromiseCounter(Continue(), 1)

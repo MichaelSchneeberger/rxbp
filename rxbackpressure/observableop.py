@@ -6,6 +6,7 @@ from rx.disposables import CompositeDisposable
 
 from rxbackpressure.ack import Continue
 from rxbackpressure.observables.RepeatFirstobservable import RepeatFirstObservable
+from rxbackpressure.observables.controlledzipobservable import ControlledZipObservable
 from rxbackpressure.observers.bufferedsubscriber import BufferedSubscriber
 from rxbackpressure.schedulers.currentthreadscheduler import current_thread_scheduler
 from rxbackpressure.subjects.cachedservefirstsubject import CachedServeFirstSubject
@@ -99,9 +100,10 @@ class ObservableOp(Observable):
         observable = FilterObservable(self, predicate=predicate)
         return ObservableOp(observable)
 
-    def flat_zip(self, right, selector_left, selector=None):
+    def flat_zip(self, right, selector_inner, selector_left=None, selector=None):
         observable = FlatZipObservable(left=self, right=right,
-                                       selector_left=selector_left, selector=selector)
+                                       selector_inner=selector_inner, selector_left=selector_left,
+                                       selector=selector)
         return ObservableOp(observable)
 
     @classmethod
@@ -251,6 +253,11 @@ class ObservableOp(Observable):
 
         o1, o2 = window(self, right, is_lower, is_higher)
         return ObservableOp(o1).map(lambda t2: (t2[0], ObservableOp(t2[1]))), ObservableOp(o2)
+
+    def controlled_zip(self, right, is_lower, is_higher, selector):
+        observable = ControlledZipObservable(left=self, right=right, is_lower=is_lower, is_higher=is_higher,
+                                             selector=selector)
+        return ObservableOp(observable)
 
     def zip(self, right, selector=None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.

@@ -40,7 +40,7 @@ class ConnectableSubscriber(Observer):
                         self.root_ack.on_completed()
                         source.is_connected = True
                         source.queue = None
-                        source.connected_ack = None
+                        # source.connected_ack = None
                         # todo: fill in
                     elif isinstance(v, Stop):
                         raise NotImplementedError
@@ -174,7 +174,8 @@ class ConnectableSubscriber(Observer):
             self.connected_ack = new_ack
             return self.connected_ack
         elif not self.was_canceled:
-            return self.underlying.on_next(elem)
+            ack = self.underlying.on_next(elem)
+            return ack
         else:
             return Stop()
 

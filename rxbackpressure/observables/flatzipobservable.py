@@ -16,6 +16,17 @@ class FlatZipObservable(Observable):
 
     """
 
+    def __init__(self, left, right, selector_inner: Callable[[Any], Observable],
+                 selector_left: Callable[[Any], Any] = None,
+                 selector: Callable[[Any, Any], Any] = None):
+        self.left = left
+        self.right = right
+        self.selector_left = selector_left or (lambda v: v)
+        self.selector_inner = selector_inner
+        self.selector = (lambda l, r: (l, r)) if selector is None else selector
+
+        self.lock = config['concurrency'].RLock()
+
     class State:
         pass
 
@@ -27,8 +38,9 @@ class FlatZipObservable(Observable):
             self.left_ack = left_ack
 
     class WaitForRight(State):
-        def __init__(self, left_ack: Ack, inner_left_elem, inner_left_ack: Ack):
+        def __init__(self, left_ack: Ack, left_elem, inner_left_elem, inner_left_ack: Ack):
             self.left_ack = left_ack
+            self.left_elem = left_elem
             self.inner_left_elem = inner_left_elem
             self.inner_left_ack = inner_left_ack
 
@@ -53,14 +65,6 @@ class FlatZipObservable(Observable):
     class Completed(State):
         pass
 
-    def __init__(self, left, right, selector_left: Callable[[Any], Observable], selector: Callable[[Any, Any], Any] = None):
-        self.left = left
-        self.right = right
-        self.selector_left = selector_left
-        self.selector = (lambda l, r: (l, r)) if selector is None else selector
-
-        self.lock = config['concurrency'].RLock()
-
     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
         state = [self.WaitForLeftOrRight()]
         current_upper_ack = [None]
@@ -70,7 +74,7 @@ class FlatZipObservable(Observable):
 
         source = self
 
-        def on_next_left(left):
+        def on_next_left(left_elem):
             ack = Ack()
 
             with self.lock:
@@ -100,7 +104,7 @@ class FlatZipObservable(Observable):
                             # not much to do
                             state_: source.WaitForRightOrInner = state[0]
                             new_state = source.WaitForRight(inner_left_elem=inner_left, left_ack=state_.left_ack,
-                                                            inner_left_ack=ack)
+                                                            inner_left_ack=ack, left_elem=source.selector_left(left_elem))
                         elif isinstance(state[0], source.Active):
                             # send zipped item to observer
                             state_: source.Active = state[0]
@@ -113,22 +117,22 @@ class FlatZipObservable(Observable):
                         state[0] = new_state
 
                     if has_right_elem:
-                        zipped_elem = source.selector(inner_left, right_elem)
+                        zipped_elem = source.selector(source.selector_left(left_elem), right_elem, inner_left)
                         upper_ack = observer.on_next(zipped_elem)
 
                         # that's ok, because there is no race-condition here
                         state_: source.Active = state[0]
                         state_.upper_ack = upper_ack
 
-                        if isinstance(upper_ack, Continue):
-                            # ack.on_next(upper_ack)
-                            # ack.on_completed()
-                            return upper_ack
-                        elif isinstance(upper_ack, Stop):
-                            raise NotImplementedError
-                        else:
-                            # upper_ack.observe_on(scheduler).subscribe(ack)
-                            return upper_ack
+                        # if isinstance(upper_ack, Continue):
+                        #     # ack.on_next(upper_ack)
+                        #     # ack.on_completed()
+                        #     return upper_ack
+                        # elif isinstance(upper_ack, Stop):
+                        #     raise NotImplementedError
+                        # else:
+                        #     # upper_ack.observe_on(scheduler).subscribe(ack)
+                        return upper_ack
                     else:
                         return ack
 
@@ -176,7 +180,7 @@ class FlatZipObservable(Observable):
                         observer.on_completed()
 
                     if request_left_right or request_left:
-                        if isinstance(upper_ack, Continue):
+                        if isinstance(upper_ack, Continue) or isinstance(upper_ack, Stop):
                             left_ack.on_next(upper_ack)
                             left_ack.on_completed()
                         elif isinstance(upper_ack, Stop):
@@ -187,7 +191,7 @@ class FlatZipObservable(Observable):
                             upper_ack.observe_on(scheduler).subscribe(left_ack)
 
                     if request_left_right:
-                        if isinstance(upper_ack, Continue):
+                        if isinstance(upper_ack, Continue) or isinstance(upper_ack, Stop):
                             right_ack.on_next(upper_ack)
                             right_ack.on_completed()
                         elif isinstance(upper_ack, Stop):
@@ -197,7 +201,7 @@ class FlatZipObservable(Observable):
                         else:
                             upper_ack.observe_on(scheduler).subscribe(right_ack)
 
-            child = self.selector_left(left)
+            child = self.selector_inner(left_elem)
             child_observer = ChildObserver(observer, scheduler)
 
             # todo: save disposable
@@ -232,6 +236,7 @@ class FlatZipObservable(Observable):
                 elif isinstance(state[0], self.WaitForRight):
                     state_: FlatZipObservable.WaitForRight = state[0]
                     has_inner_left_elem = True
+                    left_elem = state_.left_elem
                     left_ack = state_.left_ack
                     inner_left_elem = state_.inner_left_elem
                     inner_left_ack = state_.inner_left_ack
@@ -241,7 +246,7 @@ class FlatZipObservable(Observable):
                 state[0] = new_state
 
             if has_inner_left_elem:
-                zipped_elem = self.selector(inner_left_elem, right)
+                zipped_elem = self.selector(left_elem, right, inner_left_elem)
                 upper_ack = observer.on_next(zipped_elem)
 
                 request_inner_elem = False
@@ -258,7 +263,7 @@ class FlatZipObservable(Observable):
                     state[0] = new_state
 
                 if request_inner_elem:
-                    if isinstance(upper_ack, Continue):
+                    if isinstance(upper_ack, Continue) or isinstance(upper_ack, Stop):
                         inner_left_ack.on_next(upper_ack)
                         inner_left_ack.on_completed()
                     elif isinstance(upper_ack, Stop):

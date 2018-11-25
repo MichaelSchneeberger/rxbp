@@ -27,15 +27,18 @@ class Ack(AsyncSubject):
 
         return return_ack
 
+    def print_sth(self):
+        print('ok')
+
     def connect_ack(self, next_ack: 'Ack'):
         self.subscribe(next_ack)
 
-    def connect_ack_2(self, ack2: 'Ack', out_ack: 'Ack'):
+    def connect_ack_2(self, ack2: 'Ack', next_ack: 'Ack'):
         if isinstance(ack2, Stop):
-            out_ack.on_next(ack2)
-            out_ack.on_completed()
+            next_ack.on_next(ack2)
+            next_ack.on_completed()
         elif isinstance(ack2, Continue):
-            self.subscribe(out_ack)
+            self.subscribe(next_ack)
         else:
             def _(v1, v2):
                 if isinstance(v1, Stop) or isinstance(v2, Stop):
@@ -44,7 +47,7 @@ class Ack(AsyncSubject):
                 else:
                     return Continue()
 
-            self.zip(ack2, _).subscribe(out_ack)
+            self.zip(ack2, _).subscribe(next_ack)
 
 
 class Continue(Ack):
@@ -61,8 +64,8 @@ class Continue(Ack):
     def connect_ack(self, next_ack: 'Ack'):
         self.subscribe(next_ack)
 
-    def connect_ack_2(self, ack2: 'Ack', out_ack: 'Ack'):
-        ack2.subscribe(out_ack)
+    def connect_ack_2(self, ack2: 'Ack', next_ack: 'Ack'):
+        ack2.subscribe(next_ack)
 
 
 continue_ack = Continue()
@@ -78,7 +81,7 @@ class Stop(Ack):
     def merge_ack(self, ack2: 'Ack'):
         return self
 
-    def connect_ack_2(self, ack2: 'Ack', out_ack: 'Ack'):
-        self.subscribe(out_ack)
+    def connect_ack_2(self, ack2: 'Ack', next_ack: 'Ack'):
+        self.subscribe(next_ack)
 
 stop_ack = Stop()

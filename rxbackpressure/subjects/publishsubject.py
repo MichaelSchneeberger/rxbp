@@ -28,7 +28,7 @@ class PublishSubject(Observable, Observer):
 
     class State:
         def __init__(self, subscribers: Union[Set['PublishSubject.Subscriber'], 'PublishSubject.Empty'] = None,
-                     cache: List = None, error_thrown = None):
+                     cache: List = None, error_thrown=None):
             self.subscribers = subscribers or set()
             self.cache = cache
             self.error_thrown = error_thrown
@@ -43,13 +43,15 @@ class PublishSubject(Observable, Observer):
             if isinstance(self.subscribers, PublishSubject.Empty):
                 return self
             else:
-                return PublishSubject.State(error_thrown=error_thrown)
+                return PublishSubject.State(error_thrown=error_thrown,
+                                            subscribers=PublishSubject.Empty(),
+                                            cache=None)
 
-    def on_subscribe_completed(self, subscriber, ex):
+    def on_subscribe_completed(self, subscriber: Subscriber, ex):
         if ex is not None:
-            subscriber.on_error(ex)
+            subscriber.observer.on_error(ex)
         else:
-            subscriber.on_completed()
+            subscriber.observer.on_completed()
         return Disposable.empty()
 
     def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
@@ -74,7 +76,8 @@ class PublishSubject(Observable, Observer):
             if is_updated:
                 def dispose():
                     self.unsubscribe(subscriber)
-                return Disposable.create(dispose)
+                disposable = Disposable.create(dispose)
+                return disposable
             else:
                 return self.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
 
@@ -209,7 +212,7 @@ class PublishSubject(Observable, Observer):
         if state.cache is None:
             return continue_ack
         else:
-            update = self.State(subscribers = subscribers - subscriber)
+            update = self.State(subscribers = subscribers - {subscriber})
             with self.lock:
                 if self.state is state:
                     is_updated = True

@@ -7,7 +7,7 @@ library, that integrates back-pressure into observables.
 
 *Rxbackpressure* has an experimental status. 
 
-The current motivation of this library is to use it for signal processing purposes.
+The current motivation of this library is to use it for signal processing applications.
 
 
 Implemented operators
@@ -15,7 +15,7 @@ Implemented operators
 
 ### Creating backpressured observables
 
-- `now'
+- `now`
 - `from_` - create a new Observable that emits each element of an iterable
 - `from_iterator`
 - `to_rxbackpressure` - create an Observable from a rx Observable
@@ -48,6 +48,7 @@ observer backpressures.
 - `window` - forward each item from the left Observable by attaching an inner Observable to it. Subdivide or reject
 items from the right Observable via is_lower and is_higher functions, and emit each item of a subdivision (or window)
 in the inner Observable
+- `controlled_zip`
 - `zip` - combine the emissions of multiple Observables together via a specified function and emit single items for 
 each combination based on the results of this function
 
