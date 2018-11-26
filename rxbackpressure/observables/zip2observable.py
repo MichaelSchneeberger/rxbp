@@ -116,7 +116,6 @@ class Zip2Observable(Observable):
 
                         last_ack[0].observe_on(scheduler).subscribe(on_next=_)
 
-
                     continue_p[0].on_next(stop_ack)
                     last_ack[0] = stop_ack
                 else:
