@@ -1,33 +1,31 @@
-from typing import Callable, Any, Iterator, Iterable
+import itertools
+from typing import Callable, Any, Iterator, Iterable, List
 
 from rx import AnonymousObservable
-from rx.concurrency.schedulerbase import SchedulerBase
-from rx.disposables import CompositeDisposable
 
-from rxbackpressure.ack import Continue
-from rxbackpressure.observables.repeatfirstobservable import RepeatFirstObservable
-from rxbackpressure.observables.controlledzipobservable import ControlledZipObservable
-from rxbackpressure.observers.bufferedsubscriber import BufferedSubscriber
-from rxbackpressure.schedulers.currentthreadscheduler import current_thread_scheduler
-from rxbackpressure.subjects.cachedservefirstsubject import CachedServeFirstSubject
-from rxbackpressure.observables.flatmapobservable import FlatMapObservable
-from rxbackpressure.observables.connectableobservable import ConnectableObservable
-from rxbackpressure.observables.flatzipobservable import FlatZipObservable
-from rxbackpressure.subjects.publishsubject import PublishSubject
-from rxbackpressure.subjects.replaysubject import ReplaySubject
-from rxbackpressure.testing.debugobservable import DebugObservable
-from rxbackpressure.observables.filterobservable import FilterObservable
-from rxbackpressure.observables.iteratorasobservable import IteratorAsObservable
-from rxbackpressure.observables.nowobservable import NowObservable
-from rxbackpressure.scheduler import SchedulerBase, Scheduler
-from rxbackpressure.observables.window import window
-from rxbackpressure.observables.zipwithindexobservable import ZipWithIndexObservable
-from rxbackpressure.observables.mapobservable import MapObservable
-from rxbackpressure.observable import Observable
-from rxbackpressure.observables.observeonobservable import ObserveOnObservable
-from rxbackpressure.observer import Observer
-from rxbackpressure.observables.pairwiseobservable import PairwiseObservable
-from rxbackpressure.observables.zip2observable import Zip2Observable
+from rxbackpressurebatched.ack import Continue
+from rxbackpressurebatched.observables.repeatfirstobservable import RepeatFirstObservable
+from rxbackpressurebatched.observables.controlledzipobservable import ControlledZipObservable
+from rxbackpressurebatched.schedulers.currentthreadscheduler import current_thread_scheduler
+from rxbackpressurebatched.subjects.cachedservefirstsubject import CachedServeFirstSubject
+from rxbackpressurebatched.observables.flatmapobservable import FlatMapObservable
+from rxbackpressurebatched.observables.connectableobservable import ConnectableObservable
+from rxbackpressurebatched.observables.flatzipobservable import FlatZipObservable
+from rxbackpressurebatched.subjects.publishsubject import PublishSubject
+from rxbackpressurebatched.subjects.replaysubject import ReplaySubject
+from rxbackpressurebatched.testing.debugobservable import DebugObservable
+from rxbackpressurebatched.observables.filterobservable import FilterObservable
+from rxbackpressurebatched.observables.iteratorasobservable import IteratorAsObservable
+from rxbackpressurebatched.observables.nowobservable import NowObservable
+from rxbackpressurebatched.scheduler import SchedulerBase, Scheduler
+from rxbackpressurebatched.observables.window import window
+from rxbackpressurebatched.observables.zipwithindexobservable import ZipWithIndexObservable
+from rxbackpressurebatched.observables.mapobservable import MapObservable
+from rxbackpressurebatched.observable import Observable
+from rxbackpressurebatched.observables.observeonobservable import ObserveOnObservable
+from rxbackpressurebatched.observer import Observer
+from rxbackpressurebatched.observables.pairwiseobservable import PairwiseObservable
+from rxbackpressurebatched.observables.zip2observable import Zip2Observable
 
 
 class ObservableOp(Observable):
@@ -73,7 +71,7 @@ class ObservableOp(Observable):
                                        selector=selector)
         return ObservableOp(observable)
 
-    def debug(self, name, on_next=None, on_subscribe=None, on_ack=None, print_ack=None, on_ack_msg=None):
+    def debug(self, name=None, on_next=None, on_subscribe=None, on_ack=None, print_ack=None, on_ack_msg=None):
         observable = DebugObservable(self, name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack,
                                      print_ack=print_ack, on_ack_msg=on_ack_msg)
         return ObservableOp(observable)
@@ -107,7 +105,7 @@ class ObservableOp(Observable):
         return ObservableOp(observable)
 
     @classmethod
-    def from_(cls, iterable: Iterable):
+    def from_(cls, iterable: Iterable, batch_size=1):
         """ Converts an iterable into an observable
 
         :param iterable:
@@ -118,22 +116,59 @@ class ObservableOp(Observable):
 
             def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
                 iterator = iter(iterable)
-                from_iterator_obs = IteratorAsObservable(iterator=iterator)
+                from_iterator_obs = cls.from_iterator(iterator=iterator, batch_size=batch_size)
                 disposable = from_iterator_obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
                 return disposable
 
         return ObservableOp(ToIterableObservable())
 
     @classmethod
-    def from_iterator(cls, iterator: Iterator):
+    def from_iterator(cls, iterator: Iterator, batch_size=1):
         """ Converts an iterator into an observable
 
         :param iterator:
         :return:
         """
 
-        observable = IteratorAsObservable(iterator=iterator)
+        def gen():
+            for peak_first in iterator:
+                def generate_batch():
+                    yield peak_first
+                    for more in itertools.islice(iterator, batch_size - 1):
+                        yield more
+
+                # generate buffer in memory
+                buffer = list(generate_batch())
+
+                def gen_result(buffer=buffer):
+                    for e in buffer:
+                        yield e
+
+                yield gen_result
+
+        observable = IteratorAsObservable(iterator=gen())
         return ObservableOp(observable)
+
+    @classmethod
+    def from_list(cls, buffer: List, batch_size: int):
+
+        def chunks():
+            """Yield successive n-sized chunks from l."""
+            for i in range(0, len(buffer), batch_size):
+                def chunk_gen(i=i):
+                    for e in buffer[i:i + batch_size]:
+                        yield e
+                yield chunk_gen
+
+        class ToIterableObservable(Observable):
+
+            def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
+                iterator = iter(chunks())
+                from_iterator_obs = IteratorAsObservable(iterator=iterator)
+                disposable = from_iterator_obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
+                return disposable
+
+        return ObservableOp(ToIterableObservable())
 
     def map(self, selector: Callable[[Any], Any]):
         """ Maps each item emitted by the source by applying the given function
@@ -165,14 +200,14 @@ class ObservableOp(Observable):
         observable = ObserveOnObservable(self, scheduler)
         return ObservableOp(observable)
 
-    def pairwise(self, selector=None):
+    def pairwise(self):
         """ Creates an observable that pairs each neighbouring two items from the source
 
         :param selector: (optional) selector function
         :return: paired observable
         """
 
-        observable = PairwiseObservable(source=self, selector=selector)
+        observable = PairwiseObservable(source=self)
         return ObservableOp(observable)
 
     @classmethod
@@ -252,7 +287,8 @@ class ObservableOp(Observable):
         """
 
         o1, o2 = window(self, right, is_lower, is_higher)
-        return ObservableOp(o1).map(lambda t2: (t2[0], ObservableOp(t2[1]))), ObservableOp(o2)
+        # return ObservableOp(o1).map(lambda t2: (t2[0], ObservableOp(t2[1]))), ObservableOp(o2)
+        return ObservableOp(o1), ObservableOp(o2)
 
     def controlled_zip(self, right, is_lower, is_higher, selector):
         observable = ControlledZipObservable(left=self, right=right, is_lower=is_lower, is_higher=is_higher,

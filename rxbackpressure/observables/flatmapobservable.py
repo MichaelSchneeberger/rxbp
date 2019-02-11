@@ -200,6 +200,7 @@ class FlatMapObservable(Observable):
                 with source.lock:
                     current_state = state[0]
                     state[0] = WaitComplete(ex, child_ref)
+
                 if isinstance(current_state, WaitOnNextChild):
                     if ex is None:
                         self.send_on_complete()
@@ -211,7 +212,7 @@ class FlatMapObservable(Observable):
                 elif isinstance(current_state, Active):
                     if not is_active[0]:
                         self.cancel_state()
-                elif isinstance(current_state, WaitOnNextChild):
+                elif isinstance(current_state, WaitComplete):
                     with source.lock:
                         state[0] = Cancelled()
                 elif isinstance(current_state, Cancelled):

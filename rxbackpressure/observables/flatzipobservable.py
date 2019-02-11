@@ -4,9 +4,9 @@ from rx import config
 from rx.concurrency import CurrentThreadScheduler
 from rx.disposables import CompositeDisposable, MultipleAssignmentDisposable
 
-from rxbackpressure.ack import Continue, Stop, Ack, stop_ack
-from rxbackpressure.observable import Observable
-from rxbackpressure.observer import Observer
+from rxbackpressurebatched.ack import Continue, Stop, Ack, stop_ack
+from rxbackpressurebatched.observable import Observable
+from rxbackpressurebatched.observer import Observer
 
 
 class FlatZipObservable(Observable):
@@ -120,7 +120,11 @@ class FlatZipObservable(Observable):
 
                     if has_right_elem:
                         # send triple to observer
-                        zipped_elem = source.selector(source.selector_left(left_elem), right_elem, inner_left)
+                        try:
+                            zipped_elem = source.selector(source.selector_left(left_elem), right_elem, inner_left)
+                        except Exception as exc:
+                            print(exc)
+                            return self.on_error(exc)
                         upper_ack = observer.on_next(zipped_elem)
 
                         # race condition with on_completed
@@ -254,7 +258,11 @@ class FlatZipObservable(Observable):
                 state[0] = new_state
 
             if has_inner_left_elem:
-                zipped_elem = self.selector(left_elem, right, inner_left_elem)
+
+                try:
+                    zipped_elem = self.selector(left_elem, right, inner_left_elem)
+                except Exception as exc:
+                    raise NotImplementedError
                 upper_ack = observer.on_next(zipped_elem)
 
                 if isinstance(upper_ack, Stop):
@@ -333,7 +341,8 @@ class FlatZipObservable(Observable):
                 return on_next_left(v)
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                # todo: adapt this
+                raise NotImplementedError
 
             def on_completed(self):
                 return on_completed_left()
@@ -343,7 +352,7 @@ class FlatZipObservable(Observable):
                 return on_next_right(v)
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                raise NotImplementedError
 
             def on_completed(self):
                 return on_completed_right()

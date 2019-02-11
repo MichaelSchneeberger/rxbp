@@ -8,10 +8,10 @@ from rx.core.notification import OnNext, OnCompleted, OnError, Notification
 from rx.disposables import BooleanDisposable
 from rx.internal.concurrency import RLock
 
-from rxbackpressure.ack import Continue, Stop, Ack, stop_ack
-from rxbackpressure.observable import Observable
-from rxbackpressure.observer import Observer
-from rxbackpressure.scheduler import SchedulerBase, ExecutionModel, Scheduler
+from rxbackpressurebatched.ack import Continue, Stop, Ack, stop_ack
+from rxbackpressurebatched.observable import Observable
+from rxbackpressurebatched.observer import Observer
+from rxbackpressurebatched.scheduler import SchedulerBase, ExecutionModel, Scheduler
 
 
 class CachedServeFirstSubject(Observable, Observer):
