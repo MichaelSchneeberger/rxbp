@@ -1,5 +1,6 @@
 import itertools
-from typing import Callable, Any, List, Generator
+from abc import ABC, abstractmethod
+from typing import Callable, Any, List, Generator, Optional
 
 from rx import config
 from rx.disposables import CompositeDisposable
@@ -11,141 +12,194 @@ from rxbackpressurebatched.observable import Observable
 
 class Zip2Observable(Observable):
     def __init__(self, left, right, selector: Callable[[Any, Any], Any] = None):
+        """ An observable that zips the elements of a left and right observable
+
+        :param left: left observable
+        :param right: right observable
+        :param selector: a result selector function that maps each zipped element to some result
+        """
+
         self.left = left
         self.right = right
-        self.selector = (lambda l, r: (l, r)) if selector is None else selector
-
-    class State:
-        pass
-
-    class WaitOnLeft(State):
-        def __init__(self, left_buffer: List, right_buffer: List, right_ack: Ack,
-                     right_elem: Callable[[], Generator] = None):
-            self.left_buffer = left_buffer
-            self.right_buffer = right_buffer
-            self.right_ack = right_ack
-            self.right_elem = right_elem
-
-    class WaitOnRight(State):
-        def __init__(self, left_buffer: List, right_buffer: List, left_ack: Ack,
-                     left_elem: Callable[[], Generator] = None):
-            self.left_buffer = left_buffer
-            self.right_buffer = right_buffer
-            self.left_ack = left_ack
-            self.left_elem = left_elem
-
-    class WaitOnLeftRight(State):
-        def __init__(self, left_buffer: List = None,
-                     right_buffer: List = None):
-            self.left_buffer = left_buffer
-            self.right_buffer = right_buffer
-
-    class Transition(State):
-        pass
-
-    class Completed(State):
-        pass
+        self.selector = (lambda l, r: (l, r)) if selector is None else selector     # todo: remove?
 
     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-        lock = [config['concurrency'].RLock()]
-        state = [self.WaitOnLeftRight()]
-        exception = [None]
-        left_completed = [False]
-        right_completed = [False]
 
-        def signal_on_complete_or_on_error(ex=None):
-            # this function should not be called during transition state
+        class FinalState(ABC):
+            @abstractmethod
+            def get_current_state(self):
+                ...
 
-            with lock[0]:
-                if isinstance(state[0], self.WaitOnLeftRight):
-                    new_state = self.Completed()
-                elif isinstance(state[0], self.WaitOnLeft):
-                    typed_state: Zip2Observable.WaitOnLeft = state[0]
-                    typed_state.right_ack.on_next(stop_ack)
-                    typed_state.right_ack.on_completed()
-                    new_state = self.Completed()
-                elif isinstance(state[0], self.WaitOnRight):
-                    typed_state: Zip2Observable.WaitOnRight = state[0]
-                    typed_state.left_ack.on_next(stop_ack)
-                    typed_state.left_ack.on_completed()
-                    new_state = self.Completed()
+        class InitState(FinalState):
+            def get_current_state(self):
+                return self
+
+        class LeftCompletedState(FinalState):
+            def __init__(self, raw_prev_state: Optional[FinalState]):
+                self.raw_prev_state = raw_prev_state
+
+            def get_current_state(self):
+                prev_state = self.raw_prev_state #.get_current_state()
+
+                if isinstance(prev_state, InitState):
+                    return self
                 else:
-                    new_state = state[0]
+                    return self.raw_prev_state
 
-                state[0] = new_state
+        class RightCompletedState(FinalState):
+            def __init__(self, raw_prev_state: Optional[FinalState]):
+                self.raw_prev_state = raw_prev_state
 
-            if ex:
-                observer.on_error(ex)
-            else:
-                observer.on_completed()
+            def get_current_state(self):
+                prev_state = self.raw_prev_state #.get_current_state()
+
+                if isinstance(prev_state, InitState):
+                    return self
+                else:
+                    return self.raw_prev_state
+
+        class ExceptionState(FinalState):
+            def __init__(self, raw_prev_state: Optional[FinalState], ex: Exception):
+                self.raw_prev_state = raw_prev_state
+                self.ex = ex
+
+            def get_current_state(self):
+                prev_state = self.raw_prev_state #.get_current_state()
+
+                if isinstance(prev_state, InitState):
+                    return self
+                else:
+                    return self.raw_prev_state
+
+        class State(ABC):
+            @abstractmethod
+            def get_current_state(self, final_state: FinalState):
+                ...
+
+        class WaitOnLeft(State):
+            def __init__(self, left_buffer: List, right_buffer: List, right_ack: Ack,
+                         right_elem: Callable[[], Generator] = None):
+                self.left_buffer = left_buffer
+                self.right_buffer = right_buffer
+                self.right_ack = right_ack
+                self.right_elem = right_elem
+
+            def get_current_state(self, final_state: FinalState):
+                if isinstance(final_state, LeftCompletedState) or isinstance(final_state, ExceptionState):
+                    return Stopped()
+                else:
+                    return self
+
+        class WaitOnRight(State):
+            def __init__(self, left_buffer: List, right_buffer: List, left_ack: Ack,
+                         left_elem: Callable[[], Generator] = None):
+                self.left_buffer = left_buffer
+                self.right_buffer = right_buffer
+                self.left_ack = left_ack
+                self.left_elem = left_elem
+
+            def get_current_state(self, final_state: FinalState):
+                if isinstance(final_state, RightCompletedState) or isinstance(final_state, ExceptionState):
+                    return Stopped()
+                else:
+                    return self
+
+        class WaitOnLeftRight(State):
+            def __init__(self, left_buffer: List = None,
+                         right_buffer: List = None):
+                self.left_buffer = left_buffer
+                self.right_buffer = right_buffer
+
+            def get_current_state(self, final_state: FinalState):
+                if isinstance(final_state, InitState):
+                    return self
+                else:
+                    return Stopped()
+
+        class ZipElements(State):
+            def __init__(self, raw_prev_state: Optional[State], is_left: bool, ack: Ack, elem: Any):
+                self.raw_prev_state = raw_prev_state
+                self.is_left = is_left
+                self.ack = ack
+                self.elem = elem
+
+            def get_current_state(self, final_state: FinalState):
+                prev_state = self.raw_prev_state.get_current_state(final_state=final_state)
+
+                if isinstance(prev_state, Stopped):
+                    return prev_state
+                elif isinstance(prev_state, WaitOnLeftRight):
+                    if self.is_left:
+                        return WaitOnRight(right_buffer=prev_state.right_buffer,
+                                                left_buffer=prev_state.left_buffer,
+                                                left_ack=self.ack, left_elem=self.elem) \
+                            .get_current_state(final_state=final_state)
+                    else:
+                        return WaitOnLeft(right_buffer=prev_state.right_buffer,
+                                               left_buffer=prev_state.left_buffer,
+                                               right_ack=self.ack, right_elem=self.elem) \
+                            .get_current_state(final_state=final_state)
+                else:
+                    return self
+
+        class Stopped(State):
+            def get_current_state(self, final_state: FinalState):
+                return self
+
+        lock = config['concurrency'].RLock()
+        state = [WaitOnLeftRight()]
+        final_state = [InitState()]
 
         def zip_elements(elem, is_left: bool):
-            left_elem: Callable = None
-            right_elem: Callable = None
 
-            with lock[0]:
-                if isinstance(state[0], Zip2Observable.Completed):
-                    return stop_ack
-                elif isinstance(state[0], Zip2Observable.WaitOnLeftRight):
-                    # received one out of two elements, wait for other one
-                    typed_state: Zip2Observable.WaitOnLeftRight = state[0]
+            return_ack = Ack()
 
-                    # create asynchronous acknowledgment
-                    return_ack = Ack()
+            next_state = ZipElements(raw_prev_state=None, is_left=is_left,
+                                     ack=return_ack, elem=elem)
+            with lock:
+                raw_prev_state = state[0]
+                raw_prev_final_state = final_state[0]
+                next_state.raw_prev_state = raw_prev_state
+                state[0] = next_state
 
-                    # change state to wait on one side
-                    if is_left:
-                        new_state = Zip2Observable.WaitOnRight(right_buffer=typed_state.right_buffer,
-                                                               left_buffer=typed_state.left_buffer,
-                                                               left_ack=return_ack, left_elem=elem)
-                    else:
-                        new_state = Zip2Observable.WaitOnLeft(right_buffer=typed_state.right_buffer,
-                                                              left_buffer=typed_state.left_buffer,
-                                                              right_ack=return_ack, right_elem=elem)
-                    state[0] = new_state
-                    return return_ack
-                elif not is_left and isinstance(state[0], Zip2Observable.WaitOnRight):
-                    # received right element, start zipping
-                    typed_state: Zip2Observable.WaitOnRight = state[0]
-                    left_buffer = typed_state.left_buffer
-                    right_buffer = typed_state.right_buffer
-                    left_elem = typed_state.left_elem
-                    other_ack = typed_state.left_ack
-                elif is_left and isinstance(state[0], Zip2Observable.WaitOnLeft):
-                    # received right element, start zipping
-                    typed_state: Zip2Observable.WaitOnLeft = state[0]
-                    left_buffer = typed_state.left_buffer
-                    right_buffer = typed_state.right_buffer
-                    right_elem = typed_state.right_elem
-                    other_ack = typed_state.right_ack
-                else:
-                    raise Exception('unknown state')
+            prev_final_state = raw_prev_final_state.get_current_state()
+            prev_state = raw_prev_state.get_current_state(prev_final_state)
 
-                # change state to transition state
-                state[0] = self.Transition()
-
-            if is_left:
-                left_elem = elem
+            if isinstance(prev_state, Stopped):
+                return stop_ack
+            elif isinstance(prev_state, WaitOnLeftRight):
+                return return_ack
+            elif not is_left and isinstance(prev_state, WaitOnRight):
+                # received right element, start zipping
+                left_buffer = prev_state.left_buffer
+                right_buffer = prev_state.right_buffer
+                left_elem = prev_state.left_elem
+                other_ack = prev_state.left_ack
+            elif is_left and isinstance(prev_state, WaitOnLeft):
+                # received right element, start zipping
+                left_buffer = prev_state.left_buffer
+                right_buffer = prev_state.right_buffer
+                right_elem = prev_state.right_elem
+                other_ack = prev_state.right_ack
             else:
-                right_elem = elem
+                raise Exception('unknown state "{}"'.format(prev_state))
 
-            if left_buffer and left_elem is not None:
-                gen1 = itertools.chain(iter(left_buffer), left_elem())
+            if left_buffer and is_left:
+                gen1 = itertools.chain(iter(left_buffer), elem())
             elif left_buffer:
                 gen1 = iter(left_buffer)
             else:
-                gen1 = left_elem()
+                gen1 = elem()
 
-            if right_buffer and right_elem is not None:
-                gen2 = itertools.chain(iter(right_buffer), right_elem())
+            if right_buffer and not is_left:
+                gen2 = itertools.chain(iter(right_buffer), elem())
             elif right_buffer:
                 gen2 = iter(right_buffer)
             else:
-                gen2 = right_elem()
+                gen2 = elem()
 
             def zip_gen():
-                for v1, v2 in zip(gen1, gen2):
-                    yield self.selector(v1, v2)
+                yield from zip(gen1, gen2)
 
             # buffer elements
             zipped_elements = list(zip_gen())
@@ -178,132 +232,134 @@ class Zip2Observable(Observable):
                 # back-pressure when there are less elements in right buffer than left elements expected
                 do_back_pressure_right = len(rest_right) < n_left_received
 
-            # complete if the buffer of the observable that completed is empty
-
-            with lock[0]:
-                if left_completed[0] and n_left_buffer == 0:
-                    # complete observer
-                    signal_on_complete_or_on_error()
-                    return stop_ack
-                elif right_completed[0] and n_right_buffer == 0:
-                    # complete observer
-                    signal_on_complete_or_on_error()
-                    return stop_ack
-                elif exception[0] is not None:
-                    signal_on_complete_or_on_error(exception[0])
-                    return stop_ack
+            if do_back_pressure_left and do_back_pressure_right:
+                next_state = WaitOnLeftRight(rest_left, rest_right)
+                upper_ack.connect_ack(other_ack)
+                return_ack = upper_ack
+            elif do_back_pressure_right:
+                # only back-pressure right
+                if is_left:
+                    upper_ack.connect_ack(other_ack)
+                    left_ack = Ack()
+                    return_ack = left_ack
                 else:
-                    if do_back_pressure_left and do_back_pressure_right:
-                        new_state = Zip2Observable.WaitOnLeftRight(rest_left, rest_right)
-                        upper_ack.connect_ack(other_ack)
-                        return_ack = upper_ack
-                    elif do_back_pressure_right:
-                        # only back-pressure right
-                        if is_left:
-                            upper_ack.connect_ack(other_ack)
-                            left_ack = Ack()
-                            return_ack = left_ack
-                        else:
-                            left_ack = other_ack
-                            return_ack = upper_ack
-                        new_state = Zip2Observable.WaitOnRight(left_buffer=rest_left, right_buffer=rest_right,
-                                                               left_ack=left_ack, left_elem=None)
-                    elif do_back_pressure_left:
-                        # only back-pressure left
-                        if is_left:
-                            right_ack = other_ack
-                            return_ack = upper_ack
-                        else:
-                            right_ack = Ack()
-                            upper_ack.connect_ack(other_ack)
-                            return_ack = right_ack
-                        new_state = Zip2Observable.WaitOnLeft(left_buffer=rest_left, right_buffer=rest_right,
-                                                              right_ack=right_ack, right_elem=None)
-                    else:
-                        raise Exception('at least one side should be back-pressured')
+                    left_ack = other_ack
+                    return_ack = upper_ack
+                next_state = WaitOnRight(left_buffer=rest_left, right_buffer=rest_right,
+                                                       left_ack=left_ack, left_elem=None)
+            elif do_back_pressure_left:
+                # only back-pressure left
+                if is_left:
+                    right_ack = other_ack
+                    return_ack = upper_ack
+                else:
+                    right_ack = Ack()
+                    upper_ack.connect_ack(other_ack)
+                    return_ack = right_ack
+                next_state = WaitOnLeft(left_buffer=rest_left, right_buffer=rest_right,
+                                                      right_ack=right_ack, right_elem=None)
+            else:
+                raise Exception('at least one side should be back-pressured')
 
-                    state[0] = new_state
+            with lock:
+                raw_prev_final_state = final_state[0]
+                state[0] = next_state
 
-            return return_ack
+            prev_final_state = raw_prev_final_state.get_current_state()
+
+            if isinstance(prev_final_state, LeftCompletedState) or isinstance(prev_final_state, RightCompletedState):
+                observer.on_completed()
+                return stop_ack
+            elif isinstance(prev_final_state, ExceptionState):
+                observer.on_error(prev_final_state.ex)
+                return stop_ack
+            else:
+                return return_ack
 
         def on_next_left(elem):
-            # print('left')
             return_ack = zip_elements(elem=elem, is_left=True)
             return return_ack
 
         def on_next_right(elem):
-            # print('right')
             return_ack = zip_elements(elem=elem, is_left=False)
             return return_ack
 
+        def signal_on_complete_or_on_error(raw_state, ex=None):
+            # this function should not be called during transition state
+
+            if isinstance(raw_state, WaitOnLeftRight):
+                pass
+            elif isinstance(raw_state, WaitOnLeft):
+                raw_state.right_ack.on_next(stop_ack)
+                raw_state.right_ack.on_completed()
+            elif isinstance(raw_state, WaitOnRight):
+                raw_state.left_ack.on_next(stop_ack)
+                raw_state.left_ack.on_completed()
+            else:
+                pass
+
+            if ex:
+                observer.on_error(ex)
+            else:
+                observer.on_completed()
+
         def on_error(ex):
-            forward_error = False
+            next_final_state = ExceptionState(raw_prev_state=None, ex=ex)
 
-            with lock[0]:
-                if exception[0] is not None:
-                    return
-                elif isinstance(state[0], self.Transition):
-                    pass
-                else:
-                    forward_error = True
-                    state[0] = Zip2Observable.Completed()
+            with lock:
+                raw_prev_final_state = final_state[0]
+                raw_prev_state = state[0]
+                next_final_state.raw_prev_state = raw_prev_final_state
+                final_state[0] = next_final_state
 
-                exception[0] = ex
+            prev_final_state = raw_prev_final_state.get_current_state()
+            prev_state = raw_prev_state.get_current_state(final_state=prev_final_state)
 
-            if forward_error:
-                signal_on_complete_or_on_error(ex)
+            curr_final_state = next_final_state.get_current_state()
+            curr_state = raw_prev_state.get_current_state(final_state=curr_final_state)
+
+            if not isinstance(prev_state, Stopped) and isinstance(curr_state, Stopped):
+                signal_on_complete_or_on_error(raw_state=raw_prev_state, ex=ex)
 
         def on_completed_left():
-            # print('complete left')
-            # complete if the buffer of the observable that completed is empty
-            complete = False
+            next_final_state = LeftCompletedState(raw_prev_state=None)
 
-            with lock[0]:
-                if left_completed[0]:
-                    return
-                elif isinstance(state[0], self.WaitOnLeftRight) or isinstance(state[0], self.WaitOnLeft):
-                    left_buffer = state[0].left_buffer
-                    print(left_buffer)
-                    if len(left_buffer) == 0:
-                        # complete
-                        complete = True
+            with lock:
+                raw_prev_final_state = final_state[0]
+                raw_prev_state = state[0]
+                next_final_state.raw_prev_state = raw_prev_final_state
+                final_state[0] = next_final_state
 
-                        state[0] = Zip2Observable.Completed()
-                else:
-                    pass
+            prev_final_state = raw_prev_final_state.get_current_state()
+            prev_state = raw_prev_state.get_current_state(final_state=prev_final_state)
 
-                left_completed[0] = True
+            curr_final_state = next_final_state.get_current_state()
+            curr_state = raw_prev_state.get_current_state(final_state=curr_final_state)
 
-            if complete:
-                signal_on_complete_or_on_error()
+            if not isinstance(prev_state, Stopped) and isinstance(curr_state, Stopped):
+                signal_on_complete_or_on_error(raw_state=raw_prev_state)
 
         def on_completed_right():
-            # print('complete right')
-            # complete if the buffer of the observable that completed is empty
-            complete = False
+            next_final_state = RightCompletedState(raw_prev_state=None)
 
-            with lock[0]:
-                if right_completed[0]:
-                    return
-                elif isinstance(state[0], self.WaitOnLeftRight) or isinstance(state[0], self.WaitOnRight):
-                    right_buffer = state[0].right_buffer
-                    if 0 == len(right_buffer):
-                        # complete
-                        complete = True
+            with lock:
+                raw_prev_final_state = final_state[0]
+                raw_prev_state = state[0]
+                next_final_state.raw_prev_state = raw_prev_final_state
+                final_state[0] = next_final_state
 
-                        state[0] = Zip2Observable.Completed()
-                else:
-                    pass
+            prev_final_state = raw_prev_final_state.get_current_state()
+            prev_state = raw_prev_state.get_current_state(final_state=prev_final_state)
 
-                right_completed[0] = True
+            curr_final_state = next_final_state.get_current_state()
+            curr_state = raw_prev_state.get_current_state(final_state=curr_final_state)
 
-            if complete:
-                signal_on_complete_or_on_error()
+            if not isinstance(prev_state, Stopped) and isinstance(curr_state, Stopped):
+                signal_on_complete_or_on_error(raw_state=raw_prev_state)
 
         left_observer = AnonymousObserver(on_next=on_next_left, on_error=on_error,
                                           on_completed=on_completed_left)
         d1 = self.left.unsafe_subscribe(left_observer, scheduler, subscribe_scheduler)
-
         right_observer = AnonymousObserver(on_next=on_next_right, on_error=on_error,
                                            on_completed=on_completed_right)
         d2 = self.right.unsafe_subscribe(right_observer, scheduler, subscribe_scheduler)
