@@ -152,10 +152,10 @@ class Zip2Observable(Observable):
 
         def zip_elements(elem, is_left: bool):
 
-            return_ack = Ack()
+            in_ack = Ack()
 
             next_state = ZipElements(raw_prev_state=None, is_left=is_left,
-                                     ack=return_ack, elem=elem)
+                                     ack=in_ack, elem=elem)
             with lock:
                 raw_prev_state = state[0]
                 raw_prev_final_state = final_state[0]
@@ -168,44 +168,59 @@ class Zip2Observable(Observable):
             if isinstance(prev_state, Stopped):
                 return stop_ack
             elif isinstance(prev_state, WaitOnLeftRight):
-                return return_ack
+                return in_ack
             elif not is_left and isinstance(prev_state, WaitOnRight):
-                # received right element, start zipping
                 left_buffer = prev_state.left_buffer
                 right_buffer = prev_state.right_buffer
                 left_elem = prev_state.left_elem
-                other_ack = prev_state.left_ack
+                right_elem = elem
+                other_in_ack = prev_state.left_ack
             elif is_left and isinstance(prev_state, WaitOnLeft):
-                # received right element, start zipping
                 left_buffer = prev_state.left_buffer
                 right_buffer = prev_state.right_buffer
                 right_elem = prev_state.right_elem
-                other_ack = prev_state.right_ack
+                left_elem = elem
+                other_in_ack = prev_state.right_ack
             else:
                 raise Exception('unknown state "{}"'.format(prev_state))
 
-            if left_buffer and is_left:
-                gen1 = itertools.chain(iter(left_buffer), elem())
+            if left_elem is not None:
+                if left_buffer:
+                    gen1 = itertools.chain(iter(left_buffer), left_elem())
+                else:
+                    gen1 = left_elem()
             elif left_buffer:
                 gen1 = iter(left_buffer)
             else:
-                gen1 = elem()
+                raise Exception('illegal state')
 
-            if right_buffer and not is_left:
-                gen2 = itertools.chain(iter(right_buffer), elem())
+            if right_elem is not None:
+                if right_buffer:
+                    gen2 = itertools.chain(iter(right_buffer), right_elem())
+                else:
+                    gen2 = right_elem()
             elif right_buffer:
                 gen2 = iter(right_buffer)
             else:
-                gen2 = elem()
+                raise Exception('illegal state')
 
+            n1 = [None]
             def zip_gen():
-                yield from zip(gen1, gen2)
+                while True:
+                    n1[0] = None
+                    try:
+                        n1[0] = next(gen1)
+                        n2 = next(gen2)
+                    except StopIteration:
+                        break
+
+                    yield (n1[0], n2)
 
             # buffer elements
             zipped_elements = list(zip_gen())
 
             # get rest of generator, one should be empty
-            rest_left = list(gen1)
+            rest_left = list(gen1) if n1[0] is None else list(gen1) + n1
             rest_right = list(gen2)
 
             def result_gen():
@@ -217,45 +232,36 @@ class Zip2Observable(Observable):
             do_back_pressure_left = True
             do_back_pressure_right = True
 
-            n_right_buffer = len(right_buffer) if right_buffer is not None else 0
-            n_left_buffer = len(left_buffer) if left_buffer is not None else 0
-
             if rest_left:
-                # are there enough elements in rest_left to not back-pressure left?
-                n_right_received = len(zipped_elements) - n_right_buffer
-                do_back_pressure_left = len(rest_left) < n_right_received
+                do_back_pressure_left = False
             elif rest_right:
-                # are there enough elements in rest_right to not back-pressure left?
-                # therefore, assume that the same number of elements in next left generator
-                n_left_received = len(zipped_elements) - n_left_buffer
-
-                # back-pressure when there are less elements in right buffer than left elements expected
-                do_back_pressure_right = len(rest_right) < n_left_received
+                do_back_pressure_right = False
+            else:
+                pass
 
             if do_back_pressure_left and do_back_pressure_right:
                 next_state = WaitOnLeftRight(rest_left, rest_right)
-                upper_ack.connect_ack(other_ack)
-                return_ack = upper_ack
+                upper_ack.connect_ack(other_in_ack)
+                in_ack = upper_ack
             elif do_back_pressure_right:
                 # only back-pressure right
                 if is_left:
-                    upper_ack.connect_ack(other_ack)
+                    upper_ack.connect_ack(other_in_ack)
                     left_ack = Ack()
-                    return_ack = left_ack
+                    in_ack = left_ack
                 else:
-                    left_ack = other_ack
-                    return_ack = upper_ack
+                    left_ack = other_in_ack
+                    in_ack = upper_ack
                 next_state = WaitOnRight(left_buffer=rest_left, right_buffer=rest_right,
                                                        left_ack=left_ack, left_elem=None)
             elif do_back_pressure_left:
                 # only back-pressure left
                 if is_left:
-                    right_ack = other_ack
-                    return_ack = upper_ack
+                    right_ack = other_in_ack
+                    in_ack = upper_ack
                 else:
-                    right_ack = Ack()
-                    upper_ack.connect_ack(other_ack)
-                    return_ack = right_ack
+                    right_ack = in_ack
+                    upper_ack.connect_ack(other_in_ack)
                 next_state = WaitOnLeft(left_buffer=rest_left, right_buffer=rest_right,
                                                       right_ack=right_ack, right_elem=None)
             else:
@@ -267,16 +273,20 @@ class Zip2Observable(Observable):
 
             prev_final_state = raw_prev_final_state.get_current_state()
 
-            if isinstance(prev_final_state, LeftCompletedState) or isinstance(prev_final_state, RightCompletedState):
-                observer.on_completed()
+            if isinstance(prev_final_state, LeftCompletedState) and do_back_pressure_left:
+                signal_on_complete_or_on_error(raw_state=next_state)
+                return stop_ack
+            elif isinstance(prev_final_state, RightCompletedState) and do_back_pressure_right:
+                signal_on_complete_or_on_error(raw_state=next_state)
                 return stop_ack
             elif isinstance(prev_final_state, ExceptionState):
-                observer.on_error(prev_final_state.ex)
+                signal_on_complete_or_on_error(raw_state=next_state, ex=prev_final_state.ex)
                 return stop_ack
             else:
-                return return_ack
+                return in_ack
 
         def on_next_left(elem):
+
             return_ack = zip_elements(elem=elem, is_left=True)
             return return_ack
 
