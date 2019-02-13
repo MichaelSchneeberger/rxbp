@@ -5,10 +5,9 @@ RxPy back-pressure extension
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
 library, that integrates back-pressure into observables.
 
-*Rxbackpressure* has an experimental status. 
+The *rxbackpressure* library is heavily inspired by [Monix](https://github.com/monix/monix).
 
-The current motivation of this library is to use it for signal processing applications.
-
+It has still experimental status. 
 
 Implemented operators
 ---------------------
