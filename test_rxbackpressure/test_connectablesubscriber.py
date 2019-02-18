@@ -140,7 +140,7 @@ class TestConnectableSubscriber(unittest.TestCase):
         down_stream.on_next(10)
         down_stream.push_first(1)
         down_stream.push_first(2)
-        down_stream.push_complete()
+        down_stream.push_completed()
         down_stream.connect()
 
         s.advance_by(1)
@@ -168,7 +168,7 @@ class TestConnectableSubscriber(unittest.TestCase):
         s.advance_by(1)
 
         with self.assertRaises(Exception):
-            down_stream.push_complete()
+            down_stream._on_completed_or_error()
 
     # def test_should_schedule_push_error(self):
     #     s: TestScheduler = self.scheduler

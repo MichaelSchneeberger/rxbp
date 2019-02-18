@@ -7,7 +7,7 @@ from rxbp.scheduler import Scheduler
 
 class DebugObservable(Observable):
     def __init__(self, source: Observable, name: str, on_next=None, on_completed=None, on_ack=None,
-                 on_subscribe=None, on_raw_ack=None):
+                 on_subscribe=None, on_raw_ack=None, on_next_exception=None):
         self.source = source
         self.name = name
 
@@ -17,6 +17,7 @@ class DebugObservable(Observable):
         self.on_sync_ack = on_ack or (lambda v: print('{}.on_sync_ack {}'.format(name, v)))
         self.on_async_ack = on_ack or (lambda v: print('{}.on_async_ack {}'.format(name, v)))
         self.on_raw_ack = on_raw_ack or (lambda v: print('{}.on_raw_ack {}'.format(name, v)))
+        self.on_next_exception = on_next_exception or (lambda v: print('{}.on_next exception raised "{}"'.format(name, v)))
 
     def unsafe_subscribe(self, observer: Observer, scheduler: Scheduler,
                          subscribe_scheduler: Scheduler):
@@ -24,7 +25,11 @@ class DebugObservable(Observable):
 
         def on_next(v):
             self.on_next_func(v)
-            ack = observer.on_next(v)
+            try:
+                ack = observer.on_next(v)
+            except Exception as e:
+                # self.on_next_exception(e)
+                raise
 
             if isinstance(ack, Continue) or isinstance(ack, Stop):
                 self.on_sync_ack(ack)

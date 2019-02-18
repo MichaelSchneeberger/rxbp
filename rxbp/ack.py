@@ -27,9 +27,6 @@ class Ack(AsyncSubject):
 
         return return_ack
 
-    def print_sth(self):
-        print('ok')
-
     def connect_ack(self, next_ack: 'Ack'):
         self.subscribe(next_ack)
 

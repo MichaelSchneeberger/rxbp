@@ -1,10 +1,9 @@
 from typing import Callable, Any
 
-from rx.concurrency.schedulerbase import SchedulerBase
-
 from rxbp.ack import Continue
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.scheduler import Scheduler
 
 
 class FilterObservable(Observable):
@@ -12,12 +11,19 @@ class FilterObservable(Observable):
         self.source = source
         self.predicate = predicate
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def unsafe_subscribe(self, observer: Observer, scheduler: Scheduler,
+                         subscribe_scheduler: Scheduler):
         def on_next(v):
-            should_run = self.predicate(v)
+            def gen_filtered_iterable():
+                for e in v():
+                    if self.predicate(e):
+                        yield e
+
+            should_run = list(gen_filtered_iterable())
             if should_run:
-                return observer.on_next(v)
+                def gen_output():
+                    yield from should_run
+                return observer.on_next(gen_output)
             else:
                 return Continue()
 
@@ -32,4 +38,4 @@ class FilterObservable(Observable):
                 return observer.on_completed()
 
         filter_observer = FilterObserver()
-        self.source.unsafe_subscribe(filter_observer, scheduler, subscribe_scheduler)
+        return self.source.unsafe_subscribe(filter_observer, scheduler, subscribe_scheduler)

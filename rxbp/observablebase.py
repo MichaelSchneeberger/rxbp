@@ -5,19 +5,12 @@ from rx import AnonymousObservable
 
 import rxbp
 from rxbp.ack import Continue
-from rxbp.observables.flatzipobservablemulti import FlatZipObservableMulti
-from rxbp.observables.repeatfirstobservable import RepeatFirstObservable
-from rxbp.observables.windowmulti import window_multi
+from rxbp.observables.window import window_multi
 from rxbp.pipe import pipe
 from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
-from rxbp.observables.connectableobservable import ConnectableObservable
-from rxbp.subjects.replaysubject import ReplaySubject
-from rxbp.observables.filterobservable import FilterObservable
 from rxbp.scheduler import SchedulerBase, Scheduler
 from rxbp.observable import Observable
-from rxbp.observables.observeonobservable import ObserveOnObservable
 from rxbp.observer import Observer
-from rxbp.observables.pairwiseobservable import PairwiseObservable
 
 
 class ObservableBase(Observable):
@@ -181,8 +174,8 @@ class ObservableBase(Observable):
         """
 
         o1, o2 = window_multi(self, right, is_lower, is_higher)
-        # return ObservableOpMulti(o1).map(lambda t2: (t2[0], ObservableOpMulti(t2[1]))), ObservableOpMulti(o2)
-        return ObservableBase(o1), ObservableBase(o2)
+        return ObservableBase(o1).map(lambda t2: (t2[0], ObservableBase(t2[1]).buffer(size=1))), \
+               ObservableBase(o2).buffer(size=1)
 
     # def controlled_zip(self, right, is_lower, is_higher, selector):
     #     observable = ControlledZipObservable(left=self, right=right, is_lower=is_lower, is_higher=is_higher,
@@ -192,14 +185,14 @@ class ObservableBase(Observable):
     def pipe(self, *operators: Callable[[Observable], Observable]) -> 'ObservableBase':
         return ObservableBase(pipe(*operators)(self))
 
-    def zip(self, right: Observable):
+    def zip(self, right: Observable, selector: Callable[[Any, Any], Any] = None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
         :return: zipped observable
         """
 
-        observable = rxbp.op.zip(right=right)(self)
+        observable = rxbp.op.zip(right=right, selector=selector)(self)
         return ObservableBase(observable)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):

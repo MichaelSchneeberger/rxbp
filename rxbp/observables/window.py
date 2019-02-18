@@ -1,4 +1,5 @@
 import itertools
+import traceback
 from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional
 
 from rx import config
@@ -11,9 +12,9 @@ from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
-def window(left: Observable, right: Observable,
-           is_lower: Callable[[Any, Any], bool],
-           is_higher: Callable[[Any, Any], bool]):
+def window_multi(left: Observable, right: Observable,
+                 is_lower: Callable[[Any, Any], bool],
+                 is_higher: Callable[[Any, Any], bool]):
     """
     :param left:
     :param right:
@@ -41,14 +42,14 @@ def window(left: Observable, right: Observable,
 
     class WaitOnRight(State):
         def __init__(self,
-                     left_iter: Iterator,
-                     first_left: Any,
-                     publish_subject: PublishSubject,
+                     val_subject_iter: Iterator,
+                     left_val: Any,
+                     subject: PublishSubject,
                      left_in_ack: Ack,
                      last_left_out_ack: Optional[Ack]):
-            self.first_left = first_left
-            self.publish_subject = publish_subject
-            self.left_iter = left_iter
+            self.left_val = left_val
+            self.subject = subject
+            self.val_subject_iter = val_subject_iter
             self.left_in_ack = left_in_ack
             self.last_left_out_ack = last_left_out_ack
 
@@ -95,10 +96,10 @@ def window(left: Observable, right: Observable,
         there are possible more left values in iterable.
         """
 
-        def __init__(self, left_val, left_iter, last_left_out_ack):
+        def __init__(self, left_val, last_left_out_ack, subject):
             self.left_val = left_val
-            self.left_iter = left_iter
             self.last_left_out_ack = last_left_out_ack
+            self.subject = subject
 
     class SyncNoMoreLeftOLL(OnLeftLowerState):
         """ on_left_lower is called synchronously from iterate_over_right
@@ -119,8 +120,8 @@ def window(left: Observable, right: Observable,
 
     left_is_higher = is_lower
     left_is_lower = is_higher
-    right_is_higher = is_lower
-    right_is_lower = is_higher
+    # right_is_higher = is_lower
+    # right_is_lower = is_higher
 
     def unsafe_subscribe(scheduler: Scheduler, subscribe_scheduler: Scheduler):
         exception = [None]
@@ -130,7 +131,8 @@ def window(left: Observable, right: Observable,
         state = [InitialState()]
         lock = config['concurrency'].RLock()
 
-        def on_left_lower(left_iter: Iterator[Any], last_left_out_ack: Optional[Ack],
+        def on_left_lower(val_subject_iter: Iterator[Tuple[Any, PublishSubject]],
+                          last_left_out_ack: Optional[Ack],
                           right_val: Any, right_iter: Iterator[Any],
                           is_sync: ConcurrentType) \
                 -> OnLeftLowerState:
@@ -145,95 +147,53 @@ def window(left: Observable, right: Observable,
             :return:
             """
 
-            # # initialize left_out_ack before while looop
-            # left_out_ack = last_left_out_ack
+            # print('on left lower')
 
             # iterate over left until left is not lower than right
             while True:
 
                 # check if there is a next left element
                 try:
-                    next_left_val = next(left_iter)
+                    next_left_val, subject = next(val_subject_iter)
                     has_next = True
                 except StopIteration:
                     next_left_val = None
+                    subject = None
                     has_next = False
 
                 if has_next:
                     # there is a next left value, which can be send to left observer
 
-                    # print('last left out ack = {}'.format(last_left_out_ack))
-                    if last_left_out_ack is None or isinstance(last_left_out_ack, Continue):
-                        # synchronous case
+                    # print('next left val: {}'.format(next_left_val))
 
-                        publish_subject = PublishSubject()
-                        last_left_out_ack = left_observer[0].on_next((next_left_val, publish_subject))
+                    # if left value is lower than right value, then go to next left value
+                    if left_is_lower(next_left_val, right_val):
+                        subject.on_completed()
 
-                        # if left value is lower than right value, then go to next left value
-                        if left_is_lower(next_left_val, right_val):
-                            # go to next left element
-                            pass
+                    # if in sync mode, return all information to continue oiterating over right values
+                    elif isinstance(is_sync, SynchronousLeft) or isinstance(is_sync, SynchronousRight):
+                        return SyncMoreLeftOLL(left_val=next_left_val, subject=subject,
+                                            last_left_out_ack=last_left_out_ack)
 
-                        elif isinstance(is_sync, SynchronousLeft) or isinstance(is_sync, SynchronousRight):
-                            return SyncMoreLeftOLL(left_val=(next_left_val, publish_subject),
-                                                    left_iter=left_iter, last_left_out_ack=last_left_out_ack)
-                        elif isinstance(is_sync, Asynchronous):
-                            # continue iterating over right parameters
-                            # print('iterate over right 1')
-                            iterate_over_right(left_val=next_left_val, left_iter=left_iter,
-                                               last_left_out_ack=last_left_out_ack,
-                                               publish_subject=publish_subject,
-                                               right_val=right_val, right_iter=right_iter,
-                                               is_sync=is_sync)
-                            # print('iterate over right 2')
-
-                            return None
-                        else:
-                            raise Exception('illegal case')
-
-                    elif isinstance(last_left_out_ack, Stop):
-                        raise NotImplementedError
+                    elif isinstance(is_sync, Asynchronous):
+                        # continue iterating over right value
+                        iterate_over_right(left_val=next_left_val, val_subject_iter=val_subject_iter,
+                                           last_left_out_ack=last_left_out_ack,
+                                           subject=subject,
+                                           right_val=right_val, right_iter=right_iter,
+                                           is_sync=is_sync)
+                        return None
                     else:
-                        if isinstance(is_sync, SynchronousLeft):
-                            # switch to asynchronous call
-                            left_in_ack = Ack()
-                            right_in_ack = is_sync.right_in_ack
-                            updated_is_sync = Asynchronous(left_in_ack=left_in_ack,
-                                                           right_in_ack=right_in_ack,
-                                                           last_left_out_ack=last_left_out_ack)
-                        elif isinstance(is_sync, SynchronousRight):
-                            # switch to asynchronous call
-                            right_in_ack = Ack()
-                            left_in_ack = is_sync.left_in_ack
-                            updated_is_sync = Asynchronous(left_in_ack=left_in_ack,
-                                                           right_in_ack=right_in_ack,
-                                                           last_left_out_ack=last_left_out_ack)
-                        elif isinstance(is_sync, Asynchronous):
-                            left_in_ack = is_sync.left_in_ack
-                            right_in_ack = is_sync.right_in_ack
-                            updated_is_sync = is_sync
-                        else:
-                            raise Exception('illegal case')
+                        raise Exception('illegal case')
 
-                        def _(v):
-                            if isinstance(v, Continue):
-                                # asynchronous call
-                                updated_first_iter = itertools.chain([next_left_val], left_iter)
-                                on_left_lower(left_iter=updated_first_iter, last_left_out_ack=v,
-                                              right_val=right_val, right_iter=right_iter,
-                                              is_sync=updated_is_sync)
-                            else:
-                                raise NotImplementedError
-
-                        last_left_out_ack.observe_on(scheduler).subscribe(_)
-                        return AsyncOLL(left_in_ack=left_in_ack, right_in_ack=right_in_ack)
+                # val_subject_iter is empty, request new left
                 else:
-                    # left iter is empty
-
                     if isinstance(is_sync, SynchronousLeft) or isinstance(is_sync, Asynchronous):
                         right_in_ack = is_sync.right_in_ack
+
                     elif isinstance(is_sync, SynchronousRight):
                         right_in_ack = Ack()
+
                     else:
                         raise Exception('illegal case')
 
@@ -251,7 +211,6 @@ def window(left: Observable, right: Observable,
                             new_state = WaitOnLeft(right_val=right_val,
                                                    right_iter=right_iter,
                                                    right_in_ack=right_in_ack,)
-                                                   # last_left_out_ack=last_left_out_ack)
                             state[0] = new_state
                             return_stop_ack = False
 
@@ -272,9 +231,9 @@ def window(left: Observable, right: Observable,
                     else:
                         raise Exception('illegal case')
 
-        def iterate_over_right(left_val: Any, left_iter: Iterator[Any],
+        def iterate_over_right(left_val: Any,
                                last_left_out_ack: Optional[Ack],
-                               publish_subject: PublishSubject,
+                               subject: PublishSubject, val_subject_iter: Iterator[Tuple[Any, PublishSubject]],
                                right_val: Optional[Any], right_iter: Iterator[Any],
                                is_sync: ConcurrentType) \
                 -> Ack:
@@ -302,38 +261,40 @@ def window(left: Observable, right: Observable,
             right_index_buffer = []
 
             # buffer containing the values to be send over the publish subject
-            right_val_buffer = []
+            right_val_buffer = [[]]
 
             while True:
 
                 # print('left_val={}, right_val={}'.format(left_val, right_val))
 
+                # right is higher than left
                 if left_is_lower(left_val, right_val):
-                    # right is higher than left
+                    # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
 
                     # send right elements (collected in a list) to inner observer
-                    if right_val_buffer:
+                    if right_val_buffer[0]:
                         def gen_right():
-                            yield from right_val_buffer
+                            yield from right_val_buffer[0]
 
                         # ignore acknowledment because observer is completed right away
-                        _ = publish_subject.on_next(gen_right)
+                        _ = subject.on_next(gen_right)
+
+                        right_val_buffer[0] = []
 
                     # complete inner observable
-                    publish_subject.on_completed()
+                    subject.on_completed()
 
                     oll_state: OnLeftLowerState = on_left_lower(
-                        left_iter=left_iter, last_left_out_ack=last_left_out_ack,
+                        val_subject_iter=val_subject_iter,
+                        last_left_out_ack=last_left_out_ack,
                         right_val=right_val, right_iter=right_iter,
                         is_sync=is_sync)
 
                     if isinstance(oll_state, SyncMoreLeftOLL):
                         # continue to iterate through right iterable
 
-                        oll_state: SyncMoreLeftOLL = oll_state
-
                         left_val = oll_state.left_val
-                        left_iter = oll_state.left_iter
+                        subject = oll_state.subject
                         last_left_out_ack = oll_state.last_left_out_ack
                     elif isinstance(oll_state, SyncNoMoreLeftOLL):
                         # request new left iterable
@@ -373,7 +334,7 @@ def window(left: Observable, right: Observable,
                     right_index_buffer.append((True, right_val))
 
                     # add to buffer
-                    right_val_buffer.append(right_val)
+                    right_val_buffer[0].append(right_val)
 
                 # check if there is a next right element
                 try:
@@ -393,12 +354,11 @@ def window(left: Observable, right: Observable,
             # case SynchronousLeft - generate new left_ack and save it in state, send continue to right_ack
             # case SynchronousRight - return continue_ack
             # case Asynchronous - save left_ack to state, send continue to right_ack
-
-            if right_val_buffer:
+            if right_val_buffer[0]:
                 def gen_right_items_to_inner():
-                    yield from right_val_buffer
+                    yield from right_val_buffer[0]
 
-                inner_ack = publish_subject.on_next(gen_right_items_to_inner)
+                inner_ack = subject.on_next(gen_right_items_to_inner)
             else:
                 inner_ack = continue_ack
 
@@ -408,7 +368,7 @@ def window(left: Observable, right: Observable,
 
                 right_out_ack = right_observer[0].on_next(gen_right_index)
             else:
-                return  continue_ack
+                return continue_ack
 
             if isinstance(is_sync, SynchronousLeft):
                 # create a new left in ack
@@ -416,26 +376,33 @@ def window(left: Observable, right: Observable,
                 # left can be directly back-pressured with continue left
 
                 left_in_ack = Ack()
+
             elif isinstance(is_sync, SynchronousRight):
                 left_in_ack = is_sync.left_in_ack
+
             elif isinstance(is_sync, Asynchronous):
                 left_in_ack = is_sync.left_in_ack
+
             else:
                 raise Exception('illegal case')
 
             with lock:
                 if not right_completed[0] and exception[0] is None:
-                    new_state = WaitOnRight(first_left=left_val, publish_subject=publish_subject,
-                                            left_iter=left_iter,
+                    new_state = WaitOnRight(left_val=left_val, subject=subject,
+                                            val_subject_iter=val_subject_iter,
                                             left_in_ack=left_in_ack,
                                             last_left_out_ack=last_left_out_ack)
                     state[0] = new_state
 
             if right_completed[0]:
-                publish_subject.on_completed()
+                subject.on_completed()
+                for _, subject in val_subject_iter:
+                    subject.on_completed()
+
                 right_observer[0].on_completed()
                 left_observer[0].on_completed()
                 return stop_ack
+
             elif exception[0] is not None:
                 right_observer[0].on_error(exception[0])
                 left_observer[0].on_error(exception[0])
@@ -459,32 +426,35 @@ def window(left: Observable, right: Observable,
         def on_next_left(left_elem: Callable[[], Generator]):
             # print('window on left')
 
-            # create the left iterable
-            left_iter = left_elem()
+            # consume all left elements, and create a Subject for each element
+            val_subj_list = [(left, PublishSubject()) for left in left_elem()]
 
-            # by convention, there is at least one element in the left iterable
-            left_item = next(left_iter)
+            # # create a generator of element-subject pairs
+            def gen_elem_subject_pairs():
+                yield from val_subj_list
 
-            # send first left item
-            publish_subject = PublishSubject()
-            last_left_out_ack = left_observer[0].on_next((left_item, publish_subject))
+            val_subject_iter = iter(val_subj_list)
+            left_val, subject = next(val_subject_iter)
+            last_left_out_ack = left_observer[0].on_next(gen_elem_subject_pairs)
 
             with lock:
                 if isinstance(state[0], WaitOnLeft):
                     # iterate over right elements and send them over the publish subject and right observer
                     pass
+
                 elif isinstance(state[0], Completed):
                     return stop_ack
+
                 elif isinstance(state[0], InitialState):
                     # wait until right iterable is received
                     left_in_ack = Ack()
-                    new_state = WaitOnRight(first_left=left_item,
-                                            publish_subject=publish_subject,
-                                            left_iter=left_iter,
+                    new_state = WaitOnRight(left_val=left_val, val_subject_iter=val_subject_iter,
+                                            subject=subject,
                                             left_in_ack=left_in_ack,
                                             last_left_out_ack=last_left_out_ack)
                     state[0] = new_state
                     return left_in_ack
+
                 else:
                     raise Exception('illegal state {}'.format(state[0]))
 
@@ -499,15 +469,16 @@ def window(left: Observable, right: Observable,
             right_in_ack = current_state.right_in_ack
             # last_left_out_ack = current_state.last_left_out_ack
 
-            # case 1: state changed to WaitOnRight, returns acknowledgment from left, and right and inner right connected
+            # case 1: state changed to WaitOnRight, returns acknowledgment from left,
+            #   and right and inner right connected
             # case 2: state changed to WaitOnLeft, returns acknowledgment from left
             # case 3: state doesn't change, returns None
             is_sync = SynchronousLeft(right_in_ack=right_in_ack)
 
             left_ack = iterate_over_right(
-                left_val=left_item, left_iter=left_iter,
+                left_val=left_val,
                 last_left_out_ack=last_left_out_ack,
-                publish_subject=publish_subject,
+                subject=subject, val_subject_iter=val_subject_iter,
                 right_val=right_val, right_iter=right_iter,
                 is_sync=is_sync)
 
@@ -515,6 +486,7 @@ def window(left: Observable, right: Observable,
 
         def on_next_right(right_elem: Callable[[], Generator]):
             # print('window on right')
+
             # create the right iterable
             right_iter = right_elem()
             right_val = next(right_iter)
@@ -536,14 +508,16 @@ def window(left: Observable, right: Observable,
                 current_state: WaitOnRight = state[0]
                 state[0] = Transition()
 
-            left_val = current_state.first_left
-            publish_subject = current_state.publish_subject
-            left_iter = current_state.left_iter
+            left_val = current_state.left_val
+            subject = current_state.subject
+            val_subject_iter = current_state.val_subject_iter
             left_in_ack = current_state.left_in_ack
             left_out_ack = current_state.last_left_out_ack
+
             right_ack = iterate_over_right(
-                left_val=left_val, left_iter=left_iter, last_left_out_ack=left_out_ack,
-                publish_subject=publish_subject,
+                left_val=left_val, val_subject_iter=val_subject_iter,
+                last_left_out_ack=left_out_ack,
+                subject=subject,
                 right_val=right_val, right_iter=right_iter,
                 is_sync=SynchronousRight(left_in_ack=left_in_ack, left_out_ack=left_out_ack))
 
@@ -575,6 +549,7 @@ def window(left: Observable, right: Observable,
                 on_error(exc)
 
             def on_completed(self):
+                # print('left completed')
                 complete = False
 
                 with lock:

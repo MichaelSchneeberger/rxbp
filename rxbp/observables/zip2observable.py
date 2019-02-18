@@ -11,7 +11,7 @@ from rxbp.observable import Observable
 
 
 class Zip2Observable(Observable):
-    def __init__(self, left, right): #, selector: Callable[[Any, Any], Any] = None):
+    def __init__(self, left, right, selector: Callable[[Any, Any], Any] = None):
         """ An observable that zips the elements of a left and right observable
 
         :param left: left observable
@@ -21,7 +21,7 @@ class Zip2Observable(Observable):
 
         self.left = left
         self.right = right
-        # self.selector = (lambda l, r: (l, r)) if selector is None else selector     # todo: remove?
+        self.selector = (lambda l, r: (l, r)) if selector is None else selector
 
     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
 
@@ -164,6 +164,7 @@ class Zip2Observable(Observable):
 
             prev_final_state = raw_prev_final_state.get_current_state()
             prev_state = raw_prev_state.get_current_state(prev_final_state)
+            # prev_state = next_state.get_current_state(prev_final_state)
 
             if isinstance(prev_state, Stopped):
                 return stop_ack
@@ -182,7 +183,7 @@ class Zip2Observable(Observable):
                 left_elem = elem
                 other_in_ack = prev_state.right_ack
             else:
-                raise Exception('unknown state "{}"'.format(prev_state))
+                raise Exception('unknown state "{}", is_left {}'.format(prev_state, is_left))
 
             if left_elem is not None:
                 if left_buffer:
@@ -214,7 +215,7 @@ class Zip2Observable(Observable):
                     except StopIteration:
                         break
 
-                    yield (n1[0], n2)
+                    yield self.selector(n1[0], n2)
 
             # buffer elements
             zipped_elements = list(zip_gen())
@@ -228,9 +229,14 @@ class Zip2Observable(Observable):
                     yield e
 
             upper_ack = observer.on_next(result_gen)
+            # upper_ack = Ack()
+            # upper_ack2.observe_on(scheduler).subscribe(upper_ack2)
 
             do_back_pressure_left = True
             do_back_pressure_right = True
+
+            # print('rest left {}'.format(rest_left))
+            # print('rest right {}'.format(rest_right))
 
             if rest_left:
                 do_back_pressure_left = False
@@ -239,16 +245,20 @@ class Zip2Observable(Observable):
             else:
                 pass
 
+            # print('is_left ', is_left)
+            # print('do_back_pressure_right ', do_back_pressure_right)
+            # print('do_back_pressure_left ', do_back_pressure_left)
+
             if do_back_pressure_left and do_back_pressure_right:
+                # upper_ack.connect_ack(other_in_ack)
                 next_state = WaitOnLeftRight(rest_left, rest_right)
-                upper_ack.connect_ack(other_in_ack)
                 in_ack = upper_ack
             elif do_back_pressure_right:
                 # only back-pressure right
                 if is_left:
-                    upper_ack.connect_ack(other_in_ack)
                     left_ack = Ack()
                     in_ack = left_ack
+                    # upper_ack.connect_ack(other_in_ack)
                 else:
                     left_ack = other_in_ack
                     in_ack = upper_ack
@@ -260,8 +270,8 @@ class Zip2Observable(Observable):
                     right_ack = other_in_ack
                     in_ack = upper_ack
                 else:
+                    # upper_ack.connect_ack(other_in_ack)
                     right_ack = in_ack
-                    upper_ack.connect_ack(other_in_ack)
                 next_state = WaitOnLeft(left_buffer=rest_left, right_buffer=rest_right,
                                                       right_ack=right_ack, right_elem=None)
             else:
@@ -275,19 +285,43 @@ class Zip2Observable(Observable):
 
             if isinstance(prev_final_state, LeftCompletedState) and do_back_pressure_left:
                 signal_on_complete_or_on_error(raw_state=next_state)
+                other_in_ack.on_next(stop_ack)
+                other_in_ack.on_completed()
                 return stop_ack
             elif isinstance(prev_final_state, RightCompletedState) and do_back_pressure_right:
                 signal_on_complete_or_on_error(raw_state=next_state)
+                other_in_ack.on_next(stop_ack)
+                other_in_ack.on_completed()
                 return stop_ack
             elif isinstance(prev_final_state, ExceptionState):
                 signal_on_complete_or_on_error(raw_state=next_state, ex=prev_final_state.ex)
+                other_in_ack.on_next(stop_ack)
+                other_in_ack.on_completed()
                 return stop_ack
             else:
+                if do_back_pressure_left and do_back_pressure_right:
+                    upper_ack.connect_ack(other_in_ack)
+                elif do_back_pressure_right:
+                    # only back-pressure right
+                    if is_left:
+                        upper_ack.connect_ack(other_in_ack)
+                elif do_back_pressure_left:
+                    # only back-pressure left
+                    if not is_left:
+                        upper_ack.connect_ack(other_in_ack)
+                else:
+                    raise Exception('at least one side should be back-pressured')
+
                 return in_ack
 
         def on_next_left(elem):
-
-            return_ack = zip_elements(elem=elem, is_left=True)
+            try:
+                return_ack = zip_elements(elem=elem, is_left=True)
+                # return_ack.subscribe(print)
+            except:
+                import traceback
+                traceback.print_exc()
+                raise
             return return_ack
 
         def on_next_right(elem):

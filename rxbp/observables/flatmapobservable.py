@@ -1,11 +1,13 @@
-from typing import Callable, Any, Optional, List, Iterator
+from typing import Callable, Any, List
 
 from rx import config
+from rx.concurrency import immediate_scheduler
 from rx.core import Disposable
 
-from rxbp.ack import Ack, Continue, Stop, stop_ack, continue_ack
+from rxbp.ack import Ack, Continue, Stop, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observers.connectablesubscriber import ConnectableSubscriber
 
 
 class FlatMapObservable(Observable):
@@ -18,22 +20,41 @@ class FlatMapObservable(Observable):
         source = self
 
         class State:
-            pass
+            def get_actual_state(self, nco: int):
+                return self
 
-        class WaitOnNextChild(State):
-            def __init__(self, ack=None):
+        class WaitOnOuter(State):
+            def __init__(self, prev_state, ack):
+                self.prev_state = prev_state
                 self.ack = ack
 
-        class WaitOnActiveChild(State):
-            # this state is necessary in case the inner observable completes before state is set to `Active`; in this
-            #   case, return the last ack returned by output observer
-            def __init__(self, outer_iter):
-                self.outer_iter = outer_iter
+            def get_actual_state(self, nco: int):
+                if self.prev_state is None or isinstance(self.prev_state, Active):
+                    return self
+                else:
+                    return self.prev_state
+
+        # class WaitOnActiveChild(State):
+        #     # this state is necessary in case the inner observable completes before state is set to `Active`; in this
+        #     #   case, return the last ack returned by output observer
+        #     def __init__(self, outer_iter):
+        #         self.outer_iter = outer_iter
+        #
+        #     def get_actual_state(self, nao: int):
+        #         if nao == 0:
+        #             return WaitOnNextChild()
+        #         else:
+        #             return self
 
         class Active(State):
-            def __init__(self, outer_iter, disposable: List[Disposable]):
-                self.outer_iter = outer_iter
-                self.disposable = disposable
+            def __init__(self, ack = None):
+                self.ack = ack
+
+            def get_actual_state(self, nco: int):
+                if nco == 0:
+                    return WaitOnOuter(prev_state=None, ack=self.ack)
+                else:
+                    return self
 
         class WaitOuterOnCompleteOrOnError(State):
             # outer observer does not complete the output observer (except in WaitOnNextChild); however, it signals
@@ -45,18 +66,12 @@ class FlatMapObservable(Observable):
         class Completed(State):
             pass
 
-        # is_active = [True]
-        state = [WaitOnNextChild(Continue())]
+        state = [WaitOnOuter(prev_state=None, ack=Continue())]
+        conn_observers: List[List] = [None]
+        is_child_active = [False]
         lock = config['concurrency'].RLock()
-        # observer_completed = [False]
-
-        def cancel_state():
-            # with lock:
-            #     observer_completed[0] = True
-            pass
 
         def report_invalid_state(state: State, method: str):
-            cancel_state()
             scheduler.report_failure(
                 Exception('State {} in the ConcatMap.{} implementation is invalid'.format(state, method)))
 
@@ -65,103 +80,124 @@ class FlatMapObservable(Observable):
                 self.errors = [] if source.delay_errors else None
 
             def on_next(self, outer_elem):
-                # by convention, we get a single element, e.g. no iterable
+                outer_vals = list(outer_elem())
+                vals_len = len(outer_vals)
+
                 with lock:
                     # blindly set state to WaitOnActiveChild, analyse current state later
-                    previous_state = state[0]
-                    state[0] = WaitOnActiveChild(outer_iter=None)
+                    prev_state = state[0]
+                    state[0] = Active()
 
                 # nothing happened
-                if isinstance(previous_state, WaitOnNextChild):
+                if isinstance(prev_state, WaitOnOuter):
                     pass
 
                 # when should this happen?
-                elif isinstance(previous_state, Completed):
-                    state[0] = previous_state
+                elif isinstance(prev_state, Completed):
+                    state[0] = prev_state
                     return stop_ack
 
                 else:
-                    report_invalid_state(previous_state, 'on_next (1)')
+                    report_invalid_state(prev_state, 'on_next (1)')
                     return stop_ack
 
-                # select child observable from received item
-                child = source.selector(outer_elem)
-
-                # create a new child observer, and subscribe it to child observable
+                # the ack that might be returned by this `on_next`
                 async_upstream_ack = Ack()
-                child_observer = ChildObserver(observer, scheduler, async_upstream_ack, self)
-                disposable = child.unsafe_subscribe(child_observer, scheduler, subscribe_scheduler)
+
+                def gen_child_observers():
+                    for idx, val in enumerate(outer_vals):
+
+                        # select child observable from received item
+                        child = source.selector(val)
+
+                        # create a new child observer, and subscribe it to child observable
+                        child_observer = ChildObserver(observer, scheduler, async_upstream_ack, self, vals_len-idx)
+
+                        if idx == 0:
+                            disposable = child.unsafe_subscribe(child_observer, scheduler, subscribe_scheduler)
+                            yield child_observer
+                        else:
+                            conn_observer = ConnectableSubscriber(child_observer, scheduler=immediate_scheduler)
+                            disposable = child.unsafe_subscribe(conn_observer, scheduler, subscribe_scheduler)
+                            yield conn_observer
+
+                conn_observers[0] = list(gen_child_observers())
 
                 with lock:
                     # blindly set state to Active, analyse current state later
-                    previous_state = state[0]
-                    state[0] = Active(None, disposable)
+                    raw_state: State = state[0]
+                    is_child_active[0] = True
+                    nco = len(conn_observers[0])
+
+                prev_state = raw_state.get_actual_state(nco=nco)
 
                 # possible transitions during child subscription:
                 # - WaitOnActiveChild -> nothing happened
                 # - WaitOnNextChild -> inner observable completed
                 # - Completed -> inner observable got an error
 
-                # inner observable completed during subscription
-                if isinstance(previous_state, WaitOnNextChild):
-                    with lock:
-                        state[0] = previous_state
-                    return previous_state.ack
+                # inner observable completed during subscription; reset state
+                if isinstance(prev_state, WaitOnOuter):
+                    return prev_state.ack
 
                 # no state transition happened during child subscription
-                elif isinstance(previous_state, WaitOnActiveChild):
+                elif isinstance(prev_state, Active):
                     return async_upstream_ack
 
-                elif isinstance(previous_state, Completed):
+                elif isinstance(prev_state, Completed):
                     return stop_ack
 
                 else:
-                    report_invalid_state(previous_state, 'on_next (2)')
+                    report_invalid_state(prev_state, 'on_next (2)')
                     return stop_ack
 
             def on_error(self, exc):
                 with lock:
-                    previous_state = state[0]
+                    raw_state = state[0]
                     state[0] = WaitOuterOnCompleteOrOnError(exc)
+                    nco = len(conn_observers[0])
+
+                prev_state = raw_state.get_actual_state(nco=nco)
 
                 # only if state is WaitOnNextChild, complete observer
-                if isinstance(previous_state, WaitOnNextChild): # and not observer_completed[0]: todo: is this necessary
+                if isinstance(prev_state, WaitOnOuter):
                     # calls to root.on_next and root.on_error or root.on_completed happen in order,
                     # therefore state is not changed concurrently in WaitOnNextChild
-                    # if not observer_completed[0]: # todo: remove this?
                     observer.on_error(exc)
-                    # observer_completed[0] = True
 
-                    with lock:
-                        state[0] = Completed()
+                    state[0] = Completed()
 
             def on_completed(self):
                 with lock:
-                    previous_state = state[0]
+                    raw_state = state[0]
                     state[0] = WaitOuterOnCompleteOrOnError(None)
+                    nco = len(conn_observers[0])
 
+                prev_state = raw_state.get_actual_state(nco=nco)
                 # print('complete outer "{}"'.format(previous_state))
 
-                if isinstance(previous_state, WaitOnNextChild): # and not observer_completed[0]:
+                if isinstance(prev_state, WaitOnOuter):
                     # calls to root.on_next and root.on_completed happen in order,
                     # therefore state is not changed concurrently at the WaitOnNextChild
-                    # if not observer_completed[0]: # todo: remove this?
                     observer.on_completed()
                     # observer_completed[0] = True
                     state[0] = Completed()
 
         class ChildObserver(Observer):
-            def __init__(self, out: Observer, scheduler, async_upstream_ack: Ack, concat_observer):
+            def __init__(self, out: Observer, scheduler, async_upstream_ack: Ack,
+                         concat_observer, idx):
                 self.out = out
                 self.scheduler = scheduler
                 self.async_upstream_ack = async_upstream_ack
                 self.concat_observer = concat_observer
                 self.ack = Continue()
+                self.idx = idx
 
                 self.completed = False
                 self.exception = None
 
             def on_next(self, v):
+
                 # on_next, on_completed, on_error are called ordered/non-concurrently
                 ack = self.out.on_next(v)
 
@@ -198,43 +234,53 @@ class FlatMapObservable(Observable):
                 :return:
                 """
 
-                with lock:
-                    # blindly set state to InnerTransition, analyse previous state below
-                    # inner transition
-                    previous_state = state[0]
-                    state[0] = WaitOnNextChild(ack=self.ack)
+                last_ack = self.ack
+                # next_raw_state = Active()
 
-                # print('complete inner "{}"'.format(previous_state))
+                with lock:
+                    raw_state = state[0]
+                    # state[0] = next_raw_state
+                    ica = is_child_active[0]
+                    conn_observers[0].pop(0)
+                    nco = len(conn_observers[0])
+
+                prev_state = raw_state.get_actual_state(nco)
 
                 # possible previous states
                 # - Active -> outer on_next call completed before this
                 # - WaitOnActiveChild -> outer on_next call completes after this
                 # - WaitComplete -> outer.on_complete or outer.on_error was called
 
-                # outer on_next call hasn't completed yet, don't do anything
-                if isinstance(previous_state, WaitOnActiveChild):
+                if isinstance(prev_state, Completed):
                     return
 
-                # outer on_next call completed, go to next inner observable
-                elif isinstance(previous_state, Active):
-                    self.ack.connect_ack(self.async_upstream_ack)
-                    return
-
-                elif isinstance(previous_state, Completed):
-                    with lock:
-                        # todo: here something could go wrong (the short time when state is not Completed)
-                        state[0] = previous_state
-                    return
-
-                elif isinstance(previous_state, WaitOuterOnCompleteOrOnError):
-                    if previous_state.ex is None:
+                elif isinstance(prev_state, WaitOuterOnCompleteOrOnError):
+                    if prev_state.ex is None:
                         observer.on_completed()
                     else:
-                        observer.on_error(previous_state.ex)
+                        observer.on_error(prev_state.ex)
 
                     self.async_upstream_ack.on_next(stop_ack)
                     self.async_upstream_ack.on_completed()
                     return
+
+                # count is at zero; request new outer
+                elif isinstance(prev_state, WaitOnOuter):
+                    ack = prev_state.ack
+
+                    with lock:
+                        prev_state = state[0]
+                        state[0] = WaitOnOuter(prev_state=prev_state, ack=ack)
+
+                    if ica:
+                        last_ack.connect_ack(self.async_upstream_ack)
+
+                    else:
+                        return
+
+                # check if the first element of next inner has already been received
+                elif isinstance(prev_state, Active):
+                    conn_observers[0][0].connect()
 
                 else:
                     raise Exception('illegal state')

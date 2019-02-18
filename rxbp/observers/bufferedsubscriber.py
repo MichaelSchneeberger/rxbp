@@ -28,55 +28,46 @@ class BufferedSubscriber(Observer):
 
         self.lock = config['concurrency'].RLock()
 
-    def push_on_next(self, elem, last_to_push: int = None):
+    def on_next(self, v):
         if self.upstream_is_complete or self.downstream_is_complete:
             return Stop()
         else:
-            if last_to_push is None:
-                with self.lock:
-                    to_push =  self.items_to_push
-                    self.items_to_push += 1
-            else:
-                to_push = last_to_push
+            with self.lock:
+                is_back_pressured = self.back_pressured
+                to_push = self.items_to_push
+                self.items_to_push += 1
 
-            if self.back_pressured is None:
+            if is_back_pressured is None:
                 if to_push < self.buffer_size:
-                    self.queue.put(item=elem)
+                    self.queue.put(item=v)
                     self.push_to_consumer(to_push)
                     return continue_ack
                 else:
                     ack = Ack()
-                    with self.lock:
-                        self.back_pressured = ack
-                    self.queue.put(item=elem)
+                    self.back_pressured = ack
+                    self.queue.put(item=v)
                     self.push_to_consumer(to_push)
                     return ack
             else:
-                self.queue.put(item=elem)
+                self.queue.put(item=v)
                 self.push_to_consumer(to_push)
-                return self.back_pressured
+                return is_back_pressured
 
-    def on_next(self, v):
-        return self.push_on_next(v, None)
-
-    def push_complete(self, ex=None, to_push: int = None):
+    def _on_completed_or_error(self, ex=None):
         if not self.upstream_is_complete and not self.downstream_is_complete:
             self.error_thrown = ex
             self.upstream_is_complete = True
-            if to_push is None:
-                with self.lock:
-                    nr = self.items_to_push
-                    self.items_to_push += 1
-            else:
-                nr = to_push
+            with self.lock:
+                nr = self.items_to_push
+                self.items_to_push += 1
 
             self.push_to_consumer(nr)
 
     def on_error(self, ex):
-        self.push_complete(ex, None)
+        self._on_completed_or_error(ex)
 
     def on_completed(self):
-        self.push_complete(None, None)
+        self._on_completed_or_error(None)
 
     def push_to_consumer(self, current_nr: int):
         if current_nr == 0:
