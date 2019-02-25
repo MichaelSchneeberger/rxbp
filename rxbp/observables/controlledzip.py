@@ -175,20 +175,22 @@ def controlled_zip(left: ObservableBase, right: ObservableBase,
                 next_state = WaitLeftRight()
                 state[0] = next_state
 
-                result_ack = zip_out_ack.merge_ack(left_out_ack).merge_ack(right_out_ack)
+                result_ack_left = zip_out_ack.merge_ack(left_out_ack)
+                result_ack_right = zip_out_ack.merge_ack(right_out_ack)
                 if isinstance(is_sync, SynchronousLeft):
-                    result_ack.connect_ack(is_sync.right_in_ack)
+                    result_ack_right.connect_ack(is_sync.right_in_ack)
+                    return result_ack_left
                 elif isinstance(is_sync, SynchronousRight):
-                    result_ack.connect_ack(is_sync.left_in_ack)
+                    result_ack_left.connect_ack(is_sync.left_in_ack)
+                    return result_ack_right
                 else:
                     raise Exception('illegal state')
-                return result_ack
 
             elif not has_left_elem:
                 if isinstance(is_sync, SynchronousLeft):
                     right_in_ack = is_sync.right_in_ack
                 elif isinstance(is_sync, SynchronousRight):
-                    right_in_ack = continue_ack
+                    right_in_ack = Ack()
                 else:
                     raise Exception('illegal state')
 
@@ -196,18 +198,18 @@ def controlled_zip(left: ObservableBase, right: ObservableBase,
                                         right_out_ack=right_out_ack)
                 state[0] = next_state
 
-                result_ack = zip_out_ack.merge_ack(left_out_ack).merge_ack(right_out_ack)
+                result_left_ack = zip_out_ack.merge_ack(left_out_ack)
                 if isinstance(is_sync, SynchronousLeft):
-                    return result_ack
+                    return result_left_ack
                 elif isinstance(is_sync, SynchronousRight):
-                    result_ack.connect_ack(is_sync.left_in_ack)
-                    return continue_ack
+                    result_left_ack.connect_ack(is_sync.left_in_ack)
+                    return right_in_ack
                 else:
                     raise Exception('illegal state')
 
             elif not has_right_elem:
                 if isinstance(is_sync, SynchronousLeft):
-                    left_in_ack = continue_ack
+                    left_in_ack = Ack()
                 elif isinstance(is_sync, SynchronousRight):
                     left_in_ack = is_sync.left_in_ack
                 else:
@@ -217,12 +219,12 @@ def controlled_zip(left: ObservableBase, right: ObservableBase,
                                         left_out_ack=left_out_ack)
                 state[0] = next_state
 
-                result_ack = zip_out_ack.merge_ack(left_out_ack).merge_ack(right_out_ack)
+                result_right_ack = zip_out_ack.merge_ack(right_out_ack)
                 if isinstance(is_sync, SynchronousLeft):
-                    result_ack.connect_ack(is_sync.right_in_ack)
-                    return continue_ack
+                    result_right_ack.connect_ack(is_sync.right_in_ack)
+                    return left_in_ack
                 elif isinstance(is_sync, SynchronousRight):
-                    return result_ack
+                    return result_right_ack
                 else:
                     raise Exception('illegal state')
 

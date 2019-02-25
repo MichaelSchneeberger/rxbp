@@ -23,7 +23,7 @@ class Ack(AsyncSubject):
                 else:
                     return Continue()
 
-            self.zip(ack2, _).subscribe_observer(return_ack)
+            self.zip(ack2, _).subscribe(return_ack)
 
         return return_ack
 
@@ -44,7 +44,7 @@ class Ack(AsyncSubject):
                 else:
                     return Continue()
 
-            self.zip(ack2, _).subscribe_observer(next_ack)
+            self.zip(ack2, _).subscribe(next_ack)
 
 
 class Continue(Ack):
