@@ -64,7 +64,7 @@ class ConnectableSubscriber(Observer):
                                 buffer_was_drained.on_next(v)
                                 buffer_was_drained.on_completed()
 
-                        ack.subscribe_observer(on_next=on_next)
+                        ack.subscribe(on_next=on_next)
 
                         return ack
 
@@ -82,7 +82,7 @@ class ConnectableSubscriber(Observer):
                                         buffer_was_drained.on_next(Continue())
                                         buffer_was_drained.on_completed()
 
-                                self.ack.subscribe_observer(on_next)
+                                self.ack.subscribe(on_next)
                         elif source.schedule_error is not None:
                             raise NotImplementedError
                         else:

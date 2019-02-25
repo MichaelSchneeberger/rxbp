@@ -124,7 +124,7 @@ class CachedServeFirstSubject(ObservableBase, Observer):
                     inner_ack.on_next(v)
                     inner_ack.on_completed()
 
-                ack.observe_on(scheduler=self.scheduler).subscribe_observer(_)
+                ack.observe_on(scheduler=self.scheduler).subscribe(_)
                 return inner_ack
 
         def notify_on_completed(self):
@@ -199,7 +199,7 @@ class CachedServeFirstSubject(ObservableBase, Observer):
                                     else:
                                         raise Exception('no recognized acknowledgment {}'.format(v))
 
-                                ack.observe_on(self.scheduler).subscribe_observer(_)
+                                ack.observe_on(self.scheduler).subscribe(_)
 
                     if not has_next:
                         break
@@ -226,7 +226,7 @@ class CachedServeFirstSubject(ObservableBase, Observer):
                                 self.signal_stop()
                                 self.observer.on_error(err)
 
-                            ack.observe_on(self.scheduler).subscribe_observer(on_next=on_next, on_error=on_error)
+                            ack.observe_on(self.scheduler).subscribe(on_next=on_next, on_error=on_error)
                             break
                         else:
                             self.signal_stop()
@@ -296,7 +296,7 @@ class CachedServeFirstSubject(ObservableBase, Observer):
             ack_list = [current_ack] + inner_ack_list
 
             upper_ack = Ack()
-            rx.Observable.merge(*ack_list).first().subscribe_observer(upper_ack)
+            rx.Observable.merge(*ack_list).first().subscribe(upper_ack)
             return upper_ack
 
     def on_completed(self):

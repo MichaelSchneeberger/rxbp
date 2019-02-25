@@ -40,8 +40,8 @@ class Observable(ObservableBase):
     def controlled_zip(self, right: ObservableBase, is_lower, is_higher):
 
         o1, o2, o3 = controlled_zip(self, right, is_lower, is_higher)
-        return Observable(o1), Observable(o2), Observable(o3)
-        # return Observable(o1).buffer(size=1), Observable(o2).buffer(size=1), Observable(o3).buffer(size=1)
+        # return Observable(o1), Observable(o2), Observable(o3)
+        return Observable(o1).buffer(size=1), Observable(o2).buffer(size=1), Observable(o3).buffer(size=1)
 
     def flat_map(self, selector: Callable[[Any], ObservableBase]):
         """ Applies a function to each item emitted by the source and flattens the result. The function takes any type

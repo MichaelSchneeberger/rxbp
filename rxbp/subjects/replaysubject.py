@@ -117,7 +117,7 @@ class ReplaySubject(ObservableBase, Observer):
                 def on_next(v):
                     if isinstance(v, Stop):
                         self.remove_subscriber(c)
-                ack.subscribe_observer(on_next=on_next)
+                ack.subscribe(on_next=on_next)
 
             def _():
                 try:
@@ -176,7 +176,7 @@ class ReplaySubject(ObservableBase, Observer):
                         self.remove_subscriber(obs)
                         result.countdown()
 
-                ack.observe_on(obs.scheduler).subscribe_observer(on_next)
+                ack.observe_on(obs.scheduler).subscribe(on_next)
 
         if result is None:
             return Continue()

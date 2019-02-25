@@ -29,7 +29,7 @@ class RepeatFirstObservable(ObservableBase):
                                 if isinstance(ack, Continue):
                                     scheduler.schedule(action)
 
-                            ack.subscribe_observer(_)
+                            ack.subscribe(_)
                             break
 
                 scheduler.schedule(action)
