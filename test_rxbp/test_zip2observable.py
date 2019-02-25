@@ -17,7 +17,7 @@ class TestConnectableSubscriber(unittest.TestCase):
 
     def test_starts_before_other_and_finishes_before_other(self):
         Zip2Observable(self.s1, self.s2) \
-            .subscribe(self.o, self.scheduler)
+            .subscribe_observer(self.o, self.scheduler)
 
         self.o.immediate_continue = 2
 
@@ -41,7 +41,7 @@ class TestConnectableSubscriber(unittest.TestCase):
 
     def test_starts_before_other_and_finishes_before_other2(self):
         Zip2Observable(self.s1, self.s2) \
-            .subscribe(self.o, self.scheduler)
+            .subscribe_observer(self.o, self.scheduler)
 
         self.o.immediate_continue = 2
 
@@ -66,7 +66,7 @@ class TestConnectableSubscriber(unittest.TestCase):
 
     def test_signals_error_and_interrupts_the_stream_before_it_starts(self):
         Zip2Observable(self.s1, self.s2) \
-            .subscribe(self.o, self.scheduler)
+            .subscribe_observer(self.o, self.scheduler)
 
         self.o.immediate_continue = 2
 

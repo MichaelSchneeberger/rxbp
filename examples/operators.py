@@ -23,7 +23,7 @@ done = [False]
 start_time = datetime.datetime.now()
 
 # zip operation
-s1.zip(s2).subscribe_with(print, on_completed=on_completed)
+s1.zip(s2).subscribe(print, on_completed=on_completed)
 
 while True:
     if done[0] is True:

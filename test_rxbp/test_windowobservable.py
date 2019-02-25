@@ -25,8 +25,8 @@ class TestWindowObservable(unittest.TestCase):
 
         left, right = window(s1, s2, lambda v1, v2: v2 <= v1[0], lambda v1, v2: v1[1] < v2)
 
-        left.subscribe(o1, scheduler, CurrentThreadScheduler())
-        right.subscribe(o2, scheduler, CurrentThreadScheduler())
+        left.subscribe_observer(o1, scheduler, CurrentThreadScheduler())
+        right.subscribe_observer(o2, scheduler, CurrentThreadScheduler())
 
         self.scheduler = scheduler
         self.left_in = s1

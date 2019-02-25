@@ -21,8 +21,8 @@ class TestConnectableSubscriber(unittest.TestCase):
         o2 = TestObserver()
 
         subject = CachedServeFirstSubject(scheduler=s)
-        subject.subscribe(o1, s, CurrentThreadScheduler())
-        subject.subscribe(o2, s, CurrentThreadScheduler())
+        subject.subscribe_observer(o1, s, CurrentThreadScheduler())
+        subject.subscribe_observer(o2, s, CurrentThreadScheduler())
 
         # -----------------
         # 2 inactive, one returns continue => subject returns continue

@@ -64,7 +64,7 @@ class ConnectableSubscriber(Observer):
                                 buffer_was_drained.on_next(v)
                                 buffer_was_drained.on_completed()
 
-                        ack.subscribe(on_next=on_next)
+                        ack.subscribe_observer(on_next=on_next)
 
                         return ack
 
@@ -82,7 +82,7 @@ class ConnectableSubscriber(Observer):
                                         buffer_was_drained.on_next(Continue())
                                         buffer_was_drained.on_completed()
 
-                                self.ack.subscribe(on_next)
+                                self.ack.subscribe_observer(on_next)
                         elif source.schedule_error is not None:
                             raise NotImplementedError
                         else:
@@ -93,7 +93,7 @@ class ConnectableSubscriber(Observer):
 
                 self.queue.put(EmptyObject)
                 disposable = IteratorAsObservable(iter(self.queue.get, EmptyObject)) \
-                    .subscribe(CustomObserver(), self.scheduler, CurrentThreadScheduler())
+                    .subscribe_observer(CustomObserver(), self.scheduler, CurrentThreadScheduler())
 
                 self.connected_ref = buffer_was_drained, disposable
         return self.connected_ref
@@ -170,7 +170,7 @@ class ConnectableSubscriber(Observer):
             self.connected_ack \
                 .observe_on(self.scheduler) \
                 .flat_map(__) \
-                .subscribe(new_ack)
+                .subscribe_observer(new_ack)
             self.connected_ack = new_ack
             return self.connected_ack
         elif not self.was_canceled:
@@ -184,7 +184,7 @@ class ConnectableSubscriber(Observer):
             if isinstance(v, Continue):
                 self.underlying.on_error(err)
         self.connected_ack.observe_on(self.scheduler) \
-            .subscribe(on_next=on_next)
+            .subscribe_observer(on_next=on_next)
 
     def on_completed(self):
         def on_next(v):

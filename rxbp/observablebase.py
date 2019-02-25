@@ -12,8 +12,8 @@ class ObservableBase:
                          subscribe_scheduler: Scheduler):
         raise NotImplementedError
 
-    def subscribe(self, observer: Observer, scheduler: Scheduler = None,
-                  subscribe_scheduler: Scheduler = None):
+    def subscribe_observer(self, observer: Observer, scheduler: Scheduler = None,
+                           subscribe_scheduler: Scheduler = None):
         subscribe_scheduler_ = subscribe_scheduler or CurrentThreadScheduler()
         scheduler_ = scheduler or subscribe_scheduler_
 
@@ -22,14 +22,15 @@ class ObservableBase:
 
         return subscribe_scheduler_.schedule(action)
 
-    def subscribe_with(self,
-                       on_next: Callable[[Any], None] = None,
-                       on_error: Callable[[Any], None] = None,
-                       on_completed: Callable[[], None] = None,
-                       scheduler: Scheduler = None,
-                       subscribe_scheduler: Scheduler = None):
+    def subscribe(self,
+                  on_next: Callable[[Any], None] = None,
+                  on_error: Callable[[Any], None] = None,
+                  on_completed: Callable[[], None] = None,
+                  scheduler: Scheduler = None,
+                  subscribe_scheduler: Scheduler = None):
         def on_next_with_ack(v):
-            on_next(v)
+            for value in v():
+                on_next(value)
             return continue_ack
 
         on_next_ = (lambda v: continue_ack) if on_next is None else on_next_with_ack
@@ -38,4 +39,4 @@ class ObservableBase:
 
         observer = AnonymousObserver(on_next=on_next_, on_error=on_error_, on_completed=on_completed_)
 
-        return self.subscribe(observer=observer, scheduler=scheduler, subscribe_scheduler=subscribe_scheduler)
+        return self.subscribe_observer(observer=observer, scheduler=scheduler, subscribe_scheduler=subscribe_scheduler)

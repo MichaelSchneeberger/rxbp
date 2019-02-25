@@ -94,8 +94,8 @@ def from_rx(self, batch_size: int = 1):
             subscriber = BufferedSubscriber(observer, scheduler, 1000)
             disposable = source.buffer_with_count(batch_size) \
                 .map(iterable_to_gen) \
-                .subscribe(on_next=subscriber.on_next, on_error=subscriber.on_error,
-                           on_completed=subscriber.on_completed)
+                .subscribe_observer(on_next=subscriber.on_next, on_error=subscriber.on_error,
+                                    on_completed=subscriber.on_completed)
             return disposable
 
     return Observable(ToBackpressureObservable())

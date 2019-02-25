@@ -500,7 +500,7 @@ def window(left: ObservableBase, right: ObservableBase,
                     return stop_ack
                 elif isinstance(state[0], InitialState):
                     right_ack = Ack()
-                    new_state = WaitOnLeft(right_val=None, right_iter=right_iter,
+                    new_state = WaitOnLeft(right_val=right_val, right_iter=right_iter,
                                            right_in_ack=right_ack) #, last_left_out_ack=None)
                     state[0] = new_state
                     return right_ack

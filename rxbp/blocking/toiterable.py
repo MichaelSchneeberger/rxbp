@@ -28,7 +28,7 @@ def to_iterable(source, scheduler):
 
     observer = AnonymousObserver(on_next=on_next, on_error=on_error, on_completed=on_completed)
 
-    source.subscribe(observer, scheduler, CurrentThreadScheduler())
+    source.subscribe_observer(observer, scheduler, CurrentThreadScheduler())
 
     def gen():
 

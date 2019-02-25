@@ -210,7 +210,7 @@ class FlatMapObservable(ObservableBase):
                         if isinstance(v, Stop):
                             with lock:
                                 state[0] = Completed()
-                    ack.subscribe(_)
+                    ack.subscribe_observer(_)
 
                 self.ack = ack
                 return ack

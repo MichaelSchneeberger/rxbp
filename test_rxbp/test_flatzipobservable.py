@@ -55,7 +55,7 @@ class TestFlatZipObservable(unittest.TestCase):
         o1 = TestObserver()
 
         obs = FlatZipObservable(s1, s2, lambda v: v)
-        obs.subscribe(o1, s, CurrentThreadScheduler())
+        obs.subscribe_observer(o1, s, CurrentThreadScheduler())
 
         ack1 = s1.on_next(s3)
 
@@ -122,7 +122,7 @@ class TestFlatZipObservable(unittest.TestCase):
         o1 = TestObserver()
 
         obs = FlatZipObservable(s1, s2, lambda v: v)
-        obs.subscribe(o1, s, CurrentThreadScheduler())
+        obs.subscribe_observer(o1, s, CurrentThreadScheduler())
 
         ack2 = s2.on_next(100)
 
@@ -192,7 +192,7 @@ class TestFlatZipObservable(unittest.TestCase):
         o1 = TestObserver()
 
         obs = FlatZipObservable(s1, s2, lambda v: v)
-        obs.subscribe(o1, s, CurrentThreadScheduler())
+        obs.subscribe_observer(o1, s, CurrentThreadScheduler())
 
         ack1 = s1.on_next(s3)
 

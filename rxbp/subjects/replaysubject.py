@@ -95,7 +95,7 @@ class ReplaySubject(ObservableBase, Observer):
 
 
             return IteratorAsObservable(iter(buffer)) \
-                .subscribe(TObserver(), scheduler, CurrentThreadScheduler())
+                .subscribe_observer(TObserver(), scheduler, CurrentThreadScheduler())
 
         state = self.state
         buffer = state.buffer
@@ -117,7 +117,7 @@ class ReplaySubject(ObservableBase, Observer):
                 def on_next(v):
                     if isinstance(v, Stop):
                         self.remove_subscriber(c)
-                ack.subscribe(on_next=on_next)
+                ack.subscribe_observer(on_next=on_next)
 
             def _():
                 try:
@@ -176,7 +176,7 @@ class ReplaySubject(ObservableBase, Observer):
                         self.remove_subscriber(obs)
                         result.countdown()
 
-                ack.observe_on(obs.scheduler).subscribe(on_next)
+                ack.observe_on(obs.scheduler).subscribe_observer(on_next)
 
         if result is None:
             return Continue()
