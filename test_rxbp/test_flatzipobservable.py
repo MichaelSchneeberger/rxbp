@@ -2,13 +2,13 @@ import unittest
 
 from rx.core import Disposable
 
-from rxbackpressure.ack import Continue, Ack
-from rxbackpressure.observables.flatzipobservable import FlatZipObservable
-from rxbackpressure.observable import Observable
-from rxbackpressure.observer import Observer
-from rxbackpressure.scheduler import SchedulerBase
-from rxbackpressure.schedulers.currentthreadscheduler import CurrentThreadScheduler
-from rxbackpressure.testing.testscheduler import TestScheduler
+from rxbp.ack import Continue, Ack
+from rxbp.observables.flatzipobservable import FlatZipObservable
+from rxbp.observablebase import ObservableBase
+from rxbp.observer import Observer
+from rxbp.scheduler import SchedulerBase
+from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.testing.testscheduler import TestScheduler
 
 
 
@@ -37,7 +37,7 @@ class TestFlatZipObservable(unittest.TestCase):
             def on_completed(self):
                 self.was_completed = True
 
-        class TestObservable(Observable):
+        class TestObservable(ObservableBase):
             def __init__(self):
                 self.observer = None
 
@@ -101,7 +101,7 @@ class TestFlatZipObservable(unittest.TestCase):
             def on_completed(self):
                 self.was_completed = True
 
-        class TestObservable(Observable):
+        class TestObservable(ObservableBase):
             def __init__(self):
                 self.observer = None
 
@@ -170,7 +170,7 @@ class TestFlatZipObservable(unittest.TestCase):
             def on_completed(self):
                 self.was_completed = True
 
-        class TestObservable(Observable):
+        class TestObservable(ObservableBase):
             def __init__(self):
                 self.observer = None
 

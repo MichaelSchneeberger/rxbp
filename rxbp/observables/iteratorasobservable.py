@@ -6,12 +6,12 @@ from rx.core import Disposable
 from rx.disposables import BooleanDisposable
 
 from rxbp.ack import Continue, Stop
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase, ExecutionModel
 
 
-class IteratorAsObservable(Observable):
+class IteratorAsObservable(ObservableBase):
     def __init__(self, iterator: Iterator, on_finish: Disposable = Disposable.empty()):
         # def gen_batched_iterator():
         #     for peak_first in iterator:

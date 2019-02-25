@@ -1,6 +1,6 @@
 import unittest
 
-from rxbackpressure.testing.testscheduler import TestScheduler
+from rxbp.testing.testscheduler import TestScheduler
 
 
 

@@ -1,13 +1,13 @@
 from typing import Callable, Any
 
 from rxbp.ack import Continue
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class FilterObservable(Observable):
-    def __init__(self, source: Observable, predicate: Callable[[Any], bool]):
+class FilterObservable(ObservableBase):
+    def __init__(self, source: ObservableBase, predicate: Callable[[Any], bool]):
         self.source = source
         self.predicate = predicate
 

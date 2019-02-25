@@ -5,12 +5,12 @@ from rx.concurrency.schedulerbase import SchedulerBase
 from rx.core import Disposable
 
 from rxbp.ack import Continue, stop_ack, continue_ack
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 
 
-class PublishSubject(Observable, Observer):
+class PublishSubject(ObservableBase, Observer):
     def __init__(self):
         self.state = self.State()
         self.lock = config["concurrency"].RLock()

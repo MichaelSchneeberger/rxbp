@@ -5,13 +5,13 @@ from rx.concurrency import immediate_scheduler
 from rx.core import Disposable
 
 from rxbp.ack import Ack, Continue, Stop, stop_ack
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
 
 
-class FlatMapObservable(Observable):
-    def __init__(self, source, selector: Callable[[Any], Observable], delay_errors=False):
+class FlatMapObservable(ObservableBase):
+    def __init__(self, source, selector: Callable[[Any], ObservableBase], delay_errors=False):
         self.source = source
         self.selector = selector
         self.delay_errors = delay_errors

@@ -1,9 +1,9 @@
 import unittest
 
-from rxbackpressure.ack import Continue
-from rxbackpressure.observers.connectablesubscriber import ConnectableSubscriber
-from rxbackpressure.observer import Observer
-from rxbackpressure.testing.testscheduler import TestScheduler
+from rxbp.ack import Continue
+from rxbp.observers.connectablesubscriber import ConnectableSubscriber
+from rxbp.observer import Observer
+from rxbp.testing.testscheduler import TestScheduler
 
 
 class TestConnectableSubscriber(unittest.TestCase):

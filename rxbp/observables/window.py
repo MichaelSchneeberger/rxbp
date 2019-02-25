@@ -6,15 +6,15 @@ from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
-def window_multi(left: Observable, right: Observable,
-                 is_lower: Callable[[Any, Any], bool],
-                 is_higher: Callable[[Any, Any], bool]):
+def window(left: ObservableBase, right: ObservableBase,
+           is_lower: Callable[[Any, Any], bool],
+           is_higher: Callable[[Any, Any], bool]):
     """
     :param left:
     :param right:
@@ -216,8 +216,10 @@ def window_multi(left: Observable, right: Observable,
 
                     if return_stop_ack:
                         left_in_ack = stop_ack
+                    elif last_left_out_ack:
+                        left_in_ack = last_left_out_ack
                     else:
-                        left_in_ack = continue_ack
+                        left_in_ack = continue_ack      # replace by last out ack
 
                     if isinstance(is_sync, SynchronousLeft):
                         return SyncNoMoreLeftOLL(left_in_ack=left_in_ack, right_in_ack=right_in_ack)
@@ -614,8 +616,9 @@ def window_multi(left: Observable, right: Observable,
 
     left_observer = [DummyObserver()]
     right_observer = [DummyObserver()]
+    composite_disposable = CompositeDisposable()
 
-    class LeftObservable(Observable):
+    class LeftObservable(ObservableBase):
         def unsafe_subscribe(self, observer, scheduler, s):
             with lock:
                 left_observer[0] = observer
@@ -626,11 +629,14 @@ def window_multi(left: Observable, right: Observable,
                     subscribe = False
 
             if subscribe:
-                unsafe_subscribe(scheduler, s)
+                disposable = unsafe_subscribe(scheduler, s)
+                composite_disposable.add(disposable)
+
+            return composite_disposable
 
     o1 = LeftObservable()
 
-    class RightObservable(Observable):
+    class RightObservable(ObservableBase):
         def unsafe_subscribe(self, observer, scheduler, s):
             with lock:
                 right_observer[0] = observer
@@ -641,7 +647,10 @@ def window_multi(left: Observable, right: Observable,
                     subscribe = False
 
             if subscribe:
-                unsafe_subscribe(scheduler, s)
+                disposable = unsafe_subscribe(scheduler, s)
+                composite_disposable.add(disposable)
+
+            return composite_disposable
 
     o2 = RightObservable()
 

@@ -2,11 +2,11 @@ from typing import Callable, Any, List
 
 from rx.concurrency.schedulerbase import SchedulerBase
 
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 
 
-class MapObservable(Observable):
+class MapObservable(ObservableBase):
     def __init__(self, source, selector: Callable[[Any], Any]):
         self.source = source
         self.selector = selector

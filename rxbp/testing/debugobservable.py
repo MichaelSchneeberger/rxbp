@@ -1,12 +1,12 @@
 from rxbp.ack import Continue, Stop
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class DebugObservable(Observable):
-    def __init__(self, source: Observable, name: str, on_next=None, on_completed=None, on_ack=None,
+class DebugObservable(ObservableBase):
+    def __init__(self, source: ObservableBase, name: str, on_next=None, on_completed=None, on_ack=None,
                  on_subscribe=None, on_raw_ack=None, on_next_exception=None):
         self.source = source
         self.name = name

@@ -1,11 +1,11 @@
 from rx.core import Disposable
 
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class TestObservable(Observable):
+class TestObservable(ObservableBase):
     def __init__(self):
         self.observer = None
 

@@ -1,8 +1,8 @@
 import itertools
 from typing import List, Iterator, Iterable
 
-from rxbp.observable import Observable
 from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observables.nowobservable import NowObservable
 from rxbp.observers.bufferedsubscriber import BufferedSubscriber
@@ -16,7 +16,7 @@ def from_(iterable: Iterable, batch_size: int = 1):
     :return:
     """
 
-    class ToIterableObservable(Observable):
+    class ToIterableObservable(ObservableBase):
 
         def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
             iterator = iter(iterable)
@@ -24,7 +24,7 @@ def from_(iterable: Iterable, batch_size: int = 1):
             disposable = from_iterator_obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
             return disposable
 
-    return ObservableBase(ToIterableObservable())
+    return Observable(ToIterableObservable())
 
 
 from_iterable = from_
@@ -55,7 +55,7 @@ def from_iterator(iterator: Iterator, batch_size: int = 1):
             yield gen_result
 
     observable = IteratorAsObservable(iterator=gen())
-    return ObservableBase(observable)
+    return Observable(observable)
 
 
 def from_list(buffer: List, batch_size: int = 1):
@@ -69,7 +69,7 @@ def from_list(buffer: List, batch_size: int = 1):
 
             yield chunk_gen
 
-    class ToIterableObservable(Observable):
+    class ToIterableObservable(ObservableBase):
 
         def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
             iterator = iter(chunks())
@@ -77,13 +77,13 @@ def from_list(buffer: List, batch_size: int = 1):
             disposable = from_iterator_obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
             return disposable
 
-    return ObservableBase(ToIterableObservable())
+    return Observable(ToIterableObservable())
 
 
 def from_rx(self, batch_size: int = 1):
     source = self
 
-    class ToBackpressureObservable(Observable):
+    class ToBackpressureObservable(ObservableBase):
 
         def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
             def iterable_to_gen(v, _):
@@ -98,7 +98,7 @@ def from_rx(self, batch_size: int = 1):
                            on_completed=subscriber.on_completed)
             return disposable
 
-    return ObservableBase(ToBackpressureObservable())
+    return Observable(ToBackpressureObservable())
 
 
 def now(elem):
@@ -108,14 +108,14 @@ def now(elem):
     :return: single item observable
     """
     observable = NowObservable(elem=elem)
-    return ObservableBase(observable)
+    return Observable(observable)
 
 
 just = now
 return_value = now
 
 
-def zip(left: ObservableBase, right: ObservableBase):
+def zip(left: Observable, right: Observable):
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs

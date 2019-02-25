@@ -1,11 +1,11 @@
 import unittest
 
-from rxbackpressure.ack import Continue, Ack
-from rxbackpressure.subjects.cachedservefirstsubject import CachedServeFirstSubject
-from rxbackpressure.observer import Observer
-from rxbackpressure.schedulers.currentthreadscheduler import CurrentThreadScheduler
-from rxbackpressure.testing.testobserver import TestObserver
-from rxbackpressure.testing.testscheduler import TestScheduler
+from rxbp.ack import Continue, Ack
+from rxbp.subjects.cachedservefirstsubject import CachedServeFirstSubject
+from rxbp.observer import Observer
+from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.testing.testobserver import TestObserver
+from rxbp.testing.testscheduler import TestScheduler
 
 
 

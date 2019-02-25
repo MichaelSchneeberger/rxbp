@@ -7,10 +7,10 @@ from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Ack, stop_ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 
 
-class Zip2Observable(Observable):
+class Zip2Observable(ObservableBase):
     def __init__(self, left, right, selector: Callable[[Any, Any], Any] = None):
         """ An observable that zips the elements of a left and right observable
 

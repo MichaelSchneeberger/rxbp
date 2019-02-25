@@ -1,10 +1,10 @@
 import unittest
 
-from rxbackpressure.ack import Continue, continue_ack
-from rxbackpressure.schedulers.currentthreadscheduler import CurrentThreadScheduler
-from rxbackpressure.subjects.publishsubject import PublishSubject
-from rxbackpressure.testing.testobserver import TestObserver
-from rxbackpressure.testing.testscheduler import TestScheduler
+from rxbp.ack import Continue, continue_ack
+from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.subjects.publishsubject import PublishSubject
+from rxbp.testing.testobserver import TestObserver
+from rxbp.testing.testscheduler import TestScheduler
 
 
 

@@ -2,11 +2,11 @@ from typing import Callable, Any
 
 from rx.concurrency.schedulerbase import SchedulerBase
 
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 
 
-class ZipWithIndexObservable(Observable):
+class ZipWithIndexObservable(ObservableBase):
     def __init__(self, source, selector: Callable[[Any, int], Any]):
         self.source = source
         self.selector = (lambda v, i: (v, i)) if selector is None else selector

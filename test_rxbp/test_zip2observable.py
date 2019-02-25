@@ -1,10 +1,10 @@
 import unittest
 
-from rxbackpressure.ack import Continue, Stop
-from rxbackpressure.observables.zip2observable import Zip2Observable
-from rxbackpressure.testing.testobservable import TestObservable
-from rxbackpressure.testing.testobserver import TestObserver
-from rxbackpressure.testing.testscheduler import TestScheduler
+from rxbp.ack import Continue, Stop
+from rxbp.observables.zip2observable import Zip2Observable
+from rxbp.testing.testobservable import TestObservable
+from rxbp.testing.testobserver import TestObserver
+from rxbp.testing.testscheduler import TestScheduler
 
 
 class TestConnectableSubscriber(unittest.TestCase):

@@ -8,13 +8,13 @@ from rx.core import Disposable
 from rx.disposables import CompositeDisposable, MultipleAssignmentDisposable
 
 from rxbp.ack import Continue, Stop, Ack, stop_ack, continue_ack
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
 from rxbp.scheduler import Scheduler
 
 
-class FlatZipObservable(Observable):
+class FlatZipObservable(ObservableBase):
     """
 
     obs1.flat_zip(obs2, lambda v: v[1])
@@ -22,7 +22,7 @@ class FlatZipObservable(Observable):
 
     """
 
-    def __init__(self, left, right, inner_selector: Callable[[Any], Observable],
+    def __init__(self, left, right, inner_selector: Callable[[Any], ObservableBase],
                  left_selector: Callable[[Any], Any] = None,
                  result_selector: Callable[[Any, Any], Any] = None):
         self.left = left
@@ -187,6 +187,9 @@ class FlatZipObservable(Observable):
                         right_ack=prev_state.right_ack
                     ).get_actual_state(ilc=ilc, irc=irc)
 
+                elif isinstance(prev_state, WaitInnerRight):
+                    return prev_state
+
                 else:
                     raise Exception('illegal case {}'.format(prev_state))
 
@@ -309,7 +312,7 @@ class FlatZipObservable(Observable):
         source = self
 
         def on_next_left(left_elem):
-            # print('on_next_left')
+            # print('flatzip on_next_left')
 
             left_vals = list(left_elem())
             vals_len = len(left_vals)
@@ -321,7 +324,6 @@ class FlatZipObservable(Observable):
                 state[0] = new_state
                 state[0].prev_state = prev_state
                 is_left_active[0] = True
-                irc = is_right_completed[0]
 
             # curr_state = new_state.get_actual_state(ilc=False, irc=irc)
             # if isinstance(curr_state, WaitInner):
@@ -341,7 +343,7 @@ class FlatZipObservable(Observable):
 
                 def on_next(self, inner_elem):
 
-                    # print('on_next inner: {}'.format(inner_elem))
+                    # print('on_next inner "{}"'.format(self))
 
                     inner_ack = Ack()
                     inner_iter = inner_elem()
@@ -393,7 +395,7 @@ class FlatZipObservable(Observable):
                     raise NotImplementedError
 
                 def on_completed(self):
-                    # print('on_completed_inner')
+                    # print('on_completed_inner "{}"'.format(self))
 
                     inner_completed_state = InnerCompleted(prev_state=None, idx=self.idx)
 
@@ -526,18 +528,20 @@ class FlatZipObservable(Observable):
                     # create a new child observer, and subscribe it to child observable
                     child_observer = ChildObserver(observer, scheduler, left_ack, self, vals_len - idx, val)
 
-                    if 0 < idx:
-                        connectable_observer = ConnectableSubscriber(underlying=child_observer,
-                                                                     scheduler=immediate_scheduler)
-                        disposable = child.unsafe_subscribe(connectable_observer, scheduler, subscribe_scheduler)
-                        yield connectable_observer
-                    else:
-                        disposable = child.unsafe_subscribe(child_observer, scheduler, subscribe_scheduler)
-                        yield child_observer
+                    # if 0 < idx:
+                    connectable_observer = ConnectableSubscriber(underlying=child_observer,
+                                                                 scheduler=immediate_scheduler)
+                    disposable = child.unsafe_subscribe(connectable_observer, scheduler, subscribe_scheduler)
+                    yield connectable_observer
+                    # else:
+                    #     disposable = child.unsafe_subscribe(child_observer, scheduler, subscribe_scheduler)
+                    #     yield child_observer
 
             conn_observers[0] = list(gen_child_observers())
+            # print(conn_observers[0])
+            conn_observers[0][0].connect()
 
-            # todo check if child is already completed
+            # left_ack.subscribe(print)
 
             return left_ack
 

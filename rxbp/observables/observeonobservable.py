@@ -2,12 +2,12 @@ from rx.concurrency.schedulerbase import SchedulerBase
 
 from rxbp.ack import Continue, Stop, Ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 
 
-class ObserveOnObservable(Observable):
-    def __init__(self, source: Observable, scheduler: SchedulerBase):
+class ObserveOnObservable(ObservableBase):
+    def __init__(self, source: ObservableBase, scheduler: SchedulerBase):
         self.source = source
         self.scheduler = scheduler
 

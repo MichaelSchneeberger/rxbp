@@ -1,7 +1,7 @@
 from rx.core import Disposable
 from rx.disposables import CompositeDisposable
 
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.subjects.publishsubject import PublishSubject
 
 
@@ -30,7 +30,7 @@ class ConnectableObservable:
 
     def ref_count(self):
 
-        class RefCountObservable(Observable):
+        class RefCountObservable(ObservableBase):
             def __init__(self, source):
                 self.source = source
                 self.count = 0

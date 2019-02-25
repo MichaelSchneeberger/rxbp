@@ -1,11 +1,11 @@
 from typing import Any
 
-from rxbp.observable import Observable
+from rxbp.observablebase import ObservableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase
 
 
-class NowObservable(Observable):
+class NowObservable(ObservableBase):
     def __init__(self, elem: Any):
         self.elem = elem
 

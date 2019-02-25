@@ -18,10 +18,12 @@ class TestObserverSubscribeInner(Observer):
         self.scheduler = scheduler
 
     def on_next(self, v):
-        self.received.append(v)
+        values = list(v())
+        self.received.append(values)
         self.ack = Ack()
         self.inner_obs = TestObserver()
-        self.inner_selector(v).subscribe(self.inner_obs, self.scheduler, CurrentThreadScheduler())
+        for value in values:
+            self.inner_selector(value).subscribe(self.inner_obs, self.scheduler, CurrentThreadScheduler())
         return self.ack
 
     def on_error(self, err):
