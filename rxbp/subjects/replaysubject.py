@@ -7,14 +7,14 @@ from rx.core import Disposable
 from rxbp.ack import Continue, Stop
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
 
 
-class ReplaySubject(ObservableBase, Observer):
+class ReplaySubject(Observable, Observer):
 
     class State:
         def __init__(self,

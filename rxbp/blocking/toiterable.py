@@ -26,7 +26,7 @@ def to_iterable(source, scheduler):
     def on_completed():
         send_notification(('C', None))
 
-    observer = AnonymousObserver(on_next=on_next, on_error=on_error, on_completed=on_completed)
+    observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error, on_completed_func=on_completed)
 
     source.subscribe_observer(observer, scheduler, CurrentThreadScheduler())
 

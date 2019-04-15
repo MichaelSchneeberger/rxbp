@@ -8,12 +8,12 @@ from rx.core.notification import OnNext, OnCompleted, OnError
 from rx.disposables import BooleanDisposable
 
 from rxbp.ack import Continue, Stop, Ack, stop_ack
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import ExecutionModel, Scheduler
 
 
-class CachedServeFirstSubject(ObservableBase, Observer):
+class CachedServeFirstSubject(Observable, Observer):
 
     def __init__(self, name=None, scheduler=None):
         super().__init__()

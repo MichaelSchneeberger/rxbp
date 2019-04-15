@@ -8,13 +8,13 @@ from rx.core import Disposable
 from rx.disposables import CompositeDisposable, MultipleAssignmentDisposable
 
 from rxbp.ack import Continue, Stop, Ack, stop_ack, continue_ack
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
 from rxbp.scheduler import Scheduler
 
 
-class FlatZipObservable(ObservableBase):
+class FlatZipObservable(Observable):
     """
 
     obs1.flat_zip(obs2, lambda v: v[1])
@@ -22,7 +22,7 @@ class FlatZipObservable(ObservableBase):
 
     """
 
-    def __init__(self, left, right, inner_selector: Callable[[Any], ObservableBase],
+    def __init__(self, left, right, inner_selector: Callable[[Any], Observable],
                  left_selector: Callable[[Any], Any] = None,
                  result_selector: Callable[[Any, Any], Any] = None):
         self.left = left

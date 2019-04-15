@@ -1,12 +1,12 @@
 from rxbp.ack import Continue, Stop
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class DebugObservable(ObservableBase):
-    def __init__(self, source: ObservableBase, name: str, on_next=None, on_completed=None, on_ack=None,
+class DebugObservable(Observable):
+    def __init__(self, source: Observable, name: str, on_next=None, on_completed=None, on_ack=None,
                  on_subscribe=None, on_raw_ack=None, on_next_exception=None):
         self.source = source
         self.name = name
@@ -19,14 +19,19 @@ class DebugObservable(ObservableBase):
         self.on_raw_ack = on_raw_ack or (lambda v: print('{}.on_raw_ack {}'.format(name, v)))
         self.on_next_exception = on_next_exception or (lambda v: print('{}.on_next exception raised "{}"'.format(name, v)))
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: Scheduler,
-                         subscribe_scheduler: Scheduler):
+    def observe(self, observer: Observer):
         self.on_subscribe_func(observer)
 
         def on_next(v):
-            self.on_next_func(v)
+            materialized = list(v())
+
+            self.on_next_func(materialized)
+
+            def gen():
+                yield from materialized
+
             try:
-                ack = observer.on_next(v)
+                ack = observer.on_next(gen)
             except Exception as e:
                 # self.on_next_exception(e)
                 raise
@@ -42,6 +47,6 @@ class DebugObservable(ObservableBase):
             self.on_completed_func()
             return observer.on_completed()
 
-        map_observer = AnonymousObserver(on_next=on_next, on_error=observer.on_error,
-                                         on_completed=on_completed)
-        return self.source.unsafe_subscribe(map_observer, scheduler, subscribe_scheduler)
+        map_observer = AnonymousObserver(on_next_func=on_next, on_error_func=observer.on_error,
+                                         on_completed_func=on_completed)
+        return self.source.observe(map_observer)

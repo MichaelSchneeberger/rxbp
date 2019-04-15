@@ -2,12 +2,12 @@ from rx.concurrency.schedulerbase import SchedulerBase
 
 from rxbp.ack import Continue, Stop, Ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 
 
-class ObserveOnObservable(ObservableBase):
-    def __init__(self, source: ObservableBase, scheduler: SchedulerBase):
+class ObserveOnObservable(Observable):
+    def __init__(self, source: Observable, scheduler: SchedulerBase):
         self.source = source
         self.scheduler = scheduler
 
@@ -42,6 +42,6 @@ class ObserveOnObservable(ObservableBase):
 
             self.scheduler.schedule(action)
 
-        observe_on_observer = AnonymousObserver(on_next=on_next, on_error=on_error,
-                                     on_completed=on_completed)
+        observe_on_observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error,
+                                                on_completed_func=on_completed)
         return self.source.unsafe_subscribe(observe_on_observer, scheduler, subscribe_scheduler)

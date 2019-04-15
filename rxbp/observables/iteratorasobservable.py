@@ -1,39 +1,25 @@
-import itertools
-from typing import Iterator
+from typing import Iterator, Any, List
 
-from rx import config
 from rx.core import Disposable
 from rx.disposables import BooleanDisposable
 
 from rxbp.ack import Continue, Stop
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.scheduler import SchedulerBase, ExecutionModel
+from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
 
 
-class IteratorAsObservable(ObservableBase):
-    def __init__(self, iterator: Iterator, on_finish: Disposable = Disposable.empty()):
-        # def gen_batched_iterator():
-        #     for peak_first in iterator:
-        #         def generate_batch():
-        #             yield peak_first
-        #             for more in itertools.islice(iterator, batch_size - 1):
-        #                 yield more
-        #
-        #         # generate buffer in memory
-        #         buffer = list(generate_batch())
-        #
-        #         def gen_result(buffer=buffer):
-        #             for e in buffer:
-        #                 yield e
-        #
-        #         yield gen_result
+class IteratorAsObservable(Observable):
+    def __init__(self, iterator: Iterator, scheduler: Scheduler, subscribe_scheduler: Scheduler,
+                 on_finish: Disposable = Disposable.empty()):
+        super().__init__()
 
         self.iterator = iterator
+        self.scheduler = scheduler
+        self.subscribe_scheduler = subscribe_scheduler
         self.on_finish = on_finish
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
 
         try:
             item = next(self.iterator)
@@ -54,10 +40,10 @@ class IteratorAsObservable(ObservableBase):
 
                 def action(_, __):
                     # start sending items
-                    self.fast_loop(item, observer, scheduler, disposable, scheduler.get_execution_model(),
+                    self.fast_loop(item, observer, self.scheduler, disposable, self.scheduler.get_execution_model(),
                                    sync_index=0)
 
-                subscribe_scheduler.schedule(action)
+                self.subscribe_scheduler.schedule(action)
                 return disposable
         except:
             raise Exception('fatal error')

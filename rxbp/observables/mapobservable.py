@@ -1,18 +1,18 @@
-from typing import Callable, Any, List
+from typing import Callable, Any
 
-from rx.concurrency.schedulerbase import SchedulerBase
-
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.scheduler import Scheduler
 
 
-class MapObservable(ObservableBase):
-    def __init__(self, source, selector: Callable[[Any], Any]):
+class MapObservable(Observable):
+    def __init__(self, source: Observable, selector: Callable[[Any], Any]):
+        super().__init__()
+
         self.source = source
         self.selector = selector
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
         def on_next(v):
             def map_gen():
                 for e in v():
@@ -31,4 +31,4 @@ class MapObservable(ObservableBase):
                 return observer.on_completed()
 
         map_observer = MapObserver()
-        return self.source.unsafe_subscribe(map_observer, scheduler, subscribe_scheduler)
+        return self.source.observe(map_observer)

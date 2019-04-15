@@ -1,10 +1,10 @@
 from rxbp.ack import Continue, Stop, stop_ack
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase, ExecutionModel
 
 
-class RepeatFirstObservable(ObservableBase):
+class RepeatFirstObservable(Observable):
     def __init__(self, source):
         self.source = source
 

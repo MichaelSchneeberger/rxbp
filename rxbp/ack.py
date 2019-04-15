@@ -46,6 +46,11 @@ class Ack(AsyncSubject):
 
             self.zip(ack2, _).subscribe(next_ack)
 
+    def debug(self, name):
+        ack = Ack()
+        self.do_action(lambda v: print('{} {}'.format(name, v))).subscribe(ack)
+        return ack
+
 
 class Continue(Ack):
     def __init__(self):

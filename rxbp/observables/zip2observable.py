@@ -7,11 +7,11 @@ from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Ack, stop_ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 
 
-class Zip2Observable(ObservableBase):
-    def __init__(self, left, right, selector: Callable[[Any, Any], Any] = None):
+class Zip2Observable(Observable):
+    def __init__(self, left: Observable, right: Observable, selector: Callable[[Any, Any], Any] = None):
         """ An observable that zips the elements of a left and right observable
 
         :param left: left observable
@@ -19,11 +19,13 @@ class Zip2Observable(ObservableBase):
         :param selector: a result selector function that maps each zipped element to some result
         """
 
+        super().__init__()
+
         self.left = left
         self.right = right
         self.selector = (lambda l, r: (l, r)) if selector is None else selector
 
-    def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
+    def observe(self, observer):
 
         class FinalState(ABC):
             @abstractmethod
@@ -117,13 +119,17 @@ class Zip2Observable(ObservableBase):
                     return Stopped()
 
         class ZipElements(State):
-            def __init__(self, raw_prev_state: Optional[State], is_left: bool, ack: Ack, elem: Any):
+            def __init__(self, raw_prev_state: Optional[State], raw_prev_final_state: Optional[FinalState],
+                         is_left: bool, ack: Ack, elem: Any):
                 self.raw_prev_state = raw_prev_state
+                self.raw_prev_final_state = raw_prev_final_state
                 self.is_left = is_left
                 self.ack = ack
                 self.elem = elem
 
             def get_current_state(self, final_state: FinalState):
+                # overwrite final state
+                final_state = self.raw_prev_final_state.get_current_state()
                 prev_state = self.raw_prev_state.get_current_state(final_state=final_state)
 
                 if isinstance(prev_state, Stopped):
@@ -154,12 +160,13 @@ class Zip2Observable(ObservableBase):
 
             in_ack = Ack()
 
-            next_state = ZipElements(raw_prev_state=None, is_left=is_left,
+            next_state = ZipElements(raw_prev_state=None, raw_prev_final_state=None, is_left=is_left,
                                      ack=in_ack, elem=elem)
             with lock:
                 raw_prev_state = state[0]
                 raw_prev_final_state = final_state[0]
                 next_state.raw_prev_state = raw_prev_state
+                next_state.raw_prev_final_state = raw_prev_final_state
                 state[0] = next_state
 
             prev_final_state = raw_prev_final_state.get_current_state()
@@ -241,6 +248,7 @@ class Zip2Observable(ObservableBase):
             if rest_left:
                 do_back_pressure_left = False
             elif rest_right:
+                # print(rest_right)
                 do_back_pressure_right = False
             else:
                 pass
@@ -315,6 +323,7 @@ class Zip2Observable(ObservableBase):
                 return in_ack
 
         def on_next_left(elem):
+            # print('zip on_next_left')
             try:
                 return_ack = zip_elements(elem=elem, is_left=True)
                 # return_ack.subscribe(print)
@@ -325,6 +334,7 @@ class Zip2Observable(ObservableBase):
             return return_ack
 
         def on_next_right(elem):
+            # print('zip on_next_right')
             return_ack = zip_elements(elem=elem, is_left=False)
             return return_ack
 
@@ -366,6 +376,7 @@ class Zip2Observable(ObservableBase):
                 signal_on_complete_or_on_error(raw_state=raw_prev_state, ex=ex)
 
         def on_completed_left():
+            # print('zip on_completed_left')
             next_final_state = LeftCompletedState(raw_prev_state=None)
 
             with lock:
@@ -384,6 +395,7 @@ class Zip2Observable(ObservableBase):
                 signal_on_complete_or_on_error(raw_state=raw_prev_state)
 
         def on_completed_right():
+            # print('zip on_completed_right')
             next_final_state = RightCompletedState(raw_prev_state=None)
 
             with lock:
@@ -401,11 +413,11 @@ class Zip2Observable(ObservableBase):
             if not isinstance(prev_state, Stopped) and isinstance(curr_state, Stopped):
                 signal_on_complete_or_on_error(raw_state=raw_prev_state)
 
-        left_observer = AnonymousObserver(on_next=on_next_left, on_error=on_error,
-                                          on_completed=on_completed_left)
-        d1 = self.left.unsafe_subscribe(left_observer, scheduler, subscribe_scheduler)
-        right_observer = AnonymousObserver(on_next=on_next_right, on_error=on_error,
-                                           on_completed=on_completed_right)
-        d2 = self.right.unsafe_subscribe(right_observer, scheduler, subscribe_scheduler)
+        left_observer = AnonymousObserver(on_next_func=on_next_left, on_error_func=on_error,
+                                          on_completed_func=on_completed_left)
+        d1 = self.left.observe(left_observer)
+        right_observer = AnonymousObserver(on_next_func=on_next_right, on_error_func=on_error,
+                                           on_completed_func=on_completed_right)
+        d2 = self.right.observe(right_observer)
 
         return CompositeDisposable(d1, d2)

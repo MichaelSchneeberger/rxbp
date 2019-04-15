@@ -1,10 +1,10 @@
 from typing import Callable
 
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 
 
 class ObservableOperator:
-    def __init__(self, func: Callable[[ObservableBase], ObservableBase]):
+    def __init__(self, func: Callable[[Observable], Observable]):
         self.func = func
 
     def __call__(self, obs):

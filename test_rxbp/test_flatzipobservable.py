@@ -4,7 +4,7 @@ from rx.core import Disposable
 
 from rxbp.ack import Continue, Ack
 from rxbp.observables.flatzipobservable import FlatZipObservable
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
@@ -37,7 +37,7 @@ class TestFlatZipObservable(unittest.TestCase):
             def on_completed(self):
                 self.was_completed = True
 
-        class TestObservable(ObservableBase):
+        class TestObservable(Observable):
             def __init__(self):
                 self.observer = None
 
@@ -101,7 +101,7 @@ class TestFlatZipObservable(unittest.TestCase):
             def on_completed(self):
                 self.was_completed = True
 
-        class TestObservable(ObservableBase):
+        class TestObservable(Observable):
             def __init__(self):
                 self.observer = None
 
@@ -170,7 +170,7 @@ class TestFlatZipObservable(unittest.TestCase):
             def on_completed(self):
                 self.was_completed = True
 
-        class TestObservable(ObservableBase):
+        class TestObservable(Observable):
             def __init__(self):
                 self.observer = None
 

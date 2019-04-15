@@ -5,15 +5,20 @@ from rx.concurrency.schedulerbase import SchedulerBase
 from rx.core import Disposable
 
 from rxbp.ack import Continue, stop_ack, continue_ack
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
+from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
 
 
-class PublishSubject(ObservableBase, Observer):
-    def __init__(self):
+class PublishSubject(Observable, Observer):
+    def __init__(self, scheduler: SchedulerBase):
+
+        super().__init__()
+
         self.state = self.State()
         self.lock = config["concurrency"].RLock()
+        self.scheduler = scheduler
 
     class Subscriber:
         def __init__(self, observer, scheduler):
@@ -58,12 +63,11 @@ class PublishSubject(ObservableBase, Observer):
             subscriber.observer.on_completed()
         return Disposable.empty()
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
         state = self.state
         subscribers = state.subscribers
 
-        subscriber = self.Subscriber(observer, subscribe_scheduler)
+        subscriber = self.Subscriber(observer, scheduler=current_thread_scheduler)  # todo: remove scheduler
         if isinstance(subscribers, self.Empty):
             self.on_subscribe_completed(subscriber, state.error_thrown)
         else:
@@ -83,7 +87,7 @@ class PublishSubject(ObservableBase, Observer):
                 disposable = Disposable.create(dispose)
                 return disposable
             else:
-                return self.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
+                return self.observe(observer)
 
     def on_next(self, elem):
         state = self.state

@@ -3,11 +3,11 @@ import itertools
 from rx.concurrency.schedulerbase import SchedulerBase
 
 from rxbp.ack import continue_ack
-from rxbp.observablebase import ObservableBase
+from rxbp.observable import Observable
 from rxbp.observer import Observer
 
 
-class PairwiseObservable(ObservableBase):
+class PairwiseObservable(Observable):
     def __init__(self, source):
         self.source = source
 

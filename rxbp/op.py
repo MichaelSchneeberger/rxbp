@@ -1,7 +1,7 @@
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
-from rxbp.observablebase import ObservableBase
-from rxbp.observableoperator import ObservableOperator
+from rxbp.internal.indexingop import merge_indexes, index_observable
+from rxbp.observable import Observable
 from rxbp.observables.connectableobservable import ConnectableObservable
 from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observables.flatmapobservable import FlatMapObservable
@@ -17,52 +17,57 @@ from rxbp.scheduler import Scheduler
 from rxbp.subjects.cachedservefirstsubject import CachedServeFirstSubject
 from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.subjects.replaysubject import ReplaySubject
+from rxbp.subscriber import Subscriber
+from rxbp.subscriptablebase import SubscriptableBase
+from rxbp.subscriptableoperator import SubscriptableOperator
+from rxbp.subscriptables.anonymoussubscriptable import AnonymousSubscriptable
+from rxbp.subscriptables.oldliftobservablesubscriptable import LiftObservableSubscriptable, Lift2ObservableSubscriptable
 from rxbp.testing.debugobservable import DebugObservable
 
 
-def buffer(size: int):
-    def func(obs: ObservableBase):
-        class BufferObservable(ObservableBase):
-            def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-                buffered_subscriber = BufferedSubscriber(
-                    observer=observer, scheduler=scheduler, buffer_size=size)
-                disposable = obs.unsafe_subscribe(buffered_subscriber, scheduler, subscribe_scheduler)
-                return disposable
-        return BufferObservable()
-    return ObservableOperator(func)
-
-
-def cache():
-    """ Converts this observable into a multicast observable that caches the items that the fastest observer has
-    already received and the slowest observer has not yet requested. Note that this observable is subscribed when
-    the multicast observable is subscribed for the first time. Therefore, this observable is never subscribed more
-    than once.
-
-    :return: multicast observable
-    """
-
-    def func(obs: ObservableBase):
-        return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
-    return ObservableOperator(func)
-
-
-def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
-    def func(obs: ObservableBase):
-        return DebugObservable(source=obs, name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack,
-                                 on_raw_ack=on_raw_ack)
-    return ObservableOperator(func)
-
-
-def execute_on(scheduler: Scheduler):
-    def func(obs: ObservableBase):
-        class ExecuteOnObservable(ObservableBase):
-            def unsafe_subscribe(self, observer, _, subscribe_scheduler):
-                disposable = obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
-                return disposable
-
-        return ExecuteOnObservable()
-    return ObservableOperator(func)
-
+# def buffer(size: int):
+#     def func(obs: ObservableBase):
+#         class BufferObservable(ObservableBase):
+#             def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
+#                 buffered_subscriber = BufferedSubscriber(
+#                     observer=observer, scheduler=scheduler, buffer_size=size)
+#                 disposable = obs.unsafe_subscribe(buffered_subscriber, scheduler, subscribe_scheduler)
+#                 return disposable
+#         return BufferObservable()
+#     return ObservableOperator(func)
+#
+#
+# def cache():
+#     """ Converts this observable into a multicast observable that caches the items that the fastest observer has
+#     already received and the slowest observer has not yet requested. Note that this observable is subscribed when
+#     the multicast observable is subscribed for the first time. Therefore, this observable is never subscribed more
+#     than once.
+#
+#     :return: multicast observable
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
+#     return ObservableOperator(func)
+#
+#
+# def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
+#     def func(obs: ObservableBase):
+#         return DebugObservable(source=obs, name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack,
+#                                  on_raw_ack=on_raw_ack)
+#     return ObservableOperator(func)
+#
+#
+# def execute_on(scheduler: Scheduler):
+#     def func(obs: ObservableBase):
+#         class ExecuteOnObservable(ObservableBase):
+#             def unsafe_subscribe(self, observer, _, subscribe_scheduler):
+#                 disposable = obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
+#                 return disposable
+#
+#         return ExecuteOnObservable()
+#     return ObservableOperator(func)
+#
 
 def filter(predicate: Callable[[Any], bool]):
     """ Only emits those items for which the given predicate holds
@@ -72,32 +77,60 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered observable
     """
 
-    def func(obs: ObservableBase):
-        return FilterObservable(source=obs, predicate=predicate)
-    return ObservableOperator(func)
+    def func(source_subscriptable: SubscriptableBase) -> SubscriptableBase:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+            source_observable, source_selectors = source_subscriptable.unsafe_subscribe(subscriber)
 
+            observable = FilterObservable(source=source_observable, predicate=predicate, scheduler=subscriber.scheduler)
 
-def flat_map(selector: Callable[[Any], ObservableBase]):
-    """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
-    as input and returns an inner observable. The resulting observable concatenates the items of each inner
-    observable.
+            # apply filter selector to each selector
+            def gen_merged_selector():
+                for base, indexing in source_selectors.items():
+                    # if indexing is None:
+                    #     yield base, observable.selector
+                    # else:
+                    yield base, merge_indexes(indexing, observable.selector)
 
-    :param selector: A function that takes any type as input and returns an observable.
-    :return: a flattened observable
-    """
+            selectors = dict(gen_merged_selector())
 
-    def func(obs: ObservableBase):
-        return FlatMapObservable(source=obs, selector=selector)
-    return ObservableOperator(func)
+            if source_subscriptable.base is not None:
+                selectors_ = {**selectors, **{source_subscriptable.base: observable.selector}}
+            else:
+                selectors_ = selectors
 
+            return observable, selectors_
 
-def flat_zip(right: ObservableBase, inner_selector: Callable[[Any], ObservableBase], left_selector: Callable[[Any], Any]=None,
-             result_selector: Callable[[Any, Any, Any], Any] = None):
-    def func(obs: ObservableBase):
-        return FlatZipObservable(left=obs, right=right,
-                                 inner_selector=inner_selector, left_selector=left_selector,
-                                 result_selector=result_selector)
-    return ObservableOperator(func)
+        if source_subscriptable.base is None:
+            selectable_bases = source_subscriptable.selectable_bases
+        else:
+            selectable_bases = source_subscriptable.selectable_bases | {source_subscriptable.base}
+
+        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
+                                      selectable_bases=selectable_bases)
+    return SubscriptableOperator(func)
+
+#
+# def flat_map(selector: Callable[[Any], ObservableBase]):
+#     """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
+#     as input and returns an inner observable. The resulting observable concatenates the items of each inner
+#     observable.
+#
+#     :param selector: A function that takes any type as input and returns an observable.
+#     :return: a flattened observable
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return FlatMapObservable(source=obs, selector=selector)
+#     return ObservableOperator(func)
+#
+#
+# def flat_zip(right: ObservableBase, inner_selector: Callable[[Any], ObservableBase], left_selector: Callable[[Any], Any]=None,
+#              result_selector: Callable[[Any, Any, Any], Any] = None):
+#     def func(obs: ObservableBase):
+#         return FlatZipObservable(left=obs, right=right,
+#                                  inner_selector=inner_selector, left_selector=left_selector,
+#                                  result_selector=result_selector)
+#     return ObservableOperator(func)
 
 
 def map(selector: Callable[[Any], Any]):
@@ -107,86 +140,142 @@ def map(selector: Callable[[Any], Any]):
     :return: mapped observable
     """
 
-    def func(obs: ObservableBase):
-        return MapObservable(source=obs, selector=selector)
-    return ObservableOperator(func)
+    def func(source: SubscriptableBase) -> SubscriptableBase:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+            source_observable, source_selectors = source.unsafe_subscribe(subscriber=subscriber)
+            obs = MapObservable(source=source_observable, selector=selector)
+            return obs, source_selectors
+
+        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=source.base,
+                                      selectable_bases=source.selectable_bases)
+    return SubscriptableOperator(func)
 
 
-def observe_on(scheduler: Scheduler):
-    """ Operator that specifies a specific scheduler, on which observers will observe events
+# def observe_on(scheduler: Scheduler):
+#     """ Operator that specifies a specific scheduler, on which observers will observe events
+#
+#     :param scheduler: a rxbackpressure scheduler
+#     :return: an observable running on specified scheduler
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return ObserveOnObservable(source=obs, scheduler=scheduler)
+#     return ObservableOperator(func)
+#
+#
+# def pairwise():
+#     """ Creates an observable that pairs each neighbouring two items from the source
+#
+#     :param selector: (optional) selector function
+#     :return: paired observable
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return PairwiseObservable(source=obs)
+#     return ObservableOperator(func)
+#
+#
+# def repeat_first():
+#     """ Repeat the first item forever
+#
+#     :return:
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return RepeatFirstObservable(source=obs)
+#     return ObservableOperator(func)
+#
+#
+# def replay():
+#     """ Converts this observable into a multicast observable that replays the item received by the source. Note
+#     that this observable is subscribed when the multicast observable is subscribed for the first time. Therefore,
+#     this observable is never subscribed more than once.
+#
+#     :return: multicast observable
+#     """
+#
+#     def func(obs: ObservableBase):
+#         observable = ConnectableObservable(
+#             source=obs,
+#             subject=ReplaySubject()
+#         ).ref_count()
+#         return observable
+#     return ObservableOperator(func)
+#
+#
+# def share():
+#     """ Converts this observable into a multicast observable that backpressures only after each subscribed
+#     observer backpressures. Note that this observable is subscribed when the multicast observable is subscribed for
+#     the first time. Therefore, this observable is never subscribed more than once.
+#
+#     :return: multicast observable
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return ConnectableObservable(source=obs, subject=PublishSubject()).ref_count()
+#     return ObservableOperator(func)
 
-    :param scheduler: a rxbackpressure scheduler
-    :return: an observable running on specified scheduler
-    """
 
-    def func(obs: ObservableBase):
-        return ObserveOnObservable(source=obs, scheduler=scheduler)
-    return ObservableOperator(func)
-
-
-def pairwise():
-    """ Creates an observable that pairs each neighbouring two items from the source
-
-    :param selector: (optional) selector function
-    :return: paired observable
-    """
-
-    def func(obs: ObservableBase):
-        return PairwiseObservable(source=obs)
-    return ObservableOperator(func)
-
-
-def repeat_first():
-    """ Repeat the first item forever
-
-    :return:
-    """
-
-    def func(obs: ObservableBase):
-        return RepeatFirstObservable(source=obs)
-    return ObservableOperator(func)
-
-
-def replay():
-    """ Converts this observable into a multicast observable that replays the item received by the source. Note
-    that this observable is subscribed when the multicast observable is subscribed for the first time. Therefore,
-    this observable is never subscribed more than once.
-
-    :return: multicast observable
-    """
-
-    def func(obs: ObservableBase):
-        observable = ConnectableObservable(
-            source=obs,
-            subject=ReplaySubject()
-        ).ref_count()
-        return observable
-    return ObservableOperator(func)
-
-
-def share():
-    """ Converts this observable into a multicast observable that backpressures only after each subscribed
-    observer backpressures. Note that this observable is subscribed when the multicast observable is subscribed for
-    the first time. Therefore, this observable is never subscribed more than once.
-
-    :return: multicast observable
-    """
-
-    def func(obs: ObservableBase):
-        return ConnectableObservable(source=obs, subject=PublishSubject()).ref_count()
-    return ObservableOperator(func)
-
-
-def zip(right: ObservableBase, selector: Callable[[Any, Any], Any] = None):
+def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ignore_mismatch: bool = None):
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
     :return: zipped observable
     """
 
-    def func(obs: ObservableBase):
-        return Zip2Observable(left=obs, right=right, selector=selector)
-    return ObservableOperator(func)
+    source_right = right
+
+    def func(source_left: SubscriptableBase) -> SubscriptableBase:
+        # print(source_left.base)
+        # print(source_right.base)
+        # print(source_left.selectable_bases)
+
+        if ignore_mismatch is not True:
+            if source_left.base is not None and source_left.base == source_right.base:
+                transform_left = False
+                transform_left = False
+
+            elif source_left.base is not None and source_left.base in source_right.selectable_bases:
+                transform_left = False
+                transform_right = True
+
+            elif source_right.base is not None and source_right.base in source_left.selectable_bases:
+                transform_left = False
+                transform_right = True
+
+            else:
+                raise AssertionError('flowable do not match')
+
+        else:
+            transform_left = False
+            transform_right = False
+
+        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+            left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
+            right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
+
+            selectors = {}
+
+            if transform_left:
+                index_obs = right_selectors[source_left.base]
+                left_obs_ = index_observable(left_obs, index_obs)
+            else:
+                selectors = {**selectors, **left_selectors}
+                left_obs_ = left_obs
+
+            if transform_right:
+                index_obs = left_selectors[source_right.base]
+                # right_obs_ = DebugObservable(index_observable(DebugObservable(right_obs, 'd2'), DebugObservable(index_obs, 'd3')), 'd1')
+                right_obs_ = index_observable(right_obs, index_obs)
+            else:
+                selectors = {**selectors, **right_selectors}
+                right_obs_ = right_obs
+
+            obs = Zip2Observable(left=left_obs_, right=right_obs_, selector=selector)
+            return obs, selectors
+
+        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func)
+    return SubscriptableOperator(func)
 
 
 def zip_with_index(selector: Callable[[Any, int], Any] = None):
@@ -196,6 +285,9 @@ def zip_with_index(selector: Callable[[Any, int], Any] = None):
     :return: zipped with index observable
     """
 
-    def func(obs: ObservableBase):
-        return ZipWithIndexObservable(source=obs, selector=selector)
-    return ObservableOperator(func)
+    def func(source: SubscriptableBase):
+        def map_observable(obs: Observable):
+            obs = ZipWithIndexObservable(source=obs, selector=selector)
+            return obs
+        return LiftObservableSubscriptable(source=source, func=map_observable)
+    return SubscriptableOperator(func)

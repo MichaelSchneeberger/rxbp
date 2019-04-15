@@ -6,15 +6,17 @@ from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
+from rxbp.internal.indexing import OnCompleted, OnNext, on_next_idx, on_completed_idx
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
-def controlled_zip(left: Observable, right: Observable,
-                   is_lower: Callable[[Any, Any], bool],
-                   is_higher: Callable[[Any, Any], bool]):
+def match(left: Observable, right: Observable,
+                   request_left: Callable[[Any, Any], bool],
+                   request_right: Callable[[Any, Any], bool],
+                   match_func: Callable[[Any, Any], bool]):
     """
     :param left:
     :param right:
@@ -74,10 +76,10 @@ def controlled_zip(left: Observable, right: Observable,
         def __init__(self, left_in_ack: Ack):
             self.left_in_ack = left_in_ack
 
-    left_is_higher = is_higher
-    left_is_lower = is_lower
+    # left_is_higher = is_higher
+    # left_is_lower = is_lower
 
-    def unsafe_subscribe(scheduler: Scheduler, subscribe_scheduler: Scheduler):
+    def observe(): #scheduler: Scheduler, subscribe_scheduler: Scheduler):
         exception = [None]
         left_completed = [False]
         right_completed = [False]
@@ -104,39 +106,25 @@ def controlled_zip(left: Observable, right: Observable,
 
                 # print('left_val={}, right_val={}'.format(left_val, right_val))
 
-                # right is higher than left
-                if left_is_lower(left_val, right_val):
-                    # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
-
-                    left_index_buffer.append((False, left_val))
-                    try:
-                        left_val = next(left_iter)
-                    except StopIteration:
-                        has_left_elem = False
-                        break
-
-                elif left_is_higher(left_val, right_val):
-                    # update right index
-                    right_index_buffer.append((False, right_val))
-
-                    try:
-                        left_val = next(right_iter)
-                    except StopIteration:
-                        has_right_elem = False
-                        break
-
-                else:
-                    # update right index
-                    left_index_buffer.append((True, left_val))
-                    right_index_buffer.append((True, right_val))
+                if match_func(left_val, right_val):
+                    left_index_buffer.append(on_next_idx)
+                    right_index_buffer.append(on_next_idx)
 
                     # add to buffer
                     zipped_output_buffer.append((left_val, right_val))
 
+                if request_left(left_val, right_val):
+                    # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
+
+                    left_index_buffer.append(on_completed_idx)
                     try:
                         left_val = next(left_iter)
                     except StopIteration:
                         has_left_elem = False
+
+                if request_right(left_val, right_val):
+                    # update right index
+                    right_index_buffer.append(on_completed_idx)
 
                     try:
                         right_val = next(right_iter)
@@ -144,8 +132,8 @@ def controlled_zip(left: Observable, right: Observable,
                         has_right_elem = False
                         break
 
-                    if not has_left_elem:
-                        break
+                if not has_left_elem:
+                    break
 
             if zipped_output_buffer:
                 def gen():
@@ -384,10 +372,10 @@ def controlled_zip(left: Observable, right: Observable,
                     right_observer[0].on_completed()
 
         left_observer2 = LeftObserver()
-        d1 = left.unsafe_subscribe(left_observer2, scheduler, subscribe_scheduler)
+        d1 = left.observe(left_observer2)  #, scheduler, subscribe_scheduler)
 
         right_observer2 = RightObserver()
-        d2 = right.unsafe_subscribe(right_observer2, scheduler, subscribe_scheduler)
+        d2 = right.observe(right_observer2)  #, scheduler, subscribe_scheduler)
 
         return CompositeDisposable(d1, d2)
 
@@ -409,7 +397,7 @@ def controlled_zip(left: Observable, right: Observable,
     composite_disposable = CompositeDisposable()
 
     class ControlledZippedObservable(Observable):
-        def unsafe_subscribe(self, observer, scheduler, s):
+        def observe(self, observer): #, scheduler, s):
             with lock:
                 controller_zip_observer[0] = observer
 
@@ -419,7 +407,7 @@ def controlled_zip(left: Observable, right: Observable,
                     subscribe = False
 
             if subscribe:
-                disposable = unsafe_subscribe(scheduler, s)
+                disposable = observe() #scheduler, s)
                 composite_disposable.add(disposable)
 
             return composite_disposable
@@ -427,7 +415,7 @@ def controlled_zip(left: Observable, right: Observable,
     o1 = ControlledZippedObservable()
 
     class LeftObservable(Observable):
-        def unsafe_subscribe(self, observer, scheduler, s):
+        def observe(self, observer): #, scheduler, s):
             with lock:
                 left_observer[0] = observer
 
@@ -437,7 +425,7 @@ def controlled_zip(left: Observable, right: Observable,
                     subscribe = False
 
             if subscribe:
-                disposable = unsafe_subscribe(scheduler, s)
+                disposable = observe() #scheduler, s)
                 composite_disposable.add(disposable)
 
             return composite_disposable
@@ -445,7 +433,7 @@ def controlled_zip(left: Observable, right: Observable,
     o2 = LeftObservable()
 
     class RightObservable(Observable):
-        def unsafe_subscribe(self, observer, scheduler, s):
+        def observe(self, observer): #, scheduler, s):
             with lock:
                 right_observer[0] = observer
 
@@ -455,11 +443,11 @@ def controlled_zip(left: Observable, right: Observable,
                     subscribe = False
 
             if subscribe:
-                disposable = unsafe_subscribe(scheduler, s)
+                disposable = observe() #scheduler, s)
                 composite_disposable.add(disposable)
 
             return composite_disposable
 
     o3 = RightObservable()
 
-    return o1, o2, o3
+    return o1 #, o2, o3
