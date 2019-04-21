@@ -71,14 +71,19 @@ from rxbp.testing.debugobservable import DebugObservable
 #
 
 
-def controlled_zip(right: SubscriptableBase, request_left: Callable[[Any, Any], bool],
-                 request_right: Callable[[Any, Any], bool],
-                 match_func: Callable[[Any, Any], bool],):
-    """ Only emits those items for which the given predicate holds
+def controlled_zip(right: SubscriptableBase,
+                   request_left: Callable[[Any, Any], bool],
+                   request_right: Callable[[Any, Any], bool],
+                   match_func: Callable[[Any, Any], bool], ):
+    """ Creates a new observable from two observables by combining their item in pairs in a controlled manner
 
-    :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
-    filter
-    :return: filtered observable
+    :param right: other observable
+    :param request_left: a function that returns True, if a new element from the left observable is requested \
+    to build the the next pair
+    :param request_right: a function that returns True, if a new element from the left observable is requested \
+    to build the the next pair
+    :param match_func: a filter function that returns True, if the current pair is sent downstream
+    :return: zipped observable
     """
 
     source_right = right
@@ -136,8 +141,7 @@ def controlled_zip(right: SubscriptableBase, request_left: Callable[[Any, Any], 
 def filter(predicate: Callable[[Any], bool]):
     """ Only emits those items for which the given predicate holds
 
-    :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
-    filter
+    :param predicate: a function that returns True, if the current element passes the filter
     :return: filtered observable
     """
 
@@ -197,7 +201,7 @@ def filter(predicate: Callable[[Any], bool]):
 def map(selector: Callable[[Any], Any]):
     """ Maps each item emitted by the source by applying the given function
 
-    :param selector: function that defines the mapping
+    :param selector: function that defines the mapping applied to each element
     :return: mapped observable
     """
 
