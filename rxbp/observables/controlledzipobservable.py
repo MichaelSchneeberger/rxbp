@@ -1,28 +1,45 @@
-import itertools
-import traceback
-from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional
+from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
 from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.indexing import OnCompleted, OnNext, on_next_idx, on_completed_idx
+from rxbp.internal.indexing import on_next_idx, on_completed_idx
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
-def match(left: Observable, right: Observable,
-          request_left: Callable[[Any, Any], bool],
-          request_right: Callable[[Any, Any], bool],
-          match_func: Callable[[Any, Any], bool]):
-    """
-    :param left:
-    :param right:
-    :param is_lower: if right is lower than left, request next right
-    :param is_higher: if right is higher than left, request next left
-    """
+class ControlledZipObservable(Observable):
+    def __init__(self, left: Observable, right: Observable,
+                 request_left: Callable[[Any, Any], bool],
+                 request_right: Callable[[Any, Any], bool],
+                 match_func: Callable[[Any, Any], bool],
+                 scheduler: Scheduler):
+        """
+        :param left:
+        :param right:
+        :param is_lower: if right is lower than left, request next right
+        :param is_higher: if right is higher than left, request next left
+        """
+
+        self.left_observable = left
+        self.right_observable = right
+
+        self.request_left = request_left
+        self.request_right = request_right
+        self.match_func = match_func
+
+        self.left_selector = PublishSubject(scheduler=scheduler)
+        self.right_selector = PublishSubject(scheduler=scheduler)
+
+        self.exception = None
+        self.left_completed = False
+        self.right_completed = False
+        self.state = ControlledZipObservable.WaitLeftRight()
+
+        self.lock = config['concurrency'].RLock()
 
     class State:
         pass
@@ -76,21 +93,18 @@ def match(left: Observable, right: Observable,
         def __init__(self, left_in_ack: Ack):
             self.left_in_ack = left_in_ack
 
-    # left_is_higher = is_higher
-    # left_is_lower = is_lower
-
-    def observe(): #scheduler: Scheduler, subscribe_scheduler: Scheduler):
-        exception = [None]
-        left_completed = [False]
-        right_completed = [False]
-
-        state = [WaitLeftRight()]
-        lock = config['concurrency'].RLock()
+    def observe(self, observer: Observer):
+        # exception = [None]
+        # left_completed = [False]
+        # right_completed = [False]
+        #
+        # state = [ControlledZipObservable.WaitLeftRight()]
+        # lock = config['concurrency'].RLock()
 
         def start_zipping(left_val: Any,
                           last_left_out_ack: Optional[Ack], left_iter: Iterator[Tuple[Any, PublishSubject]],
                           right_val: Optional[Any], right_iter: Iterator[Any], last_right_out_ack: Optional[Ack],
-                          is_sync: ConcurrentType) \
+                          is_sync: ControlledZipObservable.ConcurrentType) \
                 -> Ack:
 
             # buffer representing which right elements are selected, and which are not
@@ -106,7 +120,7 @@ def match(left: Observable, right: Observable,
 
                 # print('left_val={}, right_val={}'.format(left_val, right_val))
 
-                if match_func(left_val, right_val):
+                if self.match_func(left_val, right_val):
                     left_index_buffer.append(on_next_idx)
                     right_index_buffer.append(on_next_idx)
 
@@ -114,7 +128,7 @@ def match(left: Observable, right: Observable,
                     zipped_output_buffer.append((left_val, right_val))
 
                 left_requested = False
-                if request_left(left_val, right_val):
+                if self.request_left(left_val, right_val):
                     # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
 
                     left_index_buffer.append(on_completed_idx)
@@ -124,7 +138,7 @@ def match(left: Observable, right: Observable,
                     except StopIteration:
                         has_left_elem = False
 
-                if request_right(left_val, right_val):
+                if self.request_right(left_val, right_val):
                     # update right index
                     right_index_buffer.append(on_completed_idx)
 
@@ -144,7 +158,7 @@ def match(left: Observable, right: Observable,
                 def gen():
                     yield from zipped_output_buffer
 
-                zip_out_ack = controller_zip_observer[0].on_next(gen)
+                zip_out_ack = observer.on_next(gen)
             else:
                 zip_out_ack = continue_ack
 
@@ -152,7 +166,7 @@ def match(left: Observable, right: Observable,
                 def gen():
                     yield from left_index_buffer
 
-                left_out_ack = left_observer[0].on_next(gen)
+                left_out_ack = self.left_selector.on_next(gen)
             else:
                 left_out_ack = last_left_out_ack or continue_ack
 
@@ -160,63 +174,63 @@ def match(left: Observable, right: Observable,
                 def gen():
                     yield from right_index_buffer
 
-                right_out_ack = right_observer[0].on_next(gen)
+                right_out_ack = self.right_selector.on_next(gen)
             else:
                 right_out_ack = last_right_out_ack or continue_ack
 
             if not has_left_elem and not has_right_elem:
-                next_state = WaitLeftRight()
-                state[0] = next_state
+                next_state = ControlledZipObservable.WaitLeftRight()
+                self.state = next_state
 
                 result_ack_left = zip_out_ack.merge_ack(left_out_ack)
                 result_ack_right = zip_out_ack.merge_ack(right_out_ack)
-                if isinstance(is_sync, SynchronousLeft):
+                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
                     result_ack_right.connect_ack(is_sync.right_in_ack)
                     return result_ack_left
-                elif isinstance(is_sync, SynchronousRight):
+                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
                     result_ack_left.connect_ack(is_sync.left_in_ack)
                     return result_ack_right
                 else:
                     raise Exception('illegal state')
 
             elif not has_left_elem:
-                if isinstance(is_sync, SynchronousLeft):
+                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
                     right_in_ack = is_sync.right_in_ack
-                elif isinstance(is_sync, SynchronousRight):
+                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
                     right_in_ack = Ack()
                 else:
                     raise Exception('illegal state')
 
-                next_state = WaitOnLeft(right_val=right_val, right_iter=right_iter, right_in_ack=right_in_ack,
+                next_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter, right_in_ack=right_in_ack,
                                         right_out_ack=right_out_ack)
-                state[0] = next_state
+                self.state = next_state
 
                 result_left_ack = zip_out_ack.merge_ack(left_out_ack)
-                if isinstance(is_sync, SynchronousLeft):
+                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
                     return result_left_ack
-                elif isinstance(is_sync, SynchronousRight):
+                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
                     result_left_ack.connect_ack(is_sync.left_in_ack)
                     return right_in_ack
                 else:
                     raise Exception('illegal state')
 
             elif not has_right_elem:
-                if isinstance(is_sync, SynchronousLeft):
+                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
                     left_in_ack = Ack()
-                elif isinstance(is_sync, SynchronousRight):
+                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
                     left_in_ack = is_sync.left_in_ack
                 else:
                     raise Exception('illegal state')
 
-                next_state = WaitOnRight(left_val=left_val, left_iter=left_iter, left_in_ack=left_in_ack,
+                next_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter, left_in_ack=left_in_ack,
                                         left_out_ack=left_out_ack)
-                state[0] = next_state
+                self.state = next_state
 
                 result_right_ack = zip_out_ack.merge_ack(right_out_ack)
-                if isinstance(is_sync, SynchronousLeft):
+                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
                     result_right_ack.connect_ack(is_sync.right_in_ack)
                     return left_in_ack
-                elif isinstance(is_sync, SynchronousRight):
+                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
                     return result_right_ack
                 else:
                     raise Exception('illegal state')
@@ -230,37 +244,37 @@ def match(left: Observable, right: Observable,
             left_iter = left_elem()
             left_val = next(left_iter)
 
-            with lock:
-                if isinstance(state[0], WaitOnLeft):
+            with self.lock:
+                if isinstance(self.state, ControlledZipObservable.WaitOnLeft):
                     # iterate over right elements and send them over the publish subject and right observer
                     pass
 
-                elif isinstance(state[0], Completed):
+                elif isinstance(self.state, ControlledZipObservable.Completed):
                     return stop_ack
 
-                elif isinstance(state[0], WaitLeftRight):
+                elif isinstance(self.state, ControlledZipObservable.WaitLeftRight):
                     # wait until right iterable is received
                     left_in_ack = Ack()
-                    new_state = WaitOnRight(left_val=left_val, left_iter=left_iter,
+                    new_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter,
                                             left_in_ack=left_in_ack, left_out_ack=None)
-                    state[0] = new_state
+                    self.state = new_state
                     return left_in_ack
 
                 else:
-                    raise Exception('illegal state {}'.format(state[0]))
+                    raise Exception('illegal state {}'.format(self.state))
 
                 # save current state to local variable
-                current_state: WaitOnLeft = state[0]
+                current_state: ControlledZipObservable.WaitOnLeft = self.state
 
                 # change state
-                state[0] = Transition()
+                self.state = ControlledZipObservable.Transition()
 
             right_val = current_state.right_val
             right_iter = current_state.right_iter
             right_in_ack = current_state.right_in_ack
             right_out_ack = current_state.right_out_ack
 
-            is_sync = SynchronousLeft(right_in_ack=right_in_ack)
+            is_sync = ControlledZipObservable.SynchronousLeft(right_in_ack=right_in_ack)
 
             left_ack = start_zipping(
                 left_val=left_val,
@@ -277,22 +291,22 @@ def match(left: Observable, right: Observable,
             right_iter = right_elem()
             right_val = next(right_iter)
 
-            with lock:
-                if isinstance(state[0], WaitOnRight):
+            with self.lock:
+                if isinstance(self.state, ControlledZipObservable.WaitOnRight):
                     pass
-                elif isinstance(state[0], Completed):
+                elif isinstance(self.state, ControlledZipObservable.Completed):
                     return stop_ack
-                elif isinstance(state[0], WaitLeftRight):
+                elif isinstance(self.state, ControlledZipObservable.WaitLeftRight):
                     right_ack = Ack()
-                    new_state = WaitOnLeft(right_val=right_val, right_iter=right_iter,
+                    new_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter,
                                            right_in_ack=right_ack, right_out_ack=None)
-                    state[0] = new_state
+                    self.state = new_state
                     return right_ack
                 else:
-                    raise Exception('illegal state {}, element {}'.format(state[0], right_val))
+                    raise Exception('illegal state {}'.format(self.state))
 
-                current_state: WaitOnRight = state[0]
-                state[0] = Transition()
+                current_state: ControlledZipObservable.WaitOnRight = self.state
+                self.state = ControlledZipObservable.Transition()
 
             left_val = current_state.left_val
             left_iter = current_state.left_iter
@@ -303,27 +317,29 @@ def match(left: Observable, right: Observable,
                 left_val=left_val, left_iter=left_iter,
                 last_left_out_ack=left_out_ack,
                 right_val=right_val, right_iter=right_iter, last_right_out_ack=None,
-                is_sync=SynchronousRight(left_in_ack=left_in_ack))
+                is_sync=ControlledZipObservable.SynchronousRight(left_in_ack=left_in_ack))
 
             return right_ack
+
+        source = self
 
         def on_error(exc):
             forward_error = False
 
-            with lock:
-                if exception[0] is not None:
+            with self.lock:
+                if self.exception is not None:
                     return
-                elif isinstance(state[0], Transition):
+                elif isinstance(self.state, ControlledZipObservable.Transition):
                     pass
                 else:
                     forward_error = True
-                    state[0] = Completed()
+                    self.state = ControlledZipObservable.Completed()
 
-                exception[0] = exc
+                self.exception = exc
 
             if forward_error:
-                right_observer[0].on_error(exc)
-                left_observer[0].on_error(exc)
+                source.left_selector.on_error(exc)
+                source.right_selector.on_error(exc)
 
         class LeftObserver(Observer):
             def on_next(self, v):
@@ -336,20 +352,20 @@ def match(left: Observable, right: Observable,
                 # print('left completed')
                 complete = False
 
-                with lock:
-                    if left_completed[0]:
+                with source.lock:
+                    if source.left_completed:
                         return
-                    elif isinstance(state[0], WaitLeftRight) or isinstance(state[0], WaitOnLeft):
+                    elif isinstance(source.state, ControlledZipObservable.WaitLeftRight) or isinstance(source.state, ControlledZipObservable.WaitOnLeft):
                         complete = True
-                        state[0] = Completed()
+                        source.state = ControlledZipObservable.Completed()
                     else:
                         pass
 
-                    left_completed[0] = True
+                    source.left_completed = True
 
                 if complete:
-                    left_observer[0].on_completed()
-                    right_observer[0].on_completed()
+                    source.left_selector.on_completed()
+                    source.right_selector.on_completed()
 
         class RightObserver(Observer):
             def on_next(self, v):
@@ -361,98 +377,25 @@ def match(left: Observable, right: Observable,
             def on_completed(self):
                 complete = False
 
-                with lock:
-                    if right_completed[0]:
+                with source.lock:
+                    if source.right_completed:
                         return
-                    elif isinstance(state[0], WaitLeftRight) or isinstance(state[0], WaitOnRight):
+                    elif isinstance(source.state, ControlledZipObservable.WaitLeftRight) or isinstance(source.state, ControlledZipObservable.WaitOnRight):
                         complete = True
-                        state[0] = Completed()
+                        source.state = ControlledZipObservable.Completed()
                     else:
                         pass
 
-                    right_completed[0] = True
+                    source.right_completed = True
 
                 if complete:
-                    left_observer[0].on_completed()
-                    right_observer[0].on_completed()
+                    source.left_selector.on_completed()
+                    source.right_selector.on_completed()
 
         left_observer2 = LeftObserver()
-        d1 = left.observe(left_observer2)  #, scheduler, subscribe_scheduler)
+        d1 = self.left_observable.observe(left_observer2)
 
         right_observer2 = RightObserver()
-        d2 = right.observe(right_observer2)  #, scheduler, subscribe_scheduler)
+        d2 = self.right_observable.observe(right_observer2)
 
         return CompositeDisposable(d1, d2)
-
-    class DummyObserver(Observer):
-        def on_next(self, v):
-            return continue_ack
-
-        def on_error(self, err):
-            pass
-
-        def on_completed(self):
-            pass
-
-    lock = config['concurrency'].RLock()
-
-    controller_zip_observer = [DummyObserver()]
-    left_observer = [DummyObserver()]
-    right_observer = [DummyObserver()]
-    composite_disposable = CompositeDisposable()
-
-    class ControlledZippedObservable(Observable):
-        def observe(self, observer): #, scheduler, s):
-            with lock:
-                controller_zip_observer[0] = observer
-
-                if isinstance(left_observer[0], DummyObserver) and isinstance(right_observer[0], DummyObserver):
-                    subscribe = True
-                else:
-                    subscribe = False
-
-            if subscribe:
-                disposable = observe() #scheduler, s)
-                composite_disposable.add(disposable)
-
-            return composite_disposable
-
-    o1 = ControlledZippedObservable()
-
-    class LeftObservable(Observable):
-        def observe(self, observer): #, scheduler, s):
-            with lock:
-                left_observer[0] = observer
-
-                if isinstance(controller_zip_observer[0], DummyObserver) and isinstance(right_observer[0], DummyObserver):
-                    subscribe = True
-                else:
-                    subscribe = False
-
-            if subscribe:
-                disposable = observe() #scheduler, s)
-                composite_disposable.add(disposable)
-
-            return composite_disposable
-
-    o2 = LeftObservable()
-
-    class RightObservable(Observable):
-        def observe(self, observer): #, scheduler, s):
-            with lock:
-                right_observer[0] = observer
-
-                if isinstance(controller_zip_observer[0], DummyObserver) and isinstance(left_observer[0], DummyObserver):
-                    subscribe = True
-                else:
-                    subscribe = False
-
-            if subscribe:
-                disposable = observe() #scheduler, s)
-                composite_disposable.add(disposable)
-
-            return composite_disposable
-
-    o3 = RightObservable()
-
-    return o1 #, o2, o3

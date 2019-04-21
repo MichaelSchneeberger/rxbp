@@ -5,7 +5,7 @@ from rx import AnonymousObservable
 import rxbp
 
 from rxbp.ack import Continue
-from rxbp.observables.controlledzip import controlled_zip
+from rxbp.observables.controlledzipobservable import controlled_zip
 from rxbp.observables.window import window
 from rxbp.pipe import pipe
 from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler

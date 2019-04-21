@@ -17,6 +17,20 @@ class Subscriptable(SubscriptableBase):
     def unsafe_subscribe(self, subscriber: Subscriber) -> Observable:
         return self.subscriptable.unsafe_subscribe(subscriber=subscriber)
 
+    def controlled_zip(self, right: SubscriptableBase, request_left: Callable[[Any, Any], bool],
+                 request_right: Callable[[Any, Any], bool],
+                 match_func: Callable[[Any, Any], bool]):
+        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+
+        :param selector: a mapping function applied over the generated pairs
+        :return: zipped observable
+        """
+
+        observable = rxbp.op.controlled_zip(right=right, request_left=request_left,
+                                            request_right=request_right,
+                                            match_func=match_func)(self)
+        return Subscriptable(observable)
+
     def filter(self, predicate: Callable[[Any], bool]):
         """ Only emits those items for which the given predicate holds
 

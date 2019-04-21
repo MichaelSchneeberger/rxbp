@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict
 from rxbp.internal.indexingop import merge_indexes, index_observable
 from rxbp.observable import Observable
 from rxbp.observables.connectableobservable import ConnectableObservable
+from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.observables.flatzipobservable import FlatZipObservable
@@ -68,6 +69,69 @@ from rxbp.testing.debugobservable import DebugObservable
 #         return ExecuteOnObservable()
 #     return ObservableOperator(func)
 #
+
+
+def controlled_zip(right: SubscriptableBase, request_left: Callable[[Any, Any], bool],
+                 request_right: Callable[[Any, Any], bool],
+                 match_func: Callable[[Any, Any], bool],):
+    """ Only emits those items for which the given predicate holds
+
+    :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
+    filter
+    :return: filtered observable
+    """
+
+    source_right = right
+
+    def func(source_left: SubscriptableBase) -> SubscriptableBase:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+            left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
+            right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
+
+            observable = ControlledZipObservable(
+                left=left_obs, right=right_obs, request_left=request_left,
+            request_right=request_right, match_func=match_func, scheduler=subscriber.scheduler)
+
+            # apply filter selector to each selector
+            def gen_left_merged_selector():
+                for base, indexing in left_selectors.items():
+                    yield base, merge_indexes(indexing, observable.left_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+
+            left_selectors = dict(gen_left_merged_selector())
+
+            if source_left.base is not None:
+                left_selectors_ = {**left_selectors, **{source_left.base: observable.left_selector}}
+            else:
+                left_selectors_ = left_selectors
+
+            # apply filter selector to each selector
+            def gen_right_merged_selector():
+                for base, indexing in right_selectors.items():
+                    yield base, merge_indexes(indexing, observable.right_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+
+            right_selectors = dict(gen_right_merged_selector())
+
+            if source_right.base is not None:
+                right_selectors_ = {**right_selectors, **{source_right.base: observable.right_selector}}
+            else:
+                right_selectors_ = right_selectors
+
+            return observable, {**left_selectors_, **right_selectors_}
+
+        if source_left.base is None:
+            left_selectable_bases = source_left.selectable_bases
+        else:
+            left_selectable_bases = source_left.selectable_bases | {source_left.base}
+
+        if source_right.base is None:
+            right_selectable_bases = source_right.selectable_bases
+        else:
+            right_selectable_bases = source_right.selectable_bases | {source_right.base}
+
+        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
+                                      selectable_bases=left_selectable_bases | right_selectable_bases)
+    return SubscriptableOperator(func)
+
 
 def filter(predicate: Callable[[Any], bool]):
     """ Only emits those items for which the given predicate holds
@@ -264,7 +328,7 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
 
             if transform_left:
                 index_obs = right_selectors[source_left.base]
-                left_obs_ = index_observable(left_obs, index_obs)
+                left_obs_ = index_observable(left_obs, index_obs, scheduler=subscriber.scheduler)
             else:
                 selectors = {**selectors, **left_selectors}
                 left_obs_ = left_obs
@@ -272,7 +336,7 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
             if transform_right:
                 index_obs = left_selectors[source_right.base]
                 # right_obs_ = DebugObservable(index_observable(DebugObservable(right_obs, 'd2'), DebugObservable(index_obs, 'd3')), 'd1')
-                right_obs_ = index_observable(right_obs, index_obs)
+                right_obs_ = index_observable(right_obs, index_obs, scheduler=subscriber.scheduler)
             else:
                 selectors = {**selectors, **right_selectors}
                 right_obs_ = right_obs
