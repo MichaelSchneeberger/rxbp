@@ -86,10 +86,7 @@ def filter(predicate: Callable[[Any], bool]):
             # apply filter selector to each selector
             def gen_merged_selector():
                 for base, indexing in source_selectors.items():
-                    # if indexing is None:
-                    #     yield base, observable.selector
-                    # else:
-                    yield base, merge_indexes(indexing, observable.selector)
+                    yield base, merge_indexes(indexing, observable.selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
 
             selectors = dict(gen_merged_selector())
 
@@ -230,20 +227,29 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
         # print(source_right.base)
         # print(source_left.selectable_bases)
 
+        selectable_bases = set()
+
         if ignore_mismatch is not True:
             if source_left.base is not None and source_left.base == source_right.base:
                 transform_left = False
                 transform_left = False
 
+                selectable_bases = source_left.selectable_bases | source_right.selectable_bases
+
             elif source_left.base is not None and source_left.base in source_right.selectable_bases:
                 transform_left = False
                 transform_right = True
+
+                selectable_bases = source_right.selectable_bases
 
             elif source_right.base is not None and source_right.base in source_left.selectable_bases:
                 transform_left = False
                 transform_right = True
 
+                selectable_bases = source_left.selectable_bases
+
             else:
+
                 raise AssertionError('flowable do not match')
 
         else:
@@ -274,7 +280,7 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
             obs = Zip2Observable(left=left_obs_, right=right_obs_, selector=selector)
             return obs, selectors
 
-        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func)
+        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, selectable_bases=selectable_bases)
     return SubscriptableOperator(func)
 
 

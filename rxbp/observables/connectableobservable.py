@@ -2,19 +2,22 @@ from rx.core import Disposable
 from rx.disposables import CompositeDisposable
 
 from rxbp.observable import Observable
+from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
 class ConnectableObservable:
 
-    def __init__(self, source, subject=None):
+    def __init__(self, source, scheduler: Scheduler, subscribe_scheduler: Scheduler, subject=None):
         super().__init__()
         self.source = source
-        self.subject = subject or PublishSubject()
+        self.subject = subject or PublishSubject(scheduler=scheduler)
         self.has_subscription = False
         self.subscription = None
+        self.scheduler = scheduler
+        self.subscribe_scheduler = subscribe_scheduler
 
-    def connect(self, scheduler, subscribe_scheduler):
+    def connect(self):
         """Connects the observable."""
 
         if not self.has_subscription:
@@ -23,12 +26,14 @@ class ConnectableObservable:
             def dispose():
                 self.has_subscription = False
 
-            disposable = self.source.unsafe_subscribe(self.subject, scheduler, subscribe_scheduler)
+            disposable = self.source.observe(self.subject)
             self.subscription = CompositeDisposable(disposable, Disposable.create(dispose))
 
         return self.subscription
 
     def ref_count(self):
+
+        source = self
 
         class RefCountObservable(Observable):
             def __init__(self, source):
@@ -36,11 +41,11 @@ class ConnectableObservable:
                 self.count = 0
                 self.first_disposable = None
 
-            def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
+            def observe(self, observer):
                 self.count += 1
-                disposable = self.source.subject.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
+                disposable = self.source.subject.observe(observer)
                 if self.count == 1:
-                    self.first_disposable = self.source.connect(scheduler, subscribe_scheduler)
+                    self.first_disposable = self.source.connect()
 
                 def dispose():
                     disposable.dispose()

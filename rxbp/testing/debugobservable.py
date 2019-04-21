@@ -6,7 +6,7 @@ from rxbp.scheduler import Scheduler
 
 
 class DebugObservable(Observable):
-    def __init__(self, source: Observable, name: str, on_next=None, on_completed=None, on_ack=None,
+    def __init__(self, source: Observable, name: str = None, on_next=None, on_completed=None, on_ack=None,
                  on_subscribe=None, on_raw_ack=None, on_next_exception=None):
         self.source = source
         self.name = name
@@ -20,6 +20,9 @@ class DebugObservable(Observable):
         self.on_next_exception = on_next_exception or (lambda v: print('{}.on_next exception raised "{}"'.format(name, v)))
 
     def observe(self, observer: Observer):
+        if self.name is None:
+            return self.source.observe(observer)
+
         self.on_subscribe_func(observer)
 
         def on_next(v):

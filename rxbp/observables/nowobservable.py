@@ -2,14 +2,15 @@ from typing import Any
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.scheduler import SchedulerBase
+from rxbp.scheduler import SchedulerBase, Scheduler
 
 
 class NowObservable(Observable):
-    def __init__(self, elem: Any):
+    def __init__(self, elem: Any, subscribe_scheduler: Scheduler):
+        self.subscribe_scheduler = subscribe_scheduler
         self.elem = elem
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
         def action(_, __):
             def gen_single_elem():
                 yield self.elem
@@ -17,5 +18,5 @@ class NowObservable(Observable):
             observer.on_next(gen_single_elem)
             observer.on_completed()
 
-        return subscribe_scheduler.schedule(action)
+        return self.subscribe_scheduler.schedule(action)
 

@@ -2,15 +2,10 @@ import functools
 import itertools
 from typing import Callable, Any
 
-from rx import config
-from rx.core import Disposable
-
 from rxbp.ack import Continue, Ack
 from rxbp.internal.indexing import on_next_idx, on_completed_idx
-from rxbp.internal.indexingop import merge_indexes
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observers.dummyobserver import DummyObserver
 from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 

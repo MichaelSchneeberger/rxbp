@@ -1,27 +1,22 @@
 import itertools
 import traceback
-from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional
+from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional, Iterable
 
 from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.indexing import OnCompleted, OnNext, on_next_idx, on_completed_idx
+from rxbp.internal.indexing import OnCompleted, OnNext, on_next_idx, on_completed_idx, Index
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
-def match(left: Observable, right: Observable,
-          request_left: Callable[[Any, Any], bool],
-          request_right: Callable[[Any, Any], bool],
-          match_func: Callable[[Any, Any], bool]):
+def merge_selector(left: Observable, right: Observable):
     """
     :param left:
     :param right:
-    :param is_lower: if right is lower than left, request next right
-    :param is_higher: if right is higher than left, request next left
     """
 
     class State:
@@ -79,7 +74,7 @@ def match(left: Observable, right: Observable,
     # left_is_higher = is_higher
     # left_is_lower = is_lower
 
-    def observe(): #scheduler: Scheduler, subscribe_scheduler: Scheduler):
+    def observe(observer: Observer): #scheduler: Scheduler, subscribe_scheduler: Scheduler):
         exception = [None]
         left_completed = [False]
         right_completed = [False]
@@ -104,7 +99,10 @@ def match(left: Observable, right: Observable,
 
             while True:
 
-                # print('left_val={}, right_val={}'.format(left_val, right_val))
+                print('left_val={}, right_val={}'.format(left_val, right_val))
+
+                match_func = lambda l, r: isinstance(r, on_next_idx)
+                request_left = lambda l, r: isinstance(r, on_completed_idx)
 
                 if match_func(left_val, right_val):
                     left_index_buffer.append(on_next_idx)
@@ -124,7 +122,7 @@ def match(left: Observable, right: Observable,
                     except StopIteration:
                         has_left_elem = False
 
-                if request_right(left_val, right_val):
+                if True:
                     # update right index
                     right_index_buffer.append(on_completed_idx)
 
@@ -224,51 +222,103 @@ def match(left: Observable, right: Observable,
             else:
                 raise Exception('illegal case')
 
+        def get_continue_index(indexes: Callable[[], Generator]):
+            val_iter = indexes()
+            has_values = [True]
+            last_val = [next(val_iter)]
+
+            if isinstance(last_val[0], on_completed_idx):
+                has_values[0] = False
+                def gen1():
+                    yield last_val[0]
+
+                    for val in val_iter:
+                        if isinstance(val, on_completed_idx):
+                            yield val
+                        else:
+                            has_values[0] = True
+                            last_val[0] = val
+                            break
+            else:
+                gen1 = None
+
+            if has_values[0]:
+                def gen2():
+                    yield last_val[0]
+                    for val in val_iter:
+                        yield val
+            else:
+                gen2 = None
+
+            return gen1, gen2
+
         def on_next_left(left_elem: Callable[[], Generator]):
             # print('controlled_zip on left')
 
-            left_iter = left_elem()
-            left_val = next(left_iter)
+            def on_next_filtered():
+                left_elem = gen2
 
-            with lock:
-                if isinstance(state[0], WaitOnLeft):
-                    # iterate over right elements and send them over the publish subject and right observer
-                    pass
+                left_iter = left_elem()
+                left_val = next(left_iter)
 
-                elif isinstance(state[0], Completed):
-                    return stop_ack
+                with lock:
+                    if isinstance(state[0], WaitOnLeft):
+                        # iterate over right elements and send them over the publish subject and right observer
+                        pass
 
-                elif isinstance(state[0], WaitLeftRight):
-                    # wait until right iterable is received
-                    left_in_ack = Ack()
-                    new_state = WaitOnRight(left_val=left_val, left_iter=left_iter,
-                                            left_in_ack=left_in_ack, left_out_ack=None)
-                    state[0] = new_state
-                    return left_in_ack
+                    elif isinstance(state[0], Completed):
+                        return stop_ack
 
+                    elif isinstance(state[0], WaitLeftRight):
+                        # wait until right iterable is received
+                        left_in_ack = Ack()
+                        new_state = WaitOnRight(left_val=left_val, left_iter=left_iter,
+                                                left_in_ack=left_in_ack, left_out_ack=None)
+                        state[0] = new_state
+                        return left_in_ack
+
+                    else:
+                        raise Exception('illegal state {}'.format(state[0]))
+
+                    # save current state to local variable
+                    current_state: WaitOnLeft = state[0]
+
+                    # change state
+                    state[0] = Transition()
+
+                right_val = current_state.right_val
+                right_iter = current_state.right_iter
+                right_in_ack = current_state.right_in_ack
+                right_out_ack = current_state.right_out_ack
+
+                is_sync = SynchronousLeft(right_in_ack=right_in_ack)
+
+                left_ack = start_zipping(
+                    left_val=left_val,
+                    left_iter=left_iter, last_left_out_ack=None,
+                    right_val=right_val, right_iter=right_iter,
+                    is_sync=is_sync, last_right_out_ack=right_out_ack)
+
+                return left_ack
+
+            gen1, gen2 = get_continue_index(left_elem)
+
+            if gen1 is not None:
+                ack1 = observer.on_next(gen1)
+
+                if gen2 is None:
+                    return ack1
                 else:
-                    raise Exception('illegal state {}'.format(state[0]))
+                    ack = Ack()
 
-                # save current state to local variable
-                current_state: WaitOnLeft = state[0]
+                    def _(v):
+                        ack2 = on_next_filtered()
+                        ack2.connect_ack(ack)
 
-                # change state
-                state[0] = Transition()
-
-            right_val = current_state.right_val
-            right_iter = current_state.right_iter
-            right_in_ack = current_state.right_in_ack
-            right_out_ack = current_state.right_out_ack
-
-            is_sync = SynchronousLeft(right_in_ack=right_in_ack)
-
-            left_ack = start_zipping(
-                left_val=left_val,
-                left_iter=left_iter, last_left_out_ack=None,
-                right_val=right_val, right_iter=right_iter,
-                is_sync=is_sync, last_right_out_ack=right_out_ack)
-
-            return left_ack
+                    ack1.subscribe(_)
+                    return ack
+            else:
+                return on_next_filtered()
 
         def on_next_right(right_elem: Callable[[], Generator]):
             # print('controlled_zip on right')
@@ -289,7 +339,7 @@ def match(left: Observable, right: Observable,
                     state[0] = new_state
                     return right_ack
                 else:
-                    raise Exception('illegal state {}, element {}'.format(state[0], right_val))
+                    raise Exception('illegal state {}'.format(state[0]))
 
                 current_state: WaitOnRight = state[0]
                 state[0] = Transition()

@@ -1,8 +1,12 @@
-class OnCompleted:
+class Index:
     pass
 
 
-class OnNext:
+class OnCompleted(Index):
+    pass
+
+
+class OnNext(Index):
     pass
 
 
