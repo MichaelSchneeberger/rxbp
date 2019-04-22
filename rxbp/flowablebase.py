@@ -13,12 +13,12 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscribers.anonymoussubscriber import AnonymousSubscriber
 
 
-class SubscriptableBase(ABC):
-    SubscribeReturnType = Tuple[Observable, Dict[Any, Optional[Observable]]]
+class FlowableBase(ABC):
+    FlowableReturnType = Tuple[Observable, Dict[Any, Optional[Observable]]]
 
     def __init__(self, base: Any = None, selectable_bases: Set[Any] = None):
         """
-        :param base: two subscriptables with the the same base emit the same number of elements 
+        :param base: two flowables with the the same base emit the same number of elements
         :param transformables: a set of bases different to the current base, a transformation is the capability to
         transform another Subscriptable to the current base, the actual transformations are defined in the `Observable`
         """
@@ -27,7 +27,7 @@ class SubscriptableBase(ABC):
         self.selectable_bases = selectable_bases or set()
 
     @abstractmethod
-    def unsafe_subscribe(self, subscriber: Subscriber) -> SubscribeReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableReturnType:
         ...
 
     def subscribe_(self, subscriber: Subscriber, observer: Observer):

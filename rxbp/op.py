@@ -19,10 +19,9 @@ from rxbp.subjects.cachedservefirstsubject import CachedServeFirstSubject
 from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.subjects.replaysubject import ReplaySubject
 from rxbp.subscriber import Subscriber
-from rxbp.subscriptablebase import SubscriptableBase
-from rxbp.subscriptableoperator import SubscriptableOperator
-from rxbp.subscriptables.anonymoussubscriptable import AnonymousSubscriptable
-from rxbp.subscriptables.oldliftobservablesubscriptable import LiftObservableSubscriptable, Lift2ObservableSubscriptable
+from rxbp.flowablebase import FlowableBase
+from rxbp.flowableoperator import FlowableOperator
+from rxbp.flowables.anonymousflowable import AnonymousFlowable
 from rxbp.testing.debugobservable import DebugObservable
 
 
@@ -71,7 +70,7 @@ from rxbp.testing.debugobservable import DebugObservable
 #
 
 
-def controlled_zip(right: SubscriptableBase,
+def controlled_zip(right: FlowableBase,
                    request_left: Callable[[Any, Any], bool],
                    request_right: Callable[[Any, Any], bool],
                    match_func: Callable[[Any, Any], bool], ):
@@ -88,8 +87,8 @@ def controlled_zip(right: SubscriptableBase,
 
     source_right = right
 
-    def func(source_left: SubscriptableBase) -> SubscriptableBase:
-        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+    def func(source_left: FlowableBase) -> FlowableBase:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
             left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
             right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
 
@@ -133,9 +132,9 @@ def controlled_zip(right: SubscriptableBase,
         else:
             right_selectable_bases = source_right.selectable_bases | {source_right.base}
 
-        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
-                                      selectable_bases=left_selectable_bases | right_selectable_bases)
-    return SubscriptableOperator(func)
+        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
+                                 selectable_bases=left_selectable_bases | right_selectable_bases)
+    return FlowableOperator(func)
 
 
 def filter(predicate: Callable[[Any], bool]):
@@ -145,8 +144,8 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered observable
     """
 
-    def func(source_subscriptable: SubscriptableBase) -> SubscriptableBase:
-        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+    def func(source_subscriptable: FlowableBase) -> FlowableBase:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
             source_observable, source_selectors = source_subscriptable.unsafe_subscribe(subscriber)
 
             observable = FilterObservable(source=source_observable, predicate=predicate, scheduler=subscriber.scheduler)
@@ -170,9 +169,9 @@ def filter(predicate: Callable[[Any], bool]):
         else:
             selectable_bases = source_subscriptable.selectable_bases | {source_subscriptable.base}
 
-        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
-                                      selectable_bases=selectable_bases)
-    return SubscriptableOperator(func)
+        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
+                                 selectable_bases=selectable_bases)
+    return FlowableOperator(func)
 
 #
 # def flat_map(selector: Callable[[Any], ObservableBase]):
@@ -205,15 +204,15 @@ def map(selector: Callable[[Any], Any]):
     :return: mapped observable
     """
 
-    def func(source: SubscriptableBase) -> SubscriptableBase:
-        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+    def func(source: FlowableBase) -> FlowableBase:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
             source_observable, source_selectors = source.unsafe_subscribe(subscriber=subscriber)
             obs = MapObservable(source=source_observable, selector=selector)
             return obs, source_selectors
 
-        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=source.base,
-                                      selectable_bases=source.selectable_bases)
-    return SubscriptableOperator(func)
+        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=source.base,
+                                 selectable_bases=source.selectable_bases)
+    return FlowableOperator(func)
 
 
 # def observe_on(scheduler: Scheduler):
@@ -281,7 +280,7 @@ def map(selector: Callable[[Any], Any]):
 #     return ObservableOperator(func)
 
 
-def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ignore_mismatch: bool = None):
+def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, ignore_mismatch: bool = None):
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
@@ -290,7 +289,7 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
 
     source_right = right
 
-    def func(source_left: SubscriptableBase) -> SubscriptableBase:
+    def func(source_left: FlowableBase) -> FlowableBase:
         # print(source_left.base)
         # print(source_right.base)
         # print(source_left.selectable_bases)
@@ -324,7 +323,7 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
             transform_left = False
             transform_right = False
 
-        def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
             left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
             right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
 
@@ -348,20 +347,20 @@ def zip(right: SubscriptableBase, selector: Callable[[Any, Any], Any] = None, ig
             obs = Zip2Observable(left=left_obs_, right=right_obs_, selector=selector)
             return obs, selectors
 
-        return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, selectable_bases=selectable_bases)
-    return SubscriptableOperator(func)
+        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, selectable_bases=selectable_bases)
+    return FlowableOperator(func)
 
 
-def zip_with_index(selector: Callable[[Any, int], Any] = None):
-    """ Zips each item emmited by the source with their indices
-
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped with index observable
-    """
-
-    def func(source: SubscriptableBase):
-        def map_observable(obs: Observable):
-            obs = ZipWithIndexObservable(source=obs, selector=selector)
-            return obs
-        return LiftObservableSubscriptable(source=source, func=map_observable)
-    return SubscriptableOperator(func)
+# def zip_with_index(selector: Callable[[Any, int], Any] = None):
+#     """ Zips each item emmited by the source with their indices
+#
+#     :param selector: a mapping function applied over the generated pairs
+#     :return: zipped with index observable
+#     """
+#
+#     def func(source: FlowableBase):
+#         def map_observable(obs: Observable):
+#             obs = ZipWithIndexObservable(source=obs, selector=selector)
+#             return obs
+#         return LiftObservableSubscriptable(source=source, func=map_observable)
+#     return FlowableOperator(func)

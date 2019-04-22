@@ -6,8 +6,8 @@ from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observables.nowobservable import NowObservable
 from rxbp.observers.bufferedsubscriber import BufferedSubscriber
 from rxbp.subscriber import Subscriber
-from rxbp.subscriptablebase import SubscriptableBase
-from rxbp.subscriptables.anonymoussubscriptable import AnonymousSubscriptable
+from rxbp.flowablebase import FlowableBase
+from rxbp.flowables.anonymousflowable import AnonymousFlowable
 
 
 def _from_iterator(iterator: Iterator, batch_size: int = None, base: Any = None): # todo: remove n_elements?
@@ -27,7 +27,7 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Any = None)
     #     bases = {base}
     #     selectors = {base: None}
 
-    def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
 
 
 
@@ -51,7 +51,7 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Any = None)
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
         return observable, {}
 
-    return AnonymousSubscriptable(unsafe_subscribe_func=unsafe_subscribe_func, base=base)
+    return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=base)
 
 
 def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None):
@@ -64,13 +64,13 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
 
     # bases = None if n_elements is None else {n_elements}
 
-    def unsafe_subscribe_func(subscriber: Subscriber) -> SubscriptableBase.SubscribeReturnType:
+    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
         iterator = iter(iterable)
         subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=n_elements)
         source_observable, source_selectors = subscriptable.unsafe_subscribe(subscriber)
         return source_observable, source_selectors
 
-    return AnonymousSubscriptable(unsafe_subscribe_func, base=n_elements)
+    return AnonymousFlowable(unsafe_subscribe_func, base=n_elements)
 
 
 def from_iterable(iterable: Iterable, batch_size: int = None):
