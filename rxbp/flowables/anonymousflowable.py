@@ -1,6 +1,6 @@
 from typing import Callable, Any, Set
 
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.subscriber import Subscriber

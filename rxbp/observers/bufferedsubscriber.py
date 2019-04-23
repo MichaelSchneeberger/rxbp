@@ -1,7 +1,8 @@
+import threading
 from optparse import Option
 from queue import Queue
 
-from rx import config
+
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack
 from rxbp.observer import Observer
@@ -26,7 +27,7 @@ class BufferedSubscriber(Observer):
         self.back_pressured = None
         self.error_thrown = None
 
-        self.lock = config['concurrency'].RLock()
+        self.lock = threading.RLock()
 
     def on_next(self, v):
         if self.upstream_is_complete or self.downstream_is_complete:

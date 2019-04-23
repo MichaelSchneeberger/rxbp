@@ -1,9 +1,9 @@
 import itertools
+import threading
 import traceback
 from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional
 
-from rx import config
-from rx.disposables import CompositeDisposable
+from rx.disposable import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
 from rxbp.internal.selection import SelectCompleted, SelectNext, select_next, select_completed
@@ -46,7 +46,7 @@ def merge(left: Observable, right: Observable):
         left_state = [Wait()]
         right_state = [Wait()]
 
-        lock = config['concurrency'].RLock()
+        lock = threading.RLock()
 
         def on_next_left(left_elem: Callable[[], Generator]):
             # print('match left element received')
@@ -205,7 +205,7 @@ def merge(left: Observable, right: Observable):
 
         return CompositeDisposable(d1, d2)
 
-    # lock = config['concurrency'].RLock()
+    # lock = threading.RLock()
 
     # controller_zip_observer = [DummyObserver()]
     # left_observer = [DummyObserver()]

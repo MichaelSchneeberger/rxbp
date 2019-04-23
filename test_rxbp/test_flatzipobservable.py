@@ -1,6 +1,6 @@
 import unittest
 
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.ack import Continue, Ack
 from rxbp.observables.flatzipobservable import FlatZipObservable
@@ -46,7 +46,7 @@ class TestFlatZipObservable(unittest.TestCase):
 
             def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
                 self.observer = observer
-                return Disposable.empty()
+                return Disposable()
 
         s1 = TestObservable()
         s2 = TestObservable()
@@ -113,7 +113,7 @@ class TestFlatZipObservable(unittest.TestCase):
 
             def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
                 self.observer = observer
-                return Disposable.empty()
+                return Disposable()
 
         s1 = TestObservable()
         s2 = TestObservable()
@@ -182,7 +182,7 @@ class TestFlatZipObservable(unittest.TestCase):
 
             def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
                 self.observer = observer
-                return Disposable.empty()
+                return Disposable()
 
         s1 = TestObservable()
         s2 = TestObservable()

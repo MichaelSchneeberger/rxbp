@@ -1,8 +1,8 @@
+import threading
 from typing import Callable, Any, List
 
-from rx import config
 from rx.concurrency import immediate_scheduler
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.ack import Ack, Continue, Stop, stop_ack
 from rxbp.observable import Observable
@@ -69,7 +69,7 @@ class FlatMapObservable(Observable):
         state = [WaitOnOuter(prev_state=None, ack=Continue())]
         conn_observers: List[List] = [None]
         is_child_active = [False]
-        lock = config['concurrency'].RLock()
+        lock = threading.RLock()
 
         def report_invalid_state(state: State, method: str):
             scheduler.report_failure(

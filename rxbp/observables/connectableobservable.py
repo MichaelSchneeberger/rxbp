@@ -1,5 +1,4 @@
-from rx.core import Disposable
-from rx.disposables import CompositeDisposable
+from rx.disposable import Disposable, CompositeDisposable
 
 from rxbp.observable import Observable
 from rxbp.scheduler import Scheduler
@@ -27,7 +26,7 @@ class ConnectableObservable:
                 self.has_subscription = False
 
             disposable = self.source.observe(self.subject)
-            self.subscription = CompositeDisposable(disposable, Disposable.create(dispose))
+            self.subscription = CompositeDisposable(disposable, Disposable(dispose))
 
         return self.subscription
 
@@ -53,6 +52,6 @@ class ConnectableObservable:
                     if self.count == 0:
                         self.first_disposable.dispose()
 
-                return Disposable.create(dispose)
+                return Disposable(dispose)
 
         return RefCountObservable(self)

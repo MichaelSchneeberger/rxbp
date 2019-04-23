@@ -6,7 +6,7 @@ from concurrent.futures import Executor
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Callable, Union, Any
 
-from rx.core import Disposable, Scheduler
+from rx.disposable import Disposable, Scheduler
 from rx.disposables import MultipleAssignmentDisposable, CompositeDisposable
 
 from rxbp.schedulers.asyncioscheduler import AsyncIOScheduler
@@ -33,7 +33,7 @@ class ThreadPoolScheduler(AsyncIOScheduler):
         def dispose():
             future.cancel()
 
-        return Disposable.create(dispose)
+        return Disposable(dispose)
 
     def schedule_relative(self,
                           timedelta: Union[int, float],
@@ -47,12 +47,12 @@ class ThreadPoolScheduler(AsyncIOScheduler):
                     action(self, state)
 
                 future = self.executor.submit(func)
-                disposable[0] = Disposable.create(lambda: future.cancel())
+                disposable[0] = Disposable(lambda: future.cancel())
             self.loop.call_later(timedelta, __)
 
         future = self.loop.call_soon_threadsafe(_)
         # super().schedule_relative(timedelta, __)
-        return CompositeDisposable(disposable, Disposable.create(lambda: future.cancel()))
+        return CompositeDisposable(disposable, Disposable(lambda: future.cancel()))
 
     def schedule_absolute(self,
                           duetime: datetime.datetime,

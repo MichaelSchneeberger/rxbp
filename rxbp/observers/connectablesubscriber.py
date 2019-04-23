@@ -1,8 +1,8 @@
+import threading
 from queue import Queue
 from typing import Iterable
 
 import rx
-from rx import config
 
 from rxbp.ack import Ack, Continue, Stop
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
@@ -25,7 +25,7 @@ class ConnectableSubscriber(Observer):
         self.schedule_error = None
         self.was_canceled = False
         self.queue = Queue()
-        self.lock = config['concurrency'].RLock()
+        self.lock = threading.RLock()
 
     def connect(self):
         with self.lock:

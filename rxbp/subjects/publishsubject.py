@@ -1,8 +1,9 @@
+import threading
 from typing import Set, Tuple, List, Union
 
-from rx import config
+import rx
 from rx.concurrency.schedulerbase import SchedulerBase
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.ack import Continue, stop_ack, continue_ack
 from rxbp.observable import Observable
@@ -17,7 +18,7 @@ class PublishSubject(Observable, Observer):
         super().__init__()
 
         self.state = self.State()
-        self.lock = config["concurrency"].RLock()
+        self.lock = threading.RLock()
         self.scheduler = scheduler
 
     class Subscriber:
@@ -61,7 +62,7 @@ class PublishSubject(Observable, Observer):
             subscriber.observer.on_error(ex)
         else:
             subscriber.observer.on_completed()
-        return Disposable.empty()
+        return Disposable()
 
     def observe(self, observer: Observer):
         state = self.state
@@ -84,7 +85,7 @@ class PublishSubject(Observable, Observer):
             if is_updated:
                 def dispose():
                     self.unsubscribe(subscriber)
-                disposable = Disposable.create(dispose)
+                disposable = Disposable(dispose)
                 return disposable
             else:
                 return self.observe(observer)
@@ -146,7 +147,7 @@ class PublishSubject(Observable, Observer):
                         self.unsubscribe(observer)
                         result.countdown()
 
-                    ack.first().subscribe(on_next=on_next, on_error=on_error)
+                    ack.pipe(rx.operators.first()).subscribe(on_next=on_next, on_error=on_error)
 
         if result is None:
             return Continue()

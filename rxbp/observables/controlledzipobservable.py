@@ -1,7 +1,7 @@
+import threading
 from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
-from rx import config
-from rx.disposables import CompositeDisposable
+from rx.disposable import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
 from rxbp.internal.selection import select_next, select_completed
@@ -39,7 +39,7 @@ class ControlledZipObservable(Observable):
         self.right_completed = False
         self.state = ControlledZipObservable.WaitLeftRight()
 
-        self.lock = config['concurrency'].RLock()
+        self.lock = threading.RLock()
 
     class State:
         pass
@@ -99,7 +99,7 @@ class ControlledZipObservable(Observable):
         # right_completed = [False]
         #
         # state = [ControlledZipObservable.WaitLeftRight()]
-        # lock = config['concurrency'].RLock()
+        # lock = threading.RLock()
 
         def start_zipping(left_val: Any,
                           last_left_out_ack: Optional[Ack], left_iter: Iterator[Tuple[Any, PublishSubject]],

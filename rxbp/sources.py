@@ -2,6 +2,7 @@ import itertools
 from typing import List, Iterator, Iterable, Optional, Any
 
 import rx
+from rx import operators
 
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
@@ -12,6 +13,7 @@ from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowable import AnonymousFlowable
+from rxbp.typing import ElementType, ValueType
 
 
 def _from_iterator(iterator: Iterator, batch_size: int = None, base: Any = None): # todo: remove n_elements?
@@ -140,15 +142,14 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                 self.scheduler = scheduler
 
             def observe(self, observer):
-                def iterable_to_gen(v, _):
+                def iterable_to_gen(v: ValueType) -> ElementType:
                     def gen():
                         yield from v
 
                     return gen
 
                 subscriber = BufferedSubscriber(observer, self.scheduler, buffer_size)
-                disposable = source.buffer_with_count(batch_size_) \
-                    .map(iterable_to_gen) \
+                disposable = source.pipe(operators.buffer_with_count(batch_size_), operators.map(iterable_to_gen)) \
                     .subscribe(on_next=subscriber.on_next, on_error=subscriber.on_error,
                                         on_completed=subscriber.on_completed)
                 return disposable

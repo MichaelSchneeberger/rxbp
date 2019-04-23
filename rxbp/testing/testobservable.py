@@ -1,4 +1,4 @@
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -20,4 +20,4 @@ class TestObservable(Observable):
 
     def unsafe_subscribe(self, observer: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler):
         self.observer = observer
-        return Disposable.empty()
+        return Disposable()

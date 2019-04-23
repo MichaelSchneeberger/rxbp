@@ -1,11 +1,13 @@
-from rx import config, Observable
+import threading
+
+import rx
 
 from rxbp.ack import Ack
 
 
 class PromiseCounter:
     def __init__(self, value, initial):
-        self.lock = config["concurrency"].RLock()
+        self.lock = threading.RLock()
 
         self.value = value
         self.counter = initial
@@ -21,5 +23,5 @@ class PromiseCounter:
             counter = self.counter
 
         if counter == 0:
-            Observable.just(self.value).subscribe(self.promise)
+            rx.just(self.value).subscribe(self.promise)
 

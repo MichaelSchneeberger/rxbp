@@ -22,7 +22,7 @@ class UncaughtExceptionReport:
         raise exc
 
 
-class Scheduler(rx.core.Scheduler, ABC):
+class Scheduler(rx.typing.Scheduler, ABC):
     def report_failure(self, exc: Exception):
         raise NotImplementedError
 
@@ -33,6 +33,7 @@ class Scheduler(rx.core.Scheduler, ABC):
 class SchedulerBase(Scheduler):
     def __init__(self, r: UncaughtExceptionReport = None, execution_model: ExecutionModel = None):
         super().__init__()
+
         self.r = r or UncaughtExceptionReport()
         self.execution_model = execution_model or BatchedExecution(256)
 

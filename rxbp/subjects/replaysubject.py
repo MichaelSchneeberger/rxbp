@@ -1,8 +1,9 @@
+import threading
 from typing import Iterable, Set, List
 
-from rx import config
+
 from rx.concurrency.schedulerbase import SchedulerBase
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.ack import Continue, Stop
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
@@ -68,7 +69,7 @@ class ReplaySubject(Observable, Observer):
     def __init__(self, initial_state: State = None):
         self.state: ReplaySubject.State = initial_state or ReplaySubject.State(buffer=[], capacity=0)
 
-        self.lock = config["concurrency"].RLock()
+        self.lock = threading.RLock()
         # self.batch_size = batch_size
 
     def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
@@ -124,7 +125,7 @@ class ReplaySubject(Observable, Observer):
                     self.remove_subscriber(c)
                 finally:
                     disposable.dispose()
-            return Disposable.create(_)
+            return Disposable(_)
 
     def on_complete_or_error(self, ex: Exception = None):
         with self.lock:

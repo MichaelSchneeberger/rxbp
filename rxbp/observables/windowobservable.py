@@ -1,7 +1,8 @@
+import threading
 from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
-from rx import config
-from rx.disposables import CompositeDisposable
+
+from rx.disposable import CompositeDisposable
 
 from rxbp.ack import Ack, continue_ack, stop_ack
 from rxbp.observable import Observable
@@ -27,7 +28,7 @@ class WindowObservable(Observable):
         self._left_is_higher = is_lower
         self._left_is_lower = is_higher
 
-        self._lock = config['concurrency'].RLock()
+        self._lock = threading.RLock()
         self._window_observer = EmptyObserver()
         self._index_observer = EmptyObserver()
         self._composite_disposable = CompositeDisposable()

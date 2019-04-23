@@ -1,11 +1,11 @@
+import threading
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import Callable, Any, Iterator, List, Optional, Union
 
-from rx import config
 from rx.concurrency import CurrentThreadScheduler, immediate_scheduler
-from rx.core import Disposable
-from rx.disposables import CompositeDisposable, MultipleAssignmentDisposable
+from rx.disposable import Disposable
+from rx.disposable import CompositeDisposable, MultipleAssignmentDisposable
 
 from rxbp.ack import Continue, Stop, Ack, stop_ack, continue_ack
 from rxbp.observable import Observable
@@ -31,7 +31,7 @@ class FlatZipObservable(Observable):
         self.selector_inner = inner_selector
         self.selector = (lambda l, r: (l, r)) if result_selector is None else result_selector
 
-        self.lock = config['concurrency'].RLock()
+        self.lock = threading.RLock()
 
     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
 

@@ -1,9 +1,10 @@
 import itertools
+import threading
 import traceback
 from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional
 
-from rx import config
-from rx.disposables import CompositeDisposable
+
+from rx.disposable import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
 from rxbp.observable import Observable
@@ -129,7 +130,7 @@ def window(left: Observable, right: Observable,
         right_completed = [False]
 
         state = [InitialState()]
-        lock = config['concurrency'].RLock()
+        lock = threading.RLock()
 
         def on_left_lower(val_subject_iter: Iterator[Tuple[Any, PublishSubject]],
                           last_left_out_ack: Optional[Ack],
@@ -612,7 +613,7 @@ def window(left: Observable, right: Observable,
         def on_completed(self):
             pass
 
-    lock = config['concurrency'].RLock()
+    lock = threading.RLock()
 
     left_observer = [DummyObserver()]
     right_observer = [DummyObserver()]

@@ -3,7 +3,7 @@ import datetime
 from threading import Thread
 from typing import Union, Callable, Any
 
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.scheduler import SchedulerBase
 
@@ -38,7 +38,7 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
         def dispose():
             handle.cancel()
 
-        return Disposable.create(dispose)
+        return Disposable(dispose)
 
     def schedule_relative(self,
                           duetime: Union[int, float],
@@ -64,7 +64,7 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
         def dispose():
             handle.cancel()
 
-        return Disposable.create(dispose)
+        return Disposable(dispose)
 
     def schedule_absolute(self,
                           duetime: datetime.datetime,

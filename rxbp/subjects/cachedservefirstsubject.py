@@ -1,11 +1,13 @@
+import threading
+
 import rx
 
 from typing import List
 
-from rx import config
-from rx.core import Disposable
+
+from rx.disposable import Disposable
 from rx.core.notification import OnNext, OnCompleted, OnError
-from rx.disposables import BooleanDisposable
+from rx.disposable import BooleanDisposable
 
 from rxbp.ack import Continue, Stop, Ack, stop_ack
 from rxbp.observable import Observable
@@ -36,7 +38,7 @@ class CachedServeFirstSubject(Observable, Observer):
 
         self.is_done = False
 
-        self.lock = config["concurrency"].RLock()
+        self.lock = threading.RLock()
 
     class DequeuableBuffer:
         def __init__(self):
@@ -244,16 +246,16 @@ class CachedServeFirstSubject(Observable, Observer):
                 current_idx = self.buffer.last_idx - 1
                 self.current_index[inner_subscription] = current_idx
                 self.inactive_subsriptions.append(inner_subscription)
-                return Disposable.empty()
+                return Disposable()
 
             exception = self.exception
 
         if exception:
             observer.on_error(exception)
-            return Disposable.empty()
+            return Disposable()
 
         observer.on_completed()
-        return Disposable.empty()
+        return Disposable()
 
     def on_next(self, value):
 

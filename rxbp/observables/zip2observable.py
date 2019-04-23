@@ -1,9 +1,10 @@
 import itertools
+import threading
 from abc import ABC, abstractmethod
 from typing import Callable, Any, List, Generator, Optional
 
-from rx import config
-from rx.disposables import CompositeDisposable
+
+from rx.disposable import CompositeDisposable
 
 from rxbp.ack import Ack, stop_ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
@@ -152,7 +153,7 @@ class Zip2Observable(Observable):
             def get_current_state(self, final_state: FinalState):
                 return self
 
-        lock = config['concurrency'].RLock()
+        lock = threading.RLock()
         state = [WaitOnLeftRight()]
         final_state = [InitState()]
 

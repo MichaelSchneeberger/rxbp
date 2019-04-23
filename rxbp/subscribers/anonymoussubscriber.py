@@ -1,6 +1,6 @@
 from typing import Callable, Dict, Any, Optional
 
-from rx.core import Disposable
+from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.scheduler import Scheduler

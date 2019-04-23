@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Set, Dict, Tuple, Optional
-
-from rx.core import Disposable
+from typing import Callable, Any, Set, Dict, Tuple, Optional, Generic
 
 from rxbp.ack import continue_ack
 from rxbp.observable import Observable
@@ -11,9 +9,10 @@ from rxbp.scheduler import Scheduler
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscribers.anonymoussubscriber import AnonymousSubscriber
+from rxbp.typing import ValueType
 
 
-class FlowableBase(ABC):
+class FlowableBase(Generic[ValueType], ABC):
     FlowableReturnType = Tuple[Observable, Dict[Any, Optional[Observable]]]
 
     def __init__(self, base: Any = None, selectable_bases: Set[Any] = None):

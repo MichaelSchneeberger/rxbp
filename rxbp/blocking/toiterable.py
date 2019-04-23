@@ -1,4 +1,4 @@
-from rx import config
+
 from rx.concurrency import CurrentThreadScheduler
 from rx.internal import Enumerator
 

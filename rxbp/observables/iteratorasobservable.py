@@ -1,7 +1,7 @@
 from typing import Iterator, Any, List
 
-from rx.core import Disposable
-from rx.disposables import BooleanDisposable
+import rx
+from rx.disposable import Disposable, BooleanDisposable
 
 from rxbp.ack import Continue, Stop
 from rxbp.observable import Observable
@@ -11,7 +11,7 @@ from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
 
 class IteratorAsObservable(Observable):
     def __init__(self, iterator: Iterator, scheduler: Scheduler, subscribe_scheduler: Scheduler,
-                 on_finish: Disposable = Disposable.empty()):
+                 on_finish: Disposable = Disposable()):
         super().__init__()
 
         self.iterator = iterator
@@ -29,12 +29,12 @@ class IteratorAsObservable(Observable):
         except Exception as e:
             # stream errors
             observer.on_error(e)
-            return Disposable.empty()
+            return Disposable()
 
         try:
             if not has_next:
                 observer.on_completed()
-                return Disposable.empty()
+                return Disposable()
             else:
                 disposable = BooleanDisposable()
 
@@ -69,7 +69,7 @@ class IteratorAsObservable(Observable):
             self.trigger_cancel(scheduler)
             scheduler.report_failure(err)
 
-        ack.observe_on(scheduler).subscribe(on_next=on_next, on_error=on_error)
+        ack.pipe(rx.operators.observe_on(scheduler)).subscribe(on_next=on_next, on_error=on_error)
 
     def fast_loop(self, current_item, observer, scheduler: SchedulerBase,
                   disposable: BooleanDisposable, em: ExecutionModel, sync_index: int):

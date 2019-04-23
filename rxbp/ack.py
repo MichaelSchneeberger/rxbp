@@ -1,3 +1,4 @@
+import rx
 from rx.subjects import AsyncSubject
 
 class Success:
@@ -23,7 +24,7 @@ class Ack(AsyncSubject):
                 else:
                     return Continue()
 
-            self.zip(ack2, _).subscribe(return_ack)
+            rx.zip(self, ack2).pipe(rx.operators.map(lambda t2: _(*t2))).subscribe(return_ack)
 
         return return_ack
 
