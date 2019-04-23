@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict
 
-from rxbp.internal.indexingop import merge_indexes, index_observable
+from rxbp.internal.selectionop import merge_selectors, select_observable
 from rxbp.observable import Observable
 from rxbp.observables.connectableobservable import ConnectableObservable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
@@ -99,7 +99,7 @@ def controlled_zip(right: FlowableBase,
             # apply filter selector to each selector
             def gen_left_merged_selector():
                 for base, indexing in left_selectors.items():
-                    yield base, merge_indexes(indexing, observable.left_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+                    yield base, merge_selectors(indexing, observable.left_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
 
             left_selectors = dict(gen_left_merged_selector())
 
@@ -111,7 +111,7 @@ def controlled_zip(right: FlowableBase,
             # apply filter selector to each selector
             def gen_right_merged_selector():
                 for base, indexing in right_selectors.items():
-                    yield base, merge_indexes(indexing, observable.right_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+                    yield base, merge_selectors(indexing, observable.right_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
 
             right_selectors = dict(gen_right_merged_selector())
 
@@ -153,7 +153,7 @@ def filter(predicate: Callable[[Any], bool]):
             # apply filter selector to each selector
             def gen_merged_selector():
                 for base, indexing in source_selectors.items():
-                    yield base, merge_indexes(indexing, observable.selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+                    yield base, merge_selectors(indexing, observable.selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
 
             selectors = dict(gen_merged_selector())
 
@@ -331,7 +331,7 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, ignore_
 
             if transform_left:
                 index_obs = right_selectors[source_left.base]
-                left_obs_ = index_observable(left_obs, index_obs, scheduler=subscriber.scheduler)
+                left_obs_ = select_observable(left_obs, index_obs, scheduler=subscriber.scheduler)
             else:
                 selectors = {**selectors, **left_selectors}
                 left_obs_ = left_obs
@@ -339,7 +339,7 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, ignore_
             if transform_right:
                 index_obs = left_selectors[source_right.base]
                 # right_obs_ = DebugObservable(index_observable(DebugObservable(right_obs, 'd2'), DebugObservable(index_obs, 'd3')), 'd1')
-                right_obs_ = index_observable(right_obs, index_obs, scheduler=subscriber.scheduler)
+                right_obs_ = select_observable(right_obs, index_obs, scheduler=subscriber.scheduler)
             else:
                 selectors = {**selectors, **right_selectors}
                 right_obs_ = right_obs

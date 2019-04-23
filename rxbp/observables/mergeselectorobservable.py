@@ -6,7 +6,7 @@ from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.indexing import OnCompleted, OnNext, on_next_idx, on_completed_idx, Index
+from rxbp.internal.selection import SelectCompleted, SelectNext, select_next, select_completed, Selection
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -101,12 +101,12 @@ def merge_selector(left: Observable, right: Observable):
 
                 print('left_val={}, right_val={}'.format(left_val, right_val))
 
-                match_func = lambda l, r: isinstance(r, on_next_idx)
-                request_left = lambda l, r: isinstance(r, on_completed_idx)
+                match_func = lambda l, r: isinstance(r, select_next)
+                request_left = lambda l, r: isinstance(r, select_completed)
 
                 if match_func(left_val, right_val):
-                    left_index_buffer.append(on_next_idx)
-                    right_index_buffer.append(on_next_idx)
+                    left_index_buffer.append(select_next)
+                    right_index_buffer.append(select_next)
 
                     # add to buffer
                     zipped_output_buffer.append((left_val, right_val))
@@ -115,7 +115,7 @@ def merge_selector(left: Observable, right: Observable):
                 if request_left(left_val, right_val):
                     # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
 
-                    left_index_buffer.append(on_completed_idx)
+                    left_index_buffer.append(select_completed)
                     try:
                         new_left_val = next(left_iter)
                         left_requested = True
@@ -124,7 +124,7 @@ def merge_selector(left: Observable, right: Observable):
 
                 if True:
                     # update right index
-                    right_index_buffer.append(on_completed_idx)
+                    right_index_buffer.append(select_completed)
 
                     try:
                         right_val = next(right_iter)
@@ -227,13 +227,13 @@ def merge_selector(left: Observable, right: Observable):
             has_values = [True]
             last_val = [next(val_iter)]
 
-            if isinstance(last_val[0], on_completed_idx):
+            if isinstance(last_val[0], select_completed):
                 has_values[0] = False
                 def gen1():
                     yield last_val[0]
 
                     for val in val_iter:
-                        if isinstance(val, on_completed_idx):
+                        if isinstance(val, select_completed):
                             yield val
                         else:
                             has_values[0] = True

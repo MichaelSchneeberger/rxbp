@@ -6,7 +6,7 @@ from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.indexing import OnCompleted, OnNext, on_next_idx, on_completed_idx
+from rxbp.internal.selection import SelectCompleted, SelectNext, select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler

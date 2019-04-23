@@ -1,10 +1,14 @@
 import itertools
 from typing import List, Iterator, Iterable, Optional, Any
 
+import rx
+
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observables.nowobservable import NowObservable
 from rxbp.observers.bufferedsubscriber import BufferedSubscriber
+from rxbp.overflowstrategy import OverflowStrategy, BackPressure
+from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowable import AnonymousFlowable
@@ -62,8 +66,6 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
     :return:
     """
 
-    # bases = None if n_elements is None else {n_elements}
-
     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
         iterator = iter(iterable)
         subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=n_elements)
@@ -114,27 +116,65 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
 #
 #     return Observable(ToIterableObservable())
 #
-#
-# def from_rx(self, batch_size: int = 1):
-#     source = self
-#
-#     class ToBackpressureObservable(ObservableBase):
-#
-#         def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-#             def iterable_to_gen(v, _):
-#                 def gen():
-#                     yield from v
-#                 return gen
-#
-#             subscriber = BufferedSubscriber(observer, scheduler, 1000)
-#             disposable = source.buffer_with_count(batch_size) \
-#                 .map(iterable_to_gen) \
-#                 .subscribe_observer(on_next=subscriber.on_next, on_error=subscriber.on_error,
-#                                     on_completed=subscriber.on_completed)
-#             return disposable
-#
-#     return Observable(ToBackpressureObservable())
-#
+
+def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None):
+    """
+    :param source: a RxPY observable
+    :param batch_size:
+    :param overflow_strategy:
+    :return:
+    """
+
+    batch_size_ = batch_size or 1
+
+    if overflow_strategy is None:
+        buffer_size = 1000
+    elif isinstance(overflow_strategy, BackPressure):
+        buffer_size = overflow_strategy.buffer_size
+    else:
+        raise AssertionError('only BackPressure is currently supported as overflow strategy')
+
+    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+        class ToBackpressureObservable(Observable):
+            def __init__(self, scheduler: Scheduler):
+                self.scheduler = scheduler
+
+            def observe(self, observer):
+                def iterable_to_gen(v, _):
+                    def gen():
+                        yield from v
+
+                    return gen
+
+                subscriber = BufferedSubscriber(observer, self.scheduler, buffer_size)
+                disposable = source.buffer_with_count(batch_size_) \
+                    .map(iterable_to_gen) \
+                    .subscribe(on_next=subscriber.on_next, on_error=subscriber.on_error,
+                                        on_completed=subscriber.on_completed)
+                return disposable
+
+        observable = ToBackpressureObservable(scheduler=subscriber.scheduler)
+        return observable, {}
+
+    return AnonymousFlowable(unsafe_subscribe_func, base=source)
+
+    # class ToBackpressureObservable(ObservableBase):
+    #
+    #     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
+    #         def iterable_to_gen(v, _):
+    #             def gen():
+    #                 yield from v
+    #             return gen
+    #
+    #         subscriber = BufferedSubscriber(observer, scheduler, 1000)
+    #         disposable = source.buffer_with_count(batch_size) \
+    #             .map(iterable_to_gen) \
+    #             .subscribe_observer(on_next=subscriber.on_next, on_error=subscriber.on_error,
+    #                                 on_completed=subscriber.on_completed)
+    #         return disposable
+    #
+    # return Observable(ToBackpressureObservable())
+
 #
 # def now(elem):
 #     """ Converts an element into an observable

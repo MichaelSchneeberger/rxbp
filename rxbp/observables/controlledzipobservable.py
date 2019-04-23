@@ -4,7 +4,7 @@ from rx import config
 from rx.disposables import CompositeDisposable
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.indexing import on_next_idx, on_completed_idx
+from rxbp.internal.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -121,8 +121,8 @@ class ControlledZipObservable(Observable):
                 # print('left_val={}, right_val={}'.format(left_val, right_val))
 
                 if self.match_func(left_val, right_val):
-                    left_index_buffer.append(on_next_idx)
-                    right_index_buffer.append(on_next_idx)
+                    left_index_buffer.append(select_next)
+                    right_index_buffer.append(select_next)
 
                     # add to buffer
                     zipped_output_buffer.append((left_val, right_val))
@@ -131,7 +131,7 @@ class ControlledZipObservable(Observable):
                 if self.request_left(left_val, right_val):
                     # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
 
-                    left_index_buffer.append(on_completed_idx)
+                    left_index_buffer.append(select_completed)
                     try:
                         new_left_val = next(left_iter)
                         left_requested = True
@@ -140,7 +140,7 @@ class ControlledZipObservable(Observable):
 
                 if self.request_right(left_val, right_val):
                     # update right index
-                    right_index_buffer.append(on_completed_idx)
+                    right_index_buffer.append(select_completed)
 
                     try:
                         right_val = next(right_iter)

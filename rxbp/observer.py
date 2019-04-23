@@ -7,7 +7,7 @@ class Observer(ABC):
         ...
 
     @abstractmethod
-    def on_error(self, err):
+    def on_error(self, err: Exception):
         ...
 
     @abstractmethod

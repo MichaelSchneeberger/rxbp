@@ -3,7 +3,7 @@ import itertools
 from typing import Callable, Any
 
 from rxbp.ack import Continue, Ack
-from rxbp.internal.indexing import on_next_idx, on_completed_idx
+from rxbp.internal.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -35,8 +35,8 @@ class FilterObservable(Observable):
             def gen_selector():
                 for sel, elem in filtered_values:
                     if sel:
-                        yield on_next_idx
-                    yield on_completed_idx
+                        yield select_next
+                    yield select_completed
 
             sel_ack = self.selector.on_next(gen_selector)
 
