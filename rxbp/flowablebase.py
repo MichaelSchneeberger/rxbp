@@ -26,7 +26,7 @@ class FlowableBase(Generic[ValueType], ABC):
         self.selectable_bases = selectable_bases or set()
 
     @abstractmethod
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> 'FlowableBase.FlowableReturnType':
         ...
 
     def subscribe_(self, subscriber: Subscriber, observer: Observer):

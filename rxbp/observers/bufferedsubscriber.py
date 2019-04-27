@@ -2,7 +2,7 @@ import threading
 from optparse import Option
 from queue import Queue
 
-
+import rx
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack
 from rxbp.observer import Observer
@@ -107,7 +107,7 @@ class BufferedSubscriber(Observer):
                 elif isinstance(v, Stop):
                     self.downstream_is_complete = True
 
-            ack.observe_on(self.scheduler).subscribe(on_next=on_next)
+            ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(on_next=on_next)
 
         def fast_loop(prev_ack: Ack, last_processed:int, start_index: int):
             def stop_streaming():

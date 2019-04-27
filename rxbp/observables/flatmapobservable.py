@@ -8,15 +8,18 @@ from rxbp.ack import Ack, Continue, Stop, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
+from rxbp.scheduler import Scheduler
 
 
 class FlatMapObservable(Observable):
-    def __init__(self, source, selector: Callable[[Any], Observable], delay_errors=False):
+    def __init__(self, source, selector: Callable[[Any], Observable], scheduler: Scheduler, delay_errors=False):
         self.source = source
         self.selector = selector
+        self.scheduler = scheduler
+        # self.subscribe_scheduler = subscribe_scheduler
         self.delay_errors = delay_errors
 
-    def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
+    def observe(self, observer: Observer):
         source = self
 
         class State:
@@ -70,9 +73,10 @@ class FlatMapObservable(Observable):
         conn_observers: List[List] = [None]
         is_child_active = [False]
         lock = threading.RLock()
+        source = self
 
         def report_invalid_state(state: State, method: str):
-            scheduler.report_failure(
+            self.scheduler.report_failure(
                 Exception('State {} in the ConcatMap.{} implementation is invalid'.format(state, method)))
 
         class ConcatMapObserver(Observer):
@@ -111,14 +115,14 @@ class FlatMapObservable(Observable):
                         child = source.selector(val)
 
                         # create a new child observer, and subscribe it to child observable
-                        child_observer = ChildObserver(observer, scheduler, async_upstream_ack, self, vals_len-idx)
+                        child_observer = ChildObserver(observer, source.scheduler, async_upstream_ack, self, vals_len-idx)
 
                         if idx == 0:
-                            disposable = child.unsafe_subscribe(child_observer, scheduler, subscribe_scheduler)
+                            disposable = child.observe(child_observer)
                             yield child_observer
                         else:
                             conn_observer = ConnectableSubscriber(child_observer, scheduler=immediate_scheduler)
-                            disposable = child.unsafe_subscribe(conn_observer, scheduler, subscribe_scheduler)
+                            disposable = child.observe(conn_observer)
                             yield conn_observer
 
                 conn_observers[0] = list(gen_child_observers())
@@ -286,5 +290,5 @@ class FlatMapObservable(Observable):
                     raise Exception('illegal state')
 
         concat_map_observer = ConcatMapObserver()
-        return self.source.unsafe_subscribe(concat_map_observer, scheduler, subscribe_scheduler)
+        return self.source.observe(concat_map_observer)
 

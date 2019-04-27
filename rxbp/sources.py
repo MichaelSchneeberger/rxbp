@@ -26,13 +26,6 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Any = None)
 
     batch_size_ = batch_size or 1
 
-    # if base is None:
-    #     bases = None
-    #     selectors = None
-    # else:
-    #     bases = {base}
-    #     selectors = {base: None}
-
     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
 
 
@@ -119,11 +112,14 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
 #     return Observable(ToIterableObservable())
 #
 
-def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None):
-    """
-    :param source: a RxPY observable
-    :param batch_size:
-    :param overflow_strategy:
+def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
+            base: Any = None):
+    """ Wraps a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
+
+    :param source: a rx.observable
+    :param batch_size: defines the number of values send in a batch via `on_next` method
+    :param overflow_strategy: defines which batches are ignored once the buffer is full
+    :param base:
     :return:
     """
 
@@ -135,6 +131,8 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
         buffer_size = overflow_strategy.buffer_size
     else:
         raise AssertionError('only BackPressure is currently supported as overflow strategy')
+
+    base_ = base if base is not None else source
 
     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
         class ToBackpressureObservable(Observable):
@@ -157,7 +155,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
         observable = ToBackpressureObservable(scheduler=subscriber.scheduler)
         return observable, {}
 
-    return AnonymousFlowable(unsafe_subscribe_func, base=source)
+    return AnonymousFlowable(unsafe_subscribe_func, base=base_)
 
     # class ToBackpressureObservable(ObservableBase):
     #

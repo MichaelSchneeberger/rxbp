@@ -1,5 +1,8 @@
+import threading
 from typing import Any, Callable, Dict
 
+from rxbp.flowable import Flowable
+from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.internal.selectionop import merge_selectors, select_observable
 from rxbp.observable import Observable
 from rxbp.observables.connectableobservable import ConnectableObservable
@@ -85,56 +88,60 @@ def controlled_zip(right: FlowableBase,
     :return: zipped observable
     """
 
-    source_right = right
-
-    def func(source_left: FlowableBase) -> FlowableBase:
-        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-            left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
-            right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
-
-            observable = ControlledZipObservable(
-                left=left_obs, right=right_obs, request_left=request_left,
-            request_right=request_right, match_func=match_func, scheduler=subscriber.scheduler)
-
-            # apply filter selector to each selector
-            def gen_left_merged_selector():
-                for base, indexing in left_selectors.items():
-                    yield base, merge_selectors(indexing, observable.left_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
-
-            left_selectors = dict(gen_left_merged_selector())
-
-            if source_left.base is not None:
-                left_selectors_ = {**left_selectors, **{source_left.base: observable.left_selector}}
-            else:
-                left_selectors_ = left_selectors
-
-            # apply filter selector to each selector
-            def gen_right_merged_selector():
-                for base, indexing in right_selectors.items():
-                    yield base, merge_selectors(indexing, observable.right_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
-
-            right_selectors = dict(gen_right_merged_selector())
-
-            if source_right.base is not None:
-                right_selectors_ = {**right_selectors, **{source_right.base: observable.right_selector}}
-            else:
-                right_selectors_ = right_selectors
-
-            return observable, {**left_selectors_, **right_selectors_}
-
-        if source_left.base is None:
-            left_selectable_bases = source_left.selectable_bases
-        else:
-            left_selectable_bases = source_left.selectable_bases | {source_left.base}
-
-        if source_right.base is None:
-            right_selectable_bases = source_right.selectable_bases
-        else:
-            right_selectable_bases = source_right.selectable_bases | {source_right.base}
-
-        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
-                                 selectable_bases=left_selectable_bases | right_selectable_bases)
+    def func(left: Flowable) -> FlowableBase:
+        return left.controlled_zip(right=right, request_left=request_left, request_right=request_right, match_func=match_func)
     return FlowableOperator(func)
+
+    # source_right = right
+    #
+    # def func(source_left: FlowableBase) -> FlowableBase:
+    #     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    #         left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
+    #         right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
+    #
+    #         observable = ControlledZipObservable(
+    #             left=left_obs, right=right_obs, request_left=request_left,
+    #         request_right=request_right, match_func=match_func, scheduler=subscriber.scheduler)
+    #
+    #         # apply filter selector to each selector
+    #         def gen_left_merged_selector():
+    #             for base, indexing in left_selectors.items():
+    #                 yield base, merge_selectors(indexing, observable.left_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+    #
+    #         left_selectors = dict(gen_left_merged_selector())
+    #
+    #         if source_left.base is not None:
+    #             left_selectors_ = {**left_selectors, **{source_left.base: observable.left_selector}}
+    #         else:
+    #             left_selectors_ = left_selectors
+    #
+    #         # apply filter selector to each selector
+    #         def gen_right_merged_selector():
+    #             for base, indexing in right_selectors.items():
+    #                 yield base, merge_selectors(indexing, observable.right_selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+    #
+    #         right_selectors = dict(gen_right_merged_selector())
+    #
+    #         if source_right.base is not None:
+    #             right_selectors_ = {**right_selectors, **{source_right.base: observable.right_selector}}
+    #         else:
+    #             right_selectors_ = right_selectors
+    #
+    #         return observable, {**left_selectors_, **right_selectors_}
+    #
+    #     if source_left.base is None:
+    #         left_selectable_bases = source_left.selectable_bases
+    #     else:
+    #         left_selectable_bases = source_left.selectable_bases | {source_left.base}
+    #
+    #     if source_right.base is None:
+    #         right_selectable_bases = source_right.selectable_bases
+    #     else:
+    #         right_selectable_bases = source_right.selectable_bases | {source_right.base}
+    #
+    #     return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
+    #                              selectable_bases=left_selectable_bases | right_selectable_bases)
+    # return FlowableOperator(func)
 
 
 def filter(predicate: Callable[[Any], bool]):
@@ -144,48 +151,72 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered observable
     """
 
-    def func(source_subscriptable: FlowableBase) -> FlowableBase:
-        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-            source_observable, source_selectors = source_subscriptable.unsafe_subscribe(subscriber)
-
-            observable = FilterObservable(source=source_observable, predicate=predicate, scheduler=subscriber.scheduler)
-
-            # apply filter selector to each selector
-            def gen_merged_selector():
-                for base, indexing in source_selectors.items():
-                    yield base, merge_selectors(indexing, observable.selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
-
-            selectors = dict(gen_merged_selector())
-
-            if source_subscriptable.base is not None:
-                selectors_ = {**selectors, **{source_subscriptable.base: observable.selector}}
-            else:
-                selectors_ = selectors
-
-            return observable, selectors_
-
-        if source_subscriptable.base is None:
-            selectable_bases = source_subscriptable.selectable_bases
-        else:
-            selectable_bases = source_subscriptable.selectable_bases | {source_subscriptable.base}
-
-        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
-                                 selectable_bases=selectable_bases)
+    def func(left: Flowable) -> FlowableBase:
+        return left.filter(predicate=predicate)
     return FlowableOperator(func)
 
+    # def func(source_subscriptable: FlowableBase) -> FlowableBase:
+    #     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    #         source_observable, source_selectors = source_subscriptable.unsafe_subscribe(subscriber)
+    #
+    #         observable = FilterObservable(source=source_observable, predicate=predicate, scheduler=subscriber.scheduler)
+    #
+    #         # apply filter selector to each selector
+    #         def gen_merged_selector():
+    #             for base, indexing in source_selectors.items():
+    #                 yield base, merge_selectors(indexing, observable.selector, subscribe_scheduler=subscriber.subscribe_scheduler, scheduler=subscriber.scheduler)
+    #
+    #         selectors = dict(gen_merged_selector())
+    #
+    #         if source_subscriptable.base is not None:
+    #             selectors_ = {**selectors, **{source_subscriptable.base: observable.selector}}
+    #         else:
+    #             selectors_ = selectors
+    #
+    #         return observable, selectors_
+    #
+    #     if source_subscriptable.base is None:
+    #         selectable_bases = source_subscriptable.selectable_bases
+    #     else:
+    #         selectable_bases = source_subscriptable.selectable_bases | {source_subscriptable.base}
+    #
+    #     return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=None,
+    #                              selectable_bases=selectable_bases)
+    # return FlowableOperator(func)
+
 #
-# def flat_map(selector: Callable[[Any], ObservableBase]):
-#     """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
-#     as input and returns an inner observable. The resulting observable concatenates the items of each inner
-#     observable.
-#
-#     :param selector: A function that takes any type as input and returns an observable.
-#     :return: a flattened observable
-#     """
-#
-#     def func(obs: ObservableBase):
-#         return FlatMapObservable(source=obs, selector=selector)
-#     return ObservableOperator(func)
+def flat_map(selector: Callable[[Any], FlowableBase]):
+    """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
+    as input and returns an inner observable. The resulting observable concatenates the items of each inner
+    observable.
+
+    :param selector: A function that takes any type as input and returns an observable.
+    :return: a flattened observable
+    """
+
+    def func(left: Flowable) -> FlowableBase:
+        return left.flat_map(selector=selector)
+    return FlowableOperator(func)
+
+    # def func(source: FlowableBase) -> FlowableBase:
+    #     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    #         source_observable, source_selectors = source.unsafe_subscribe(subscriber=subscriber)
+    #
+    #         def observable_selector(elem: Any):
+    #             flowable = selector(elem)
+    #             inner_obs, _ = flowable.unsafe_subscribe(subscriber=subscriber)
+    #             return inner_obs
+    #
+    #         obs = FlatMapObservable(source=source_observable, selector=observable_selector,
+    #                                 scheduler=subscriber.scheduler)
+    #         return obs, source_selectors
+    #
+    #     return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func)
+    # return FlowableOperator(func)
+
+    # def func(obs: ObservableBase):
+    #     return FlatMapObservable(source=obs, selector=selector)
+    # return ObservableOperator(func)
 #
 #
 # def flat_zip(right: ObservableBase, inner_selector: Callable[[Any], ObservableBase], left_selector: Callable[[Any], Any]=None,
@@ -204,14 +235,8 @@ def map(selector: Callable[[Any], Any]):
     :return: mapped observable
     """
 
-    def func(source: FlowableBase) -> FlowableBase:
-        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-            source_observable, source_selectors = source.unsafe_subscribe(subscriber=subscriber)
-            obs = MapObservable(source=source_observable, selector=selector)
-            return obs, source_selectors
-
-        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=source.base,
-                                 selectable_bases=source.selectable_bases)
+    def func(left: Flowable) -> FlowableBase:
+        return left.map(selector=selector)
     return FlowableOperator(func)
 
 
@@ -265,8 +290,8 @@ def map(selector: Callable[[Any], Any]):
 #         ).ref_count()
 #         return observable
 #     return ObservableOperator(func)
-#
-#
+
+
 # def share():
 #     """ Converts this observable into a multicast observable that backpressures only after each subscribed
 #     observer backpressures. Note that this observable is subscribed when the multicast observable is subscribed for
@@ -275,80 +300,27 @@ def map(selector: Callable[[Any], Any]):
 #     :return: multicast observable
 #     """
 #
-#     def func(obs: ObservableBase):
-#         return ConnectableObservable(source=obs, subject=PublishSubject()).ref_count()
-#     return ObservableOperator(func)
+#     def func(source: FlowableBase) -> FlowableBase:
+#         base = source.base or source    # take over base or create new one
+#         return RefCountFlowable(source=source, base=base,
+#                                  selectable_bases=source.selectable_bases)
+#     return FlowableOperator(func)
 
 
-def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, ignore_mismatch: bool = None):
+def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, auto_match: bool = None):
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
     :return: zipped observable
     """
 
-    source_right = right
-
-    def func(source_left: FlowableBase) -> FlowableBase:
-        # print(source_left.base)
-        # print(source_right.base)
-        # print(source_left.selectable_bases)
-
-        selectable_bases = set()
-
-        if ignore_mismatch is not True:
-            if source_left.base is not None and source_left.base == source_right.base:
-                transform_left = False
-                transform_left = False
-
-                selectable_bases = source_left.selectable_bases | source_right.selectable_bases
-
-            elif source_left.base is not None and source_left.base in source_right.selectable_bases:
-                transform_left = False
-                transform_right = True
-
-                selectable_bases = source_right.selectable_bases
-
-            elif source_right.base is not None and source_right.base in source_left.selectable_bases:
-                transform_left = False
-                transform_right = True
-
-                selectable_bases = source_left.selectable_bases
-
-            else:
-
-                raise AssertionError('flowable do not match')
-
-        else:
-            transform_left = False
-            transform_right = False
-
-        def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-            left_obs, left_selectors = source_left.unsafe_subscribe(subscriber=subscriber)
-            right_obs, right_selectors = source_right.unsafe_subscribe(subscriber=subscriber)
-
-            selectors = {}
-
-            if transform_left:
-                index_obs = right_selectors[source_left.base]
-                left_obs_ = select_observable(left_obs, index_obs, scheduler=subscriber.scheduler)
-            else:
-                selectors = {**selectors, **left_selectors}
-                left_obs_ = left_obs
-
-            if transform_right:
-                index_obs = left_selectors[source_right.base]
-                # right_obs_ = DebugObservable(index_observable(DebugObservable(right_obs, 'd2'), DebugObservable(index_obs, 'd3')), 'd1')
-                right_obs_ = select_observable(right_obs, index_obs, scheduler=subscriber.scheduler)
-            else:
-                selectors = {**selectors, **right_selectors}
-                right_obs_ = right_obs
-
-            obs = Zip2Observable(left=left_obs_, right=right_obs_, selector=selector)
-            return obs, selectors
-
-        return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, selectable_bases=selectable_bases)
+    def func(left: Flowable) -> FlowableBase:
+        return left.zip(right=right, selector=selector, auto_match=auto_match)
     return FlowableOperator(func)
+
+
+# def match_and_zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+#     return zip(right=right, selector=selector, auto_match=True)
 
 
 # def zip_with_index(selector: Callable[[Any, int], Any] = None):
