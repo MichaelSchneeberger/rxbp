@@ -1,7 +1,5 @@
 from typing import Callable, Any
 
-from rx.concurrency.schedulerbase import SchedulerBase
-
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 
@@ -11,8 +9,7 @@ class ZipWithIndexObservable(Observable):
         self.source = source
         self.selector = (lambda v, i: (v, i)) if selector is None else selector
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
         count = [0]
 
         def on_next(v):
@@ -35,4 +32,4 @@ class ZipWithIndexObservable(Observable):
                 return observer.on_completed()
 
         map_observer = ZipCountObserver()
-        return self.source.unsafe_subscribe(map_observer, scheduler, subscribe_scheduler)
+        return self.source.observe(map_observer)

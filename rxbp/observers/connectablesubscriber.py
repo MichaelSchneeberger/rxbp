@@ -2,8 +2,6 @@ import threading
 from queue import Queue
 from typing import Iterable
 
-import rx
-
 from rxbp.ack import Ack, Continue, Stop
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer

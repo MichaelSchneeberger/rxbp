@@ -5,7 +5,6 @@ from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.internal.selectionop import merge_selectors, select_observable
 from rxbp.observable import Observable
-from rxbp.observables.connectableobservable import ConnectableObservable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observables.flatmapobservable import FlatMapObservable
@@ -52,26 +51,18 @@ from rxbp.testing.debugobservable import DebugObservable
 #     def func(obs: ObservableBase):
 #         return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
 #     return ObservableOperator(func)
-#
-#
-# def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
-#     def func(obs: ObservableBase):
-#         return DebugObservable(source=obs, name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack,
-#                                  on_raw_ack=on_raw_ack)
-#     return ObservableOperator(func)
-#
-#
-# def execute_on(scheduler: Scheduler):
-#     def func(obs: ObservableBase):
-#         class ExecuteOnObservable(ObservableBase):
-#             def unsafe_subscribe(self, observer, _, subscribe_scheduler):
-#                 disposable = obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
-#                 return disposable
-#
-#         return ExecuteOnObservable()
-#     return ObservableOperator(func)
-#
 
+
+def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
+    def func(source: Flowable) -> FlowableBase:
+        return source.debug(name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack, on_raw_ack=on_raw_ack,
+                            on_ack_msg=on_ack_msg)
+    return FlowableOperator(func)
+
+def execute_on(scheduler: Scheduler):
+    def func(source: Flowable) -> FlowableBase:
+        return source.execute_on(scheduler=scheduler)
+    return FlowableOperator(func)
 
 def controlled_zip(right: FlowableBase,
                    request_left: Callable[[Any, Any], bool],

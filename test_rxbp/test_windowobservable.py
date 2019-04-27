@@ -1,13 +1,13 @@
 import unittest
 
-from rxbp.ack import Continue, continue_ack
+from rxbp.ack import continue_ack
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
 from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testobserversubscribeinner import TestObserverSubscribeInner
 from rxbp.testing.testscheduler import TestScheduler
-from rxbp.observables.window import window
+from backup.window import window
 
 
 class TestWindowObservable(unittest.TestCase):

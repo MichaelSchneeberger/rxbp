@@ -2,18 +2,18 @@ import threading
 from typing import Set, Tuple, List, Union
 
 import rx
-from rx.concurrency.schedulerbase import SchedulerBase
 from rx.disposable import Disposable
 
 from rxbp.ack import Continue, stop_ack, continue_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
+from rxbp.scheduler import Scheduler
 from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
 
 
 class PublishSubject(Observable, Observer):
-    def __init__(self, scheduler: SchedulerBase):
+    def __init__(self, scheduler: Scheduler):
 
         super().__init__()
 

@@ -27,7 +27,6 @@ class FilterFlowable(FlowableBase):
         def gen_merged_selector():
             for base, indexing in source_selectors.items():
                 yield base, merge_selectors(indexing, observable.selector,
-                                            subscribe_scheduler=subscriber.subscribe_scheduler,
                                             scheduler=subscriber.scheduler)
 
         selectors = dict(gen_merged_selector())

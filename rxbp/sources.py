@@ -1,9 +1,10 @@
 import itertools
-from typing import List, Iterator, Iterable, Optional, Any
+from typing import Iterator, Iterable, Any
 
 import rx
 from rx import operators
 
+from rxbp.flowable import Flowable
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observables.nowobservable import NowObservable
@@ -157,43 +158,30 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
     return AnonymousFlowable(unsafe_subscribe_func, base=base_)
 
-    # class ToBackpressureObservable(ObservableBase):
-    #
-    #     def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-    #         def iterable_to_gen(v, _):
-    #             def gen():
-    #                 yield from v
-    #             return gen
-    #
-    #         subscriber = BufferedSubscriber(observer, scheduler, 1000)
-    #         disposable = source.buffer_with_count(batch_size) \
-    #             .map(iterable_to_gen) \
-    #             .subscribe_observer(on_next=subscriber.on_next, on_error=subscriber.on_error,
-    #                                 on_completed=subscriber.on_completed)
-    #         return disposable
-    #
-    # return Observable(ToBackpressureObservable())
+def now(elem: Any):
+    """ Converts an element into an observable
 
-#
-# def now(elem):
-#     """ Converts an element into an observable
-#
-#     :param elem: the single item sent by the observable
-#     :return: single item observable
-#     """
-#     observable = NowObservable(elem=elem)
-#     return Observable(observable)
-#
-#
-# just = now
-# return_value = now
-#
-#
-# def zip(left: Observable, right: Observable):
-#     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
-#
-#     :param selector: a mapping function applied over the generated pairs
-#     :return: zipped observable
-#     """
-#
-#     return left.zip(right=right)
+    :param elem: the single item sent by the observable
+    :return: single item observable
+    """
+
+
+    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+        observable = NowObservable(elem=elem, subscribe_scheduler=subscriber.subscribe_scheduler)
+        return observable, {}
+
+    return AnonymousFlowable(unsafe_subscribe_func, base=1)
+
+
+just = now
+return_value = now
+
+
+def zip(left: Flowable, right: Flowable):
+    """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+
+    :param selector: a mapping function applied over the generated pairs
+    :return: zipped observable
+    """
+
+    return left.zip(right=right)
