@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Any, Set, Dict, Tuple, Optional, Generic
 
-from rxbp.ack import continue_ack
+from rxbp.ack import continue_ack, Ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
@@ -24,10 +24,6 @@ class FlowableBase(Generic[ValueType], ABC):
 
         self.base = base
         self.selectable_bases = selectable_bases or set()
-
-    @abstractmethod
-    def unsafe_subscribe(self, subscriber: Subscriber) -> 'FlowableBase.FlowableReturnType':
-        ...
 
     def subscribe_(self, subscriber: Subscriber, observer: Observer):
         def action(_, __):
@@ -62,3 +58,7 @@ class FlowableBase(Generic[ValueType], ABC):
 
         disposable = self.subscribe_(subscriber=subscriber, observer=observer)
         return disposable
+
+    @abstractmethod
+    def unsafe_subscribe(self, subscriber: Subscriber) -> 'FlowableBase.FlowableReturnType':
+        ...

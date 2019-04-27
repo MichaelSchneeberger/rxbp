@@ -1,13 +1,12 @@
+import threading
 
-from rx.concurrency import CurrentThreadScheduler
-from rx.internal import Enumerator
-
-from rxbp.ack import Continue
-from rxbp.observers.anonymousobserver import AnonymousObserver
+from rxbp.flowablebase import FlowableBase
+from rxbp.scheduler import Scheduler
+from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
 
 
-def to_iterable(source, scheduler):
-    condition = config["concurrency"].Condition()
+def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
+    condition = threading.Condition()
     notifications = []
 
     def send_notification(n):
@@ -18,7 +17,6 @@ def to_iterable(source, scheduler):
 
     def on_next(v):
         send_notification(('N', v))
-        return Continue()
 
     def on_error(exc):
         send_notification(('E', exc))
@@ -26,12 +24,12 @@ def to_iterable(source, scheduler):
     def on_completed():
         send_notification(('C', None))
 
-    observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error, on_completed_func=on_completed)
+    # observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error, on_completed_func=on_completed)
 
-    source.subscribe_observer(observer, scheduler, CurrentThreadScheduler())
+    source.subscribe(on_next=on_next, on_error=on_error, on_completed=on_completed, scheduler=scheduler,
+                     subscribe_scheduler=CurrentThreadScheduler())
 
     def gen():
-
         while True:
             condition.acquire()
             while not len(notifications):
@@ -47,4 +45,4 @@ def to_iterable(source, scheduler):
             condition.release()
             yield value
 
-    return Enumerator(gen())
+    return gen()

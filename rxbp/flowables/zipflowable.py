@@ -10,7 +10,7 @@ class ZipFlowable(FlowableBase):
     def __init__(self, left: FlowableBase, right: FlowableBase,
                  selector: Callable[[Any, Any], Any] = None, auto_match: bool = None):
 
-        auto_match_ = auto_match if isinstance(auto_match, bool) else True
+        auto_match_ = auto_match if isinstance(auto_match, bool) else False
         selectable_bases = set()
 
         if auto_match_ is True:

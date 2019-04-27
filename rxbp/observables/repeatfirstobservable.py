@@ -1,15 +1,16 @@
 from rxbp.ack import Continue, Stop, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.scheduler import SchedulerBase, ExecutionModel
+from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
 
 
 class RepeatFirstObservable(Observable):
-    def __init__(self, source):
-        self.source = source
+    def __init__(self, source: Observable, scheduler: Scheduler):
+        self._source = source
+        self._scheduler = scheduler
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
+        source = self
 
         class RepeatFirstObserver(Observer):
             def on_next(self, v):
@@ -27,12 +28,12 @@ class RepeatFirstObservable(Observable):
                         else:
                             def _(ack):
                                 if isinstance(ack, Continue):
-                                    scheduler.schedule(action)
+                                    source._scheduler.schedule(action)
 
                             ack.subscribe(_)
                             break
 
-                scheduler.schedule(action)
+                source._scheduler.schedule(action)
                 return stop_ack
 
             def on_error(self, exc):
@@ -42,4 +43,4 @@ class RepeatFirstObservable(Observable):
                 return observer.on_completed()
 
         map_observer = RepeatFirstObserver()
-        return self.source.unsafe_subscribe(map_observer, scheduler, subscribe_scheduler)
+        return self._source.observe(map_observer)

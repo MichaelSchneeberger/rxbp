@@ -19,7 +19,7 @@ Implemented builders and operators
 
 ### Transforming operators
 
-- `execute_on`
+- `execute_on` - 
 - `flat_map` - flatten inner Observable emissioned by the outer SubFlowObservable into a single Observable
 - `map` - transform the items emitted by an Observable by applying a function to each item
 - `map_count` - The same as `map`, except that the selector function takes index in addition to the value

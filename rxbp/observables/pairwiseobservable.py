@@ -1,7 +1,5 @@
 import itertools
 
-from rx.concurrency.schedulerbase import SchedulerBase
-
 from rxbp.ack import continue_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -11,8 +9,7 @@ class PairwiseObservable(Observable):
     def __init__(self, source):
         self.source = source
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase,
-                         subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
 
         last_elem = [None]
 
@@ -54,4 +51,4 @@ class PairwiseObservable(Observable):
                 return observer.on_completed()
 
         map_observer = PairwiseObserver()
-        return self.source.unsafe_subscribe(map_observer, scheduler, subscribe_scheduler)
+        return self.source.observe(map_observer,)

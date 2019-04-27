@@ -4,14 +4,15 @@ from rxbp.ack import Continue, Stop, Ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.scheduler import Scheduler
 
 
 class ObserveOnObservable(Observable):
-    def __init__(self, source: Observable, scheduler: SchedulerBase):
+    def __init__(self, source: Observable, scheduler: Scheduler):
         self.source = source
         self.scheduler = scheduler
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
         def on_next(v):
             def action(_, __):
                 inner_ack = observer.on_next(v)
@@ -44,4 +45,4 @@ class ObserveOnObservable(Observable):
 
         observe_on_observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error,
                                                 on_completed_func=on_completed)
-        return self.source.unsafe_subscribe(observe_on_observer, scheduler, subscribe_scheduler)
+        return self.source.observe(observe_on_observer)
