@@ -7,8 +7,8 @@ library, that integrates back-pressure into observables.
 
 The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), and has still experimental status. 
 
-Differences to RxPY
--------------------
+Differences from RxPY
+---------------------
 
 
 
@@ -39,9 +39,10 @@ index in addition to the value
 
 ### Combining operators
 
-- `controlled_zip` - 
-- `zip` - combine the emissions of multiple Observables together via a specified function and emit single items for 
-each combination based on the results of this function
+- `controlled_zip` - combines the elements emitted by two flowables 
+into pairs in a controlled sequence. 
+- `zip` - combines the elements emitted by two flowables into pairs in 
+a strict sequence.
 
 ### Create a rx Observable
 

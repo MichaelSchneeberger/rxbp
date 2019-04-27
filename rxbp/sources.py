@@ -89,6 +89,8 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
     return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
 
 
+range = from_range
+
 # def from_list(buffer: List, batch_size: int = 1):
 #
 #     def chunks():
@@ -111,7 +113,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
 #             return disposable
 #
 #     return Observable(ToIterableObservable())
-#
+
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
             base: Any = None):
@@ -157,6 +159,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
         return observable, {}
 
     return AnonymousFlowable(unsafe_subscribe_func, base=base_)
+
 
 def now(elem: Any):
     """ Converts an element into an observable

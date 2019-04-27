@@ -1,9 +1,13 @@
+from datetime import datetime
+
+from rx import Observable
 from rx.core import typing
-from rx.core.abc import Observable
+from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime
 
 from rxbp.ack import Continue
 from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
+from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
 from rxbp.subscriber import Subscriber
 
@@ -17,6 +21,22 @@ def to_rx(source: FlowableBase):
 
     class FromFlowableObservable(Observable):
         def _subscribe_core(self, observer: typing.Observer, scheduler: typing.Scheduler = None):
+            class RxBPScheduler(SchedulerBase):
+                @property
+                def now(self) -> datetime:
+                    return scheduler.now
+
+                def schedule(self, action: 'ScheduledAction', state: TState = None) -> Disposable:
+                    return scheduler.schedule(action=action, state=state)
+
+                def schedule_relative(self, duetime: RelativeTime, action: 'ScheduledAction',
+                                      state: TState = None) -> Disposable:
+                    return scheduler.schedule_relative(duetime=duetime, action=action, state=state)
+
+                def schedule_absolute(self, duetime: AbsoluteTime, action: 'ScheduledAction',
+                                      state: TState = None) -> Disposable:
+                    return scheduler.schedule_absolute(duetime=duetime, action=action, state=state)
+
             class ToRxObserver(Observer):
                 def on_next(self, v):
                     for e in v():
@@ -29,7 +49,7 @@ def to_rx(source: FlowableBase):
                 def on_completed(self):
                     observer.on_completed()
 
-            scheduler_ = scheduler or current_thread_scheduler
+            scheduler_ = RxBPScheduler() if scheduler is not None else current_thread_scheduler
             subscriber = Subscriber(scheduler=scheduler_, subscribe_scheduler=current_thread_scheduler)
             return source.subscribe_(observer=ToRxObserver(), subscriber=subscriber)
 

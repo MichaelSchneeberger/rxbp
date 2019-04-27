@@ -176,7 +176,7 @@ def share(func: Callable[[FlowableBase], FlowableBase]):
 
 
 def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, auto_match: bool = None):
-    """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
     :return: zipped observable
