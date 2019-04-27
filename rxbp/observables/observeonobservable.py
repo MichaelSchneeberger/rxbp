@@ -24,7 +24,7 @@ class ObserveOnObservable(Observable):
                     ack.on_next(inner_ack)
                     ack.on_completed()
                 else:
-                    inner_ack.unsafe_subscribe(ack)
+                    inner_ack.subscribe(ack)
 
             self.scheduler.schedule(action)
 
