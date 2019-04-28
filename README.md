@@ -10,7 +10,7 @@ The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/mon
 Example
 -------
 
-The syntax is similar to RxPY.
+The rx back-pressure syntax is similar to RxPY.
 
 ```python
 # example taken from RxPY
@@ -56,11 +56,14 @@ Differences from RxPY
 
 ### Flowable
 
-
+The Flowable is a data type for modeling and processing asynchronous and reactive 
+streaming of events with non-blocking back-pressure. It is the equivelent of the 
+RxPY Observable.
 
 ### zip operator
 
-The `zip` operator has an optional `auto_match` argument that 
+The `zip` operator has an optional `auto_match` argument, which if set to `True`
+will match two Flowables, where one originally has the same number of elements of the other.
 
 ```python
 import rxbp
@@ -73,6 +76,8 @@ rxbp.range_(10) \
     .subscribe(print)
 ```
 
+The previous code outputs:
+
 ```
 (2, 1)
 (4, 3)
@@ -83,8 +88,8 @@ rxbp.range_(10) \
 
 ### share operator
 
-The `share` method does not return a multicast object. Instead, it takes a function exposing a
-multicast Flowable.
+The `share` method does not return a multicast object directly. Instead, it takes a function 
+exposing a multicast Flowable via the argument of the function.
 
 ```python
 import rxbp
@@ -94,6 +99,7 @@ rxbp.range_(10) \
     .share(lambda f1: f1.zip(f1.map(lambda v: v+1).filter(lambda v: v%2==0))) \
     .subscribe(print)
 ```
+The previous code outputs:
 
 ```
 (1, 2)
@@ -103,9 +109,17 @@ rxbp.range_(10) \
 (9, 10)
 ```
 
-When to use an Observable, when Flowable?
+When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
+A Flowable is used when some asynchronous stages can't process the values 
+fast enough and need a way to tell the upstream producer to slow down. This is called
+back-pressuring. But even if the generation of a data stream cannot be directly controlled, 
+back-pressure can reduce the memory consumption by holding back data, and by emitting data
+in a synchronized fashion.
+
+An RxPY Observable on the other hand is push based. That means it emits elements as soon as
+it receives them.
 
 
 Implemented builders and operators
