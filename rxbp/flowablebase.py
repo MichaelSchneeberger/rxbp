@@ -7,15 +7,16 @@ from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 from rxbp.subscribers.anonymoussubscriber import AnonymousSubscriber
 from rxbp.typing import ValueType
 
 
 class FlowableBase(Generic[ValueType], ABC):
-    FlowableReturnType = Tuple[Observable, Dict[Any, Optional[Observable]]]
+    FlowableReturnType = Tuple[Observable, Dict[Base, Optional[Observable]]]
 
-    def __init__(self, base: Any = None, selectable_bases: Set[Any] = None):
+    def __init__(self, base: Base = None, selectable_bases: Set[Base] = None):
         """
         :param base: two flowables with the the same base emit the same number of elements
         :param transformables: a set of bases different to the current base, a transformation is the capability to

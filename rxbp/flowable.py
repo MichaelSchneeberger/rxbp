@@ -2,13 +2,15 @@ from typing import Callable, Any, Generic
 
 import rx
 
+from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
+from rxbp.pipe import pipe
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
-from rxbp.flowables.sharedflowable import SharedFlowable
+from rxbp.flowables.shareflowable import ShareFlowable
 from rxbp.flowables.zipflowable import ZipFlowable
 from rxbp.observable import Observable
 from rxbp.observables.mapobservable import MapObservable
@@ -163,6 +165,9 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return Flowable(PairwiseFlowable(source=self))
 
+    def pipe(self, *operators: Callable[[FlowableBase], FlowableBase]):
+        return Flowable(pipe(*operators)(self))
+
     def run(self):
         return list(to_iterator(self))
 
@@ -186,11 +191,18 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = RepeatFirstFlowable(source=self)
         return Flowable(flowable)
 
+    def cache_serve_first(self, func: Callable[[FlowableBase], FlowableBase]):
+        def lifted_func(f: RefCountFlowable):
+            return func(Flowable(f))
+
+        flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
+        return Flowable(flowable)
+
     def share(self, func: Callable[[FlowableBase], FlowableBase]):
         def lifted_func(f: RefCountFlowable):
             return func(Flowable(f))
 
-        flowable =  SharedFlowable(source=self, func=lifted_func)
+        flowable = ShareFlowable(source=self, func=lifted_func)
         return Flowable(flowable)
 
     def to_rx(self) -> rx.Observable:

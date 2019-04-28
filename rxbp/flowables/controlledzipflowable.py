@@ -1,7 +1,7 @@
 from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.internal.selectionop import merge_selectors
+from rxbp.selectors.selectionop import merge_selectors
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.subscriber import Subscriber
 

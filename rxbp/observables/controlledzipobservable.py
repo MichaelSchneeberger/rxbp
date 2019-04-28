@@ -3,8 +3,8 @@ from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.selection import select_next, select_completed
+from rxbp.ack import Ack, continue_ack, stop_ack
+from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler

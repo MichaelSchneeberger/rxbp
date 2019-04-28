@@ -1,18 +1,19 @@
 from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.internal.selectionop import merge_selectors
+from rxbp.selectors.selectionop import merge_selectors
 from rxbp.observables.filterobservable import FilterObservable
 from rxbp.subscriber import Subscriber
 
 
 class FilterFlowable(FlowableBase):
     def __init__(self, source: FlowableBase, predicate: Callable[[Any], bool]):
-        if source.base is None:
-            selectable_bases = source.selectable_bases
-        else:
+        if source.base is not None:
             selectable_bases = source.selectable_bases | {source.base}
+        else:
+            selectable_bases = source.selectable_bases
 
+        # base becomes undefined after filtering
         super().__init__(base=None, selectable_bases=selectable_bases)
 
         self._source = source

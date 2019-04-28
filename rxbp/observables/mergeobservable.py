@@ -1,16 +1,11 @@
-import itertools
 import threading
-import traceback
-from typing import Callable, Any, Generator, List, Iterator, Tuple, Optional
+from typing import Callable, Generator
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.ack import Stop, Continue, Ack, continue_ack, stop_ack
-from rxbp.internal.selection import SelectCompleted, SelectNext, select_next, select_completed
+from rxbp.ack import Continue, Ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.scheduler import Scheduler
-from rxbp.subjects.publishsubject import PublishSubject
 
 
 def merge(left: Observable, right: Observable):

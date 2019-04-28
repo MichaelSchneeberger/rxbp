@@ -5,14 +5,14 @@ import rx
 from rx.disposable import Disposable
 
 from rxbp.ack import Continue, stop_ack, continue_ack
-from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
+from rxbp.subjects.subjectbase import SubjectBase
 
 
-class PublishSubject(Observable, Observer):
+class PublishSubject(SubjectBase):
     def __init__(self, scheduler: Scheduler):
 
         super().__init__()

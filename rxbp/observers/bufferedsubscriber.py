@@ -1,16 +1,15 @@
 import threading
-from optparse import Option
 from queue import Queue
 
 import rx
 
 from rxbp.ack import Stop, Continue, Ack, continue_ack
 from rxbp.observer import Observer
-from rxbp.scheduler import SchedulerBase
+from rxbp.scheduler import Scheduler
 
 
 class BufferedSubscriber(Observer):
-    def __init__(self, observer: Observer, scheduler: SchedulerBase, buffer_size: int):
+    def __init__(self, observer: Observer, scheduler: Scheduler, buffer_size: int):
         self.observer = observer
         self.scheduler = scheduler
         self.em = scheduler.get_execution_model()

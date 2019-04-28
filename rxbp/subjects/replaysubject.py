@@ -2,20 +2,19 @@ import threading
 from typing import Iterable, Set, List
 
 
-from rx.concurrency.schedulerbase import SchedulerBase
 from rx.disposable import Disposable
 
 from rxbp.ack import Continue, Stop
 from rxbp.observers.connectablesubscriber import ConnectableSubscriber
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
-from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.subjects.subjectbase import SubjectBase
 
 
-class ReplaySubject(Observable, Observer):
+class ReplaySubject(SubjectBase):
 
     class State:
         def __init__(self,

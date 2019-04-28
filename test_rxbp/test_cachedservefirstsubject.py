@@ -1,7 +1,7 @@
 import unittest
 
 from rxbp.ack import Continue, Ack
-from rxbp.subjects.cachedservefirstsubject import CachedServeFirstSubject
+from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
 from rxbp.observer import Observer
 from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
 from rxbp.testing.testobserver import TestObserver
@@ -20,7 +20,7 @@ class TestConnectableSubscriber(unittest.TestCase):
         o1 = TestObserver()
         o2 = TestObserver()
 
-        subject = CachedServeFirstSubject(scheduler=s)
+        subject = CacheServeFirstSubject(scheduler=s)
         subject.subscribe_observer(o1, s, CurrentThreadScheduler())
         subject.subscribe_observer(o2, s, CurrentThreadScheduler())
 

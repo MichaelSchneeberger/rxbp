@@ -1,4 +1,4 @@
-from rxbp.internal.selection import SelectCompleted, SelectNext, select_completed, select_next
+from rxbp.selectors.selection import SelectCompleted, SelectNext
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observables.filterobservable import FilterObservable

@@ -7,9 +7,104 @@ library, that integrates back-pressure into observables.
 
 The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), and has still experimental status. 
 
+Example
+-------
+
+The syntax is similar to RxPY.
+
+```python
+# example taken from RxPY
+import rxbp
+from rxbp import op
+
+source = rxbp.from_(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+
+composed = source.pipe(
+    op.map(lambda s: len(s)),
+    op.filter(lambda i: i >= 5)
+)
+composed.subscribe(lambda value: print("Received {0}".format(value)))
+```
+
+Integrate RxPY
+--------------
+
+A rx Observable can be converted to a Flowable via the `from_rx` method.
+Equivalently, a Flowable can be converted to a rx Observable via the `to_rx` method.
+
+```python
+import rx
+import rxbp
+from rxbp import op
+
+rx_source = rx.of("Alpha", "Beta", "Gamma", "Delta", "Epsilon")
+
+# convert Observable to Flowable
+source = rxbp.from_rx(rx_source)
+
+composed = source.pipe(
+    op.map(lambda s: len(s)),
+    op.filter(lambda i: i >= 5)
+)
+
+# convert Flowable to Observable
+composed.to_rx().subscribe(lambda value: print("Received {0}".format(value)))
+```
+
 Differences from RxPY
 ---------------------
 
+### Flowable
+
+
+
+### zip operator
+
+The `zip` operator has an optional `auto_match` argument that 
+
+```python
+import rxbp
+from rxbp import op
+
+rxbp.range_(10) \
+    .map(lambda v: v+1) \
+    .filter(lambda v: v%2==0) \
+    .zip(rxbp.range_(10), auto_match=True) \
+    .subscribe(print)
+```
+
+```
+(2, 1)
+(4, 3)
+(6, 5)
+(8, 7)
+(10, 9)
+```
+
+### share operator
+
+The `share` method does not return a multicast object. Instead, it takes a function exposing a
+multicast Flowable.
+
+```python
+import rxbp
+from rxbp import op
+
+rxbp.range_(10) \
+    .share(lambda f1: f1.zip(f1.map(lambda v: v+1).filter(lambda v: v%2==0))) \
+    .subscribe(print)
+```
+
+```
+(1, 2)
+(3, 4)
+(5, 6)
+(7, 8)
+(9, 10)
+```
+
+When to use an Observable, when Flowable?
+-----------------------------------------
 
 
 

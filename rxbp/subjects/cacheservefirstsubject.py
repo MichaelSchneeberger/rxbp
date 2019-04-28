@@ -13,11 +13,12 @@ from rxbp.ack import Continue, Stop, Ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import ExecutionModel, Scheduler
+from rxbp.subjects.subjectbase import SubjectBase
 
 
-class CachedServeFirstSubject(Observable, Observer):
+class CacheServeFirstSubject(SubjectBase):
 
-    def __init__(self, name=None, scheduler=None):
+    def __init__(self, scheduler: Scheduler, name=None):
         super().__init__()
 
         self.name = name
@@ -29,7 +30,7 @@ class CachedServeFirstSubject(Observable, Observer):
         self.current_index = {}
 
         # a inner subscription is inactive if all elements in the buffer are sent
-        self.inactive_subsriptions: List[CachedServeFirstSubject.InnerSubscription] = []
+        self.inactive_subsriptions: List[CacheServeFirstSubject.InnerSubscription] = []
 
         self.buffer = self.DequeuableBuffer()
 
@@ -74,7 +75,7 @@ class CachedServeFirstSubject(Observable, Observer):
                 self.queue.pop(0)
 
     class InnerSubscription:
-        def __init__(self, source: 'CachedServeFirstSubject', observer: Observer,
+        def __init__(self, source: 'CacheServeFirstSubject', observer: Observer,
                      scheduler: Scheduler, em: ExecutionModel):
             self.source = source
             self.observer = observer
@@ -126,7 +127,7 @@ class CachedServeFirstSubject(Observable, Observer):
                     inner_ack.on_next(v)
                     inner_ack.on_completed()
 
-                ack.observe_on(scheduler=self.scheduler).subscribe(_)
+                ack.pipe(rx.operators.observe_on(scheduler=self.scheduler)).subscribe(_)
                 return inner_ack
 
         def notify_on_completed(self):
@@ -228,7 +229,7 @@ class CachedServeFirstSubject(Observable, Observer):
                                 self.signal_stop()
                                 self.observer.on_error(err)
 
-                            ack.observe_on(self.scheduler).subscribe(on_next=on_next, on_error=on_error)
+                            ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(on_next=on_next, on_error=on_error)
                             break
                         else:
                             self.signal_stop()
@@ -236,9 +237,9 @@ class CachedServeFirstSubject(Observable, Observer):
                 except:
                     raise Exception('fatal error')
 
-    def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-        em = scheduler.get_execution_model()
-        inner_subscription = self.InnerSubscription(source=self, observer=observer, scheduler=scheduler, em=em)
+    def observe(self, observer: Observer):
+        em = self.scheduler.get_execution_model()
+        inner_subscription = self.InnerSubscription(source=self, observer=observer, scheduler=self.scheduler, em=em)
 
         with self.lock:
             if not self.is_stopped:
@@ -298,7 +299,7 @@ class CachedServeFirstSubject(Observable, Observer):
             ack_list = [current_ack] + inner_ack_list
 
             upper_ack = Ack()
-            rx.Observable.merge(*ack_list).first().subscribe(upper_ack)
+            rx.merge(*ack_list).pipe(rx.operators.first()).subscribe(upper_ack)
             return upper_ack
 
     def on_completed(self):

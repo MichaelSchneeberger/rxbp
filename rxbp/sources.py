@@ -11,13 +11,14 @@ from rxbp.observables.nowobservable import NowObservable
 from rxbp.observers.bufferedsubscriber import BufferedSubscriber
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure
 from rxbp.scheduler import Scheduler
+from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowable import AnonymousFlowable
 from rxbp.typing import ElementType, ValueType
 
 
-def _from_iterator(iterator: Iterator, batch_size: int = None, base: Any = None): # todo: remove n_elements?
+def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None):
     """ Converts an iterator into an observable
 
     :param iterator:
@@ -62,13 +63,15 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
     :return:
     """
 
+    base = NumericalBase(n_elements)
+
     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
         iterator = iter(iterable)
-        subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=n_elements)
+        subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=base)
         source_observable, source_selectors = subscriptable.unsafe_subscribe(subscriber)
         return source_observable, source_selectors
 
-    return AnonymousFlowable(unsafe_subscribe_func, base=n_elements)
+    return AnonymousFlowable(unsafe_subscribe_func, base=base)
 
 
 def from_iterable(iterable: Iterable, batch_size: int = None):
@@ -89,7 +92,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
     return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
 
 
-range = from_range
+range_ = from_range
 
 # def from_list(buffer: List, batch_size: int = 1):
 #
@@ -116,7 +119,7 @@ range = from_range
 
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
-            base: Any = None):
+            base: Base = None):
     """ Wraps a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
 
     :param source: a rx.observable
@@ -135,7 +138,12 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
     else:
         raise AssertionError('only BackPressure is currently supported as overflow strategy')
 
-    base_ = base if base is not None else source
+    if isinstance(base, Base):
+        base_ = base
+    elif base is not None:
+        base_ = ObjectRefBase(base)
+    else:
+        base_ = ObjectRefBase(source)
 
     def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
         class ToBackpressureObservable(Observable):
@@ -169,11 +177,11 @@ def now(elem: Any):
     """
 
 
-    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-        observable = NowObservable(elem=elem, subscribe_scheduler=subscriber.subscribe_scheduler)
-        return observable, {}
+    # def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    #     observable = NowObservable(elem=elem, subscribe_scheduler=subscriber.subscribe_scheduler)
+    #     return observable, {}
 
-    return AnonymousFlowable(unsafe_subscribe_func, base=1)
+    return _from_iterable([elem], n_elements=1)
 
 
 just = now
