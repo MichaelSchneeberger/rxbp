@@ -1,6 +1,6 @@
 from rxbp.ack import Ack
 from rxbp.observer import Observer
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testobserver import TestObserver
 
 
@@ -23,7 +23,7 @@ class TestObserverSubscribeInner(Observer):
         self.ack = Ack()
         self.inner_obs = TestObserver()
         for value in values:
-            self.inner_selector(value).subscribe_observer(self.inner_obs, self.scheduler, CurrentThreadScheduler())
+            self.inner_selector(value).subscribe_observer(self.inner_obs, self.scheduler, TrampolineScheduler())
         return self.ack
 
     def on_error(self, err):

@@ -2,7 +2,7 @@ import threading
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.scheduler import Scheduler
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
 
 def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
@@ -27,7 +27,7 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
     # observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error, on_completed_func=on_completed)
 
     source.subscribe(on_next=on_next, on_error=on_error, on_completed=on_completed, scheduler=scheduler,
-                     subscribe_scheduler=CurrentThreadScheduler())
+                     subscribe_scheduler=TrampolineScheduler())
 
     def gen():
         while True:

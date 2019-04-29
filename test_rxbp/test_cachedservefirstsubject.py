@@ -3,7 +3,7 @@ import unittest
 from rxbp.ack import Continue, Ack
 from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
 from rxbp.observer import Observer
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
@@ -21,8 +21,8 @@ class TestConnectableSubscriber(unittest.TestCase):
         o2 = TestObserver()
 
         subject = CacheServeFirstSubject(scheduler=s)
-        subject.subscribe_observer(o1, s, CurrentThreadScheduler())
-        subject.subscribe_observer(o2, s, CurrentThreadScheduler())
+        subject.subscribe_observer(o1, s, TrampolineScheduler())
+        subject.subscribe_observer(o2, s, TrampolineScheduler())
 
         # -----------------
         # 2 inactive, one returns continue => subject returns continue

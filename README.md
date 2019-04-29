@@ -5,12 +5,13 @@ RxPy back-pressure extension
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
 library, that integrates back-pressure into observables.
 
-The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), and has still experimental status. 
+The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), 
+and has still experimental status. 
 
 Example
 -------
 
-The rx back-pressure syntax is similar to RxPY.
+The *rxbackpressure* syntax is similar to RxPY.
 
 ```python
 # example taken from RxPY
@@ -29,8 +30,8 @@ composed.subscribe(lambda value: print("Received {0}".format(value)))
 Integrate RxPY
 --------------
 
-A rx Observable can be converted to a Flowable via the `from_rx` method.
-Equivalently, a Flowable can be converted to a rx Observable via the `to_rx` method.
+A RxPY Observable can be converted to a Flowable via the `from_rx` method.
+Equivalently, a Flowable can be converted to a RxPY Observable via the `to_rx` method.
 
 ```python
 import rx
@@ -57,23 +58,25 @@ Differences from RxPY
 ### Flowable
 
 The Flowable is a data type for modeling and processing asynchronous and reactive 
-streaming of events with non-blocking back-pressure. It is the equivelent of the 
+streaming of events with non-blocking back-pressure. It is the equivalent of the 
 RxPY Observable.
 
 ### zip operator
 
 The `zip` operator has an optional `auto_match` argument, which if set to `True`
 will match two Flowables, where one originally has the same number of elements of the other.
+This feature has been introduced to avoid the general problem of interlocked Flowables.
+It is automatically set to `True` in situations where the Flowable would otherwise stop flowing.
 
 ```python
 import rxbp
 from rxbp import op
 
-rxbp.range_(10) \
-    .map(lambda v: v+1) \
-    .filter(lambda v: v%2==0) \
-    .zip(rxbp.range_(10), auto_match=True) \
-    .subscribe(print)
+rxbp.range_(10).pipe(
+    rxbp.op.map(lambda v: v+1),
+    rxbp.op.filter(lambda v: v%2==0),
+    rxbp.op.zip(rxbp.range_(10), auto_match=True)
+).subscribe(print)
 ```
 
 The previous code outputs:
@@ -89,15 +92,22 @@ The previous code outputs:
 ### share operator
 
 The `share` method does not return a multicast object directly. Instead, it takes a function 
-exposing a multicast Flowable via the argument of the function.
+exposing a multicast Flowable via its arguments.
 
 ```python
 import rxbp
 from rxbp import op
 
-rxbp.range_(10) \
-    .share(lambda f1: f1.zip(f1.map(lambda v: v+1).filter(lambda v: v%2==0))) \
-    .subscribe(print)
+rxbp.range_(10).pipe(
+    rxbp.op.share(
+        lambda f1: f1.pipe(
+            rxbp.op.zip(f1.pipe(                    # auto_match is set by default to True 
+                rxbp.op.map(lambda v: v+1),
+                rxbp.op.filter(lambda v: v%2==0)),
+            )
+        )
+    ),
+).subscribe(print)
 ```
 The previous code outputs:
 
@@ -113,13 +123,15 @@ When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
 A Flowable is used when some asynchronous stages can't process the values 
-fast enough and need a way to tell the upstream producer to slow down. This is called
-back-pressuring. But even if the generation of a data stream cannot be directly controlled, 
-back-pressure can reduce the memory consumption by holding back data, and by emitting data
-in a synchronized fashion.
+fast enough and need a way to tell the upstream producer to slow down (called back-pressuring). But even 
+if the generation of a values cannot be directly controlled, 
+back-pressure can reduce the memory consumption by holding back the values in a buffer, and emitting them
+in a synchronized fashion. Values from a Flowable need to be pulled by the downstream consumer,
+which can lead to situations where the stream stops "flowing" due to bad coordination of back-pressuring
+a mulicast Flowable.
 
 An RxPY Observable on the other hand is push based. That means it emits elements as soon as
-it receives them.
+it receives them. 
 
 
 Implemented builders and operators

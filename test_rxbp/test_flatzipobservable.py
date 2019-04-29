@@ -7,7 +7,7 @@ from rxbp.observables.flatzipobservable import FlatZipObservable
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testscheduler import TestScheduler
 
 
@@ -55,7 +55,7 @@ class TestFlatZipObservable(unittest.TestCase):
         o1 = TestObserver()
 
         obs = FlatZipObservable(s1, s2, lambda v: v)
-        obs.subscribe_observer(o1, s, CurrentThreadScheduler())
+        obs.subscribe_observer(o1, s, TrampolineScheduler())
 
         ack1 = s1.on_next(s3)
 
@@ -122,7 +122,7 @@ class TestFlatZipObservable(unittest.TestCase):
         o1 = TestObserver()
 
         obs = FlatZipObservable(s1, s2, lambda v: v)
-        obs.subscribe_observer(o1, s, CurrentThreadScheduler())
+        obs.subscribe_observer(o1, s, TrampolineScheduler())
 
         ack2 = s2.on_next(100)
 
@@ -192,7 +192,7 @@ class TestFlatZipObservable(unittest.TestCase):
         o1 = TestObserver()
 
         obs = FlatZipObservable(s1, s2, lambda v: v)
-        obs.subscribe_observer(o1, s, CurrentThreadScheduler())
+        obs.subscribe_observer(o1, s, TrampolineScheduler())
 
         ack1 = s1.on_next(s3)
 

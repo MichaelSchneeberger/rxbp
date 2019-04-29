@@ -6,7 +6,7 @@ from rxbp.ack import Ack, Continue, Stop
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
 
 class ConnectableSubscriber(Observer):
@@ -91,7 +91,7 @@ class ConnectableSubscriber(Observer):
 
                 self.queue.put(EmptyObject)
                 disposable = IteratorAsObservable(iter(self.queue.get, EmptyObject)) \
-                    .subscribe_observer(CustomObserver(), self.scheduler, CurrentThreadScheduler())
+                    .subscribe_observer(CustomObserver(), self.scheduler, TrampolineScheduler())
 
                 self.connected_ref = buffer_was_drained, disposable
         return self.connected_ref

@@ -1,7 +1,7 @@
 import unittest
 
 from rxbp.ack import Continue, continue_ack
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
@@ -23,7 +23,7 @@ class TestPublishSubject(unittest.TestCase):
         o1 = TestObserver()
         o1.immediate_continue = 5
 
-        subject.unsafe_subscribe(o1, self.scheduler, CurrentThreadScheduler())
+        subject.unsafe_subscribe(o1, self.scheduler, TrampolineScheduler())
 
         self.assertIsInstance(subject.on_next(4), Continue)
         self.assertIsInstance(subject.on_next(5), Continue)

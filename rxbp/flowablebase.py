@@ -6,7 +6,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.scheduler import Scheduler
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 from rxbp.subscribers.anonymoussubscriber import AnonymousSubscriber
@@ -41,7 +41,7 @@ class FlowableBase(Generic[ValueType], ABC):
                   scheduler: Scheduler = None,
                   subscribe_scheduler: Scheduler = None):
 
-        subscribe_scheduler_ = subscribe_scheduler or CurrentThreadScheduler()
+        subscribe_scheduler_ = subscribe_scheduler or TrampolineScheduler()
         scheduler_ = scheduler or subscribe_scheduler_
 
         subscriber = AnonymousSubscriber(scheduler=scheduler_, subscribe_scheduler=subscribe_scheduler_)

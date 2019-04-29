@@ -8,7 +8,7 @@ from rxbp.ack import Continue, stop_ack, continue_ack
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.scheduler import Scheduler
-from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.subjectbase import SubjectBase
 
 
@@ -68,7 +68,7 @@ class PublishSubject(SubjectBase):
         state = self.state
         subscribers = state.subscribers
 
-        subscriber = self.Subscriber(observer, scheduler=current_thread_scheduler)  # todo: remove scheduler
+        subscriber = self.Subscriber(observer, scheduler=TrampolineScheduler())  # todo: remove scheduler
         if isinstance(subscribers, self.Empty):
             self.on_subscribe_completed(subscriber, state.error_thrown)
         else:

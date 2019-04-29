@@ -10,7 +10,7 @@ from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.scheduler import SchedulerBase
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.subjectbase import SubjectBase
 
 
@@ -95,7 +95,7 @@ class ReplaySubject(SubjectBase):
 
 
             return IteratorAsObservable(iter(buffer)) \
-                .subscribe_observer(TObserver(), scheduler, CurrentThreadScheduler())
+                .subscribe_observer(TObserver(), scheduler, TrampolineScheduler())
 
         state = self.state
         buffer = state.buffer

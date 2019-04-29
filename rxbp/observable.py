@@ -5,7 +5,7 @@ from rxbp.ack import continue_ack
 from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.scheduler import Scheduler
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
 
 class Observable(ABC):

@@ -1,7 +1,7 @@
 import unittest
 
 from rxbp.ack import continue_ack
-from rxbp.schedulers.currentthreadscheduler import CurrentThreadScheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
@@ -25,8 +25,8 @@ class TestWindowObservable(unittest.TestCase):
 
         left, right = window(s1, s2, lambda v1, v2: v2 <= v1[0], lambda v1, v2: v1[1] < v2)
 
-        left.subscribe_observer(o1, scheduler, CurrentThreadScheduler())
-        right.subscribe_observer(o2, scheduler, CurrentThreadScheduler())
+        left.subscribe_observer(o1, scheduler, TrampolineScheduler())
+        right.subscribe_observer(o2, scheduler, TrampolineScheduler())
 
         self.scheduler = scheduler
         self.left_in = s1

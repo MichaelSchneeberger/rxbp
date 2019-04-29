@@ -8,7 +8,7 @@ from rxbp.ack import Continue
 from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase
-from rxbp.schedulers.currentthreadscheduler import current_thread_scheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
 
 
@@ -49,6 +49,7 @@ def to_rx(source: FlowableBase):
                 def on_completed(self):
                     observer.on_completed()
 
+            current_thread_scheduler = TrampolineScheduler()
             scheduler_ = RxBPScheduler() if scheduler is not None else current_thread_scheduler
             subscriber = Subscriber(scheduler=scheduler_, subscribe_scheduler=current_thread_scheduler)
             return source.subscribe_(observer=ToRxObserver(), subscriber=subscriber)
