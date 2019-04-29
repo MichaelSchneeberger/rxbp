@@ -8,6 +8,15 @@ library, that integrates back-pressure into observables.
 The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), 
 and has still experimental status. 
 
+Installation
+------------
+
+rxbp v3.x runs on Python 3.6 or above. To install rxbp alpha version:
+
+```
+pip3 install --pre rxbp
+```
+
 Example
 -------
 

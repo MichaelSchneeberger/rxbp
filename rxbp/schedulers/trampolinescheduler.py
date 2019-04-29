@@ -1,4 +1,5 @@
 # from rx.concurrency import current_thread_scheduler as parent_current_thread_scheduler
+import datetime
 import logging
 import threading
 import time
@@ -8,7 +9,6 @@ from rx.concurrency import ScheduledItem
 from rx.concurrency.schedulerbase import SchedulerBase
 from rx.core import typing
 from rx.internal import PriorityQueue
-from rx.internal.constants import DELTA_ZERO
 
 from rxbp.scheduler import SchedulerBase as RxBPSchedulerBase
 
@@ -18,14 +18,14 @@ log = logging.getLogger('Rx')
 class TrampolineScheduler(RxBPSchedulerBase, SchedulerBase):
     class Trampoline(object):
         @classmethod
-        def run(cls, queue: PriorityQueue[ScheduledItem[typing.TState]]) -> None:
+        def run(cls, queue: PriorityQueue) -> None:
             while queue:
                 item: ScheduledItem = queue.peek()
                 if item.is_cancelled():
                     queue.dequeue()
                 else:
                     diff = item.duetime - item.scheduler.now
-                    if diff <= DELTA_ZERO:
+                    if diff <= datetime.timedelta(0):
                         item.invoke()
                         queue.dequeue()
                     else:
@@ -110,7 +110,7 @@ class TrampolineScheduler(RxBPSchedulerBase, SchedulerBase):
                     with self.lock:
                         if not self.queue:
                             self.idle = True
-                            self.queue.clear()
+                            # self.queue.clear()
                             break
 
         return si.disposable
