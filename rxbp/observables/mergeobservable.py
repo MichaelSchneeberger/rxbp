@@ -8,7 +8,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 
 
-def merge(left: Observable, right: Observable):
+class MergeObservable(Observable):
     """
     :param left:
     :param right:
@@ -20,21 +20,21 @@ def merge(left: Observable, right: Observable):
 
     """
 
-    class State:
-        pass
+    def __init__(self, left: Observable, right: Observable):
+        self.left = left
+        self.right = right
 
-    class Wait(State):
-        pass
+    def observe(self, observer):
+        class State:
+            pass
 
-    class ElementReceived(State):
-        def __init__(self, ack: Ack):
-            self.ack = ack
+        class Wait(State):
+            pass
 
-    class ElementSent(State):
-        def __init__(self, ack: Ack):
-            self.ack = ack
+        class ElementReceived(State):
+            def __init__(self, ack: Ack):
+                self.ack = ack
 
-    def observe(observer: Observer):
         left_completed = [False]
         right_completed = [False]
         exception = [None]
@@ -192,62 +192,10 @@ def merge(left: Observable, right: Observable):
                 if meas_left_completed and not prev_right_completed:
                     observer.on_completed()
 
-        left_observer2 = LeftObserver()
-        d1 = left.observe(left_observer2)  #, scheduler, subscribe_scheduler)
+        left_observer = LeftObserver()
+        d1 = self.left.observe(left_observer)
 
-        right_observer2 = RightObserver()
-        d2 = right.observe(right_observer2)  #, scheduler, subscribe_scheduler)
+        right_observer = RightObserver()
+        d2 = self.right.observe(right_observer)
 
         return CompositeDisposable(d1, d2)
-
-    # lock = threading.RLock()
-
-    # controller_zip_observer = [DummyObserver()]
-    # left_observer = [DummyObserver()]
-    # right_observer = [DummyObserver()]
-    # composite_disposable = CompositeDisposable()
-
-    class ControlledZippedObservable(Observable):
-        def observe(self, observer): #, scheduler, s):
-            disposable = observe(observer)
-            return disposable
-
-    o1 = ControlledZippedObservable()
-
-    # class LeftObservable(Observable):
-    #     def observe(self, observer): #, scheduler, s):
-    #         with lock:
-    #             left_observer[0] = observer
-    #
-    #             if isinstance(controller_zip_observer[0], DummyObserver) and isinstance(right_observer[0], DummyObserver):
-    #                 subscribe = True
-    #             else:
-    #                 subscribe = False
-    #
-    #         if subscribe:
-    #             disposable = observe() #scheduler, s)
-    #             composite_disposable.add(disposable)
-    #
-    #         return composite_disposable
-    #
-    # o2 = LeftObservable()
-    #
-    # class RightObservable(Observable):
-    #     def observe(self, observer): #, scheduler, s):
-    #         with lock:
-    #             right_observer[0] = observer
-    #
-    #             if isinstance(controller_zip_observer[0], DummyObserver) and isinstance(left_observer[0], DummyObserver):
-    #                 subscribe = True
-    #             else:
-    #                 subscribe = False
-    #
-    #         if subscribe:
-    #             disposable = observe() #scheduler, s)
-    #             composite_disposable.add(disposable)
-    #
-    #         return composite_disposable
-    #
-    # o3 = RightObservable()
-
-    return o1 #, o2, o3

@@ -37,8 +37,8 @@ class TrampolineScheduler(RxBPSchedulerBase, SchedulerBase):
 
         super().__init__()
 
-        self.idle: bool = True
-        self.queue: PriorityQueue[ScheduledItem[typing.TState]] = PriorityQueue()
+        self.idle = True
+        self.queue = PriorityQueue()
 
         self.lock = threading.RLock()
 
@@ -115,23 +115,23 @@ class TrampolineScheduler(RxBPSchedulerBase, SchedulerBase):
 
         return si.disposable
 
-    def schedule_required(self):
-        """Test if scheduling is required.
-
-        Gets a value indicating whether the caller must call a
-        schedule method. If the trampoline is active, then it returns
-        False; otherwise, if  the trampoline is not active, then it
-        returns True.
-        """
-        return self.queue is None
-
-    def ensure_trampoline(self, action):
-        """Method for testing the CurrentThreadScheduler."""
-
-        if self.schedule_required():
-            return self.schedule(action)
-        else:
-            return action(self, None)
+    # def schedule_required(self):
+    #     """Test if scheduling is required.
+    #
+    #     Gets a value indicating whether the caller must call a
+    #     schedule method. If the trampoline is active, then it returns
+    #     False; otherwise, if  the trampoline is not active, then it
+    #     returns True.
+    #     """
+    #     return self.queue is None
+    #
+    # def ensure_trampoline(self, action):
+    #     """Method for testing the CurrentThreadScheduler."""
+    #
+    #     if self.schedule_required():
+    #         return self.schedule(action)
+    #     else:
+    #         return action(self, None)
 
 
 

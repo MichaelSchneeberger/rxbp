@@ -32,7 +32,8 @@ class FlowableBase(Generic[ValueType], ABC):
             disposable = source_observable.observe(observer=observer)
             return disposable
 
-        return subscriber.subscribe_scheduler.schedule(action)
+        disposable = subscriber.subscribe_scheduler.schedule(action)
+        return disposable
 
     def subscribe(self,
                   on_next: Callable[[Any], None] = None,

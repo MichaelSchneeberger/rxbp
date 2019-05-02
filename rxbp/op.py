@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Iterable, Iterator
 
 from rxbp.flowable import Flowable
 from rxbp.scheduler import Scheduler
@@ -31,6 +31,11 @@ from rxbp.flowableoperator import FlowableOperator
 #         return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
 #     return ObservableOperator(func)
 
+
+def concat(sources: Iterable[FlowableBase]):
+    def func(left: Flowable) -> FlowableBase:
+        return left.concat(sources=sources)
+    return FlowableOperator(func)
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
     def func(source: Flowable) -> FlowableBase:
@@ -107,6 +112,18 @@ def map(selector: Callable[[Any], Any]):
 
     def func(source: Flowable) -> FlowableBase:
         return source.map(selector=selector)
+    return FlowableOperator(func)
+
+
+def merge(other: FlowableBase):
+    """ Maps each item emitted by the source by applying the given function
+
+    :param selector: function that defines the mapping applied to each element
+    :return: mapped observable
+    """
+
+    def func(source: Flowable) -> FlowableBase:
+        return source.merge(other=other)
     return FlowableOperator(func)
 
 

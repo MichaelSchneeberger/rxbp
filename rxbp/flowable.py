@@ -1,8 +1,11 @@
-from typing import Callable, Any, Generic
+import itertools
+from typing import Callable, Any, Generic, Iterator, Iterable
 
 import rx
 
 from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
+from rxbp.flowables.concatflowable import ConcatFlowable
+from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.pipe import pipe
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
@@ -33,6 +36,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Observable:
         return self.subscriptable.unsafe_subscribe(subscriber=subscriber)
+
+    def concat(self, sources: Iterable[FlowableBase]):
+        all_sources = itertools.chain([self], sources)
+        flowable = ConcatFlowable(sources=all_sources)
+        return Flowable(flowable)
 
     def controlled_zip(self, right: FlowableBase, request_left: Callable[[Any, Any], bool],
                        request_right: Callable[[Any, Any], bool],
@@ -118,6 +126,28 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = MapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
+    def merge(self, other: FlowableBase):
+        """
+
+        :param selector: (optional) selector function
+        :return: paired observable
+        """
+
+        class MergeFlowable(FlowableBase):
+            def __init__(self, source: FlowableBase):
+                super().__init__()
+
+                self._source = source
+
+            def unsafe_subscribe(self, subscriber: Subscriber):
+                left_obs, _ = self._source.unsafe_subscribe(subscriber=subscriber)
+                right_obs, _ = other.unsafe_subscribe(subscriber=subscriber)
+                obs = MergeObservable(left=left_obs, right=right_obs)
+
+                return obs, {}
+
+        return Flowable(MergeFlowable(source=self))
+
     def observe_on(self, scheduler: Scheduler):
         """ Operator that specifies a specific scheduler, on which observers will observe events
 
@@ -149,11 +179,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         class PairwiseFlowable(FlowableBase):
             def __init__(self, source: FlowableBase):
-                if isinstance(source.base, int):
-                    base = source.base - 1
-                else:
-                    base = None
-                super().__init__(base=base)
+                # if isinstance(source.base, int):
+                #     base = source.base - 1
+                # else:
+                #     base = None
+                super().__init__(base=None)
 
                 self._source = source
 

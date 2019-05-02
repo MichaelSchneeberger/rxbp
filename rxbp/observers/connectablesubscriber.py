@@ -2,17 +2,19 @@ import threading
 from queue import Queue
 from typing import Iterable
 
+import rx
+
 from rxbp.ack import Ack, Continue, Stop
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
-from rxbp.scheduler import SchedulerBase
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
+from rxbp.scheduler import Scheduler
 
 
 class ConnectableSubscriber(Observer):
-    def __init__(self, underlying: Observer, scheduler: SchedulerBase):
+    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler):
         self.underlying = underlying
         self.scheduler = scheduler
+        self.subscribe_scheduler = subscribe_scheduler
 
         self.root_ack = Ack()
         self.connected_ack = self.root_ack
@@ -90,8 +92,9 @@ class ConnectableSubscriber(Observer):
                     pass
 
                 self.queue.put(EmptyObject)
-                disposable = IteratorAsObservable(iter(self.queue.get, EmptyObject)) \
-                    .subscribe_observer(CustomObserver(), self.scheduler, TrampolineScheduler())
+                disposable = IteratorAsObservable(iter(self.queue.get, EmptyObject), scheduler=self.scheduler,
+                                                  subscribe_scheduler=self.subscribe_scheduler) \
+                    .observe(CustomObserver())
 
                 self.connected_ref = buffer_was_drained, disposable
         return self.connected_ref
@@ -165,10 +168,10 @@ class ConnectableSubscriber(Observer):
                     return Stop()
 
             new_ack = Ack()
-            self.connected_ack \
-                .observe_on(self.scheduler) \
-                .flat_map(__) \
-                .subscribe_observer(new_ack)
+            self.connected_ack.pipe(
+                rx.operators.observe_on(self.scheduler),
+                rx.operators.flat_map(__),
+            ).subscribe(new_ack)
             self.connected_ack = new_ack
             return self.connected_ack
         elif not self.was_canceled:
@@ -181,12 +184,12 @@ class ConnectableSubscriber(Observer):
         def on_next(v):
             if isinstance(v, Continue):
                 self.underlying.on_error(err)
-        self.connected_ack.observe_on(self.scheduler) \
-            .subscribe_observer(on_next=on_next)
+        self.connected_ack.pipe(rx.operators.observe_on(self.scheduler)) \
+            .subscribe(on_next=on_next)
 
     def on_completed(self):
         def on_next(v):
             if isinstance(v, Continue):
                 self.underlying.on_completed()
-        self.connected_ack.observe_on(self.scheduler) \
+        self.connected_ack.pipe(rx.operators.observe_on(self.scheduler)) \
             .subscribe(on_next=on_next)

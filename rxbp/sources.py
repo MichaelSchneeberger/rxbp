@@ -5,9 +5,9 @@ import rx
 from rx import operators
 
 from rxbp.flowable import Flowable
+from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
-from rxbp.observables.nowobservable import NowObservable
 from rxbp.observers.bufferedsubscriber import BufferedSubscriber
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure
 from rxbp.scheduler import Scheduler
@@ -74,12 +74,12 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
     return AnonymousFlowable(unsafe_subscribe_func, base=base)
 
 
+def concat(sources: Iterable[FlowableBase]):
+    return Flowable(ConcatFlowable(sources=sources))
+
+
 def from_iterable(iterable: Iterable, batch_size: int = None):
     return _from_iterable(iterable=iterable, batch_size=batch_size)
-
-
-from_ = from_iterable
-
 
 def from_range(arg1: int, arg2: int = None, batch_size: int = None):
     if arg2 is None:
@@ -90,9 +90,6 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
         stop = arg2
 
     return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
-
-
-range_ = from_range
 
 # def from_list(buffer: List, batch_size: int = 1):
 #
@@ -184,8 +181,8 @@ def now(elem: Any):
     return _from_iterable([elem], n_elements=1)
 
 
-just = now
-return_value = now
+# just = now
+# return_value = now
 
 
 def zip(left: Flowable, right: Flowable):
