@@ -19,7 +19,7 @@ class ConcatObservable(Observable):
 
         subscription = SerialDisposable()
         outer_subscription = SerialDisposable()
-        inner_subscription = SerialDisposable()
+        inner_subscription = SerialDisposable()     # probably not necessary
 
         class ConcatObserver(Observer):
             def __init__(self):

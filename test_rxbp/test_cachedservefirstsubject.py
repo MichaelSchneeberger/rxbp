@@ -1,15 +1,13 @@
-import unittest
-
 from rxbp.ack import Continue, Ack
 from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
 from rxbp.observer import Observer
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.testcasebase import TestCaseBase
 
 
-
-class TestConnectableSubscriber(unittest.TestCase):
+class TestCachedServeFirstSubject(TestCaseBase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
@@ -21,14 +19,19 @@ class TestConnectableSubscriber(unittest.TestCase):
         o2 = TestObserver()
 
         subject = CacheServeFirstSubject(scheduler=s)
-        subject.subscribe_observer(o1, s, TrampolineScheduler())
-        subject.subscribe_observer(o2, s, TrampolineScheduler())
+        subject.observe(o1)
+        subject.observe(o2)
+
+        def gen_value(v):
+            def gen():
+                yield v
+            return gen
 
         # -----------------
         # 2 inactive, one returns continue => subject returns continue
 
         o1.immediate_continue = 1
-        ack = subject.on_next(10)
+        ack = subject.on_next(gen_value(10))
 
         self.assertListEqual(o1.received, [10])
         self.assertListEqual(o2.received, [10])
@@ -39,7 +42,7 @@ class TestConnectableSubscriber(unittest.TestCase):
         # 1 inactive, asynchroneous ackowledgement
 
         o1.immediate_continue = 0
-        ack = subject.on_next(20)
+        ack = subject.on_next(gen_value(20))
 
         self.assertListEqual(o1.received, [10, 20])
         self.assertListEqual(o2.received, [10])
@@ -56,13 +59,13 @@ class TestConnectableSubscriber(unittest.TestCase):
         # 1 inactive, revive other observer
 
         o1.immediate_continue = 0
-        ack = subject.on_next(30)
+        ack = subject.on_next(gen_value(30))
 
         self.assertListEqual(o1.received, [10, 20, 30])
         self.assertListEqual(o2.received, [10])
 
-        ack = subject.on_next(40)
-        ack = subject.on_next(50)
+        ack = subject.on_next(gen_value(40))
+        ack = subject.on_next(gen_value(50))
 
         o2.immediate_continue = 1
         o2.ack.on_next(Continue())
@@ -91,7 +94,7 @@ class TestConnectableSubscriber(unittest.TestCase):
         self.assertListEqual(o1.received, [10, 20, 30, 40, 50])
         self.assertListEqual(o2.received, [10, 20, 30, 40, 50])
 
-        ack = subject.on_next(60)
+        ack = subject.on_next(gen_value(60))
 
         o2.ack.on_next(Continue())
         o2.ack.on_completed()

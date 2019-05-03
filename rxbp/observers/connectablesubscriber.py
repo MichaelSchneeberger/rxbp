@@ -45,7 +45,7 @@ class ConnectableSubscriber(Observer):
                     elif isinstance(v, Stop):
                         raise NotImplementedError
                     else:
-                        raise NotImplementedError
+                        raise Exception('illegal acknowledgment value {}'.format(v))
 
                 buffer_was_drained.subscribe(on_next=on_next)
 
@@ -155,11 +155,11 @@ class ConnectableSubscriber(Observer):
 
     def on_next(self, elem):
         if not self.is_connected:
-            def __(v, _):
+            def __(v):
                 if isinstance(v, Continue):
                     ack = self.underlying.on_next(elem)
                     if isinstance(ack, Continue):
-                        return rx.Observable.just(ack)
+                        return rx.just(ack)
                     elif isinstance(ack, Stop):
                         raise NotImplementedError
                     else:

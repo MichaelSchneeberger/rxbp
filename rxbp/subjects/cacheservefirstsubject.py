@@ -202,7 +202,7 @@ class CacheServeFirstSubject(SubjectBase):
                                     else:
                                         raise Exception('no recognized acknowledgment {}'.format(v))
 
-                                ack.observe_on(self.scheduler).subscribe(_)
+                                ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(_)
 
                     if not has_next:
                         break

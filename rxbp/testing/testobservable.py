@@ -18,6 +18,6 @@ class TestObservable(Observable):
     def on_completed(self):
         return self.observer.on_completed()
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler):
+    def observe(self, observer: Observer):
         self.observer = observer
         return Disposable()

@@ -23,7 +23,7 @@ class TestObserverSubscribeInner(Observer):
         self.ack = Ack()
         self.inner_obs = TestObserver()
         for value in values:
-            self.inner_selector(value).subscribe_observer(self.inner_obs, self.scheduler, TrampolineScheduler())
+            self.inner_selector(value).observe(self.inner_obs)
         return self.ack
 
     def on_error(self, err):

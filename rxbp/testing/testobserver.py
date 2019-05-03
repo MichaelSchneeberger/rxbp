@@ -16,7 +16,7 @@ class TestObserver(Observer):
 
     def on_next(self, v):
         values = list(v())
-        self.received.append(values)
+        self.received += values
         if 0 < self.immediate_continue:
             self.immediate_continue -= 1
             return Continue()

@@ -81,10 +81,10 @@ It is automatically set to `True` in situations where the Flowable would otherwi
 import rxbp
 from rxbp import op
 
-rxbp.range_(10).pipe(
+rxbp.range(10).pipe(
     rxbp.op.map(lambda v: v+1),
     rxbp.op.filter(lambda v: v%2==0),
-    rxbp.op.zip(rxbp.range_(10), auto_match=True)
+    rxbp.op.zip(rxbp.range(10), auto_match=True)
 ).subscribe(print)
 ```
 
@@ -107,7 +107,7 @@ exposing a multicast Flowable via its arguments.
 import rxbp
 from rxbp import op
 
-rxbp.range_(10).pipe(
+rxbp.range(10).pipe(
     rxbp.op.share(lambda f1: f1.pipe(
         rxbp.op.zip(f1.pipe(                    # auto_match is set by default to True
             rxbp.op.map(lambda v: v + 1),
@@ -149,6 +149,7 @@ Implemented builders and operators
 - `now` - creates a Flowable that emits a single element
 - `from_` - create a Flowable that emits each element of an iterable
 - `from_iterator` - see `from_`
+- `range` - creates a Flowable that emits elements defined by the range
 - `from_rx` - creates a Flowable from a rx Observable that buffers each element emitted by the Observable
 
 ### Transforming operators
