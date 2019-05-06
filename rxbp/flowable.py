@@ -1,5 +1,5 @@
 import itertools
-from typing import Callable, Any, Generic, Iterator, Iterable
+from typing import Callable, Any, Generic, Iterator, Iterable, List, Tuple
 
 import rx
 
@@ -7,6 +7,7 @@ from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.pipe import pipe
+from rxbp.selectors.bases import Base, PairwiseBase
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
@@ -179,11 +180,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         class PairwiseFlowable(FlowableBase):
             def __init__(self, source: FlowableBase):
-                # if isinstance(source.base, int):
-                #     base = source.base - 1
-                # else:
-                #     base = None
-                super().__init__(base=None)
+                if isinstance(source.base, Base):
+                    base = PairwiseBase(source.base)
+                else:
+                    base = None
+                super().__init__(base=base)
 
                 self._source = source
 
@@ -221,19 +222,19 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = RepeatFirstFlowable(source=self)
         return Flowable(flowable)
 
-    def cache_serve_first(self, func: Callable[[FlowableBase], FlowableBase]):
+    def share(self, func: Callable[[FlowableBase], FlowableBase]):
         def lifted_func(f: RefCountFlowable):
             return func(Flowable(f))
 
         flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
         return Flowable(flowable)
 
-    def share(self, func: Callable[[FlowableBase], FlowableBase]):
-        def lifted_func(f: RefCountFlowable):
-            return func(Flowable(f))
-
-        flowable = ShareFlowable(source=self, func=lifted_func)
-        return Flowable(flowable)
+    # def share(self, func: Callable[[FlowableBase], FlowableBase]):
+    #     def lifted_func(f: RefCountFlowable):
+    #         return func(Flowable(f))
+    #
+    #     flowable = ShareFlowable(source=self, func=lifted_func)
+    #     return Flowable(flowable)
 
     def to_rx(self) -> rx.Observable:
         """ Converts this observable to an rx.Observable

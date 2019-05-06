@@ -41,7 +41,6 @@ class ControlledZipFlowable(FlowableBase):
         def gen_left_merged_selector():
             for base, indexing in left_selectors.items():
                 yield base, merge_selectors(indexing, observable.left_selector,
-                                            subscribe_scheduler=subscriber.subscribe_scheduler,
                                             scheduler=subscriber.scheduler)
 
         left_selectors = dict(gen_left_merged_selector())
@@ -55,7 +54,6 @@ class ControlledZipFlowable(FlowableBase):
         def gen_right_merged_selector():
             for base, indexing in right_selectors.items():
                 yield base, merge_selectors(indexing, observable.right_selector,
-                                            subscribe_scheduler=subscriber.subscribe_scheduler,
                                             scheduler=subscriber.scheduler)
 
         right_selectors = dict(gen_right_merged_selector())

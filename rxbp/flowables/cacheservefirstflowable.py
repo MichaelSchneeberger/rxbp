@@ -17,7 +17,7 @@ class CacheServeFirstFlowable(FlowableBase):
         self._func = func
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-        base = SharedBase(has_fan_out=False, prev_base=self._source.base)
+        base = SharedBase(has_fan_out=True, prev_base=self._source.base)
 
         def subject_gen(scheduler: Scheduler):
             return CacheServeFirstSubject(scheduler=scheduler)

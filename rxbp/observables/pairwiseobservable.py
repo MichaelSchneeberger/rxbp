@@ -23,19 +23,36 @@ class PairwiseObservable(Observable):
                     last_elem[0] = [peak_first]
                     return continue_ack
 
-                last_elem[0] = itertools.chain([peak_first, peak_second], last_elem[0])
-                iter = last_elem[0]
+                def pairwise_gen():
+                    yield peak_first, peak_second
+                    last_elem[0] = peak_second
+
+                    for elem in temp_iter:
+                        yield last_elem[0], elem
+                        last_elem[0] = elem
+
+
+                # last_elem[0] = itertools.chain([peak_first, peak_second])
+                # iter = last_elem[0]
             else:
-                iter = itertools.chain(last_elem[0], v())
+                # iter = itertools.chain(last_elem[0], v())
 
-            a, b = itertools.tee(iter)
+                # print(last_elem[0])
 
-            def pairwise_gen():
-                next(a, None)
-                for e1, e2 in zip(a, b):
-                    yield e2, e1
+                # a, b = itertools.tee(iter)
 
-            last_elem[0] = b
+                def pairwise_gen():
+
+                    for elem in v():
+                        yield last_elem[0], elem
+                        last_elem[0] = elem
+
+                    # last_elem[0] = next(iter)
+                    # next(a, None)
+                    # for e1, e2 in zip(a, b):
+                    #     yield e2, e1
+
+            # last_elem[0] = b
 
             ack = observer.on_next(pairwise_gen)
             return ack

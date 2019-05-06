@@ -71,7 +71,7 @@ class IteratorAsObservable(Observable):
 
         ack.pipe(rx.operators.observe_on(scheduler)).subscribe(on_next=on_next, on_error=on_error)
 
-    def fast_loop(self, current_item, observer, scheduler: SchedulerBase,
+    def fast_loop(self, current_item, observer, scheduler: Scheduler,
                   disposable: BooleanDisposable, em: ExecutionModel, sync_index: int):
         while True:
             try:

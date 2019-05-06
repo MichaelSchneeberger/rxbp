@@ -116,7 +116,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
 
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
-            base: Base = None):
+            base: Any = None):
     """ Wraps a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
 
     :param source: a rx.observable

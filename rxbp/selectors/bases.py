@@ -27,7 +27,9 @@ class NumericalBase(Base):
         self.num = num
 
     def is_matching(self, other: Base):
-        if isinstance(other, NumericalBase) and self.num == other.num:
+        base = other.get_base_sequence()[0]
+
+        if isinstance(base, NumericalBase) and self.num == base.num:
             return True, False
         else:
             return False, False
@@ -49,7 +51,9 @@ class ObjectRefBase(Base):
         self.obj = obj or self
 
     def is_matching(self, other: Base):
-        if isinstance(other, ObjectRefBase) and self.obj == other.obj:
+        base = other.get_base_sequence()[0]
+
+        if isinstance(base, ObjectRefBase) and self.obj == base.obj:
             return True, False
         else:
             return False, False
@@ -94,7 +98,6 @@ class SharedBase(Base):
                 i2 = iter(seq2)
 
                 last1 = None
-                last2 = None
 
                 while True:
                     try:
@@ -117,7 +120,6 @@ class SharedBase(Base):
                             break
 
                         last1 = e1
-                        last2 = e2
                     elif has_e1:
                         yield last1, [e1] + list(i1) + list(i2)
                     elif has_e1:
@@ -133,3 +135,25 @@ class SharedBase(Base):
             return is_matching, not (fan_out or buffered)
         else:
             return is_matching, False
+
+
+class PairwiseBase(Base):
+    def __init__(self, underlying: Base):
+        self.underlying = underlying
+
+    def is_matching(self, other: Base) -> Tuple[bool, bool]:
+        if isinstance(other, PairwiseBase):
+            return self.underlying.is_matching(other.underlying)
+        else:
+            return False, False
+
+    def get_base_sequence(self) -> List[Base]:
+        return [self]
+
+    @property
+    def buffered(self) -> bool:
+        return False
+
+    @property
+    def fan_out(self) -> bool:
+        return False
