@@ -4,18 +4,15 @@ from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 from rx.disposable import CompositeDisposable
 
 from rxbp.ack import Ack, continue_ack, stop_ack
-from rxbp.selectors.selection import select_next, select_completed
+from rxbp.selectors.selection import select_next, select_completed, SelectCompleted, SelectNext
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.subjects.publishsubject import PublishSubject
 
 
-class ControlledZipObservable(Observable):
+class MergeSelectorObservable(Observable):
     def __init__(self, left: Observable, right: Observable,
-                 request_left: Callable[[Any, Any], bool],
-                 request_right: Callable[[Any, Any], bool],
-                 match_func: Callable[[Any, Any], bool],
                  scheduler: Scheduler):
         """
         :param left:
@@ -27,9 +24,14 @@ class ControlledZipObservable(Observable):
         self.left_observable = left
         self.right_observable = right
 
+        request_left = lambda l, r: isinstance(r, SelectCompleted)
+        request_right = lambda l, r: True
+        match_func = lambda l, r: isinstance(r, SelectNext)
+
         self.request_left = request_left
         self.request_right = request_right
         self.match_func = match_func
+        self.result_selector = lambda t2: t2[0]
 
         self.left_selector = PublishSubject(scheduler=scheduler)
         self.right_selector = PublishSubject(scheduler=scheduler)
@@ -37,7 +39,7 @@ class ControlledZipObservable(Observable):
         self.exception = None
         self.left_completed = False
         self.right_completed = False
-        self.state = ControlledZipObservable.WaitLeftRight()
+        self.state = MergeSelectorObservable.WaitLeftRight()
 
         self.lock = threading.RLock()
 
@@ -104,7 +106,7 @@ class ControlledZipObservable(Observable):
         def start_zipping(left_val: Any,
                           last_left_out_ack: Optional[Ack], left_iter: Iterator[Tuple[Any, PublishSubject]],
                           right_val: Optional[Any], right_iter: Iterator[Any], last_right_out_ack: Optional[Ack],
-                          is_sync: ControlledZipObservable.ConcurrentType) \
+                          is_sync: MergeSelectorObservable.ConcurrentType) \
                 -> Ack:
 
             # buffer representing which right elements are selected, and which are not
@@ -125,18 +127,25 @@ class ControlledZipObservable(Observable):
                     right_index_buffer.append(select_next)
 
                     # add to buffer
-                    zipped_output_buffer.append((left_val, right_val))
+                    zipped_output_buffer.append(left_val)
 
                 left_requested = False
                 if self.request_left(left_val, right_val):
                     # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
 
                     left_index_buffer.append(select_completed)
-                    try:
-                        new_left_val = next(left_iter)
-                        left_requested = True
-                    except StopIteration:
-                        has_left_elem = False
+                    while True:
+                        try:
+                            new_left_val = next(left_iter)
+
+                            if isinstance(new_left_val, SelectCompleted):
+                                zipped_output_buffer.append(new_left_val)
+                            else:
+                                left_requested = True
+                                break
+                        except StopIteration:
+                            has_left_elem = False
+                            break
 
                 if self.request_right(left_val, right_val):
                     # update right index
@@ -179,58 +188,58 @@ class ControlledZipObservable(Observable):
                 right_out_ack = last_right_out_ack or continue_ack
 
             if not has_left_elem and not has_right_elem:
-                next_state = ControlledZipObservable.WaitLeftRight()
+                next_state = MergeSelectorObservable.WaitLeftRight()
                 self.state = next_state
 
                 result_ack_left = zip_out_ack.merge_ack(left_out_ack)
                 result_ack_right = zip_out_ack.merge_ack(right_out_ack)
-                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
+                if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     result_ack_right.connect_ack(is_sync.right_in_ack)
                     return result_ack_left
-                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
+                elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     result_ack_left.connect_ack(is_sync.left_in_ack)
                     return result_ack_right
                 else:
                     raise Exception('illegal state')
 
             elif not has_left_elem:
-                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
+                if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     right_in_ack = is_sync.right_in_ack
-                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
+                elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     right_in_ack = Ack()
                 else:
                     raise Exception('illegal state')
 
-                next_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter, right_in_ack=right_in_ack,
-                                        right_out_ack=right_out_ack)
+                next_state = MergeSelectorObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter, right_in_ack=right_in_ack,
+                                                                right_out_ack=right_out_ack)
                 self.state = next_state
 
                 result_left_ack = zip_out_ack.merge_ack(left_out_ack)
-                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
+                if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     return result_left_ack
-                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
+                elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     result_left_ack.connect_ack(is_sync.left_in_ack)
                     return right_in_ack
                 else:
                     raise Exception('illegal state')
 
             elif not has_right_elem:
-                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
+                if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     left_in_ack = Ack()
-                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
+                elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     left_in_ack = is_sync.left_in_ack
                 else:
                     raise Exception('illegal state')
 
-                next_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter, left_in_ack=left_in_ack,
-                                        left_out_ack=left_out_ack)
+                next_state = MergeSelectorObservable.WaitOnRight(left_val=left_val, left_iter=left_iter, left_in_ack=left_in_ack,
+                                                                 left_out_ack=left_out_ack)
                 self.state = next_state
 
                 result_right_ack = zip_out_ack.merge_ack(right_out_ack)
-                if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
+                if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     result_right_ack.connect_ack(is_sync.right_in_ack)
                     return left_in_ack
-                elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
+                elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     return result_right_ack
                 else:
                     raise Exception('illegal state')
@@ -242,47 +251,85 @@ class ControlledZipObservable(Observable):
             # print('controlled_zip on left')
 
             left_iter = left_elem()
-            left_val = next(left_iter)
+            left_val = [next(left_iter)]
 
-            with self.lock:
-                if isinstance(self.state, ControlledZipObservable.WaitOnLeft):
-                    # iterate over right elements and send them over the publish subject and right observer
-                    pass
+            has_elem = [True]
+            def gen_first_continue():
+                while True:
+                    if isinstance(left_val[0], SelectCompleted):
+                        yield left_val[0]
+                    else:
+                        break
 
-                elif isinstance(self.state, ControlledZipObservable.Completed):
-                    return stop_ack
+                    try:
+                        left_val[0] = next(left_iter)
+                    except StopIteration:
+                        has_elem[0] = False
+                        break
 
-                elif isinstance(self.state, ControlledZipObservable.WaitLeftRight):
-                    # wait until right iterable is received
-                    left_in_ack = Ack()
-                    new_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter,
-                                            left_in_ack=left_in_ack, left_out_ack=None)
-                    self.state = new_state
-                    return left_in_ack
+            continue_sel = list(gen_first_continue())
 
+            def continue_processing():
+                with self.lock:
+                    if isinstance(self.state, MergeSelectorObservable.WaitOnLeft):
+                        # iterate over right elements and send them over the publish subject and right observer
+                        pass
+
+                    elif isinstance(self.state, MergeSelectorObservable.Completed):
+                        return stop_ack
+
+                    elif isinstance(self.state, MergeSelectorObservable.WaitLeftRight):
+                        # wait until right iterable is received
+                        left_in_ack = Ack()
+                        new_state = MergeSelectorObservable.WaitOnRight(left_val=left_val[0], left_iter=left_iter,
+                                                                        left_in_ack=left_in_ack, left_out_ack=None)
+                        self.state = new_state
+                        return left_in_ack
+
+                    else:
+                        raise Exception('illegal state {}'.format(self.state))
+
+                    # save current state to local variable
+                    current_state: MergeSelectorObservable.WaitOnLeft = self.state
+
+                    # change state
+                    self.state = MergeSelectorObservable.Transition()
+
+                right_val = current_state.right_val
+                right_iter = current_state.right_iter
+                right_in_ack = current_state.right_in_ack
+                right_out_ack = current_state.right_out_ack
+
+                is_sync = MergeSelectorObservable.SynchronousLeft(right_in_ack=right_in_ack)
+
+                left_ack = start_zipping(
+                    left_val=left_val[0],
+                    left_iter=left_iter, last_left_out_ack=None,
+                    right_val=right_val, right_iter=right_iter,
+                    is_sync=is_sync, last_right_out_ack=right_out_ack)
+
+                return left_ack
+
+            if continue_sel:
+                def gen():
+                    yield from continue_sel
+
+                ack = observer.on_next(gen)
+
+                if has_elem[0]:
+                    return_ack = Ack()
+
+                    def _(v):
+                        new_ack = continue_processing()
+                        new_ack.connect_ack(return_ack)
+
+                    ack.subscribe(_)
+                    return return_ack
                 else:
-                    raise Exception('illegal state {}'.format(self.state))
+                    return ack
 
-                # save current state to local variable
-                current_state: ControlledZipObservable.WaitOnLeft = self.state
-
-                # change state
-                self.state = ControlledZipObservable.Transition()
-
-            right_val = current_state.right_val
-            right_iter = current_state.right_iter
-            right_in_ack = current_state.right_in_ack
-            right_out_ack = current_state.right_out_ack
-
-            is_sync = ControlledZipObservable.SynchronousLeft(right_in_ack=right_in_ack)
-
-            left_ack = start_zipping(
-                left_val=left_val,
-                left_iter=left_iter, last_left_out_ack=None,
-                right_val=right_val, right_iter=right_iter,
-                is_sync=is_sync, last_right_out_ack=right_out_ack)
-
-            return left_ack
+            else:
+                return continue_processing()
 
         def on_next_right(right_elem: Callable[[], Generator]):
             # print('controlled_zip on right')
@@ -292,21 +339,21 @@ class ControlledZipObservable(Observable):
             right_val = next(right_iter)
 
             with self.lock:
-                if isinstance(self.state, ControlledZipObservable.WaitOnRight):
+                if isinstance(self.state, MergeSelectorObservable.WaitOnRight):
                     pass
-                elif isinstance(self.state, ControlledZipObservable.Completed):
+                elif isinstance(self.state, MergeSelectorObservable.Completed):
                     return stop_ack
-                elif isinstance(self.state, ControlledZipObservable.WaitLeftRight):
+                elif isinstance(self.state, MergeSelectorObservable.WaitLeftRight):
                     right_ack = Ack()
-                    new_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter,
-                                           right_in_ack=right_ack, right_out_ack=None)
+                    new_state = MergeSelectorObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter,
+                                                                   right_in_ack=right_ack, right_out_ack=None)
                     self.state = new_state
                     return right_ack
                 else:
                     raise Exception('illegal state {}'.format(self.state))
 
-                current_state: ControlledZipObservable.WaitOnRight = self.state
-                self.state = ControlledZipObservable.Transition()
+                current_state: MergeSelectorObservable.WaitOnRight = self.state
+                self.state = MergeSelectorObservable.Transition()
 
             left_val = current_state.left_val
             left_iter = current_state.left_iter
@@ -317,7 +364,7 @@ class ControlledZipObservable(Observable):
                 left_val=left_val, left_iter=left_iter,
                 last_left_out_ack=left_out_ack,
                 right_val=right_val, right_iter=right_iter, last_right_out_ack=None,
-                is_sync=ControlledZipObservable.SynchronousRight(left_in_ack=left_in_ack))
+                is_sync=MergeSelectorObservable.SynchronousRight(left_in_ack=left_in_ack))
 
             return right_ack
 
@@ -329,11 +376,11 @@ class ControlledZipObservable(Observable):
             with self.lock:
                 if self.exception is not None:
                     return
-                elif isinstance(self.state, ControlledZipObservable.Transition):
+                elif isinstance(self.state, MergeSelectorObservable.Transition):
                     pass
                 else:
                     forward_error = True
-                    self.state = ControlledZipObservable.Completed()
+                    self.state = MergeSelectorObservable.Completed()
 
                 self.exception = exc
 
@@ -355,9 +402,9 @@ class ControlledZipObservable(Observable):
                 with source.lock:
                     if source.left_completed:
                         return
-                    elif isinstance(source.state, ControlledZipObservable.WaitLeftRight) or isinstance(source.state, ControlledZipObservable.WaitOnLeft):
+                    elif isinstance(source.state, MergeSelectorObservable.WaitLeftRight) or isinstance(source.state, MergeSelectorObservable.WaitOnLeft):
                         complete = True
-                        source.state = ControlledZipObservable.Completed()
+                        source.state = MergeSelectorObservable.Completed()
                     else:
                         pass
 
@@ -382,9 +429,9 @@ class ControlledZipObservable(Observable):
                 with source.lock:
                     if source.right_completed:
                         return
-                    elif isinstance(source.state, ControlledZipObservable.WaitLeftRight) or isinstance(source.state, ControlledZipObservable.WaitOnRight):
+                    elif isinstance(source.state, MergeSelectorObservable.WaitLeftRight) or isinstance(source.state, MergeSelectorObservable.WaitOnRight):
                         complete = True
-                        source.state = ControlledZipObservable.Completed()
+                        source.state = MergeSelectorObservable.Completed()
                     else:
                         pass
 

@@ -1,5 +1,6 @@
+import functools
 import itertools
-from typing import Iterator, Iterable, Any
+from typing import Iterator, Iterable, Any, Callable
 
 import rx
 from rx import operators
@@ -183,6 +184,22 @@ def now(elem: Any):
 
 # just = now
 # return_value = now
+
+def share(sources: Iterable[Flowable], func: Callable[..., Flowable]):
+    def gen_stack():
+        for source in sources:
+            def _(func: Callable[..., Flowable], source=source):
+                def __(*args):
+                    def ___(f: Flowable):
+                        new_args = args + (f,)
+                        return func(*new_args)
+
+                    return source.share(___)
+                return __
+            yield _
+
+    __ = functools.reduce(lambda acc, _: _(acc), gen_stack(), func)
+    return __()
 
 
 def zip(left: Flowable, right: Flowable):

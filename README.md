@@ -70,34 +70,6 @@ The Flowable is a data type for modeling and processing asynchronous and reactiv
 streaming of events with non-blocking back-pressure. It is the equivalent of the 
 RxPY Observable.
 
-### zip operator
-
-The `zip` operator has an optional `auto_match` argument, which if set to `True`
-will match two Flowables, where one originally has the same number of elements of the other.
-This feature has been introduced to avoid the general problem of interlocked Flowables.
-It is automatically set to `True` in situations where the Flowable would otherwise stop flowing.
-
-```python
-import rxbp
-from rxbp import op
-
-rxbp.range(10).pipe(
-    rxbp.op.map(lambda v: v+1),
-    rxbp.op.filter(lambda v: v%2==0),
-    rxbp.op.zip(rxbp.range(10), auto_match=True)
-).subscribe(print)
-```
-
-The previous code outputs:
-
-```
-(2, 1)
-(4, 3)
-(6, 5)
-(8, 7)
-(10, 9)
-```
-
 ### share operator
 
 The `share` method does not return a multicast object directly. Instead, it takes a function 

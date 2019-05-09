@@ -2,10 +2,22 @@ from abc import ABC, abstractmethod
 from typing import Any, Tuple, List
 
 
-class Base(ABC):
+class SourceMixin(ABC):
     @abstractmethod
-    def is_matching(self, other: 'Base') -> Tuple[bool, bool]:
+    def equals(self, other: 'Base') -> bool:
         ...
+
+
+class Base(ABC):
+    # @abstractmethod
+    def is_matching(self, other: 'Base') -> bool:
+        source1 = self.get_base_sequence()[0]
+        source2 = other.get_base_sequence()[0]
+
+        assert isinstance(source1, SourceMixin) and isinstance(source2, SourceMixin), \
+            'first element in base sequence must be a Source'
+
+        return source1.equals(source2)
 
     @abstractmethod
     def get_base_sequence(self) -> List['Base']:
@@ -21,18 +33,24 @@ class Base(ABC):
     def fan_out(self) -> bool:
         ...
 
+    @abstractmethod
+    def _sel_auto_match(self, other: 'Base') -> bool:
+        ...
 
-class NumericalBase(Base):
+    @abstractmethod
+    def sel_auto_match(self, other: 'Base') -> bool:
+        ...
+
+
+class NumericalBase(SourceMixin, Base):
     def __init__(self, num: int):
         self.num = num
 
-    def is_matching(self, other: Base):
-        base = other.get_base_sequence()[0]
-
-        if isinstance(base, NumericalBase) and self.num == base.num:
-            return True, False
+    def equals(self, other: Base):
+        if isinstance(other, NumericalBase) and self.num == other.num:
+            return True
         else:
-            return False, False
+            return False
 
     def get_base_sequence(self) -> List['Base']:
         return [self]
@@ -45,18 +63,22 @@ class NumericalBase(Base):
     def fan_out(self) -> bool:
         return False
 
+    def _sel_auto_match(self, other: 'Base') -> bool:
+        return False
 
-class ObjectRefBase(Base):
+    def sel_auto_match(self, other: 'Base') -> bool:
+        return other._sel_auto_match(other=self)
+
+
+class ObjectRefBase(SourceMixin, Base):
     def __init__(self, obj: Any = None):
         self.obj = obj or self
 
-    def is_matching(self, other: Base):
-        base = other.get_base_sequence()[0]
-
-        if isinstance(base, ObjectRefBase) and self.obj == base.obj:
-            return True, False
+    def equals(self, other: Base):
+        if isinstance(other, ObjectRefBase) and self.obj == other.obj:
+            return True
         else:
-            return False, False
+            return False
 
     def get_base_sequence(self) -> List['Base']:
         return [self]
@@ -68,6 +90,12 @@ class ObjectRefBase(Base):
     @property
     def fan_out(self) -> bool:
         return False
+
+    def _sel_auto_match(self, other: 'Base') -> bool:
+        return False
+
+    def sel_auto_match(self, other: 'Base') -> bool:
+        return other._sel_auto_match(other=self)
 
 
 class SharedBase(Base):
@@ -86,13 +114,11 @@ class SharedBase(Base):
     def fan_out(self) -> bool:
         return not self.has_fan_out
 
-    def is_matching(self, other: Base):
+    def _sel_auto_match(self, other: 'Base') -> bool:
         seq1 = self.get_base_sequence()
         seq2 = other.get_base_sequence()
 
-        is_matching, _ = seq1[0].is_matching(seq2[0])
-
-        if is_matching and 1 < len(seq1) and 1 < len(seq2):
+        if 1 < len(seq2):
             def gen_rest():
                 i1 = iter(seq1)
                 i2 = iter(seq2)
@@ -115,6 +141,8 @@ class SharedBase(Base):
                         has_e2 = False
 
                     if has_e1 and has_e2:
+
+                        # split point found
                         if e1 != e2:
                             yield last1, [e1] + list(i1) + [e2] + list(i2)
                             break
@@ -127,25 +155,37 @@ class SharedBase(Base):
                     else:
                         yield last1, list(i1) + list(i2)
 
-            rest1, rest2 = next(gen_rest())
+            split_point, rest = next(gen_rest())
 
-            fan_out = rest1.fan_out
-            buffered = any(e.buffered for e in rest2)
+            # is the split point a base allowing "fan out"
+            fan_out = split_point.fan_out
 
-            return is_matching, not (fan_out or buffered)
+            # in case of "fan out" or buffered node, do not select auto_match
+            buffered = any(e.buffered for e in rest)
+
+            return not (fan_out or buffered)
         else:
-            return is_matching, False
+            return True
+
+    def sel_auto_match(self, other: 'Base') -> bool:
+        return self._sel_auto_match(other=other)
 
 
-class PairwiseBase(Base):
+class PairwiseBase(Base, SourceMixin):
     def __init__(self, underlying: Base):
         self.underlying = underlying
 
-    def is_matching(self, other: Base) -> Tuple[bool, bool]:
+    def equals(self, other: Base):
         if isinstance(other, PairwiseBase):
-            return self.underlying.is_matching(other.underlying)
+            self_source = self.underlying.get_base_sequence()[0]
+            other_source = other.underlying.get_base_sequence()[0]
+
+            assert isinstance(self_source, SourceMixin) and isinstance(other_source, SourceMixin), \
+                'first element in base sequence must be a Source'
+
+            return self_source.equals(other_source)
         else:
-            return False, False
+            return False
 
     def get_base_sequence(self) -> List[Base]:
         return [self]
@@ -157,3 +197,9 @@ class PairwiseBase(Base):
     @property
     def fan_out(self) -> bool:
         return False
+
+    def _sel_auto_match(self, other: 'Base') -> bool:
+        return False
+
+    def sel_auto_match(self, other: 'Base') -> bool:
+        return other._sel_auto_match(other=self)

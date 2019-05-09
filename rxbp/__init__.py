@@ -1,5 +1,5 @@
 from . import op
-from .sources import from_iterable, from_range, now, from_rx, concat
+from .sources import from_iterable, from_range, now, from_rx, concat, share
 
 
 from_ = from_iterable

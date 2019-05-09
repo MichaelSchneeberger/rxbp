@@ -63,4 +63,7 @@ class ControlledZipFlowable(FlowableBase):
         else:
             right_selectors_ = right_selectors
 
+        # print('left_selectors_', left_selectors_)
+        # print('right_selectors_', right_selectors_)
+
         return observable, {**left_selectors_, **right_selectors_}
