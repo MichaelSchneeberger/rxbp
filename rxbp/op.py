@@ -200,7 +200,7 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, auto_ma
     """
 
     def func(left: Flowable) -> FlowableBase:
-        return left.zip(right=right, selector=selector, auto_match=auto_match)
+        return left.zip(right=right, result_selector=selector, auto_match=auto_match)
     return FlowableOperator(func)
 
 

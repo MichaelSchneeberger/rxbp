@@ -245,14 +245,24 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return to_rx(source=self)
 
-    def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None, auto_match: bool = None):
+    def match(self, right: FlowableBase, result_selector: Callable[[Any, Any], Any] = None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
-        :param selector: a mapping function applied over the generated pairs
+        :param result_selector: a mapping function applied over the generated pairs
         :return: zipped observable
         """
 
-        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=auto_match)
+        flowable =  ZipFlowable(left=self, right=right, selector=result_selector, auto_match=True)
+        return Flowable(flowable)
+
+    def zip(self, right: FlowableBase, result_selector: Callable[[Any, Any], Any] = None):
+        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+
+        :param result_selector: a mapping function applied over the generated pairs
+        :return: zipped observable
+        """
+
+        flowable =  ZipFlowable(left=self, right=right, selector=result_selector, auto_match=False)
         return Flowable(flowable)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):

@@ -229,7 +229,7 @@ class Zip2Observable(Observable):
             zipped_elements = list(zip_gen())
 
             # get rest of generator, one should be empty
-            rest_left = list(gen1) if n1[0] is None else list(gen1) + n1
+            rest_left = list(gen1) if n1[0] is None else n1 + list(gen1)
             rest_right = list(gen2)
 
             def result_gen():

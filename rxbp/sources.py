@@ -1,6 +1,6 @@
 import functools
 import itertools
-from typing import Iterator, Iterable, Any, Callable, List
+from typing import Iterator, Iterable, Any, Callable, List, Tuple
 
 import rx
 from rx import operators
@@ -155,11 +155,6 @@ def return_value(elem: Any):
     :return: single item observable
     """
 
-
-    # def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-    #     observable = NowObservable(elem=elem, subscribe_scheduler=subscriber.subscribe_scheduler)
-    #     return observable, {}
-
     return _from_iterable([elem], n_elements=1)
 
 
@@ -180,11 +175,57 @@ def share(sources: List[Flowable], func: Callable[..., Flowable]):
     return __()
 
 
-def zip(left: Flowable, right: Flowable):
+def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None):
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
     :return: zipped observable
     """
 
-    return left.zip(right=right)
+    def gen_stack():
+        for source in reversed(sources):
+            def _(right: Flowable = None, left: Flowable = source):
+                if right is None:
+                    return left.map(lambda v: (v,))
+                else:
+                    def inner_result_selector(v1: Any, v2: Tuple[Any]):
+                        return (v1,) + v2
+
+                    return left.zip(right, result_selector=inner_result_selector)
+
+            yield _
+
+    obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+
+    if result_selector is None:
+        return obs
+    else:
+        return obs.map(lambda t: result_selector(*t))
+
+
+def match(sources: List[Flowable], result_selector: Callable[..., Any] = None):
+    """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+
+    :param selector: a mapping function applied over the generated pairs
+    :return: zipped observable
+    """
+
+    def gen_stack():
+        for source in reversed(sources):
+            def _(right: Flowable = None, left: Flowable = source):
+                if right is None:
+                    return left.map(lambda v: (v,))
+                else:
+                    def inner_result_selector(v1: Any, v2: Tuple[Any]):
+                        return (v1,) + v2
+
+                    return left.match(right, result_selector=inner_result_selector)
+
+            yield _
+
+    obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+
+    if result_selector is None:
+        return obs
+    else:
+        return obs.map(lambda t: result_selector(*t))
