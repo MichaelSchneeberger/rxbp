@@ -192,7 +192,7 @@ def share(func: Callable[[FlowableBase], FlowableBase]):
     return FlowableOperator(inner_func)
 
 
-def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, auto_match: bool = None):
+def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
@@ -200,7 +200,19 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None, auto_ma
     """
 
     def func(left: Flowable) -> FlowableBase:
-        return left.zip(right=right, result_selector=selector, auto_match=auto_match)
+        return left.zip(right=right, result_selector=selector)
+    return FlowableOperator(func)
+
+
+def match(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+
+    :param selector: a mapping function applied over the generated pairs
+    :return: zipped observable
+    """
+
+    def func(left: Flowable) -> FlowableBase:
+        return left.match(right=right, result_selector=selector)
     return FlowableOperator(func)
 
 

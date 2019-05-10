@@ -81,7 +81,7 @@ from rxbp import op
 
 rxbp.range(10).pipe(
     rxbp.op.share(lambda f1: f1.pipe(
-        rxbp.op.zip(f1.pipe(                    # auto_match is set by default to True
+        rxbp.op.zip(f1.pipe(
             rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),
         )
@@ -91,11 +91,11 @@ rxbp.range(10).pipe(
 The previous code outputs:
 
 ```
-(1, 2)
-(3, 4)
-(5, 6)
-(7, 8)
-(9, 10)
+(0, 2)
+(1, 4)
+(2, 6)
+(3, 8)
+(4, 10)
 ```
 
 When to use an Flowable, when RxPY Observable?
