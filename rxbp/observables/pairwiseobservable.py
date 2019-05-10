@@ -1,6 +1,6 @@
 import itertools
 
-from rxbp.ack import continue_ack
+from rxbp.ack import continue_ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 
@@ -14,45 +14,39 @@ class PairwiseObservable(Observable):
         last_elem = [None]
 
         def on_next(v):
+
+            def pairwise_gen_template(iterator):
+                for elem in iterator:
+                    yield last_elem[0], elem
+                    last_elem[0] = elem
+
+            # is first element
             if last_elem[0] is None:
-                temp_iter = v()
-                peak_first = next(temp_iter)
+
+                # catches exceptions raised when consuming next element from iterator
                 try:
-                    peak_second = next(temp_iter)
-                except StopIteration:
-                    last_elem[0] = [peak_first]
-                    return continue_ack
+                    temp_iter = v()
+
+                    peak_first = next(temp_iter)
+
+                    try:
+                        peak_second = next(temp_iter)
+                    except StopIteration:
+                        last_elem[0] = peak_first
+                        return continue_ack
+
+                except Exception as exc:
+                    observer.on_error(exc)
+                    return stop_ack
 
                 def pairwise_gen():
                     yield peak_first, peak_second
                     last_elem[0] = peak_second
+                    yield from pairwise_gen_template(temp_iter)
 
-                    for elem in temp_iter:
-                        yield last_elem[0], elem
-                        last_elem[0] = elem
-
-
-                # last_elem[0] = itertools.chain([peak_first, peak_second])
-                # iter = last_elem[0]
             else:
-                # iter = itertools.chain(last_elem[0], v())
-
-                # print(last_elem[0])
-
-                # a, b = itertools.tee(iter)
-
                 def pairwise_gen():
-
-                    for elem in v():
-                        yield last_elem[0], elem
-                        last_elem[0] = elem
-
-                    # last_elem[0] = next(iter)
-                    # next(a, None)
-                    # for e1, e2 in zip(a, b):
-                    #     yield e2, e1
-
-            # last_elem[0] = b
+                    yield from pairwise_gen_template(v())
 
             ack = observer.on_next(pairwise_gen)
             return ack

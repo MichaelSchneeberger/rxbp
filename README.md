@@ -118,7 +118,7 @@ Implemented builders and operators
 
 ### Create a Flowable
 
-- `now` - creates a Flowable that emits a single element
+- `return_value` - creates a Flowable that emits a single element
 - `from_` - create a Flowable that emits each element of an iterable
 - `from_iterator` - see `from_`
 - `range` - creates a Flowable that emits elements defined by the range

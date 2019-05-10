@@ -1,7 +1,8 @@
+import traceback
 from abc import ABC, abstractmethod
 from typing import Callable, Any, Set, Dict, Tuple, Optional, Generic
 
-from rxbp.ack import continue_ack, Ack
+from rxbp.ack import continue_ack, Ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
@@ -47,16 +48,23 @@ class FlowableBase(Generic[ValueType], ABC):
 
         subscriber = AnonymousSubscriber(scheduler=scheduler_, subscribe_scheduler=subscribe_scheduler_)
 
-        def on_next_with_ack(v):
-            for value in v():
-                on_next(value)
-            return continue_ack
+        def default_on_error(exc: Exception):
+            traceback.print_exception(type(exc), exc, exc.__traceback__)
 
-        on_next_ = (lambda v: continue_ack) if on_next is None else on_next_with_ack
-        on_error_ = on_error or (lambda err: None)
+        on_next_ = (lambda v: None) if on_next is None else on_next
+        on_error_ = default_on_error if on_error is None else on_error
         on_completed_ = on_completed or (lambda: None)
 
-        observer = AnonymousObserver(on_next_func=on_next_, on_error_func=on_error_, on_completed_func=on_completed_)
+        def on_next_with_ack(v):
+            try:
+                for value in v():
+                    on_next_(value)
+                return continue_ack
+            except Exception as exc:
+                on_error_(exc)
+                return stop_ack
+
+        observer = AnonymousObserver(on_next_func=on_next_with_ack, on_error_func=on_error_, on_completed_func=on_completed_)
 
         disposable = self.subscribe_(subscriber=subscriber, observer=observer)
         return disposable

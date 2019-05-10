@@ -14,6 +14,8 @@ class MapObservable(Observable):
 
     def observe(self, observer: Observer):
         def on_next(v):
+
+            # `map` does not consume elements from buffer, it is not its responsibility to try catch an exception
             def map_gen():
                 for e in v():
                     yield self.selector(e)

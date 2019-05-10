@@ -1,3 +1,4 @@
+from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.selectors.mergeselectorobservable import MergeSelectorObservable
 from rxbp.selectors.selection import SelectCompleted, SelectNext
 from rxbp.observable import Observable
@@ -15,10 +16,6 @@ def merge_selectors(left: Observable, right: Observable, scheduler: Scheduler):
     obs = MergeSelectorObservable(DebugObservable(left),
                                   DebugObservable(right),
                                   scheduler=scheduler)
-    # result = DebugObservable(MapObservable(obs, lambda t2: t2[0]))
-    #
-    # o1 = DebugObservable(FilterObservable(left, lambda v: isinstance(v, SelectCompleted), scheduler=scheduler))
-    # o2 = DebugObservable(MergeObservable(o1, result))
     o3 = RefCountObservable(source=obs, subject=PublishSubject(scheduler=scheduler))
 
     return o3

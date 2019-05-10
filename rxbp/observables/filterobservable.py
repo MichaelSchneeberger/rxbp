@@ -1,7 +1,7 @@
 import functools
 from typing import Callable, Any
 
-from rxbp.ack import Ack
+from rxbp.ack import Ack, stop_ack
 from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -28,7 +28,13 @@ class FilterObservable(Observable):
                     else:
                         yield False, e
 
-            filtered_values = list(gen_filtered_iterable())
+            try:
+                # buffer elemenets
+                filtered_values = list(gen_filtered_iterable())
+            except Exception as exc:
+                observer.on_error(exc)
+                return stop_ack
+
             should_run = functools.reduce(lambda acc, v: acc or v[0], filtered_values, False)
 
             def gen_selector():

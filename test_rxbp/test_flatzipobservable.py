@@ -3,7 +3,7 @@ import unittest
 from rx.disposable import Disposable
 
 from rxbp.ack import Continue, Ack
-from rxbp.observables.flatzipobservable import FlatZipObservable
+from backup.flatzipobservable import FlatZipObservable
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase

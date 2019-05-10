@@ -237,29 +237,18 @@ class Zip2Observable(Observable):
                     yield e
 
             upper_ack = observer.on_next(result_gen)
-            # upper_ack = Ack()
-            # upper_ack2.observe_on(scheduler).subscribe(upper_ack2)
 
             do_back_pressure_left = True
             do_back_pressure_right = True
 
-            # print('rest left {}'.format(rest_left))
-            # print('rest right {}'.format(rest_right))
-
             if rest_left:
                 do_back_pressure_left = False
             elif rest_right:
-                # print(rest_right)
                 do_back_pressure_right = False
             else:
                 pass
 
-            # print('is_left ', is_left)
-            # print('do_back_pressure_right ', do_back_pressure_right)
-            # print('do_back_pressure_left ', do_back_pressure_left)
-
             if do_back_pressure_left and do_back_pressure_right:
-                # upper_ack.connect_ack(other_in_ack)
                 next_state = WaitOnLeftRight(rest_left, rest_right)
                 in_ack = upper_ack
             elif do_back_pressure_right:
@@ -267,7 +256,6 @@ class Zip2Observable(Observable):
                 if is_left:
                     left_ack = Ack()
                     in_ack = left_ack
-                    # upper_ack.connect_ack(other_in_ack)
                 else:
                     left_ack = other_in_ack
                     in_ack = upper_ack
@@ -279,7 +267,6 @@ class Zip2Observable(Observable):
                     right_ack = other_in_ack
                     in_ack = upper_ack
                 else:
-                    # upper_ack.connect_ack(other_in_ack)
                     right_ack = in_ack
                 next_state = WaitOnLeft(left_buffer=rest_left, right_buffer=rest_right,
                                                       right_ack=right_ack, right_elem=None)
@@ -327,16 +314,18 @@ class Zip2Observable(Observable):
             # print('zip on_next_left')
             try:
                 return_ack = zip_elements(elem=elem, is_left=True)
-                # return_ack.subscribe(print)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            except Exception as exc:
+                observer.on_error(exc)
+                return stop_ack
             return return_ack
 
         def on_next_right(elem):
             # print('zip on_next_right')
-            return_ack = zip_elements(elem=elem, is_left=False)
+            try:
+                return_ack = zip_elements(elem=elem, is_left=False)
+            except Exception as exc:
+                observer.on_error(exc)
+                return stop_ack
             return return_ack
 
         def signal_on_complete_or_on_error(raw_state, ex=None):

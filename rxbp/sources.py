@@ -1,6 +1,6 @@
 import functools
 import itertools
-from typing import Iterator, Iterable, Any, Callable
+from typing import Iterator, Iterable, Any, Callable, List
 
 import rx
 from rx import operators
@@ -92,28 +92,9 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
 
     return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
 
-# def from_list(buffer: List, batch_size: int = 1):
-#
-#     def chunks():
-#         """Yield successive n-sized chunks from l."""
-#         for i in range(0, len(buffer), batch_size):
-#             def chunk_gen(i=i):
-#                 for e in buffer[i:i + batch_size]:
-#                     yield e
-#
-#             yield chunk_gen
-#
-#     class ToIterableObservable(ObservableBase):
-#         def __init__(self):
-#             super().__init__(base=len(buffer), transformations=None)
-#
-#         def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-#             iterator = iter(chunks())
-#             from_iterator_obs = IteratorAsObservable(iterator=iterator)
-#             disposable = from_iterator_obs.unsafe_subscribe(observer, scheduler, subscribe_scheduler)
-#             return disposable
-#
-#     return Observable(ToIterableObservable())
+
+def from_list(buffer: List, batch_size: int = None):
+    return _from_iterable(iterable=buffer, batch_size=batch_size, n_elements=len(buffer))
 
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
@@ -167,7 +148,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
     return AnonymousFlowable(unsafe_subscribe_func, base=base_)
 
 
-def now(elem: Any):
+def return_value(elem: Any):
     """ Converts an element into an observable
 
     :param elem: the single item sent by the observable
@@ -182,12 +163,9 @@ def now(elem: Any):
     return _from_iterable([elem], n_elements=1)
 
 
-# just = now
-# return_value = now
-
-def share(sources: Iterable[Flowable], func: Callable[..., Flowable]):
+def share(sources: List[Flowable], func: Callable[..., Flowable]):
     def gen_stack():
-        for source in sources:
+        for source in reversed(sources):
             def _(func: Callable[..., Flowable], source=source):
                 def __(*args):
                     def ___(f: Flowable):

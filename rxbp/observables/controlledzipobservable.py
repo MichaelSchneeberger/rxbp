@@ -127,18 +127,18 @@ class ControlledZipObservable(Observable):
                     # add to buffer
                     zipped_output_buffer.append((left_val, right_val))
 
-                left_requested = False
+                old_left_val = left_val
+
                 if self.request_left(left_val, right_val):
                     # print('left is lower, right_val_buffer = {}'.format(right_val_buffer[0]))
 
                     left_index_buffer.append(select_completed)
                     try:
-                        new_left_val = next(left_iter)
-                        left_requested = True
+                        left_val = next(left_iter)
                     except StopIteration:
                         has_left_elem = False
 
-                if self.request_right(left_val, right_val):
+                if self.request_right(old_left_val, right_val):
                     # update right index
                     right_index_buffer.append(select_completed)
 
@@ -150,9 +150,6 @@ class ControlledZipObservable(Observable):
 
                 if not has_left_elem:
                     break
-
-                if left_requested:
-                    left_val = new_left_val
 
             if zipped_output_buffer:
                 def gen():
