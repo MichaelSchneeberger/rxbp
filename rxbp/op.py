@@ -152,9 +152,9 @@ def observe_on(scheduler: Scheduler):
 
 
 def repeat_first():
-    """ Repeat the first item forever
+    """ Returns a flowable that repeats the first item it receives forever.
 
-    :return:
+    :return: a flowable
     """
 
     def func(source: Flowable) -> FlowableBase:
@@ -179,12 +179,28 @@ def repeat_first():
 #     return ObservableOperator(func)
 
 
-def share(func: Callable[[FlowableBase], FlowableBase]):
-    """ Converts this observable into a multicast observable that backpressures only after each subscribed
-    observer backpressures. Note that this observable is subscribed when the multicast observable is subscribed for
-    the first time. Therefore, this observable is never subscribed more than once.
+def scan(func: Callable[[Any, Any], Any], initial: Any):
+    """ Applies an accumulator function over a flowable sequence and
+    returns each intermediate result. The initial value is used
+    as the initial accumulator value.
 
-    :return: multicast observable
+    :param func: An accumulator function to be invoked on each element
+    :param initial: The initial accumulator value
+    :return: a flowable that emits the accumulated values
+    """
+
+    def inner_func(source: Flowable) -> FlowableBase:
+        return source.scan(func=func, initial=initial)
+    return FlowableOperator(inner_func)
+
+
+def share(func: Callable[[FlowableBase], FlowableBase]):
+    """ Share takes a function and exposes a multi-cast flowable via the function's arguments. The multi-cast
+    flowable back-pressures, when the first subscriber back-pressures. In case of more than one subscribers,
+    the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures
+    the element.
+
+    :return: flowable returned by the share function
     """
 
     def inner_func(source: Flowable) -> FlowableBase:
@@ -200,7 +216,7 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
     """
 
     def func(left: Flowable) -> FlowableBase:
-        return left.zip(right=right, result_selector=selector)
+        return left.zip(right=right, selector=selector)
     return FlowableOperator(func)
 
 
@@ -212,7 +228,7 @@ def match(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
     """
 
     def func(left: Flowable) -> FlowableBase:
-        return left.match(right=right, result_selector=selector)
+        return left.match(right=right, selector=selector)
     return FlowableOperator(func)
 
 

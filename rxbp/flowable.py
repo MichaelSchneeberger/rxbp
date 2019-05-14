@@ -6,6 +6,7 @@ import rx
 from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.observables.mergeobservable import MergeObservable
+from rxbp.observables.scanobservable import ScanObservable
 from rxbp.pipe import pipe
 from rxbp.selectors.bases import Base, PairwiseBase
 from rxbp.toiterator import to_iterator
@@ -222,6 +223,21 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = RepeatFirstFlowable(source=self)
         return Flowable(flowable)
 
+    def scan(self, func: Callable[[Any, Any], Any], initial: Any):
+        source = self
+
+        class ScanFlowable(FlowableBase):
+            def __init__(self):
+                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
+
+            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+                source_observable, source_selectors = source.unsafe_subscribe(subscriber=subscriber)
+                obs = ScanObservable(source=source_observable, func=func, initial=initial)
+                return obs, source_selectors
+
+        flowable = ScanFlowable()
+        return Flowable(flowable)
+
     def share(self, func: Callable[[FlowableBase], FlowableBase]):
         def lifted_func(f: RefCountFlowable):
             return func(Flowable(f))
@@ -245,24 +261,24 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return to_rx(source=self)
 
-    def match(self, right: FlowableBase, result_selector: Callable[[Any, Any], Any] = None):
+    def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
-        :param result_selector: a mapping function applied over the generated pairs
+        :param selector: a mapping function applied over the generated pairs
         :return: zipped observable
         """
 
-        flowable =  ZipFlowable(left=self, right=right, selector=result_selector, auto_match=True)
+        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=True)
         return Flowable(flowable)
 
-    def zip(self, right: FlowableBase, result_selector: Callable[[Any, Any], Any] = None):
+    def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
-        :param result_selector: a mapping function applied over the generated pairs
+        :param selector: a mapping function applied over the generated pairs
         :return: zipped observable
         """
 
-        flowable =  ZipFlowable(left=self, right=right, selector=result_selector, auto_match=False)
+        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=False)
         return Flowable(flowable)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):

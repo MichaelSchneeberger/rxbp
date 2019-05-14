@@ -191,7 +191,7 @@ def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None):
                     def inner_result_selector(v1: Any, v2: Tuple[Any]):
                         return (v1,) + v2
 
-                    return left.zip(right, result_selector=inner_result_selector)
+                    return left.zip(right, selector=inner_result_selector)
 
             yield _
 
@@ -203,6 +203,33 @@ def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None):
         return obs.map(lambda t: result_selector(*t))
 
 
+# def match(sources: List[Flowable], result_selector: Callable[..., Any] = None):
+#     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+#
+#     :param selector: a mapping function applied over the generated pairs
+#     :return: zipped observable
+#     """
+#
+#     def gen_stack():
+#         for source in reversed(sources):
+#             def _(right: Flowable = None, left: Flowable = source):
+#                 if right is None:
+#                     return left.map(lambda v: (v,))
+#                 else:
+#                     def inner_result_selector(v1: Any, v2: Tuple[Any]):
+#                         return (v1,) + v2
+#
+#                     return left.match(right, selector=inner_result_selector)
+#
+#             yield _
+#
+#     obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+#
+#     if result_selector is None:
+#         return obs
+#     else:
+#         return obs.map(lambda t: result_selector(*t))
+
 def match(sources: List[Flowable], result_selector: Callable[..., Any] = None):
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
@@ -211,15 +238,15 @@ def match(sources: List[Flowable], result_selector: Callable[..., Any] = None):
     """
 
     def gen_stack():
-        for source in reversed(sources):
-            def _(right: Flowable = None, left: Flowable = source):
-                if right is None:
-                    return left.map(lambda v: (v,))
+        for source in sources:
+            def _(left: Flowable = None, right: Flowable = source):
+                if left is None:
+                    return right.map(lambda v: (v,))
                 else:
-                    def inner_result_selector(v1: Any, v2: Tuple[Any]):
-                        return (v1,) + v2
+                    def inner_result_selector(v1, v2):
+                        return v1 + (v2,)
 
-                    return left.match(right, result_selector=inner_result_selector)
+                    return left.match(right, selector=inner_result_selector)
 
             yield _
 

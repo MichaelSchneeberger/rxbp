@@ -8,3 +8,10 @@ class TestCaseBase(unittest.TestCase):
             yield v
 
         return gen
+
+    @staticmethod
+    def gen_seq(v):
+        def gen():
+            yield from v
+
+        return gen

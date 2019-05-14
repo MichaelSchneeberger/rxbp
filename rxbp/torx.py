@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from rx import Observable
 from rx.core import typing
@@ -36,6 +37,10 @@ def to_rx(source: FlowableBase):
                 def schedule_absolute(self, duetime: AbsoluteTime, action: 'ScheduledAction',
                                       state: TState = None) -> Disposable:
                     return scheduler.schedule_absolute(duetime=duetime, action=action, state=state)
+
+                def schedule_periodic(self, period: RelativeTime, action: 'ScheduledPeriodicAction',
+                                      state: Optional[TState] = None) -> Disposable:
+                    raise NotImplementedError
 
             class ToRxObserver(Observer):
                 def on_next(self, v):

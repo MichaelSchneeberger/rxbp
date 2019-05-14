@@ -1,13 +1,13 @@
 import unittest
 
-from rxbp.ack import Continue, Stop
 from rxbp.observables.zip2observable import Zip2Observable
+from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestConnectableSubscriber(unittest.TestCase):
+class TestConnectableSubscriber(TestCaseBase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
@@ -15,28 +15,23 @@ class TestConnectableSubscriber(unittest.TestCase):
         self.s2 = TestObservable()
         self.o = TestObserver()
 
-    def test_starts_before_other_and_finishes_before_other(self):
+    def test_basics(self):
         Zip2Observable(self.s1, self.s2) \
             .observe(self.o)
 
-        def gen_value(v):
-            def gen():
-                yield v
-            return gen
+        gen_seq = self.gen_seq
 
         self.o.immediate_continue = 2
 
-        self.s1.on_next(gen_value(1))
+        self.s1.on_next(gen_seq([1, 2, 3]))
         self.assertListEqual(self.o.received, [])
-        self.s2.on_next(gen_value(2))
-        self.assertListEqual(self.o.received, [(1, 2)])
-
-        self.s2.on_next(gen_value(4))
-        self.assertListEqual(self.o.received, [(1, 2)])
-        self.s1.on_next(gen_value(3))
-        self.assertListEqual(self.o.received, [(1, 2), (3, 4)])
+        self.s2.on_next(gen_seq([10, 11]))
+        self.assertListEqual(self.o.received, [(1, 10), (2, 11)])
 
         self.s1.on_completed()
+        self.s2.on_next(gen_seq([12]))
+
+        self.assertListEqual(self.o.received, [(1, 10), (2, 11), (3, 12)])
         self.assertTrue(self.o.is_completed)
 
     # def test_starts_before_other_and_finishes_before_other2(self):

@@ -61,5 +61,5 @@ class PairwiseObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        map_observer = PairwiseObserver()
-        return self.source.observe(map_observer,)
+        pairwise_observer = PairwiseObserver()
+        return self.source.observe(pairwise_observer)
