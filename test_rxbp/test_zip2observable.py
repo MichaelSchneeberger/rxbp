@@ -8,6 +8,18 @@ from rxbp.testing.testscheduler import TestScheduler
 
 
 class TestConnectableSubscriber(TestCaseBase):
+    """
+    Zip2Observable is a stateful object, therefore we test methods of Zip2Observable as a function of its states
+    called "zip_state" of type Zip2Observable.ZipState and "termination_state" of type Zip2Observable.TerminationState.
+    The termination state has four data types (haskell terminology), which possibly have their own states.
+    The zip state has five data types, which possibly have their own states as well.
+
+    Restricted method calls according to rxbackpressure conventions:
+    1. left.on_next and right.on_next in state=ZipElements
+    2. left.on_next in state=WaitForRight
+    3. right.on_next in state=WaitForLeft
+
+    """
 
     def setUp(self):
         self.scheduler = TestScheduler()
@@ -25,11 +37,16 @@ class TestConnectableSubscriber(TestCaseBase):
 
         self.s1.on_next(gen_seq([1, 2, 3]))
         self.assertListEqual(self.o.received, [])
+
+        # state WaitLeft -> ZipElements -> WaitLeft
         self.s2.on_next(gen_seq([10, 11]))
         self.assertListEqual(self.o.received, [(1, 10), (2, 11)])
 
+        # state InitState -> LeftCompletedState
         self.s1.on_completed()
-        self.s2.on_next(gen_seq([12]))
+
+        # state WaitLeft -> ZipElements -> WaitLeft
+        self.s2.on_next(gen_seq([12, 13]))
 
         self.assertListEqual(self.o.received, [(1, 10), (2, 11), (3, 12)])
         self.assertTrue(self.o.is_completed)
