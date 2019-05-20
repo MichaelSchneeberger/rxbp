@@ -88,6 +88,7 @@ rxbp.range(10).pipe(
     )),
 ).subscribe(print)
 ```
+
 The previous code outputs:
 
 ```
@@ -97,6 +98,7 @@ The previous code outputs:
 (3, 8)
 (4, 10)
 ```
+
 
 When to use an Flowable, when RxPY Observable?
 -----------------------------------------

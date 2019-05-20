@@ -8,9 +8,9 @@ from rxbp.subscriber import Subscriber
 
 class ControlledZipFlowable(FlowableBase):
     def __init__(self, left: FlowableBase, right: FlowableBase,
-                   request_left: Callable[[Any, Any], bool],
-                   request_right: Callable[[Any, Any], bool],
-                   match_func: Callable[[Any, Any], bool]):
+                   request_left: Callable[[Any, Any], bool] = None,
+                   request_right: Callable[[Any, Any], bool] = None,
+                   match_func: Callable[[Any, Any], bool] = None):
         if left.base is None:
             left_selectable_bases = left.selectable_bases
         else:
@@ -25,9 +25,9 @@ class ControlledZipFlowable(FlowableBase):
 
         self._left = left
         self._right = right
-        self._request_left = request_left
-        self._request_right = request_right
-        self._match_func = match_func
+        self._request_left = request_left if request_left is not None else lambda _, __: True
+        self._request_right = request_right if request_right is not None else lambda _, __: True
+        self._match_func = match_func if match_func is not None else lambda _, __: True
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
         left_obs, left_selectors = self._left.unsafe_subscribe(subscriber=subscriber)

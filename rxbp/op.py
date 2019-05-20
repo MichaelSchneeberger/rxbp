@@ -49,9 +49,9 @@ def execute_on(scheduler: Scheduler):
     return FlowableOperator(func)
 
 def controlled_zip(right: FlowableBase,
-                   request_left: Callable[[Any, Any], bool],
-                   request_right: Callable[[Any, Any], bool],
-                   match_func: Callable[[Any, Any], bool], ):
+                   request_left: Callable[[Any, Any], bool] = None,
+                   request_right: Callable[[Any, Any], bool] = None,
+                   match_func: Callable[[Any, Any], bool] = None, ):
     """ Creates a new observable from two observables by combining their item in pairs in a controlled manner
 
     :param right: other observable
@@ -139,16 +139,16 @@ def observe_on(scheduler: Scheduler):
     return FlowableOperator(func)
 
 
-# def pairwise():
-#     """ Creates an observable that pairs each neighbouring two items from the source
-#
-#     :param selector: (optional) selector function
-#     :return: paired observable
-#     """
-#
-#     def func(obs: ObservableBase):
-#         return PairwiseObservable(source=obs)
-#     return ObservableOperator(func)
+def pairwise():
+    """ Creates an observable that pairs each neighbouring two items from the source
+
+    :param selector: (optional) selector function
+    :return: paired observable
+    """
+
+    def func(source: Flowable) -> FlowableBase:
+        return source.pairwise()
+    return FlowableOperator(func)
 
 
 def repeat_first():

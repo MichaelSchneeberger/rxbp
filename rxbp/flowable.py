@@ -44,9 +44,10 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = ConcatFlowable(sources=all_sources)
         return Flowable(flowable)
 
-    def controlled_zip(self, right: FlowableBase, request_left: Callable[[Any, Any], bool],
-                       request_right: Callable[[Any, Any], bool],
-                       match_func: Callable[[Any, Any], bool]) -> 'Flowable[ValueType]':
+    def controlled_zip(self, right: FlowableBase,
+                       request_left: Callable[[Any, Any], bool] = None,
+                       request_right: Callable[[Any, Any], bool] = None,
+                       match_func: Callable[[Any, Any], bool] = None) -> 'Flowable[ValueType]':
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
