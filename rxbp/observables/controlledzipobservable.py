@@ -1,4 +1,5 @@
 import threading
+from abc import ABC, abstractmethod
 from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
 from rx.disposable import CompositeDisposable
@@ -40,68 +41,219 @@ class ControlledZipObservable(Observable):
 
         # ControlledZipObservable state
         self.observer = None
-        self.exception = None
-        self.left_completed = False
-        self.right_completed = False
-        self.state = ControlledZipObservable.WaitLeftRight()
+        self.termination_state = ControlledZipObservable.InitState()
+        self.zip_state = ControlledZipObservable.WaitOnLeftRight()
 
-    class State:
-        pass
+    class TerminationState(ABC):
+        """ The zip observable actor state is best captured with two states, to avoid having to
+        enumerate a big number of states. The termination state is changed on the `on_complete`
+        or `on_error` method call.
 
-    class WaitLeftRight(State):
-        pass
+        The ZipState depends on the TerminationState but not vice versa.
+        """
 
-    class WaitOnLeft(State):
+        @abstractmethod
+        def get_current_state(self):
+            ...
+
+    class InitState(TerminationState):
+        def get_current_state(self):
+            return self
+
+    class LeftCompletedState(TerminationState):
+        def __init__(self, raw_prev_state: Optional['ControlledZipObservable.TerminationState']):
+            self.raw_prev_state = raw_prev_state
+
+        def get_current_state(self):
+            prev_state = self.raw_prev_state
+
+            if isinstance(prev_state, ControlledZipObservable.InitState):
+                return self
+            else:
+                return self.raw_prev_state
+
+    class RightCompletedState(TerminationState):
+        def __init__(self, raw_prev_state: Optional['ControlledZipObservable.TerminationState']):
+            self.raw_prev_state = raw_prev_state
+
+        def get_current_state(self):
+            prev_state = self.raw_prev_state
+
+            if isinstance(prev_state, ControlledZipObservable.InitState):
+                return self
+            else:
+                return self.raw_prev_state
+
+    class ErrorState(TerminationState):
+        def __init__(self, raw_prev_state: Optional['ControlledZipObservable.TerminationState'],
+                     ex: Exception):
+            self.raw_prev_state = raw_prev_state
+            self.ex = ex
+
+        def get_current_state(self):
+            prev_state = self.raw_prev_state
+
+            if isinstance(prev_state, ControlledZipObservable.InitState):
+                return self
+            else:
+                return self.raw_prev_state
+
+    class ControlledZipState(ABC):
+        """ The state of the controlled zip observable actor
+
+        The true state (at the point when it is read) is only known by calling  the
+        `get_current_state` method.
+        """
+
+        @abstractmethod
+        def get_current_state(self, final_state: 'ControlledZipObservable.TerminationState'):
+            ...
+
+    class WaitOnLeft(ControlledZipState):
         def __init__(self,
                      right_val: Any,
                      right_iter: Iterator,
                      right_in_ack: Ack,
-                     right_out_ack: Optional[Ack]
+                     right_sel_ack: Optional[Ack]
                      ):
             self.right_val = right_val
             self.right_iter = right_iter
             self.right_in_ack = right_in_ack
-            self.right_out_ack = right_out_ack
+            self.right_sel_ack = right_sel_ack
 
-    class WaitOnRight(State):
+        def get_current_state(self, final_state: 'ControlledZipObservable.TerminationState'):
+            if isinstance(final_state, ControlledZipObservable.LeftCompletedState) or \
+                    isinstance(final_state, ControlledZipObservable.ErrorState):
+                return ControlledZipObservable.Stopped()
+            else:
+                return self
+
+    class WaitOnRight(ControlledZipState):
         def __init__(self,
                      left_iter: Iterator,
                      left_val: Any,
                      left_in_ack: Ack,
-                     left_out_ack: Optional[Ack]):
+                     left_sel_ack: Optional[Ack]):
             self.left_val = left_val
             self.left_iter = left_iter
             self.left_in_ack = left_in_ack
-            self.left_out_ack = left_out_ack
+            self.left_sel_ack = left_sel_ack
 
-    class Transition(State):
-        pass
+        def get_current_state(self, final_state: 'ControlledZipObservable.TerminationState'):
+            if isinstance(final_state, ControlledZipObservable.RightCompletedState) or \
+                    isinstance(final_state, ControlledZipObservable.ErrorState):
+                return ControlledZipObservable.Stopped()
+            else:
+                return self
 
-    class Completed(State):
-        pass
 
-    class ConcurrentType:
-        pass
+    class WaitOnLeftRight(ControlledZipState):
+        """ Zip observable actor has or will back-pressure the left and right source, but
+        no element has yet been received.
 
-    class SynchronousLeft(ConcurrentType):
-        """ Object indicating if function is called synchronously
+        In this state, the left and right buffer are empty.
         """
 
-        def __init__(self, right_in_ack: Ack):
-            self.right_in_ack = right_in_ack
+        def get_current_state(self, final_state: 'ControlledZipObservable.TerminationState'):
+            if isinstance(final_state, ControlledZipObservable.InitState):
+                return self
+            else:
+                return ControlledZipObservable.Stopped()
 
-    class SynchronousRight(ConcurrentType):
-        """ Object indicating if function is called synchronously
+    class Transition(ControlledZipState):
+        """ Zip observable actor is zipping the values just received by a source and
+         from the buffer.
+
+        In this state the actual termination state is ignored in the `get_current_state`
+        method.
         """
 
-        def __init__(self, left_in_ack: Ack):
-            self.left_in_ack = left_in_ack
+        def __init__(self, is_left: bool, ack: Ack, iter: Iterator, val: Any,
+                     prev_state: 'ControlledZipObservable.ControlledZipState',
+                     prev_terminal_state: 'ControlledZipObservable.TerminationState'):
+            """
+            :param is_left:
+            :param ack:
+            :param iter:
+            """
 
-    def iterate_over_batch(self, left_val: Any,
-                           last_left_out_ack: Optional[Ack], left_iter: Iterator[Tuple[Any, PublishSubject]],
-                           right_val: Optional[Any], right_iter: Iterator[Any], last_right_out_ack: Optional[Ack],
-                           is_sync: 'ControlledZipObservable.ConcurrentType') \
+            self.is_left = is_left
+            self.ack = ack
+            self.val = val
+            self.iter = iter
+
+            self.prev_state = prev_state
+            self.prev_terminal_state = prev_terminal_state
+
+        def get_current_state(self, final_state: 'ControlledZipObservable.TerminationState'):
+            if isinstance(self.prev_state, ControlledZipObservable.Stopped):
+                return self.prev_state
+
+            # Needed for `signal_on_complete_or_on_error`
+            elif isinstance(self.prev_state, ControlledZipObservable.WaitOnLeftRight):
+                if self.is_left:
+                    return ControlledZipObservable.WaitOnRight(left_in_ack=self.ack,
+                                                               left_val=self.val,
+                                                               left_iter=self.iter,
+                                                               left_sel_ack=None) \
+                        .get_current_state(final_state=self.prev_terminal_state)
+                else:
+                    return ControlledZipObservable.WaitOnLeft(right_in_ack=self.ack,
+                                                              right_val=self.val,
+                                                              right_iter=self.iter,
+                                                              right_sel_ack=None) \
+                        .get_current_state(final_state=self.prev_terminal_state)
+
+            else:
+                return self
+
+    class Stopped(ControlledZipState):
+        def get_current_state(self, final_state: 'ControlledZipObservable.TerminationState'):
+            return self
+
+    def _iterate_over_batch(self, elem: Callable[[], Generator], is_left: bool) \
             -> Ack:
+
+        upstream_ack = Ack()
+
+        iter = elem()
+        val = next(iter)
+
+        # not a concurrent situation, therefore, read and write states without a lock
+        raw_prev_termination_state = self.termination_state
+        prev_terminal_state = self.termination_state.get_current_state()
+        prev_state = self.zip_state.get_current_state(final_state=prev_terminal_state)
+        next_state = ControlledZipObservable.Transition(is_left=is_left, ack=upstream_ack, iter=iter,
+                                                        val=val, prev_state=prev_state,
+                                                        prev_terminal_state=prev_terminal_state)
+        self.zip_state = next_state
+
+        if isinstance(prev_state, ControlledZipObservable.Stopped):
+            return stop_ack
+        elif isinstance(prev_state, ControlledZipObservable.WaitOnLeftRight):
+            return upstream_ack
+        elif is_left and isinstance(prev_state, ControlledZipObservable.WaitOnLeft):
+            left_val = val
+            left_iter = iter
+            left_in_ack = upstream_ack
+            last_left_sel_ack = None
+            right_val = prev_state.right_val
+            right_iter = prev_state.right_iter
+            right_in_ack = prev_state.right_in_ack
+            other_upstream_ack = prev_state.right_in_ack
+            last_right_sel_ack = prev_state.right_sel_ack
+        elif not is_left and isinstance(prev_state, ControlledZipObservable.WaitOnRight):
+            left_val = prev_state.left_val
+            left_iter = prev_state.left_iter
+            left_in_ack = prev_state.left_in_ack
+            last_left_sel_ack = prev_state.left_sel_ack
+            right_val = val
+            right_iter = iter
+            right_in_ack = upstream_ack
+            other_upstream_ack = prev_state.left_in_ack
+            last_right_sel_ack = None
+        else:
+            raise Exception('unknown state "{}", is_left {}'.format(prev_state, is_left))
 
         # keep elements to be sent in a buffer. Only when the incoming batch of elements is iterated over, the
         # elements in the buffer are sent.
@@ -109,8 +261,8 @@ class ControlledZipObservable(Observable):
         right_index_buffer = []                 #   by the match function
         zipped_output_buffer = []
 
-        has_left_elem = True
-        has_right_elem = True
+        do_back_pressure_left = False
+        do_back_pressure_right = False
 
         # iterate over two batches of elements from left and right observable until one batch is empty
         while True:
@@ -132,7 +284,7 @@ class ControlledZipObservable(Observable):
                 try:
                     left_val = next(left_iter)
                 except StopIteration:
-                    has_left_elem = False
+                    do_back_pressure_left = True
 
             if self.request_right(old_left_val, right_val):
                 right_index_buffer.append(select_completed)
@@ -140,10 +292,10 @@ class ControlledZipObservable(Observable):
                 try:
                     right_val = next(right_iter)
                 except StopIteration:
-                    has_right_elem = False
+                    do_back_pressure_right = True
                     break
 
-            if not has_left_elem:
+            if do_back_pressure_left:
                 break
 
         # only send elements downstream, if there are any to be sent
@@ -163,7 +315,7 @@ class ControlledZipObservable(Observable):
 
             left_out_ack = self.left_selector.on_next(gen)
         else:
-            left_out_ack = last_left_out_ack or continue_ack
+            left_out_ack = last_left_sel_ack or continue_ack
 
         # only send elements over the right selector observer, if there are any to be sent
         if right_index_buffer:
@@ -172,215 +324,198 @@ class ControlledZipObservable(Observable):
 
             right_out_ack = self.right_selector.on_next(gen)
         else:
-            right_out_ack = last_right_out_ack or continue_ack
+            right_out_ack = last_right_sel_ack or continue_ack
 
-        # all elements in the left and right buffer are send to the observer
-        if not has_left_elem and not has_right_elem:
-            next_state = ControlledZipObservable.WaitLeftRight()
-            self.state = next_state
+        # all elements in the left and right iterable are send downstream
+        if do_back_pressure_left and do_back_pressure_right:
+            next_state = ControlledZipObservable.WaitOnLeftRight()
 
-            result_ack_left = zip_out_ack.merge_ack(left_out_ack)
-            result_ack_right = zip_out_ack.merge_ack(right_out_ack)
-            if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
-                result_ack_right.connect_ack(is_sync.right_in_ack)
-                return result_ack_left
-            elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
-                result_ack_left.connect_ack(is_sync.left_in_ack)
-                return result_ack_right
-            else:
-                raise Exception('illegal state')
+        elif do_back_pressure_left:
+            next_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter,
+                                                            right_in_ack=right_in_ack,
+                                                            right_sel_ack=right_out_ack)
 
-        elif not has_left_elem:
-            if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
-                right_in_ack = is_sync.right_in_ack
-            elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
-                right_in_ack = Ack()
-            else:
-                raise Exception('illegal state')
-
-            next_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter, right_in_ack=right_in_ack,
-                                    right_out_ack=right_out_ack)
-            self.state = next_state
-
-            result_left_ack = zip_out_ack.merge_ack(left_out_ack)
-            if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
-                return result_left_ack
-            elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
-                result_left_ack.connect_ack(is_sync.left_in_ack)
-                return right_in_ack
-            else:
-                raise Exception('illegal state')
-
-        elif not has_right_elem:
-            if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
-                left_in_ack = Ack()
-            elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
-                left_in_ack = is_sync.left_in_ack
-            else:
-                raise Exception('illegal state')
-
-            next_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter, left_in_ack=left_in_ack,
-                                    left_out_ack=left_out_ack)
-            self.state = next_state
-
-            result_right_ack = zip_out_ack.merge_ack(right_out_ack)
-            if isinstance(is_sync, ControlledZipObservable.SynchronousLeft):
-                result_right_ack.connect_ack(is_sync.right_in_ack)
-                return left_in_ack
-            elif isinstance(is_sync, ControlledZipObservable.SynchronousRight):
-                return result_right_ack
-            else:
-                raise Exception('illegal state')
+        elif do_back_pressure_right:
+            next_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter,
+                                                             left_in_ack=left_in_ack,
+                                                             left_sel_ack=left_out_ack)
 
         else:
-            raise Exception('illegal case')
-
-    def on_next_left(self, left_elem: Callable[[], Generator]):
-
-        left_iter = left_elem()
-        left_val = next(left_iter)
+            raise Exception('at least one side should be back-pressured')
 
         with self.lock:
-            if isinstance(self.state, ControlledZipObservable.WaitOnLeft):
-                # iterate over right elements and send them over the publish subject and right observer
-                pass
+            # get termination state
+            raw_prev_termination_state = self.termination_state
 
-            elif isinstance(self.state, ControlledZipObservable.Completed):
-                return stop_ack
+            # set next state
+            self.zip_state = next_state
 
-            elif isinstance(self.state, ControlledZipObservable.WaitLeftRight):
-                # wait until right iterable is received
-                left_in_ack = Ack()
-                new_state = ControlledZipObservable.WaitOnRight(left_val=left_val, left_iter=left_iter,
-                                        left_in_ack=left_in_ack, left_out_ack=None)
-                self.state = new_state
-                return left_in_ack
+        prev_termination_state = raw_prev_termination_state.get_current_state()
+
+        def stop_active_acks():
+            if last_right_sel_ack is not None:
+                last_right_sel_ack.on_next(stop_ack)
+                last_right_sel_ack.on_completed()
+            elif last_left_sel_ack is not None:
+                last_left_sel_ack.on_next(stop_ack)
+                last_left_sel_ack.on_completed()
+            other_upstream_ack.on_next(stop_ack)
+            other_upstream_ack.on_completed()
+
+        # stop back-pressuring both sources, because there is no need to request elements
+        # from completed source
+        if isinstance(prev_termination_state, ControlledZipObservable.LeftCompletedState) \
+                and do_back_pressure_left:
+
+            # current state should be Stopped
+            assert isinstance(next_state.get_current_state(prev_termination_state), ControlledZipObservable.Stopped)
+
+            self._signal_on_complete_or_on_error(raw_state=next_state)
+            stop_active_acks()
+            return stop_ack
+
+        # stop back-pressuring both sources, because there is no need to request elements
+        # from completed source
+        elif isinstance(prev_termination_state, ControlledZipObservable.RightCompletedState) \
+                and do_back_pressure_right:
+            self._signal_on_complete_or_on_error(raw_state=next_state)
+            stop_active_acks()
+            return stop_ack
+
+        # in error state, stop back-pressuring both sources
+        elif isinstance(prev_termination_state, ControlledZipObservable.ErrorState):
+            self._signal_on_complete_or_on_error(raw_state=next_state, ex=prev_termination_state.ex)
+            stop_active_acks()
+            return stop_ack
+
+        # finish connecting ack only if not in Stopped or Error state
+        else:
+
+            if do_back_pressure_left and do_back_pressure_right:
+
+                # integrate selector acks
+                result_ack_left = zip_out_ack.merge_ack(left_out_ack)
+                result_ack_right = zip_out_ack.merge_ack(right_out_ack)
+
+                # directly return ack depending on whether left or right called `iterate_over_batch`
+                if is_left:
+                    result_ack_right.connect_ack(right_in_ack)
+                    return result_ack_left
+                else:
+                    result_ack_left.connect_ack(left_in_ack)
+                    return result_ack_right
+
+            # all elements in the left buffer are send to the observer, back-pressure only left
+            elif do_back_pressure_left:
+
+                result_left_ack = zip_out_ack.merge_ack(left_out_ack)
+                if is_left:
+                    return result_left_ack
+                else:
+                    result_left_ack.connect_ack(left_in_ack)
+                    return right_in_ack
+
+            # all elements in the left buffer are send to the observer, back-pressure only right
+            elif do_back_pressure_right:
+
+                result_right_ack = zip_out_ack.merge_ack(right_out_ack)
+                if is_left:
+                    result_right_ack.connect_ack(right_in_ack)
+                    return left_in_ack
+                else:
+                    return result_right_ack
 
             else:
-                raise Exception('illegal state {}'.format(self.state))
+                raise Exception('illegal case')
 
-            # save current state to local variable
-            current_state: ControlledZipObservable.WaitOnLeft = self.state
+    def _on_next_left(self, elem: Callable[[], Generator]):
 
-            # change state
-            self.state = ControlledZipObservable.Transition()
+        try:
+            return_ack = self._iterate_over_batch(elem=elem, is_left=True)
+        except Exception as exc:
+            self.observer._on_error(exc)
+            return stop_ack
+        return return_ack
 
-        right_val = current_state.right_val
-        right_iter = current_state.right_iter
-        right_in_ack = current_state.right_in_ack
-        right_out_ack = current_state.right_out_ack
+    def _on_next_right(self, elem: Callable[[], Generator]):
 
-        is_sync = ControlledZipObservable.SynchronousLeft(right_in_ack=right_in_ack)
+        try:
+            return_ack = self._iterate_over_batch(elem=elem, is_left=False)
+        except Exception as exc:
+            self.observer._on_error(exc)
+            return stop_ack
+        return return_ack
 
-        left_ack = self.iterate_over_batch(
-            left_val=left_val,
-            left_iter=left_iter, last_left_out_ack=None,
-            right_val=right_val, right_iter=right_iter,
-            is_sync=is_sync, last_right_out_ack=right_out_ack)
+    def _signal_on_complete_or_on_error(self, raw_state: 'ControlledZipObservable.ControlledZipState',
+                                        ex: Exception = None):
+        """ this function is called once
 
-        return left_ack
+        :param raw_state:
+        :param ex:
+        :return:
+        """
 
-    def on_next_right(self, right_elem: Callable[[], Generator]):
+        # stop active acknowledgments
+        if isinstance(raw_state, ControlledZipObservable.WaitOnLeftRight):
+            pass
+        elif isinstance(raw_state, ControlledZipObservable.WaitOnLeft):
+            raw_state.right_in_ack.on_next(stop_ack)
+            raw_state.right_in_ack.on_completed()
+        elif isinstance(raw_state, ControlledZipObservable.WaitOnRight):
+            raw_state.left_in_ack.on_next(stop_ack)
+            raw_state.left_in_ack.on_completed()
+        else:
+            pass
 
-        # create the right iterable
-        right_iter = right_elem()
-        right_val = next(right_iter)
-
-        with self.lock:
-            if isinstance(self.state, ControlledZipObservable.WaitOnRight):
-                pass
-            elif isinstance(self.state, ControlledZipObservable.Completed):
-                return stop_ack
-            elif isinstance(self.state, ControlledZipObservable.WaitLeftRight):
-                right_ack = Ack()
-                new_state = ControlledZipObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter,
-                                       right_in_ack=right_ack, right_out_ack=None)
-                self.state = new_state
-                return right_ack
-            else:
-                raise Exception('illegal state {}'.format(self.state))
-
-            current_state: ControlledZipObservable.WaitOnRight = self.state
-            self.state = ControlledZipObservable.Transition()
-
-        left_val = current_state.left_val
-        left_iter = current_state.left_iter
-        left_in_ack = current_state.left_in_ack
-        left_out_ack = current_state.left_out_ack
-
-        right_ack = self.iterate_over_batch(
-            left_val=left_val, left_iter=left_iter,
-            last_left_out_ack=left_out_ack,
-            right_val=right_val, right_iter=right_iter, last_right_out_ack=None,
-            is_sync=ControlledZipObservable.SynchronousRight(left_in_ack=left_in_ack))
-
-        return right_ack
-
-    def on_error(self, exc):
-        forward_error = False
-
-        with self.lock:
-            if self.exception is not None:
-                return
-            elif isinstance(self.state, ControlledZipObservable.Transition):
-                pass
-            else:
-                forward_error = True
-                self.state = ControlledZipObservable.Completed()
-
-            self.exception = exc
-
-        if forward_error:
-            self.left_selector.on_error(exc)
-            self.right_selector.on_error(exc)
-
-    def on_completed_left(self):
-        complete = False
-
-        with self.lock:
-            if self.left_completed:
-                return
-            elif isinstance(self.state, ControlledZipObservable.WaitLeftRight) or isinstance(self.state,
-                                                                                               ControlledZipObservable.WaitOnLeft):
-                complete = True
-                self.state = ControlledZipObservable.Completed()
-            else:
-                pass
-
-            self.left_completed = True
-
-        if complete:
-            self.left_selector.on_completed()
-            self.right_selector.on_completed()
+        # terminate observer
+        if ex:
+            self.observer.on_error(ex)
+        else:
             self.observer.on_completed()
 
-    def on_completed_right(self):
-        complete = False
+    def _on_error_or_complete(self, next_final_state: 'ControlledZipObservable.TerminationState'):
 
         with self.lock:
-            if self.right_completed:
-                return
-            elif isinstance(self.state, ControlledZipObservable.WaitLeftRight) or isinstance(self.state,
-                                                                                               ControlledZipObservable.WaitOnRight):
-                complete = True
-                self.state = ControlledZipObservable.Completed()
-            else:
-                pass
+            raw_prev_final_state = self.termination_state
+            raw_prev_state = self.zip_state
+            next_final_state.raw_prev_state = raw_prev_final_state
+            self.termination_state = next_final_state
 
-            self.right_completed = True
+        prev_final_state = raw_prev_final_state.get_current_state()
+        prev_state = raw_prev_state.get_current_state(final_state=prev_final_state)
 
-        if complete:
-            self.left_selector.on_completed()
-            self.right_selector.on_completed()
-            self.observer.on_completed()
+        curr_final_state = next_final_state.get_current_state()
+        curr_state = raw_prev_state.get_current_state(final_state=curr_final_state)
+
+        if not isinstance(prev_state, ControlledZipObservable.Stopped) \
+                and isinstance(curr_state, ControlledZipObservable.Stopped):
+            self._signal_on_complete_or_on_error(raw_prev_state)
+
+    def _on_error(self, ex):
+        next_final_state = ControlledZipObservable.ErrorState(raw_prev_state=None, ex=ex)
+        self._on_error_or_complete(next_final_state=next_final_state)
+
+    def _on_completed_left(self):
+        next_final_state = ControlledZipObservable.LeftCompletedState(raw_prev_state=None)
+        self._on_error_or_complete(next_final_state=next_final_state)
+
+    def _on_completed_right(self):
+        next_final_state = ControlledZipObservable.RightCompletedState(raw_prev_state=None)
+        self._on_error_or_complete(next_final_state=next_final_state)
 
     def observe(self, observer: Observer):
+        """ This function ought be called at most once.
+
+        :param observer: downstream obseNonerver
+        :return: Disposable
+        """
+
         self.observer = observer
 
-        left_observer2 = AnonymousObserver(self.on_next_left, self.on_error, self.on_completed_left)
+        left_observer2 = AnonymousObserver(self._on_next_left, self._on_error, self._on_completed_left)
         d1 = self.left_observable.observe(left_observer2)
 
-        right_observer2 = AnonymousObserver(self.on_next_right, self.on_error, self.on_completed_right)
+        right_observer2 = AnonymousObserver(self._on_next_right, self._on_error, self._on_completed_right)
         d2 = self.right_observable.observe(right_observer2)
 
         return CompositeDisposable(d1, d2)

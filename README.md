@@ -100,6 +100,42 @@ The previous code outputs:
 ```
 
 
+### match operator (experimental)
+
+The `match` operator tries to match two Flowables, otherwise it raises an exception.
+Two observables match if they have the same base or if there exists a mapping that maps 
+the one base to the base of the other Flowable. These mappings are called "selectors",
+and returned by the `unsafe_subscribe` method of each Flowable.
+
+If two Flowables have the same base, they should match in the sense of the `zip` operator.
+Every pair of elements that get zipped from the two Flowables should match, e.g. from all
+the elements that gets emitted by the other Flowable only the one makes sense to pair
+with the current element.
+
+```python
+import rxbp
+from rxbp import op
+
+rxbp.range(10).pipe(
+    rxbp.op.share(lambda f1: f1.pipe(
+        rxbp.op.match(f1.pipe(
+            rxbp.op.map(lambda v: v + 1),
+            rxbp.op.filter(lambda v: v % 2 == 0)),
+        )
+    )),
+).subscribe(print)
+```
+
+The previous code outputs:
+
+```
+(1, 2)
+(3, 4)
+(5, 6)
+(7, 8)
+(9, 10)
+```
+
 When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
