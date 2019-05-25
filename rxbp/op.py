@@ -33,20 +33,34 @@ from rxbp.flowableoperator import FlowableOperator
 
 
 def concat(sources: Iterable[FlowableBase]):
+    """ Consecutively subscribe each Flowable after the previous Flowable completes
+
+    :param sources:
+    :return:
+    """
     def func(left: Flowable) -> FlowableBase:
         return left.concat(sources=sources)
     return FlowableOperator(func)
 
+
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
     def func(source: Flowable) -> FlowableBase:
+        """ Prints debug messages to the console when providing the name argument
+
+        :param source:
+        :return:
+        """
+
         return source.debug(name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack, on_raw_ack=on_raw_ack,
                             on_ack_msg=on_ack_msg)
     return FlowableOperator(func)
+
 
 def execute_on(scheduler: Scheduler):
     def func(source: Flowable) -> FlowableBase:
         return source.execute_on(scheduler=scheduler)
     return FlowableOperator(func)
+
 
 def controlled_zip(right: FlowableBase,
                    request_left: Callable[[Any, Any], bool] = None,
@@ -112,6 +126,18 @@ def map(selector: Callable[[Any], Any]):
 
     def func(source: Flowable) -> FlowableBase:
         return source.map(selector=selector)
+    return FlowableOperator(func)
+
+
+def match(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+
+    :param selector: a mapping function applied over the generated pairs
+    :return: zipped observable
+    """
+
+    def func(left: Flowable) -> FlowableBase:
+        return left.match(right=right, selector=selector)
     return FlowableOperator(func)
 
 
@@ -217,18 +243,6 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
 
     def func(left: Flowable) -> FlowableBase:
         return left.zip(right=right, selector=selector)
-    return FlowableOperator(func)
-
-
-def match(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
-    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
-
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped observable
-    """
-
-    def func(left: Flowable) -> FlowableBase:
-        return left.match(right=right, selector=selector)
     return FlowableOperator(func)
 
 

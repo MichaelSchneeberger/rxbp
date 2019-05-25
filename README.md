@@ -107,10 +107,8 @@ Two observables match if they have the same base or if there exists a mapping th
 the one base to the base of the other Flowable. These mappings are called "selectors",
 and returned by the `unsafe_subscribe` method of each Flowable.
 
-If two Flowables have the same base, they should match in the sense of the `zip` operator.
-Every pair of elements that get zipped from the two Flowables should match, e.g. from all
-the elements that gets emitted by the other Flowable only the one makes sense to pair
-with the current element.
+If two Flowables have the same base, they should match in the sense of the `zip` operator,
+e.g. every pair of elements that get zipped from the two Flowables should belong together.
 
 ```python
 import rxbp
@@ -119,7 +117,6 @@ from rxbp import op
 rxbp.range(10).pipe(
     rxbp.op.share(lambda f1: f1.pipe(
         rxbp.op.match(f1.pipe(
-            rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),
         )
     )),
@@ -129,23 +126,22 @@ rxbp.range(10).pipe(
 The previous code outputs:
 
 ```
-(1, 2)
-(3, 4)
-(5, 6)
-(7, 8)
-(9, 10)
+(1, 1)
+(3, 3)
+(5, 5)
+(7, 7)
+(9, 9)
 ```
 
 When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
-A Flowable is used when some asynchronous stages can't process the values 
-fast enough and need a way to tell the upstream producer to slow down (called back-pressuring). But even 
+A Flowable is used when some asynchronous stage can't process the values 
+fast enough and need a way to tell the upstream producer to slow down. But even 
 if the generation of a values cannot be directly controlled, 
 back-pressure can reduce the memory consumption by holding back the values in a buffer, and emitting them
 in a synchronized fashion. Values from a Flowable need to be pulled by the downstream consumer,
-which can lead to situations where the stream stops "flowing" due to bad coordination of back-pressuring
-a mulicast Flowable.
+which can lead to situations where the stream stops "flowing" due to bad back-pressure coordination.
 
 An RxPY Observable on the other hand is push based. That means it emits elements as soon as
 it receives them. 
@@ -164,24 +160,31 @@ Implemented builders and operators
 
 ### Transforming operators
 
-- `execute_on` - inject new scheduler that is used to subscribe Flowable
+- `filter` - emits only those element for which the given predicate holds
+- `first` - emits the first element only
 - `flat_map` - flattens a Flowable of Flowables
 - `map` - applies a function to each element emitted by the Flowable
-- `observe_on` - schedules element emitted by the Flowable on a dedicated scheduler
 - `pairwise` - pairing two consecutive elements emitted by the Flowable
-- `share` - exposes a multicast flowable that allows multible subscriptions
-- `first` - emits the first element only
 - `repeat_first` - repeat the first element by the Flowable forever (until disposed)
+- `scan` - Applies an accumulator function over a Flowable sequence and returns each intermediate result.
+- `share` - exposes a multicast flowable that allows multible subscriptions
 - `zip_with_index` - The same as `map`, except that the selector function takes 
 index in addition to the value
 
-
 ### Combining operators
 
-- `controlled_zip` - combines the elements emitted by two flowables 
+- `concat` - consecutively subscribe each Flowable after the previous Flowable completes
+- `controlled_zip` - combines the elements emitted by two Flowables 
 into pairs in a controlled sequence. 
-- `zip` - combines the elements emitted by two flowables into pairs in 
+- `match` - combines the elements emitted by two Flowables into matching pairs.
+- `zip` - combines the elements emitted by two Flowables into pairs in 
 a strict sequence.
+
+### Other operators
+
+- `debug` - prints debug messages to the console
+- `execute_on` - inject new scheduler that is used to subscribe Flowable
+- `observe_on` - schedules element emitted by the Flowable on a dedicated scheduler
 
 ### Create a rx Observable
 
