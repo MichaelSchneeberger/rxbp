@@ -1,13 +1,13 @@
 import math
 
-from rxbp.observers.connectablesubscriber import ConnectableSubscriber
+from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.testing.testcasebase import TestCaseBase
 
 
-class TestConnectableSubscriber(TestCaseBase):
+class TestConnectableObserver(TestCaseBase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
@@ -16,7 +16,7 @@ class TestConnectableSubscriber(TestCaseBase):
         s: TestScheduler = self.scheduler
 
         o1 = TestObserver()
-        down_stream = ConnectableSubscriber(o1, scheduler=s, subscribe_scheduler=TrampolineScheduler())
+        down_stream = ConnectableObserver(o1, scheduler=s, subscribe_scheduler=TrampolineScheduler())
 
         gen_single = TestCaseBase.gen_single
 
@@ -42,8 +42,8 @@ class TestConnectableSubscriber(TestCaseBase):
 
     def test_should_emit_pushed_items_immediately_after_connect(self):
         o1 = TestObserver()
-        down_stream = ConnectableSubscriber(o1, scheduler=self.scheduler,
-                                            subscribe_scheduler=self.scheduler)
+        down_stream = ConnectableObserver(o1, scheduler=self.scheduler,
+                                          subscribe_scheduler=self.scheduler)
 
         gen_single = TestCaseBase.gen_single
 
@@ -60,8 +60,8 @@ class TestConnectableSubscriber(TestCaseBase):
 
     def test_should_not_allow_push_first_after_connect(self):
         o1 = TestObserver()
-        down_stream = ConnectableSubscriber(o1, scheduler=self.scheduler,
-                                            subscribe_scheduler=self.scheduler)
+        down_stream = ConnectableObserver(o1, scheduler=self.scheduler,
+                                          subscribe_scheduler=self.scheduler)
 
         gen_single = TestCaseBase.gen_single
 
@@ -74,7 +74,7 @@ class TestConnectableSubscriber(TestCaseBase):
 
     def test_should_not_allow_push_first_all_after_connect(self):
         o1 = TestObserver()
-        down_stream = ConnectableSubscriber(o1, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        down_stream = ConnectableObserver(o1, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
 
         gen_single = TestCaseBase.gen_single
 
@@ -87,8 +87,8 @@ class TestConnectableSubscriber(TestCaseBase):
 
     def test_should_schedule_push_complete(self):
         o1 = TestObserver()
-        down_stream = ConnectableSubscriber(o1, scheduler=self.scheduler,
-                                            subscribe_scheduler=self.scheduler)
+        down_stream = ConnectableObserver(o1, scheduler=self.scheduler,
+                                          subscribe_scheduler=self.scheduler)
 
         gen_single = TestCaseBase.gen_single
 

@@ -9,8 +9,9 @@ from rxbp.flowable import Flowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
-from rxbp.observers.bufferedsubscriber import BufferedSubscriber
-from rxbp.overflowstrategy import OverflowStrategy, BackPressure
+from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
+from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
+from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase
 from rxbp.subscriber import Subscriber
@@ -110,13 +111,6 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
     batch_size_ = batch_size or 1
 
-    if overflow_strategy is None:
-        buffer_size = 1000
-    elif isinstance(overflow_strategy, BackPressure):
-        buffer_size = overflow_strategy.buffer_size
-    else:
-        raise AssertionError('only BackPressure is currently supported as overflow strategy')
-
     if isinstance(base, Base):
         base_ = base
     elif base is not None:
@@ -136,7 +130,19 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
                     return gen
 
-                subscriber = BufferedSubscriber(observer, self.scheduler, buffer_size)
+                if isinstance(overflow_strategy, DropOld) or isinstance(overflow_strategy, ClearBuffer):
+                    subscriber = EvictingBufferedObserver(observer=observer, scheduler=self.scheduler,
+                                                          strategy=overflow_strategy)
+                else:
+                    if overflow_strategy is None:
+                        buffer_size = 1000
+                    elif isinstance(overflow_strategy, BackPressure):
+                        buffer_size = overflow_strategy.buffer_size
+                    else:
+                        raise AssertionError('only BackPressure is currently supported as overflow strategy')
+
+                    subscriber = BackpressureBufferedObserver(observer, self.scheduler, buffer_size)
+
                 disposable = source.pipe(operators.buffer_with_count(batch_size_), operators.map(iterable_to_gen)) \
                     .subscribe(on_next=subscriber.on_next, on_error=subscriber.on_error,
                                         on_completed=subscriber.on_completed)

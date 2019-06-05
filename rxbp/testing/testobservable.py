@@ -2,12 +2,23 @@ from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.scheduler import Scheduler
 
 
 class TestObservable(Observable):
     def __init__(self):
         self.observer = None
+
+    def on_next_single(self, val):
+        def gen():
+            yield val
+
+        return self.on_next(gen)
+
+    def on_next_seq(self, val):
+        def gen():
+            yield from val
+
+        return self.on_next(gen)
 
     def on_next(self, val):
         return self.observer.on_next(val)

@@ -6,7 +6,7 @@ from rx.disposable import Disposable
 from rxbp.ack import Ack, Continue, Stop, stop_ack, continue_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observers.connectablesubscriber import ConnectableSubscriber
+from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
@@ -106,7 +106,7 @@ class FlatMapObservable(Observable):
                         # else:
 
                         scheduler = TrampolineScheduler()
-                        conn_observer = ConnectableSubscriber(child_observer, scheduler=scheduler, subscribe_scheduler=scheduler)
+                        conn_observer = ConnectableObserver(child_observer, scheduler=scheduler, subscribe_scheduler=scheduler)
                         disposable = child.observe(conn_observer)
                         yield conn_observer
 

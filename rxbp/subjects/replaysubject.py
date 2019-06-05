@@ -5,7 +5,7 @@ from typing import Iterable, Set, List
 from rx.disposable import Disposable
 
 from rxbp.ack import Continue, Stop
-from rxbp.observers.connectablesubscriber import ConnectableSubscriber
+from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
@@ -103,7 +103,7 @@ class ReplaySubject(SubjectBase):
         if state.is_done:
             return stream_on_done(buffer, state.error_thrown)
         else:
-            c = ConnectableSubscriber(observer, scheduler=scheduler)
+            c = ConnectableObserver(observer, scheduler=scheduler)
             with self.lock:
                 new_state = self.state.add_new_subscriber(c)
                 self.state = new_state
@@ -140,7 +140,7 @@ class ReplaySubject(SubjectBase):
             else:
                 obs.on_error(ex)
 
-    def remove_subscriber(self, s: ConnectableSubscriber):
+    def remove_subscriber(self, s: ConnectableObserver):
         with self.lock:
             # print('remove subscriber')
             state = self.state

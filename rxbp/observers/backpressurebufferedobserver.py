@@ -8,20 +8,18 @@ from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class BufferedSubscriber(Observer):
+class BackpressureBufferedObserver(Observer):
     def __init__(self, observer: Observer, scheduler: Scheduler, buffer_size: int):
         self.observer = observer
         self.scheduler = scheduler
         self.em = scheduler.get_execution_model()
         self.buffer_size = buffer_size
 
+        # states of buffered subscriber
         self.queue = Queue()
-
         self.last_iteration_ack = None
-
         self.upstream_is_complete = False
         self.downstream_is_complete = False
-
         self.items_to_push = 0
         self.back_pressured = None
         self.error_thrown = None
@@ -38,16 +36,20 @@ class BufferedSubscriber(Observer):
                 self.items_to_push += 1
 
             if is_back_pressured is None:
+                # buffer is not full, no back-pressure is needed
                 if to_push < self.buffer_size:
                     self.queue.put(item=v)
                     self.push_to_consumer(to_push)
                     return continue_ack
+
+                # buffer is full, back-pressure is needed
                 else:
                     ack = Ack()
                     self.back_pressured = ack
                     self.queue.put(item=v)
                     self.push_to_consumer(to_push)
                     return ack
+
             else:
                 self.queue.put(item=v)
                 self.push_to_consumer(to_push)

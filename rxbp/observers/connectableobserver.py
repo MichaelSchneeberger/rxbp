@@ -10,7 +10,7 @@ from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class ConnectableSubscriber(Observer):
+class ConnectableObserver(Observer):
     def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler):
         self.underlying = underlying
         self.scheduler = scheduler

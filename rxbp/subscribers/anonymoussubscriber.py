@@ -1,8 +1,3 @@
-from typing import Callable, Dict, Any, Optional
-
-from rx.disposable import Disposable
-
-from rxbp.observable import Observable
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 
