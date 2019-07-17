@@ -2,8 +2,9 @@ import threading
 from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
 from rx.disposable import CompositeDisposable
+from rxbp.ack.ackimpl import continue_ack, stop_ack
+from rxbp.ack.ackbase import AckBase
 
-from rxbp.ack import Ack, continue_ack, stop_ack
 from rxbp.selectors.selection import select_next, select_completed, SelectCompleted, SelectNext
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -41,7 +42,7 @@ class MergeSelectorObservable(Observable):
         def __init__(self,
                      right_val: Any,
                      right_iter: Iterator,
-                     right_in_ack: Ack):
+                     right_in_ack: AckBase):
             self.right_val = right_val
             self.right_iter = right_iter
             self.right_in_ack = right_in_ack
@@ -50,7 +51,7 @@ class MergeSelectorObservable(Observable):
         def __init__(self,
                      left_iter: Iterator,
                      left_val: Any,
-                     left_in_ack: Ack):
+                     left_in_ack: AckBase):
             self.left_val = left_val
             self.left_iter = left_iter
             self.left_in_ack = left_in_ack
@@ -68,14 +69,14 @@ class MergeSelectorObservable(Observable):
         """ Object indicating if function is called synchronously
         """
 
-        def __init__(self, right_in_ack: Ack):
+        def __init__(self, right_in_ack: AckBase):
             self.right_in_ack = right_in_ack
 
     class SynchronousRight(ConcurrentType):
         """ Object indicating if function is called synchronously
         """
 
-        def __init__(self, left_in_ack: Ack):
+        def __init__(self, left_in_ack: AckBase):
             self.left_in_ack = left_in_ack
 
     def observe(self, observer: Observer):
@@ -89,7 +90,7 @@ class MergeSelectorObservable(Observable):
         def start_zipping(left_val: Any, left_iter: Iterator[Tuple[Any, PublishSubject]],
                           right_val: Optional[Any], right_iter: Iterator[Any],
                           is_sync: MergeSelectorObservable.ConcurrentType) \
-                -> Ack:
+                -> AckBase:
 
             zipped_output_buffer = []
 
@@ -146,10 +147,10 @@ class MergeSelectorObservable(Observable):
                 self.state = next_state
 
                 if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
-                    zip_out_ack.connect_ack(is_sync.right_in_ack)
+                    zip_out_ack.subscribe(is_sync.right_in_ack)
                     return zip_out_ack
                 elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
-                    zip_out_ack.connect_ack(is_sync.left_in_ack)
+                    zip_out_ack.subscribe(is_sync.left_in_ack)
                     return zip_out_ack
                 else:
                     raise Exception('illegal state')
@@ -158,7 +159,7 @@ class MergeSelectorObservable(Observable):
                 if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     right_in_ack = is_sync.right_in_ack
                 elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
-                    right_in_ack = Ack()
+                    right_in_ack = AckBase()
                 else:
                     raise Exception('illegal state')
 
@@ -168,14 +169,14 @@ class MergeSelectorObservable(Observable):
                 if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
                     return zip_out_ack
                 elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
-                    zip_out_ack.connect_ack(is_sync.left_in_ack)
+                    zip_out_ack.subscribe(is_sync.left_in_ack)
                     return right_in_ack
                 else:
                     raise Exception('illegal state')
 
             elif not has_right_elem:
                 if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
-                    left_in_ack = Ack()
+                    left_in_ack = AckBase()
                 elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     left_in_ack = is_sync.left_in_ack
                 else:
@@ -185,7 +186,7 @@ class MergeSelectorObservable(Observable):
                 self.state = next_state
 
                 if isinstance(is_sync, MergeSelectorObservable.SynchronousLeft):
-                    zip_out_ack.connect_ack(is_sync.right_in_ack)
+                    zip_out_ack.subscribe(is_sync.right_in_ack)
                     return left_in_ack
                 elif isinstance(is_sync, MergeSelectorObservable.SynchronousRight):
                     return zip_out_ack
@@ -228,7 +229,7 @@ class MergeSelectorObservable(Observable):
 
                     elif isinstance(self.state, MergeSelectorObservable.WaitLeftRight):
                         # wait until right iterable is received
-                        left_in_ack = Ack()
+                        left_in_ack = AckBase()
                         new_state = MergeSelectorObservable.WaitOnRight(left_val=left_val[0], left_iter=left_iter,
                                                                         left_in_ack=left_in_ack)
                         self.state = new_state
@@ -264,11 +265,11 @@ class MergeSelectorObservable(Observable):
                 ack = observer.on_next(gen)
 
                 if has_elem[0]:
-                    return_ack = Ack()
+                    return_ack = AckBase()
 
                     def _(v):
                         new_ack = continue_processing()
-                        new_ack.connect_ack(return_ack)
+                        new_ack.subscribe(return_ack)
 
                     ack.subscribe(_)
                     return return_ack
@@ -291,7 +292,7 @@ class MergeSelectorObservable(Observable):
                 elif isinstance(self.state, MergeSelectorObservable.Completed):
                     return stop_ack
                 elif isinstance(self.state, MergeSelectorObservable.WaitLeftRight):
-                    right_ack = Ack()
+                    right_ack = AckBase()
                     new_state = MergeSelectorObservable.WaitOnLeft(right_val=right_val, right_iter=right_iter,
                                                                    right_in_ack=right_ack)
                     self.state = new_state
@@ -333,6 +334,10 @@ class MergeSelectorObservable(Observable):
                 observer.on_error(exc)
 
         class LeftObserver(Observer):
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 return on_next_left(v)
 
@@ -358,6 +363,10 @@ class MergeSelectorObservable(Observable):
                     observer.on_completed()
 
         class RightObserver(Observer):
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 return on_next_right(v)
 

@@ -1,15 +1,15 @@
 import threading
 from typing import Iterable, Set, List
 
-
+import rx
 from rx.disposable import Disposable
+from rxbp.ack.ackimpl import Continue, Stop
 
-from rxbp.ack import Continue, Stop
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
-from rxbp.scheduler import SchedulerBase
+from rxbp.scheduler import SchedulerBase, Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.subjectbase import SubjectBase
 
@@ -23,7 +23,8 @@ class ReplaySubject(SubjectBase):
                      subscribers: Set = set(),
                      length : int = 0,
                      is_done: bool = False,
-                     error_thrown: Exception = None):
+                     error_thrown: Exception = None,
+                     ):
             self.buffer = buffer
             self.capacity = capacity
             self.subscribers = subscribers
@@ -65,13 +66,16 @@ class ReplaySubject(SubjectBase):
             return ReplaySubject.State(buffer=self.buffer, capacity=self.capacity, subscribers=set(),
                                 length=self.length, is_done=True, error_thrown=ex)
 
-    def __init__(self, initial_state: State = None):
+    def __init__(self, scheduler: SchedulerBase, subscribe_scheduler: Scheduler, initial_state: State = None):
         self.state: ReplaySubject.State = initial_state or ReplaySubject.State(buffer=[], capacity=0)
+
+        self.scheduler = scheduler
+        self.subscribe_scheduler = subscribe_scheduler
 
         self.lock = threading.RLock()
         # self.batch_size = batch_size
 
-    def unsafe_subscribe(self, observer: Observer, scheduler: SchedulerBase, subscribe_scheduler: SchedulerBase):
+    def observe(self, observer: Observer):
         """ Creates a new ConnectableSubscriber for each subscription, pushes the current buffer to the
         ConnectableSubscriber and connects it immediately
 
@@ -94,8 +98,8 @@ class ReplaySubject(SubjectBase):
                         observer.on_completed()
 
 
-            return IteratorAsObservable(iter(buffer)) \
-                .subscribe_observer(TObserver(), scheduler, TrampolineScheduler())
+            return IteratorAsObservable(iter(buffer), scheduler=self.scheduler, subscribe_scheduler=TrampolineScheduler()) \
+                .observe(TObserver())
 
         state = self.state
         buffer = state.buffer
@@ -103,7 +107,7 @@ class ReplaySubject(SubjectBase):
         if state.is_done:
             return stream_on_done(buffer, state.error_thrown)
         else:
-            c = ConnectableObserver(observer, scheduler=scheduler)
+            c = ConnectableObserver(observer, scheduler=self.scheduler, subscribe_scheduler=self.subscribe_scheduler)
             with self.lock:
                 new_state = self.state.add_new_subscriber(c)
                 self.state = new_state
@@ -176,7 +180,7 @@ class ReplaySubject(SubjectBase):
                         self.remove_subscriber(obs)
                         result.countdown()
 
-                ack.observe_on(obs.scheduler).subscribe(on_next)
+                ack.pipe(rx.operators.observe_on(obs.scheduler)).subscribe(on_next)
 
         if result is None:
             return Continue()

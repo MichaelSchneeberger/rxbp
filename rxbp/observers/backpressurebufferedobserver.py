@@ -2,16 +2,21 @@ import threading
 from queue import Queue
 
 import rx
+from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
+from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.observeon import _observe_on
+from rxbp.ack.single import Single
 
-from rxbp.ack import Stop, Continue, Ack, continue_ack
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
 class BackpressureBufferedObserver(Observer):
-    def __init__(self, observer: Observer, scheduler: Scheduler, buffer_size: int):
-        self.observer = observer
+    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler,
+                 buffer_size: int):
+        self.underlying = underlying
         self.scheduler = scheduler
+        self.subscribe_scheduler = subscribe_scheduler
         self.em = scheduler.get_execution_model()
         self.buffer_size = buffer_size
 
@@ -26,9 +31,13 @@ class BackpressureBufferedObserver(Observer):
 
         self.lock = threading.RLock()
 
+    @property
+    def is_volatile(self):
+        return self.underlying.is_volatile
+
     def on_next(self, v):
         if self.upstream_is_complete or self.downstream_is_complete:
-            return Stop()
+            return stop_ack
         else:
             with self.lock:
                 is_back_pressured = self.back_pressured
@@ -44,7 +53,7 @@ class BackpressureBufferedObserver(Observer):
 
                 # buffer is full, back-pressure is needed
                 else:
-                    ack = Ack()
+                    ack = AckSubject()
                     self.back_pressured = ack
                     self.queue.put(item=v)
                     self.push_to_consumer(to_push)
@@ -81,24 +90,24 @@ class BackpressureBufferedObserver(Observer):
     def consumer_run_loop(self):
         def signal_next(next):
             try:
-                ack = self.observer.on_next(next)
+                ack = self.underlying.on_next(next)
                 return ack
             except:
                 raise NotImplementedError
 
         def signal_complete():
             try:
-                self.observer.on_completed()
+                self.underlying.on_completed()
             except:
                 raise NotImplementedError
 
         def signal_error(ex):
             try:
-                self.observer.on_error(ex)
+                self.underlying.on_error(ex)
             except:
                 raise NotImplementedError
 
-        def go_async(next, next_size: int, ack: Ack, processed: int):
+        def go_async(next, next_size: int, ack: AckSubject, processed: int):
             def on_next(v):
                 if isinstance(v, Continue):
                     next_ack = signal_next(next)
@@ -108,9 +117,16 @@ class BackpressureBufferedObserver(Observer):
                 elif isinstance(v, Stop):
                     self.downstream_is_complete = True
 
-            ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(on_next=on_next)
+            class ResultSingle(Single):
+                def on_next(self, elem):
+                    on_next(elem)
 
-        def fast_loop(prev_ack: Ack, last_processed:int, start_index: int):
+                def on_error(self, exc: Exception):
+                    raise NotImplementedError
+
+            _observe_on(ack, self.scheduler).subscribe(ResultSingle())
+
+        def fast_loop(prev_ack: AckSubject, last_processed:int, start_index: int):
             def stop_streaming():
                 self.downstream_is_complete = True
                 pass

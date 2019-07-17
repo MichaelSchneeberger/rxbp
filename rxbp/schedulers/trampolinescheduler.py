@@ -5,17 +5,17 @@ import threading
 import time
 from typing import Optional
 
-from rx.concurrency import ScheduledItem
-from rx.concurrency.schedulerbase import SchedulerBase
+from rx.scheduler.scheduleditem import ScheduledItem
 from rx.core import typing
 from rx.internal import PriorityQueue
+from rx.scheduler.scheduler import Scheduler
 
 from rxbp.scheduler import SchedulerBase as RxBPSchedulerBase
 
 log = logging.getLogger('Rx')
 
 
-class TrampolineScheduler(RxBPSchedulerBase, SchedulerBase):
+class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
     class Trampoline(object):
         @classmethod
         def run(cls, queue: PriorityQueue) -> None:

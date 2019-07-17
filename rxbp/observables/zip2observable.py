@@ -4,8 +4,10 @@ from abc import ABC, abstractmethod
 from typing import Callable, Any, List, Generator, Optional, Iterator
 
 from rx.disposable import CompositeDisposable
+from rxbp.ack.ackimpl import stop_ack
+from rxbp.ack.ackbase import AckBase
+from rxbp.ack.acksubject import AckSubject
 
-from rxbp.ack import Ack, stop_ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 
@@ -103,7 +105,7 @@ class Zip2Observable(Observable):
         In this state, the left buffer is empty.
         """
 
-        def __init__(self, right_ack: Ack, right_iter: Iterator):
+        def __init__(self, right_ack: AckBase, right_iter: Iterator):
             self.right_ack = right_ack
             self.right_iter = right_iter
 
@@ -116,7 +118,7 @@ class Zip2Observable(Observable):
     class WaitOnRight(ZipState):
         """ Equivalent of WaitOnLeft """
 
-        def __init__(self, left_ack: Ack, left_iter: Iterator):
+        def __init__(self, left_ack: AckBase, left_iter: Iterator):
             self.left_iter = left_iter
             self.left_ack = left_ack
 
@@ -147,7 +149,7 @@ class Zip2Observable(Observable):
         method.
         """
 
-        def __init__(self, is_left: bool, ack: Ack, iter: Iterator):
+        def __init__(self, is_left: bool, ack: AckBase, iter: Iterator):
             """
             :param is_left:
             :param ack:
@@ -188,7 +190,7 @@ class Zip2Observable(Observable):
 
     def _iterate_over_batch(self, elem: Callable[[], Generator], is_left: bool):
 
-        upstream_ack = Ack()
+        upstream_ack = AckSubject()
         iter = elem()
 
         next_state = Zip2Observable.ZipElements(is_left=is_left, ack=upstream_ack, iter=iter)
@@ -261,7 +263,7 @@ class Zip2Observable(Observable):
         # back-pressure both sources
         if do_back_pressure_left and do_back_pressure_right:
             next_state = Zip2Observable.WaitOnLeftRight()
-            downstream_ack.connect_ack(upstream_ack)
+            downstream_ack.subscribe(upstream_ack)
 
         # only back-pressure right source
         elif do_back_pressure_right:
@@ -302,7 +304,6 @@ class Zip2Observable(Observable):
 
             self._signal_on_complete_or_on_error(raw_state=next_state)
             other_upstream_ack.on_next(stop_ack)
-            other_upstream_ack.on_completed()
             return stop_ack
 
         # stop back-pressuring both sources, because there is no need to request elements
@@ -310,33 +311,31 @@ class Zip2Observable(Observable):
         elif isinstance(prev_termination_state, Zip2Observable.RightCompletedState) and do_back_pressure_right:
             self._signal_on_complete_or_on_error(raw_state=next_state)
             other_upstream_ack.on_next(stop_ack)
-            other_upstream_ack.on_completed()
             return stop_ack
 
         # in error state, stop back-pressuring both sources
         elif isinstance(prev_termination_state, Zip2Observable.ErrorState):
             self._signal_on_complete_or_on_error(raw_state=next_state, ex=prev_termination_state.ex)
             other_upstream_ack.on_next(stop_ack)
-            other_upstream_ack.on_completed()
             return stop_ack
 
         # finish connecting ack only if not in Stopped or Error state
         else:
 
             if do_back_pressure_left and do_back_pressure_right:
-                downstream_ack.connect_ack(other_upstream_ack)
+                downstream_ack.subscribe(other_upstream_ack)
 
             elif do_back_pressure_right:
                 if is_left:
-                    downstream_ack.connect_ack(other_upstream_ack)
+                    downstream_ack.subscribe(other_upstream_ack)
                 else:
-                    downstream_ack.connect_ack(upstream_ack)
+                    downstream_ack.subscribe(upstream_ack)
 
             elif do_back_pressure_left:
                 if is_left:
-                    downstream_ack.connect_ack(upstream_ack)
+                    downstream_ack.subscribe(upstream_ack)
                 else:
-                    downstream_ack.connect_ack(other_upstream_ack)
+                    downstream_ack.subscribe(other_upstream_ack)
 
             else:
                 raise Exception('at least one side should be back-pressured')
@@ -372,10 +371,8 @@ class Zip2Observable(Observable):
             pass
         elif isinstance(raw_state, Zip2Observable.WaitOnLeft):
             raw_state.right_ack.on_next(stop_ack)
-            raw_state.right_ack.on_completed()
         elif isinstance(raw_state, Zip2Observable.WaitOnRight):
             raw_state.left_ack.on_next(stop_ack)
-            raw_state.left_ack.on_completed()
         else:
             pass
 

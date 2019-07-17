@@ -22,6 +22,10 @@ class ZipWithIndexObservable(Observable):
             return observer.on_next(map_gen)
 
         class ZipCountObserver(Observer):
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 return on_next(v)
 

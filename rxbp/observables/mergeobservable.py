@@ -2,8 +2,11 @@ import threading
 from typing import Callable, Generator
 
 from rx.disposable import CompositeDisposable
+from rxbp.ack.ackimpl import Continue
+from rxbp.ack.ackbase import AckBase
+from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.single import Single
 
-from rxbp.ack import Continue, Ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 
@@ -32,7 +35,7 @@ class MergeObservable(Observable):
             pass
 
         class ElementReceived(State):
-            def __init__(self, ack: Ack):
+            def __init__(self, ack: AckBase):
                 self.ack = ack
 
         left_completed = [False]
@@ -46,7 +49,7 @@ class MergeObservable(Observable):
         def on_next_left(left_elem: Callable[[], Generator]):
             # print('match left element received')
 
-            ack = Ack()
+            ack = AckSubject()
 
             new_left_state = ElementReceived(ack=ack)
 
@@ -58,38 +61,46 @@ class MergeObservable(Observable):
             if isinstance(meas_right_state, Wait):
 
                 # send element
-                out_ack: Ack = observer.on_next(left_elem)
-                out_ack.connect_ack(ack)
+                out_ack: AckBase = observer.on_next(left_elem)
+                out_ack.subscribe(ack)
 
-                def _(v):
-                    if isinstance(v, Continue):
+                class ReusltSingle(Single):
+                    def on_next(_, v):
+                        if isinstance(v, Continue):
 
-                        new_left_state = Wait()
+                            new_left_state = Wait()
 
-                        with lock:
-                            left_state[0] = new_left_state
-                            meas_right_state = right_state[0]
+                            with lock:
+                                left_state[0] = new_left_state
+                                meas_right_state = right_state[0]
 
-                        if isinstance(meas_right_state, Wait):
-                            ack.on_next(v)
-                        elif isinstance(meas_right_state, ElementReceived):
-                            meas_right_state.ack.connect_ack(ack)
-                        else:
-                            raise Exception('illegal state "{}"'.format(meas_right_state))
+                            if isinstance(meas_right_state, Wait):
+                                ack.on_next(v)
+                            elif isinstance(meas_right_state, ElementReceived):
+                                meas_right_state.ack.subscribe(ack)
+                            else:
+                                raise Exception('illegal state "{}"'.format(meas_right_state))
 
-                out_ack.subscribe(_)
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
+
+                out_ack.subscribe(ReusltSingle())
 
             # right was first
             elif isinstance(meas_right_state, ElementReceived):
 
-                def _(v):
-                    if isinstance(v, Continue):
+                class ReusltSingle(Single):
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
 
-                        out_ack = observer.on_next(left_elem)
+                    def on_next(_, v):
+                        if isinstance(v, Continue):
 
-                        out_ack.connect_ack(ack)
+                            out_ack = observer.on_next(left_elem)
 
-                meas_right_state.ack.subscribe(_)
+                            out_ack.subscribe(ack)
+
+                meas_right_state.ack.subscribe(ReusltSingle())
 
             else:
                 raise Exception('illegal state "{}"'.format(meas_right_state))
@@ -99,7 +110,7 @@ class MergeObservable(Observable):
         def on_next_right(right_elem: Callable[[], Generator]):
             # print('match right element received')
 
-            ack = Ack()
+            ack = AckBase()
 
             new_right_state = ElementReceived(ack=ack)
 
@@ -111,37 +122,45 @@ class MergeObservable(Observable):
             if isinstance(meas_left_state, Wait):
 
                 # send element
-                out_ack: Ack = observer.on_next(right_elem)
-                out_ack.connect_ack(ack)
+                out_ack: AckBase = observer.on_next(right_elem)
+                out_ack.subscribe(ack)
 
-                def _(v):
-                    if isinstance(v, Continue):
+                class ReusltSingle(Single):
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
 
-                        new_right_state = Wait()
+                    def on_next(_, v):
+                        if isinstance(v, Continue):
 
-                        with lock:
-                            right_state[0] = new_right_state
-                            meas_left_state = left_state[0]
+                            new_right_state = Wait()
 
-                        if isinstance(meas_left_state, Wait):
-                            ack.on_next(v)
-                        elif isinstance(meas_left_state, ElementReceived):
-                            meas_left_state.ack.connect_ack(ack)
-                        else:
-                            raise Exception('illegal state "{}"'.format(meas_left_state))
+                            with lock:
+                                right_state[0] = new_right_state
+                                meas_left_state = left_state[0]
 
-                out_ack.subscribe(_)
+                            if isinstance(meas_left_state, Wait):
+                                ack.on_next(v)
+                            elif isinstance(meas_left_state, ElementReceived):
+                                meas_left_state.ack.subscribe(ack)
+                            else:
+                                raise Exception('illegal state "{}"'.format(meas_left_state))
+
+                out_ack.subscribe(ReusltSingle())
 
             # right was first
             elif isinstance(meas_left_state, ElementReceived):
 
-                def _(v):
-                    if isinstance(v, Continue):
-                        out_ack = observer.on_next(right_elem)
+                class ReusltSingle(Single):
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
 
-                        out_ack.connect_ack(ack)
+                    def on_next(_, v):
+                        if isinstance(v, Continue):
+                            out_ack = observer.on_next(right_elem)
 
-                meas_left_state.ack.subscribe(_)
+                            out_ack.subscribe(ack)
+
+                meas_left_state.ack.subscribe(ReusltSingle())
 
             else:
                 raise Exception('illegal state "{}"'.format(meas_left_state))

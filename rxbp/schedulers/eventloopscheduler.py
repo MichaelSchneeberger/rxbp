@@ -1,4 +1,4 @@
-from rx.concurrency import EventLoopScheduler as ParentEventLoopScheduler
+from rx.scheduler.eventloopscheduler import EventLoopScheduler as ParentEventLoopScheduler
 
 from rxbp.scheduler import SchedulerBase
 

@@ -3,8 +3,11 @@ from abc import ABC, abstractmethod
 from typing import Callable, Any, Generator, Iterator, Tuple, Optional
 
 from rx.disposable import CompositeDisposable
+from rxbp.ack.ackimpl import continue_ack, stop_ack
+from rxbp.ack.ackbase import AckBase
+from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.merge import _merge
 
-from rxbp.ack import Ack, continue_ack, stop_ack
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
@@ -113,8 +116,8 @@ class ControlledZipObservable(Observable):
         def __init__(self,
                      right_val: Any,
                      right_iter: Iterator,
-                     right_in_ack: Ack,
-                     right_sel_ack: Optional[Ack]
+                     right_in_ack: AckBase,
+                     right_sel_ack: Optional[AckBase]
                      ):
             self.right_val = right_val
             self.right_iter = right_iter
@@ -132,8 +135,8 @@ class ControlledZipObservable(Observable):
         def __init__(self,
                      left_iter: Iterator,
                      left_val: Any,
-                     left_in_ack: Ack,
-                     left_sel_ack: Optional[Ack]):
+                     left_in_ack: AckBase,
+                     left_sel_ack: Optional[AckBase]):
             self.left_val = left_val
             self.left_iter = left_iter
             self.left_in_ack = left_in_ack
@@ -168,7 +171,7 @@ class ControlledZipObservable(Observable):
         method.
         """
 
-        def __init__(self, is_left: bool, ack: Ack, iter: Iterator, val: Any,
+        def __init__(self, is_left: bool, ack: AckBase, iter: Iterator, val: Any,
                      prev_state: 'ControlledZipObservable.ControlledZipState',
                      prev_terminal_state: 'ControlledZipObservable.TerminationState'):
             """
@@ -212,9 +215,9 @@ class ControlledZipObservable(Observable):
             return self
 
     def _iterate_over_batch(self, elem: Callable[[], Generator], is_left: bool) \
-            -> Ack:
+            -> AckBase:
 
-        upstream_ack = Ack()
+        upstream_ack = AckSubject()
 
         iter = elem()
         val = next(iter)
@@ -353,14 +356,11 @@ class ControlledZipObservable(Observable):
         prev_termination_state = raw_prev_termination_state.get_current_state()
 
         def stop_active_acks():
-            if last_right_sel_ack is not None:
+            if isinstance(last_right_sel_ack, AckSubject): #last_right_sel_ack is not None :
                 last_right_sel_ack.on_next(stop_ack)
-                last_right_sel_ack.on_completed()
-            elif last_left_sel_ack is not None:
+            elif isinstance(last_left_sel_ack, AckSubject): #last_left_sel_ack is not None:
                 last_left_sel_ack.on_next(stop_ack)
-                last_left_sel_ack.on_completed()
             other_upstream_ack.on_next(stop_ack)
-            other_upstream_ack.on_completed()
 
         # stop back-pressuring both sources, because there is no need to request elements
         # from completed source
@@ -394,33 +394,37 @@ class ControlledZipObservable(Observable):
             if do_back_pressure_left and do_back_pressure_right:
 
                 # integrate selector acks
-                result_ack_left = zip_out_ack.merge_ack(left_out_ack)
-                result_ack_right = zip_out_ack.merge_ack(right_out_ack)
+                # result_ack_left = zip_out_ack.merge_ack(left_out_ack)
+                # result_ack_right = zip_out_ack.merge_ack(right_out_ack)
+                result_ack_left = _merge(zip_out_ack, left_out_ack)
+                result_ack_right = _merge(zip_out_ack, right_out_ack)
 
                 # directly return ack depending on whether left or right called `iterate_over_batch`
                 if is_left:
-                    result_ack_right.connect_ack(right_in_ack)
+                    result_ack_right.subscribe(right_in_ack)
                     return result_ack_left
                 else:
-                    result_ack_left.connect_ack(left_in_ack)
+                    result_ack_left.subscribe(left_in_ack)
                     return result_ack_right
 
             # all elements in the left buffer are send to the observer, back-pressure only left
             elif do_back_pressure_left:
 
-                result_left_ack = zip_out_ack.merge_ack(left_out_ack)
+                # result_left_ack = zip_out_ack.merge_ack(left_out_ack)
+                result_left_ack = _merge(zip_out_ack, left_out_ack)
                 if is_left:
                     return result_left_ack
                 else:
-                    result_left_ack.connect_ack(left_in_ack)
+                    result_left_ack.subscribe(left_in_ack)
                     return right_in_ack
 
             # all elements in the left buffer are send to the observer, back-pressure only right
             elif do_back_pressure_right:
 
-                result_right_ack = zip_out_ack.merge_ack(right_out_ack)
+                # result_right_ack = zip_out_ack.merge_ack(right_out_ack)
+                result_right_ack = _merge(zip_out_ack, right_out_ack)
                 if is_left:
-                    result_right_ack.connect_ack(right_in_ack)
+                    result_right_ack.subscribe(right_in_ack)
                     return left_in_ack
                 else:
                     return result_right_ack
@@ -460,10 +464,8 @@ class ControlledZipObservable(Observable):
             pass
         elif isinstance(raw_state, ControlledZipObservable.WaitOnLeft):
             raw_state.right_in_ack.on_next(stop_ack)
-            raw_state.right_in_ack.on_completed()
         elif isinstance(raw_state, ControlledZipObservable.WaitOnRight):
             raw_state.left_in_ack.on_next(stop_ack)
-            raw_state.left_in_ack.on_completed()
         else:
             pass
 

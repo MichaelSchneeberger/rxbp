@@ -21,5 +21,5 @@ class FlatMapFlowable(FlowableBase):
             return inner_obs
 
         obs = FlatMapObservable(source=source_observable, selector=observable_selector,
-                                scheduler=subscriber.scheduler)
+                                scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
         return obs, source_selectors

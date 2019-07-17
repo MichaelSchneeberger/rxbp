@@ -25,6 +25,10 @@ class ConcatObservable(Observable):
             def __init__(self):
                 self.ack = None
 
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 self.ack = observer.on_next(v)
                 return self.ack

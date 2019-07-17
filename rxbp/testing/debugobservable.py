@@ -1,4 +1,5 @@
-from rxbp.ack import Continue, Stop
+from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.single import Single
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -11,17 +12,29 @@ class DebugObservable(Observable):
         self.source = source
         self.name = name
 
-        self.on_next_func = on_next or (lambda v: print('{}.on_next {}'.format(name, v)))
-        self.on_completed_func = on_completed or (lambda: print('{}.on_completed'.format(name)))
-        self.on_subscribe_func = on_subscribe or (lambda v: print('{}.on_subscribe {}'.format(name, v)))
-        self.on_sync_ack = on_ack or (lambda v: print('{}.on_sync_ack {}'.format(name, v)))
-        self.on_async_ack = on_ack or (lambda v: print('{}.on_async_ack {}'.format(name, v)))
-        self.on_raw_ack = on_raw_ack or (lambda v: print('{}.on_raw_ack {}'.format(name, v)))
-        self.on_next_exception = on_next_exception or (lambda v: print('{}.on_next exception raised "{}"'.format(name, v)))
+        if name is not None:
+            self.on_next_func = on_next or (lambda v: print('{}.on_next {}'.format(name, v)))
+            self.on_completed_func = on_completed or (lambda: print('{}.on_completed'.format(name)))
+            self.on_subscribe_func = on_subscribe or (lambda v: print('{}.on_observe {}'.format(name, v)))
+            self.on_sync_ack = on_ack or (lambda v: print('{}.on_sync_ack {}'.format(name, v)))
+            self.on_async_ack = on_ack or (lambda v: print('{}.on_async_ack {}'.format(name, v)))
+            self.on_raw_ack = on_raw_ack or (lambda v: print('{}.on_raw_ack {}'.format(name, v)))
+            self.on_next_exception = on_next_exception or (lambda v: print('{}.on_next exception raised "{}"'.format(name, v)))
+        else:
+            empty_func0 = lambda: None
+            empty_func1 = lambda v: None
+
+            self.on_next_func = on_next or empty_func1
+            self.on_completed_func = on_completed or empty_func0
+            self.on_subscribe_func = on_subscribe or empty_func1
+            self.on_sync_ack = on_ack or empty_func1
+            self.on_async_ack = on_ack or empty_func1
+            self.on_raw_ack = on_raw_ack or empty_func1
+            self.on_next_exception = on_next_exception or empty_func1
 
     def observe(self, observer: Observer):
-        if self.name is None:
-            return self.source.observe(observer)
+        # if self.name is None:
+        #     return self.source.observe(observer)
 
         self.on_subscribe_func(observer)
 
@@ -43,7 +56,15 @@ class DebugObservable(Observable):
                 self.on_sync_ack(ack)
             else:
                 self.on_raw_ack(ack)
-                ack.subscribe(self.on_async_ack)
+
+                class ResultSingle(Single):
+                    def on_next(_, elem):
+                        self.on_async_ack(elem)
+
+                    def on_error(self, exc: Exception):
+                        pass
+
+                ack.subscribe(ResultSingle())
             return ack
 
         def on_completed():

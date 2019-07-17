@@ -1,7 +1,6 @@
 import itertools
 from typing import Callable, Any
 
-from rxbp.ack import continue_ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 
@@ -15,17 +14,32 @@ class ScanObservable(Observable):
     def observe(self, observer: Observer):
 
         def on_next(v):
+            def scan_func(elem):
+                val = self.func(self.acc, elem)
+                self.acc = val
+                return val
+
+            materialize_data = [scan_func(elem) for elem in v()]
 
             def scan_gen():
-                for elem in v():
-                    val = self.func(self.acc, elem)
-                    self.acc = val
-                    yield val
+                # for elem in v():
+                #     val = self.func(self.acc, elem)
+                #     self.acc = val
+                #     yield val
+                yield from materialize_data
+
+            # materialized_values = list(scan_gen())
+            # def gen():
+            #     yield from materialized_values
 
             ack = observer.on_next(scan_gen)
             return ack
 
         class ScanObserver(Observer):
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 return on_next(v)
 

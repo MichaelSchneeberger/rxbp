@@ -22,7 +22,7 @@ class UncaughtExceptionReport:
         raise exc
 
 
-class Scheduler(rx.typing.Scheduler, ABC):
+class Scheduler(rx.scheduler.scheduler.Scheduler, ABC):
     def report_failure(self, exc: Exception):
         raise NotImplementedError
 

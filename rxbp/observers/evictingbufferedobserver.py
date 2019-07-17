@@ -3,8 +3,9 @@ from queue import Queue
 from typing import List, Any
 
 import rx
+from rxbp.ack.ackimpl import Continue, continue_ack, Stop
+from rxbp.ack.ackbase import AckBase
 
-from rxbp.ack import Stop, Continue, Ack, continue_ack
 from rxbp.observer import Observer
 from rxbp.overflowstrategy import OverflowStrategy, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
@@ -44,10 +45,11 @@ class AtomicInt(AtomicAny):
 
 
 class EvictingBufferedObserver(Observer):
-    def __init__(self, observer: Observer, scheduler: Scheduler,
+    def __init__(self, observer: Observer, scheduler: Scheduler, subscribe_scheduler,
                  strategy: OverflowStrategy):
         self.observer = observer
         self.scheduler = scheduler
+        self.subscribe_scheduler = subscribe_scheduler
         self.em = scheduler.get_execution_model()
         # self.buffer_size = strategy
 
@@ -73,6 +75,10 @@ class EvictingBufferedObserver(Observer):
     #
     # class ClearBuffer(Strategy):
     #     pass
+
+    @property
+    def is_volatile(self):
+        return self.observer.is_volatile
 
     class Buffer:
         def __init__(self, lock, strategy: OverflowStrategy):
@@ -164,7 +170,7 @@ class EvictingBufferedObserver(Observer):
             except:
                 raise NotImplementedError
 
-        def go_async(current_queue: List, next_val, next_size: int, ack: Ack, processed: int):
+        def go_async(current_queue: List, next_val, next_size: int, ack: AckBase, processed: int):
             def on_next(v):
                 if isinstance(v, Continue):
                     next_ack = signal_next(next_val)
@@ -174,9 +180,9 @@ class EvictingBufferedObserver(Observer):
                 elif isinstance(v, Stop):
                     self.downstream_is_complete = True
 
-            ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(on_next=on_next)
+            ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(on_next=on_next, scheduler=self.subscribe_scheduler)
 
-        def fast_loop(prev_queue: List, prev_ack: Ack, last_processed:int, start_index: int):
+        def fast_loop(prev_queue: List, prev_ack: AckBase, last_processed:int, start_index: int):
             ack = continue_ack if prev_ack is None else prev_ack
             is_first_iteration = isinstance(ack, Continue)
             processed = last_processed

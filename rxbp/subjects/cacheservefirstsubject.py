@@ -8,9 +8,12 @@ from typing import List
 from rx.disposable import Disposable
 from rx.core.notification import OnNext, OnCompleted, OnError
 from rx.disposable import BooleanDisposable
+from rxbp.ack.ackimpl import Continue, Stop, stop_ack
+from rxbp.ack.ackbase import AckBase
+from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.observeon import _observe_on
+from rxbp.ack.single import Single
 
-from rxbp.ack import Continue, Stop, Ack, stop_ack
-from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import ExecutionModel, Scheduler
 from rxbp.subjects.subjectbase import SubjectBase
@@ -82,7 +85,7 @@ class CacheServeFirstSubject(SubjectBase):
             self.scheduler = scheduler
             self.em = em
 
-        def notify_on_next(self, value) -> Ack:
+        def notify_on_next(self, value) -> AckBase:
             # inner subscription gets only notified if all items from buffer are sent and ack received
 
             with self.source.lock:
@@ -104,7 +107,7 @@ class CacheServeFirstSubject(SubjectBase):
                 self.signal_stop()
                 return ack
             else:
-                inner_ack = Ack()
+                inner_ack = AckSubject()
 
                 def _(v):
                     if isinstance(v, Continue):
@@ -125,9 +128,15 @@ class CacheServeFirstSubject(SubjectBase):
                         raise Exception('no recognized acknowledgment {}'.format(v))
 
                     inner_ack.on_next(v)
-                    inner_ack.on_completed()
 
-                ack.pipe(rx.operators.observe_on(scheduler=self.scheduler)).subscribe(_)
+                class ResultSingle(Single):
+                    def on_next(self, elem):
+                        _(elem)
+
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
+
+                _observe_on(source=ack, scheduler=self.scheduler).subscribe(ResultSingle())
                 return inner_ack
 
         def notify_on_completed(self):
@@ -140,8 +149,11 @@ class CacheServeFirstSubject(SubjectBase):
             with self.source.lock:
                 del self.source.current_index[self]
 
+                num_subscriber = len([True for inner_sub in self.source.current_index.keys() if inner_sub.observer.is_volatile is False])
+                # num_subscriber = len(self.source.current_index)
+
                 # todo: bug here
-                if len(self.source.current_index) == 0:
+                if num_subscriber == 0:
                     self.source.is_done = True
 
         def fast_loop(self, current_idx: int, sync_index: int, disposable: BooleanDisposable):
@@ -202,7 +214,14 @@ class CacheServeFirstSubject(SubjectBase):
                                     else:
                                         raise Exception('no recognized acknowledgment {}'.format(v))
 
-                                ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(_)
+                                class ResultSingle(Single):
+                                    def on_next(self, elem):
+                                        _(elem)
+
+                                    def on_error(self, exc: Exception):
+                                        raise NotImplementedError
+
+                                _observe_on(source=ack, scheduler=self.scheduler).subscribe(ResultSingle())
 
                     if not has_next:
                         break
@@ -229,7 +248,15 @@ class CacheServeFirstSubject(SubjectBase):
                                 self.signal_stop()
                                 self.observer.on_error(err)
 
-                            ack.pipe(rx.operators.observe_on(self.scheduler)).subscribe(on_next=on_next, on_error=on_error)
+                            class ResultSingle(Single):
+                                def on_next(self, elem):
+                                    on_next(elem)
+
+                                def on_error(self, exc: Exception):
+                                    on_error(exc)
+
+                            _observe_on(source=ack, scheduler=self.scheduler).subscribe(ResultSingle())
+
                             break
                         else:
                             self.signal_stop()
@@ -260,7 +287,7 @@ class CacheServeFirstSubject(SubjectBase):
 
     def on_next(self, value):
 
-        current_ack = Ack()
+        current_ack = AckSubject()
 
         with self.lock:
             # concurrent situation with acknowledgment in inner subscription or new subscriptions
@@ -298,8 +325,11 @@ class CacheServeFirstSubject(SubjectBase):
 
             ack_list = [current_ack] + inner_ack_list
 
-            upper_ack = Ack()
-            rx.merge(*ack_list).pipe(rx.operators.first()).subscribe(upper_ack)
+            upper_ack = AckSubject()
+
+            for ack in ack_list:
+                ack.subscribe(upper_ack)
+
             return upper_ack
 
     def on_completed(self):
@@ -320,7 +350,6 @@ class CacheServeFirstSubject(SubjectBase):
     def on_error(self, exception):
         with self.lock:
             # concurrent situation with acknowledgment in inner subscription or new subscriptions
-
             # inner subscriptions that return Continue or Stop need to be added to inactive subscriptions again
             inactive_subsriptions = self.inactive_subsriptions
             self.inactive_subsriptions = []

@@ -59,7 +59,7 @@ class TestWindowObservable(unittest.TestCase):
         # self.assertEqual(self.right_out.ack, ack_right)
 
         # request next right
-        continue_ack.connect_ack(self.right_out.ack.on_next)
+        continue_ack.subscribe(self.right_out.ack.on_next)
         ack_right = self.right_in.on_next(self._get_gen([8.5, 9.5, 10.5]))
 
         print(self.right_out.received)

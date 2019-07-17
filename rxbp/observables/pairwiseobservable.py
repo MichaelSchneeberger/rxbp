@@ -1,6 +1,6 @@
 import itertools
 
-from rxbp.ack import continue_ack, stop_ack
+from rxbp.ack.ackimpl import continue_ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 
@@ -52,6 +52,10 @@ class PairwiseObservable(Observable):
             return ack
 
         class PairwiseObserver(Observer):
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 return on_next(v)
 

@@ -1,4 +1,4 @@
-from rxbp.ack import Continue, Stop, stop_ack
+from rxbp.ack.ackimpl import Continue, Stop, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler

@@ -1,9 +1,11 @@
 from typing import Iterator, Any, List
 
 import rx
-from rx.disposable import Disposable, BooleanDisposable
+from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
+from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.observeon import _observe_on
+from rxbp.ack.single import Single
 
-from rxbp.ack import Continue, Stop
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
@@ -36,15 +38,15 @@ class IteratorAsObservable(Observable):
                 observer.on_completed()
                 return Disposable()
             else:
-                disposable = BooleanDisposable()
+                d1 = BooleanDisposable()
 
                 def action(_, __):
                     # start sending items
-                    self.fast_loop(item, observer, self.scheduler, disposable, self.scheduler.get_execution_model(),
+                    self.fast_loop(item, observer, self.scheduler, d1, self.scheduler.get_execution_model(),
                                    sync_index=0)
 
-                self.subscribe_scheduler.schedule(action)
-                return disposable
+                d2 = self.subscribe_scheduler.schedule(action)
+                return CompositeDisposable(d1, d2)
         except:
             raise Exception('fatal error')
 
@@ -55,21 +57,23 @@ class IteratorAsObservable(Observable):
             scheduler.report_failure(e)
 
     def reschedule(self, ack, next_item, observer, scheduler: SchedulerBase, disposable, em: ExecutionModel):
-        def on_next(next):
-            if isinstance(next, Continue):
-                try:
-                    self.fast_loop(next_item, observer, scheduler, disposable, em, sync_index=0)
-                except Exception as e:
+        class ResultSingle(Single):
+            def on_next(_, next):
+                if isinstance(next, Continue):
+                    try:
+                        self.fast_loop(next_item, observer, scheduler, disposable, em, sync_index=0)
+                    except Exception as e:
+                        self.trigger_cancel(scheduler)
+                        scheduler.report_failure(e)
+                else:
                     self.trigger_cancel(scheduler)
-                    scheduler.report_failure(e)
-            else:
+
+            def on_error(_, err):
                 self.trigger_cancel(scheduler)
+                scheduler.report_failure(err)
 
-        def on_error(err):
-            self.trigger_cancel(scheduler)
-            scheduler.report_failure(err)
-
-        ack.pipe(rx.operators.observe_on(scheduler)).subscribe(on_next=on_next, on_error=on_error)
+        _observe_on(source=ack, scheduler=scheduler).subscribe(ResultSingle())
+        # ack.subscribe(ResultSingle())
 
     def fast_loop(self, current_item, observer, scheduler: Scheduler,
                   disposable: BooleanDisposable, em: ExecutionModel, sync_index: int):

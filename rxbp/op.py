@@ -94,6 +94,18 @@ def filter(predicate: Callable[[Any], bool]):
     return FlowableOperator(func)
 
 
+def filter_with_index(predicate: Callable[[Any, int], bool]):
+    """ Only emits those items for which the given predicate holds
+
+    :param predicate: a function that returns True, if the current element passes the filter
+    :return: filtered observable
+    """
+
+    def func(left: Flowable) -> FlowableBase:
+        return left.filter_with_index(predicate=predicate)
+    return FlowableOperator(func)
+
+
 def flat_map(selector: Callable[[Any], FlowableBase]):
     """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
     as input and returns an inner observable. The resulting observable concatenates the items of each inner
@@ -232,6 +244,12 @@ def share(func: Callable[[FlowableBase], FlowableBase]):
     def inner_func(source: Flowable) -> FlowableBase:
         return source.share(func=func)
     return FlowableOperator(inner_func)
+
+
+def to_list():
+    def func(source: Flowable) -> FlowableBase:
+        return source.to_list()
+    return FlowableOperator(func)
 
 
 def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):

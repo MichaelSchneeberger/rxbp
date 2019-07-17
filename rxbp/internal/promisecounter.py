@@ -1,8 +1,7 @@
 import threading
 
 import rx
-
-from rxbp.ack import Ack
+from rxbp.ack.acksubject import AckSubject
 
 
 class PromiseCounter:
@@ -11,7 +10,7 @@ class PromiseCounter:
 
         self.value = value
         self.counter = initial
-        self.promise = Ack()
+        self.promise = AckSubject()
 
     def acquire(self):
         with self.lock:
@@ -23,5 +22,5 @@ class PromiseCounter:
             counter = self.counter
 
         if counter == 0:
-            rx.just(self.value).subscribe(self.promise)
+            self.promise.on_next(self.value)
 

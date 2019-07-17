@@ -3,8 +3,9 @@ from typing import Set, Tuple, List, Union
 
 import rx
 from rx.disposable import Disposable
+from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
+from rxbp.ack.single import Single
 
-from rxbp.ack import Continue, stop_ack, continue_ack
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.scheduler import Scheduler
@@ -13,13 +14,14 @@ from rxbp.subjects.subjectbase import SubjectBase
 
 
 class PublishSubject(SubjectBase):
-    def __init__(self, scheduler: Scheduler):
+    def __init__(self, scheduler: Scheduler, min_num_of_subscriber: int = 1):
 
         super().__init__()
 
         self.state = self.State()
         self.lock = threading.RLock()
         self.scheduler = scheduler
+        self._min_num_of_subscriber = min_num_of_subscriber
 
     class Subscriber:
         def __init__(self, observer, scheduler):
@@ -94,9 +96,9 @@ class PublishSubject(SubjectBase):
         state = self.state
         subscribers = state.cache
 
-        if subscribers is None:
+        if subscribers is None: # or len(subscribers) < self._min_num_of_subscriber:
             sub_set = state.subscribers
-            if isinstance(sub_set, self.Empty):
+            if isinstance(sub_set, self.Empty): # or len(sub_set) < self._min_num_of_subscriber:
                 return stop_ack
             else:
                 update = state.refresh()
@@ -111,8 +113,12 @@ class PublishSubject(SubjectBase):
     def on_completed(self):
         self.send_oncomplete_or_error()
 
-    def send_on_next_to_all(self, subscribers: List, v):
+    def send_on_next_to_all(self, subscribers: List, elem):
         result = None
+
+        materialized_values = list(elem())
+        def gen():
+            yield from materialized_values
 
         index = 0
         while index < len(subscribers):
@@ -121,16 +127,19 @@ class PublishSubject(SubjectBase):
             index += 1
 
             try:
-                ack = observer.on_next(v)
+                ack = observer.on_next(gen)
             except:
                 raise NotImplementedError
 
-            if ack.has_value:
-                if not isinstance(ack, Continue) and ack.exception is not None:
+            # todo: redo this
+            if isinstance(ack, Continue):
+               pass
+            elif isinstance(ack, Stop): #and ack.exception is not None:
                     self.unsubscribe(observer)
             else:
+                has_value = ack.value[0]
 
-                if not isinstance(ack, Continue):
+                if not has_value:
                     if result is None:
                         result = PromiseCounter(Continue(), 1)
 
@@ -147,7 +156,14 @@ class PublishSubject(SubjectBase):
                         self.unsubscribe(observer)
                         result.countdown()
 
-                    ack.pipe(rx.operators.first()).subscribe(on_next=on_next, on_error=on_error)
+                    class ResultSingle(Single):
+                        def on_next(self, elem):
+                            on_next(elem)
+
+                        def on_error(self, exc: Exception):
+                            on_error(exc)
+
+                    ack.subscribe(ResultSingle())
 
         if result is None:
             return Continue()

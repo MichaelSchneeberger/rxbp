@@ -1,6 +1,5 @@
-from rx.concurrency.schedulerbase import SchedulerBase
-
-from rxbp.ack import Continue, Stop, Ack
+from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.acksubject import AckSubject
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -14,22 +13,20 @@ class ObserveOnObservable(Observable):
 
     def observe(self, observer: Observer):
         def on_next(v):
+            ack_subject = AckSubject()
+
             def action(_, __):
                 inner_ack = observer.on_next(v)
 
                 if isinstance(inner_ack, Continue):
-                    ack.on_next(inner_ack)
-                    ack.on_completed()
+                    ack_subject.on_next(inner_ack)
                 elif isinstance(inner_ack, Stop):
-                    ack.on_next(inner_ack)
-                    ack.on_completed()
+                    ack_subject.on_next(inner_ack)
                 else:
-                    inner_ack.subscribe(ack)
+                    inner_ack.subscribe(ack_subject)
 
             self.scheduler.schedule(action)
-
-            ack = Ack()
-            return ack
+            return ack_subject
 
         def on_error(exc):
             def action(_, __):

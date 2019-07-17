@@ -1,7 +1,9 @@
 import functools
 from typing import Callable, Any
 
-from rxbp.ack import Ack, stop_ack
+from rxbp.ack.ack import Ack
+from rxbp.ack.ackimpl import stop_ack
+from rxbp.ack.ackbase import AckBase
 from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -53,13 +55,17 @@ class FilterObservable(Observable):
 
                 ack1: Ack = observer.on_next(gen_output)
 
-                return ack1.merge_ack(sel_ack)
+                return ack1.merge(sel_ack)
             else:
                 return sel_ack
 
         source = self
 
         class FilterObserver(Observer):
+            @property
+            def is_volatile(self):
+                return observer.is_volatile
+
             def on_next(self, v):
                 return on_next(v)
 

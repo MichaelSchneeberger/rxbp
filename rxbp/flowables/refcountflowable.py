@@ -5,6 +5,7 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import ObjectRefBase, Base
+from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.subjects.subjectbase import SubjectBase
 from rxbp.subscriber import Subscriber
 
@@ -15,12 +16,15 @@ class RefCountFlowable(FlowableBase):
         return o1.zip(o2).zip(o3))
     """
 
-    def __init__(self, source: FlowableBase, subject_gen: Callable[[Scheduler], SubjectBase], base: Base = None):
+    def __init__(self, source: FlowableBase, subject_gen: Callable[[Scheduler], SubjectBase] = None, base: Base = None):
         base_ = base or source.base or ObjectRefBase(self)  # take over base or create new one
         super().__init__(base=base_, selectable_bases=source.selectable_bases)
 
+        def default_subject_gen(scheduler: Scheduler):
+            return PublishSubject(scheduler=scheduler)
+
         self.source = source
-        self._subject_gen = subject_gen
+        self._subject_gen = subject_gen or default_subject_gen
 
         self.has_subscription = False
         self.source_selectors = None
@@ -30,13 +34,13 @@ class RefCountFlowable(FlowableBase):
 
     def unsafe_subscribe(self, subscriber: Subscriber):
         """Connects the observable."""
-
         with self.lock:
             if not self.has_subscription:
+                self.has_subscription = True
+
                 source_obs, source_selectors = self.source.unsafe_subscribe(subscriber)
                 subject = self._subject_gen(subscriber.scheduler) #PublishSubject(scheduler=subscriber.scheduler)
 
-                self.has_subscription = True
                 self.source_selectors = source_selectors
                 self.shared_observable = RefCountObservable(source=source_obs, subject=subject)
 
