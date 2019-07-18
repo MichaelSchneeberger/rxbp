@@ -9,6 +9,7 @@ from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 
 
 class MergeObservable(Observable):
@@ -27,7 +28,9 @@ class MergeObservable(Observable):
         self.left = left
         self.right = right
 
-    def observe(self, observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
+
         class State:
             pass
 
@@ -110,7 +113,7 @@ class MergeObservable(Observable):
         def on_next_right(right_elem: Callable[[], Generator]):
             # print('match right element received')
 
-            ack = AckBase()
+            ack = AckSubject()
 
             new_right_state = ElementReceived(ack=ack)
 
@@ -212,9 +215,11 @@ class MergeObservable(Observable):
                     observer.on_completed()
 
         left_observer = LeftObserver()
-        d1 = self.left.observe(left_observer)
+        left_subscription = subscription.copy(left_observer)
+        d1 = self.left.observe(left_subscription)
 
         right_observer = RightObserver()
-        d2 = self.right.observe(right_observer)
+        right_subscription = subscription.copy(right_observer)
+        d2 = self.right.observe(right_subscription)
 
         return CompositeDisposable(d1, d2)

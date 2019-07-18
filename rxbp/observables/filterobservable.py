@@ -4,6 +4,7 @@ from typing import Callable, Any
 from rxbp.ack.ack import Ack
 from rxbp.ack.ackimpl import stop_ack
 from rxbp.ack.ackbase import AckBase
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -21,7 +22,9 @@ class FilterObservable(Observable):
         self.source = source
         self.predicate = predicate
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
+
         def on_next(v):
             def gen_filtered_iterable():
                 for e in v():
@@ -62,10 +65,6 @@ class FilterObservable(Observable):
         source = self
 
         class FilterObserver(Observer):
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
-
             def on_next(self, v):
                 return on_next(v)
 
@@ -77,5 +76,5 @@ class FilterObservable(Observable):
                 source.selector.on_completed()
                 return observer.on_completed()
 
-        filter_observer = FilterObserver()
-        return self.source.observe(filter_observer)
+        filter_subscription = subscription.copy(FilterObserver())
+        return self.source.observe(filter_subscription)

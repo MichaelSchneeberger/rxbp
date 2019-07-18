@@ -4,14 +4,18 @@ from typing import Iterable, Set, List
 import rx
 from rx.disposable import Disposable
 from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.observeon import _observe_on
+from rxbp.ack.single import Single
 
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import SchedulerBase, Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.subjectbase import SubjectBase
+
 
 
 class ReplaySubject(SubjectBase):
@@ -75,11 +79,12 @@ class ReplaySubject(SubjectBase):
         self.lock = threading.RLock()
         # self.batch_size = batch_size
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
         """ Creates a new ConnectableSubscriber for each subscription, pushes the current buffer to the
         ConnectableSubscriber and connects it immediately
 
         """
+        observer = subscription.observer
 
         def stream_on_done(buffer: Iterable, error_thrown: Exception = None) -> Disposable:
             class TObserver(Observer):
@@ -97,9 +102,9 @@ class ReplaySubject(SubjectBase):
                     else:
                         observer.on_completed()
 
-
+            t_subscription = subscription.copy(TObserver())
             return IteratorAsObservable(iter(buffer), scheduler=self.scheduler, subscribe_scheduler=TrampolineScheduler()) \
-                .observe(TObserver())
+                .observe(t_subscription)
 
         state = self.state
         buffer = state.buffer
@@ -173,14 +178,19 @@ class ReplaySubject(SubjectBase):
                     result = PromiseCounter(Continue(), 1)
                 result.acquire()
 
-                def on_next(v):
-                    if isinstance(v, Continue):
-                        result.countdown()
-                    else:
-                        self.remove_subscriber(obs)
-                        result.countdown()
+                class InnerSingle(Single):
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
 
-                ack.pipe(rx.operators.observe_on(obs.scheduler)).subscribe(on_next)
+                    def on_next(_, v):
+                        if isinstance(v, Continue):
+                            result.countdown()
+                        else:
+                            self.remove_subscriber(obs)
+                            result.countdown()
+
+                _observe_on(ack, obs.scheduler).subscribe(InnerSingle())
+                # ack.pipe(rx.operators.observe_on(obs.scheduler)).subscribe(on_next)
 
         if result is None:
             return Continue()

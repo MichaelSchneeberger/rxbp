@@ -1,6 +1,7 @@
 from rxbp.ack.ackimpl import Continue, Stop, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
 
 
@@ -9,7 +10,8 @@ class RepeatFirstObservable(Observable):
         self._source = source
         self._scheduler = scheduler
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
         source = self
 
         class RepeatFirstObserver(Observer):
@@ -42,5 +44,6 @@ class RepeatFirstObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        map_observer = RepeatFirstObserver()
-        return self._source.observe(map_observer)
+        repeat_first_observer = RepeatFirstObserver()
+        repeat_first_subscription = subscription.copy(repeat_first_observer)
+        return self._source.observe(repeat_first_subscription)

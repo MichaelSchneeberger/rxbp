@@ -1,13 +1,13 @@
 import threading
-from typing import Set, Tuple, List, Union
+from typing import Set, List, Union
 
-import rx
 from rx.disposable import Disposable
 from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
 from rxbp.ack.single import Single
 
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subjects.subjectbase import SubjectBase
@@ -66,7 +66,8 @@ class PublishSubject(SubjectBase):
             subscriber.observer.on_completed()
         return Disposable()
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
         state = self.state
         subscribers = state.subscribers
 
@@ -90,7 +91,7 @@ class PublishSubject(SubjectBase):
                 disposable = Disposable(dispose)
                 return disposable
             else:
-                return self.observe(observer)
+                return self.observe(subscription)
 
     def on_next(self, elem):
         state = self.state
@@ -137,7 +138,7 @@ class PublishSubject(SubjectBase):
             elif isinstance(ack, Stop): #and ack.exception is not None:
                     self.unsubscribe(observer)
             else:
-                has_value = ack.value[0]
+                has_value = ack.has_value
 
                 if not has_value:
                     if result is None:

@@ -1,7 +1,6 @@
-from rxbp.ack import Continue, Ack
+from rxbp.ack.ackimpl import Continue
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
-from rxbp.observer import Observer
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.testing.testcasebase import TestCaseBase
@@ -19,8 +18,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         o2 = TestObserver()
 
         subject = CacheServeFirstSubject(scheduler=s)
-        subject.observe(o1)
-        subject.observe(o2)
+        subject.observe(ObserveSubscription(o1))
+        subject.observe(ObserveSubscription(o2))
 
         def gen_value(v):
             def gen():
@@ -35,7 +34,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
 
         self.assertListEqual(o1.received, [10])
         self.assertListEqual(o2.received, [10])
-        self.assertIsInstance(ack.value, Continue)
+        self.assertIsInstance(ack, Continue)
         self.assertEqual(len(subject.inactive_subsriptions), 1)
 
         # -----------------
@@ -49,7 +48,6 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertFalse(ack.has_value)
 
         o1.ack.on_next(Continue())
-        o1.ack.on_completed()
         self.scheduler.advance_by(1)
 
         self.assertTrue(ack.has_value)
@@ -69,7 +67,6 @@ class TestCachedServeFirstSubject(TestCaseBase):
 
         o2.immediate_continue = 1
         o2.ack.on_next(Continue())
-        o2.ack.on_completed()
         s.advance_by(1)
 
         self.assertListEqual(o1.received, [10, 20, 30])
@@ -77,7 +74,6 @@ class TestCachedServeFirstSubject(TestCaseBase):
 
         o2.immediate_continue = 1
         o2.ack.on_next(Continue())
-        o2.ack.on_completed()
         s.advance_by(1)
 
         self.assertListEqual(o1.received, [10, 20, 30])
@@ -87,7 +83,6 @@ class TestCachedServeFirstSubject(TestCaseBase):
 
         o1.immediate_continue = 2
         o1.ack.on_next(Continue())
-        o1.ack.on_completed()
         s.advance_by(1)
 
         self.assertTrue(ack.has_value)
@@ -97,7 +92,6 @@ class TestCachedServeFirstSubject(TestCaseBase):
         ack = subject.on_next(gen_value(60))
 
         o2.ack.on_next(Continue())
-        o2.ack.on_completed()
         s.advance_by(1)
 
         self.assertListEqual(o1.received, [10, 20, 30, 40, 50, 60])

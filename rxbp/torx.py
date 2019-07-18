@@ -8,6 +8,7 @@ from rxbp.ack.ackimpl import continue_ack
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
@@ -76,6 +77,7 @@ def to_rx(source: FlowableBase, batched: bool = None):
             trampoline_scheduler = TrampolineScheduler()
             scheduler_ = RxBPScheduler(scheduler=scheduler) if scheduler is not None else trampoline_scheduler
             subscriber = Subscriber(scheduler=scheduler_, subscribe_scheduler=trampoline_scheduler)
-            return source.subscribe_(observer=to_rx_observer, subscriber=subscriber)
+            subscription = ObserveSubscription(observer=to_rx_observer)
+            return source.subscribe_(subscriber=subscriber, subscription=subscription)
 
     return FromFlowableObservable()

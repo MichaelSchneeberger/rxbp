@@ -12,14 +12,17 @@ from rxbp.ack.single import Single
 
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 
 
 class ConnectableObserver(Observer):
-    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler):
+    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler,
+                 is_volatile: bool = None):
         self.underlying = underlying
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
+        self.is_volatile = is_volatile or False
 
         self.root_ack = AckSubject()
         self.connected_ack = self.root_ack
@@ -31,10 +34,6 @@ class ConnectableObserver(Observer):
         self.was_canceled = False
         self.queue = Queue()
         self.lock = threading.RLock()
-
-    @property
-    def is_volatile(self):
-        return self.underlying.is_volatile
 
     def connect(self):
         with self.lock:
@@ -57,19 +56,15 @@ class ConnectableObserver(Observer):
                         elif isinstance(v, Stop):
                             raise NotImplementedError
                         else:
-                            raise Exception('illegal acknowledgment value {}'.format(v))
+                            raise Exception('illegal acknowledgment value "{}"'.format(v))
 
                 buffer_was_drained.subscribe(ResultSingle())
 
                 source = self
 
-                class CustomObserver(Observer):
+                class InnerConnectableObserver(Observer):
                     def __init__(self):
                         self.ack: Optional[AckSubject] = None
-
-                    @property
-                    def is_volatile(self):
-                        return False
 
                     def on_next(self, v):
                         ack = source.underlying.on_next(v)
@@ -113,9 +108,10 @@ class ConnectableObserver(Observer):
                     pass
 
                 self.queue.put(EmptyObject)
+                subscription = ObserveSubscription(observer=InnerConnectableObserver(), is_volatile=self.is_volatile)
                 disposable = IteratorAsObservable(iter(self.queue.get, EmptyObject), scheduler=self.scheduler,
                                                   subscribe_scheduler=self.subscribe_scheduler) \
-                    .observe(CustomObserver())
+                    .observe(subscription)
 
                 self.connected_ref = buffer_was_drained, disposable
         return self.connected_ref

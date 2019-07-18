@@ -19,6 +19,7 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
         send_notification(('N', v))
 
     def on_error(exc):
+        print('on_error')
         send_notification(('E', exc))
 
     def on_completed():

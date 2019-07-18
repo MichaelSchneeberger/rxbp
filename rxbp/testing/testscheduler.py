@@ -1,4 +1,4 @@
-from rx.concurrency import VirtualTimeScheduler
+from rx.scheduler.virtualtimescheduler import VirtualTimeScheduler
 
 from rxbp.scheduler import SchedulerBase, ExecutionModel, UncaughtExceptionReport, BatchedExecution
 

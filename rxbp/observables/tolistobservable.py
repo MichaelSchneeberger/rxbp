@@ -1,6 +1,7 @@
 from rxbp.ack.ackimpl import continue_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 
 
 class ToListObservable(Observable):
@@ -9,7 +10,8 @@ class ToListObservable(Observable):
 
         self.source = source
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.is_volatile
         queue = [[]]
 
         def on_completed():
@@ -25,10 +27,6 @@ class ToListObservable(Observable):
             return continue_ack
 
         class ToListObserver(Observer):
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
-
             def on_next(self, v):
                 return on_next(v)
 
@@ -39,4 +37,5 @@ class ToListObservable(Observable):
                 return on_completed()
 
         map_observer = ToListObserver()
-        return self.source.observe(map_observer)
+        map_subscription = ObserveSubscription(map_observer, is_volatile=subscription.is_volatile)
+        return self.source.observe(map_subscription)

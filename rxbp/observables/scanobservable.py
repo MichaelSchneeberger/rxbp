@@ -3,6 +3,7 @@ from typing import Callable, Any
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 
 
 class ScanObservable(Observable):
@@ -11,22 +12,15 @@ class ScanObservable(Observable):
         self.func = func
         self.acc = initial
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
 
         def on_next(v):
-            def scan_func(elem):
-                val = self.func(self.acc, elem)
-                self.acc = val
-                return val
-
-            materialize_data = [scan_func(elem) for elem in v()]
-
             def scan_gen():
-                # for elem in v():
-                #     val = self.func(self.acc, elem)
-                #     self.acc = val
-                #     yield val
-                yield from materialize_data
+                for elem in v():
+                    val = self.func(self.acc, elem)
+                    self.acc = val
+                    yield val
 
             # materialized_values = list(scan_gen())
             # def gen():
@@ -36,10 +30,6 @@ class ScanObservable(Observable):
             return ack
 
         class ScanObserver(Observer):
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
-
             def on_next(self, v):
                 return on_next(v)
 
@@ -49,5 +39,5 @@ class ScanObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        scan_observer = ScanObserver()
+        scan_observer = subscription.copy(ScanObserver())
         return self.source.observe(scan_observer)

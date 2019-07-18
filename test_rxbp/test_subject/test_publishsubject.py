@@ -1,7 +1,7 @@
 import unittest
 
-from rxbp.ack import Continue, continue_ack
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
+from rxbp.ack.ackimpl import Continue
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.subjects.publishsubject import PublishSubject
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
@@ -16,6 +16,11 @@ class TestPublishSubject(unittest.TestCase):
     def test_should_emit_from_the_point_of_subscription_forward(self):
         subject = PublishSubject(scheduler=self.scheduler)
 
+        def gen_value(v):
+            def gen():
+                yield v
+            return gen
+
         self.assertIsInstance(subject.on_next(gen_value(1)), Continue)
         self.assertIsInstance(subject.on_next(gen_value(2)), Continue)
         self.assertIsInstance(subject.on_next(gen_value(3)), Continue)
@@ -23,7 +28,7 @@ class TestPublishSubject(unittest.TestCase):
         o1 = TestObserver()
         o1.immediate_continue = 5
 
-        subject.observe(o1)
+        subject.observe(ObserveSubscription(o1))
 
         self.assertIsInstance(subject.on_next(gen_value(4)), Continue)
         self.assertIsInstance(subject.on_next(gen_value(5)), Continue)

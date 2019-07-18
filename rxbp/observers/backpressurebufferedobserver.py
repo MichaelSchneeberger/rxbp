@@ -31,10 +31,6 @@ class BackpressureBufferedObserver(Observer):
 
         self.lock = threading.RLock()
 
-    @property
-    def is_volatile(self):
-        return self.underlying.is_volatile
-
     def on_next(self, v):
         if self.upstream_is_complete or self.downstream_is_complete:
             return stop_ack

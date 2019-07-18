@@ -4,11 +4,6 @@ from rxbp.typing import ElementType
 
 
 class Observer(ABC):
-    @property
-    @abstractmethod
-    def is_volatile(self):
-        ...
-
     @abstractmethod
     def on_next(self, elem: ElementType):
         ...

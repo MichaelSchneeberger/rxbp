@@ -2,6 +2,7 @@ from typing import Callable, Any
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 
 
@@ -12,7 +13,9 @@ class MapObservable(Observable):
         self.source = source
         self.selector = selector
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
+
         def on_next(v):
 
             # `map` does not consume elements from buffer, it is not its responsibility to try catch an exception
@@ -23,10 +26,6 @@ class MapObservable(Observable):
             return observer.on_next(map_gen)
 
         class MapObserver(Observer):
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
-
             def on_next(self, v):
                 return on_next(v)
 
@@ -36,5 +35,5 @@ class MapObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        map_observer = MapObserver()
-        return self.source.observe(map_observer)
+        map_subscription = subscription.copy(MapObserver())
+        return self.source.observe(map_subscription)

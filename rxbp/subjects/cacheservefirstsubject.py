@@ -1,9 +1,6 @@
 import threading
 
-import rx
-
 from typing import List
-
 
 from rx.disposable import Disposable
 from rx.core.notification import OnNext, OnCompleted, OnError
@@ -15,6 +12,7 @@ from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
 
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import ExecutionModel, Scheduler
 from rxbp.subjects.subjectbase import SubjectBase
 
@@ -78,10 +76,11 @@ class CacheServeFirstSubject(SubjectBase):
                 self.queue.pop(0)
 
     class InnerSubscription:
-        def __init__(self, source: 'CacheServeFirstSubject', observer: Observer,
+        def __init__(self, source: 'CacheServeFirstSubject', subscription: ObserveSubscription,
                      scheduler: Scheduler, em: ExecutionModel):
             self.source = source
-            self.observer = observer
+            self.observer = subscription.observer
+            self.is_volatile = subscription.is_volatile
             self.scheduler = scheduler
             self.em = em
 
@@ -149,7 +148,7 @@ class CacheServeFirstSubject(SubjectBase):
             with self.source.lock:
                 del self.source.current_index[self]
 
-                num_subscriber = len([True for inner_sub in self.source.current_index.keys() if inner_sub.observer.is_volatile is False])
+                num_subscriber = len([True for inner_sub in self.source.current_index.keys() if inner_sub.is_volatile is False])
                 # num_subscriber = len(self.source.current_index)
 
                 # todo: bug here
@@ -190,7 +189,6 @@ class CacheServeFirstSubject(SubjectBase):
                             if isinstance(ack, Continue):
                                 self.source.inactive_subsriptions.append(self)
                                 self.source.current_ack.on_next(ack)
-                                self.source.current_ack.on_completed()
                             elif isinstance(ack, Stop):
                                 self.signal_stop()
                                 break
@@ -204,7 +202,6 @@ class CacheServeFirstSubject(SubjectBase):
                                                 has_elem = False
                                                 self.source.inactive_subsriptions.append(self)
                                                 self.source.current_ack.on_next(v)
-                                                self.source.current_ack.on_completed()
 
                                         if has_elem:
                                             disposable = BooleanDisposable()
@@ -264,9 +261,10 @@ class CacheServeFirstSubject(SubjectBase):
                 except:
                     raise Exception('fatal error')
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        # observer = subscription.observer
         em = self.scheduler.get_execution_model()
-        inner_subscription = self.InnerSubscription(source=self, observer=observer, scheduler=self.scheduler, em=em)
+        inner_subscription = self.InnerSubscription(source=self, subscription=subscription, scheduler=self.scheduler, em=em)
 
         with self.lock:
             if not self.is_stopped:
@@ -287,6 +285,15 @@ class CacheServeFirstSubject(SubjectBase):
 
     def on_next(self, value):
 
+        try:
+            materialized_values = list(value())
+        except Exception as exc:
+            self.on_error(exc)
+            return stop_ack
+
+        def gen():
+            yield from materialized_values
+
         current_ack = AckSubject()
 
         with self.lock:
@@ -297,7 +304,7 @@ class CacheServeFirstSubject(SubjectBase):
             self.inactive_subsriptions = []
 
             # add item to buffer
-            self.buffer.append(OnNext(value))
+            self.buffer.append(OnNext(gen))
 
             # current ack is used by subscriptions that weren't inactive, but reached the top of the buffer
             self.current_ack = current_ack
@@ -310,7 +317,7 @@ class CacheServeFirstSubject(SubjectBase):
         def gen_inner_ack():
             # send notification to inactive subscriptions
             for inner_subscription in inactive_subsriptions:
-                inner_ack = inner_subscription.notify_on_next(value)
+                inner_ack = inner_subscription.notify_on_next(gen)
                 yield inner_ack
 
         inner_ack_list = list(gen_inner_ack())

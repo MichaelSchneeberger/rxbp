@@ -5,6 +5,4 @@ from rxbp.observer import Observer
 
 
 class SubjectBase(Observable, Observer, ABC):
-    @property
-    def is_volatile(self):
-        return False
+    pass

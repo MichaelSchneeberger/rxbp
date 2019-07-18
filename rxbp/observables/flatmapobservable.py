@@ -11,6 +11,7 @@ from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
@@ -74,8 +75,9 @@ class FlatMapObservable(Observable):
         def get_actual_state(self, nco: int):
             return self
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
         source = self
+        observer = subscription.observer
 
         composite_disposable = CompositeDisposable()
 
@@ -86,10 +88,6 @@ class FlatMapObservable(Observable):
         class OuterObserver(Observer):
             def __init__(self):
                 self.errors = [] if source._delay_errors else None
-
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
 
             def on_next(self, outer_elem: ElementType):
 
@@ -131,9 +129,10 @@ class FlatMapObservable(Observable):
                         # to get control of activating one after the other
                         conn_observer = ConnectableObserver(inner_observer, scheduler=source._scheduler,
                                                             subscribe_scheduler=source._subscribe_scheduler)
+                        conn_subscription = subscription.copy(conn_observer)
 
                         # observe inner observable
-                        disposable = inner_observable.observe(conn_observer)
+                        disposable = inner_observable.observe(conn_subscription)
                         composite_disposable.add(disposable)
 
                         yield conn_observer
@@ -221,10 +220,6 @@ class FlatMapObservable(Observable):
 
                 self.completed = False
                 self.exception = None
-
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
 
             def on_next(self, v):
 
@@ -318,8 +313,8 @@ class FlatMapObservable(Observable):
                 else:
                     raise Exception('illegal state')
 
-        concat_map_observer = OuterObserver()
-        d1 = self._source.observe(concat_map_observer)
+        concat_map_subscription = subscription.copy(OuterObserver())
+        d1 = self._source.observe(concat_map_subscription)
         composite_disposable.add(d1)
 
         return composite_disposable

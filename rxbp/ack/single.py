@@ -8,4 +8,11 @@ class Single(ABC):
 
     @abstractmethod
     def on_error(self, exc: Exception):
+        """ An `Ack` is potentially run on some `Scheduler`. Therefore, if something fails the exception needs to be
+        correctly integrated into the data stream. Raising an exception is unsuitable.
+
+        :param exc:
+        :return:
+        """
+
         ...

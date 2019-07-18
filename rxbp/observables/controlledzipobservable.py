@@ -9,6 +9,7 @@ from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.merge import _merge
 
 from rxbp.observers.anonymousobserver import AnonymousObserver
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -505,19 +506,21 @@ class ControlledZipObservable(Observable):
         next_final_state = ControlledZipObservable.RightCompletedState(raw_prev_state=None)
         self._on_error_or_complete(next_final_state=next_final_state)
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
         """ This function ought be called at most once.
 
         :param observer: downstream obseNonerver
         :return: Disposable
         """
 
-        self.observer = observer
+        self.observer = subscription.observer
 
-        left_observer2 = AnonymousObserver(self._on_next_left, self._on_error, self._on_completed_left)
-        d1 = self.left_observable.observe(left_observer2)
+        left_observer = AnonymousObserver(self._on_next_left, self._on_error, self._on_completed_left)
+        left_subscription = subscription.copy(left_observer)
+        d1 = self.left_observable.observe(left_subscription)
 
-        right_observer2 = AnonymousObserver(self._on_next_right, self._on_error, self._on_completed_right)
-        d2 = self.right_observable.observe(right_observer2)
+        right_observer = AnonymousObserver(self._on_next_right, self._on_error, self._on_completed_right)
+        left_subscription = subscription.copy(right_observer)
+        d2 = self.right_observable.observe(left_subscription)
 
         return CompositeDisposable(d1, d2)

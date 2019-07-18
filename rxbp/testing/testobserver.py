@@ -1,4 +1,5 @@
-from rxbp.ack import Continue, Ack
+from rxbp.ack.ackimpl import Continue
+from rxbp.ack.acksubject import AckSubject
 from rxbp.observer import Observer
 
 
@@ -21,7 +22,7 @@ class TestObserver(Observer):
             self.immediate_continue -= 1
             return Continue()
         else:
-            self.ack = Ack()
+            self.ack = AckSubject()
             return self.ack
 
     def on_error(self, err):

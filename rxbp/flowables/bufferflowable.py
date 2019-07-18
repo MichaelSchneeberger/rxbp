@@ -1,6 +1,7 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.subscriber import Subscriber
 
 
@@ -14,7 +15,9 @@ class BufferFlowable(FlowableBase):
         source_obs, selector = self._source.unsafe_subscribe(subscriber=subscriber)
 
         class BufferObservable(Observable):
-            def observe(self, observer):
+            def observe(self, subscription: ObserveSubscription):
+                observer = subscription.observer
+
                 buffered_subscriber = BackpressureBufferedObserver(
                     underlying=observer, scheduler=subscriber.scheduler,
                     subscribe_scheduler=subscriber.subscribe_scheduler,

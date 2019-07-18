@@ -6,6 +6,7 @@ from rxbp.ack.ackimpl import continue_ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.selectors.bases import Base
@@ -26,10 +27,10 @@ class FlowableBase(Generic[ValueType], ABC):
         self.base = base
         self.selectable_bases = selectable_bases or set()
 
-    def subscribe_(self, subscriber: Subscriber, observer: Observer):
+    def subscribe_(self, subscriber: Subscriber, subscription: ObserveSubscription):
         def action(_, __):
             source_observable, _ = self.unsafe_subscribe(subscriber=subscriber)
-            disposable = source_observable.observe(observer=observer)
+            disposable = source_observable.observe(subscription=subscription)
             return disposable
 
         disposable = subscriber.subscribe_scheduler.schedule(action)
@@ -64,8 +65,9 @@ class FlowableBase(Generic[ValueType], ABC):
                 return stop_ack
 
         observer = AnonymousObserver(on_next_func=on_next_with_ack, on_error_func=on_error_, on_completed_func=on_completed_)
+        subscription = ObserveSubscription(observer=observer)
 
-        disposable = self.subscribe_(subscriber=subscriber, observer=observer)
+        disposable = self.subscribe_(subscriber=subscriber, subscription=subscription)
         return disposable
 
     @abstractmethod

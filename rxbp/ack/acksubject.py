@@ -22,7 +22,15 @@ class AckSubject(AckMixin, AckBase, Single):
         self.singles: List[Single] = []
         self.exception: Optional[Exception] = None
 
-        self.value = (False, None)
+        self._value = (False, None)
+
+    @property
+    def has_value(self):
+        return self._value[0]
+
+    @property
+    def value(self):
+        return self._value[1]
 
     def check_disposed(self) -> None:
         if self.is_disposed:
@@ -34,7 +42,7 @@ class AckSubject(AckMixin, AckBase, Single):
             self.singles.append(single)
 
             ex = self.exception
-            has_value, value = self.value
+            has_value, value = self._value
 
         if ex:
             single.on_error(ex)
@@ -48,7 +56,7 @@ class AckSubject(AckMixin, AckBase, Single):
         with self._lock:
             singles = self.singles.copy()
             self.singles.clear()
-            self.value = (True, value)
+            self._value = (True, value)
 
         for single in singles:
             single.on_next(value)
@@ -74,4 +82,4 @@ class AckSubject(AckMixin, AckBase, Single):
             self.singles = []
             self.exception = None
 
-            self.value = (False, None)
+            self._value = (False, None)

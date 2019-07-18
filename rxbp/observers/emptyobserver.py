@@ -1,4 +1,4 @@
-from rxbp.ack import continue_ack
+from rxbp.ack.ackimpl import continue_ack
 from rxbp.observer import Observer
 
 

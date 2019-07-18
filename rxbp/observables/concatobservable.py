@@ -4,6 +4,7 @@ from rx.disposable import CompositeDisposable, SerialDisposable, SingleAssignmen
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 
 
@@ -14,20 +15,17 @@ class ConcatObservable(Observable):
         self._sources = iter(sources)
         self._subscribe_scheduler = subscribe_scheduler
 
-    def observe(self, observer: Observer):
+    def observe(self, subscription: ObserveSubscription):
+        observer = subscription.observer
         source = self
 
-        subscription = SerialDisposable()
+        subscription_disposable = SerialDisposable()
         outer_subscription = SerialDisposable()
         inner_subscription = SerialDisposable()     # probably not necessary
 
         class ConcatObserver(Observer):
             def __init__(self):
                 self.ack = None
-
-            @property
-            def is_volatile(self):
-                return observer.is_volatile
 
             def on_next(self, v):
                 self.ack = observer.on_next(v)
@@ -46,11 +44,12 @@ class ConcatObservable(Observable):
                 if has_element:
                     def observe_next():
                         def action(_, __):
-                            disposable = next_source.observe(ConcatObserver())
+                            next_subscription = ObserveSubscription(ConcatObserver(), is_volatile=subscription.is_volatile)
+                            disposable = next_source.observe(next_subscription)
                             inner_subscription.disposable = disposable
 
                         disposable = source._subscribe_scheduler.schedule(action)
-                        subscription.disposable = disposable
+                        subscription_disposable.disposable = disposable
 
                     if self.ack:
                         disposable = self.ack.subscribe(lambda _: observe_next(), scheduler=source._subscribe_scheduler)
@@ -61,7 +60,9 @@ class ConcatObservable(Observable):
                     observer.on_completed()
 
         concat_observer = ConcatObserver()
+        concat_subscription = ObserveSubscription(concat_observer, is_volatile=subscription.is_volatile)
 
         first_source = next(self._sources)
-        disposable = first_source.observe(concat_observer)
-        return CompositeDisposable(disposable, subscription, outer_subscription, inner_subscription)
+        disposable = first_source.observe(concat_subscription)
+
+        return CompositeDisposable(disposable, subscription_disposable, outer_subscription, inner_subscription)

@@ -2,11 +2,12 @@ from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observesubscription import ObserveSubscription
 
 
 class TestObservable(Observable):
-    def __init__(self):
-        self.observer = None
+    def __init__(self, observer: Observer = None):
+        self.observer = observer
 
     def on_next_single(self, val):
         def gen():
@@ -29,6 +30,6 @@ class TestObservable(Observable):
     def on_completed(self):
         return self.observer.on_completed()
 
-    def observe(self, observer: Observer):
-        self.observer = observer
+    def observe(self, subscription: ObserveSubscription):
+        self.observer = subscription.observer
         return Disposable()

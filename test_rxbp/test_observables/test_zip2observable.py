@@ -1,5 +1,7 @@
-from rxbp.ack import Ack, continue_ack
+from rxbp.ack.ack import Ack
+from rxbp.ack.ackimpl import continue_ack
 from rxbp.observables.zip2observable import Zip2Observable
+from rxbp.observesubscription import ObserveSubscription
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
@@ -33,7 +35,7 @@ class TestConnectableSubscriber(TestCaseBase):
 
     def test_init_termination_state_wait_on_left_right_immediate_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(self.sink)
+        obs.observe(ObserveSubscription(self.sink))
 
         self.sink.immediate_continue = 10
 
@@ -67,7 +69,7 @@ class TestConnectableSubscriber(TestCaseBase):
 
     def test_init_termination_state_wait_on_left_right_delayed_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(self.sink)
+        obs.observe(ObserveSubscription(self.sink))
 
         # state WaitOnLeftRight -> WaitOnRight
         ack1: Ack = self.s1.on_next_seq([1, 2, 3, 4])
@@ -82,7 +84,6 @@ class TestConnectableSubscriber(TestCaseBase):
         self.assertFalse(ack2.has_value)
 
         self.sink.ack.on_next(continue_ack)
-        self.sink.ack.on_completed()
         # back-pressure right
         self.assertFalse(ack1.has_value)
         self.assertTrue(ack2.has_value)
@@ -93,14 +94,13 @@ class TestConnectableSubscriber(TestCaseBase):
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         self.sink.ack.on_next(continue_ack)
-        self.sink.ack.on_completed()
         # back-pressure both
         self.assertTrue(ack1.has_value)
         self.assertTrue(ack2.has_value)
 
     def test_init_termination_state_wait_on_right_immediate_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(self.sink)
+        obs.observe(ObserveSubscription(self.sink))
 
         self.sink.immediate_continue = 10
 
