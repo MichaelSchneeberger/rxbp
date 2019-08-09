@@ -95,7 +95,7 @@ def defer(func: Callable[[FlowableBase], FlowableBase],
           defer_selector: Callable[[FlowableBase], FlowableBase] = None,
           base: Base = None):
 
-    return Flowable(DeferFlowable(base=base))
+    return Flowable(DeferFlowable(base=base, func=func, initial=initial, defer_selector=defer_selector))
 
 
 def from_iterable(iterable: Iterable, batch_size: int = None):

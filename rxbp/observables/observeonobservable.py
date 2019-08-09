@@ -14,6 +14,7 @@ class ObserveOnObservable(Observable):
 
     def observe(self, subscription: ObserveSubscription):
         observer = subscription.observer
+
         def on_next(v):
             ack_subject = AckSubject()
 

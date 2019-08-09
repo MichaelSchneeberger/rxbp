@@ -26,34 +26,35 @@ class DeferFlowable(FlowableBase):
         self._defer_selector = defer_selector or (lambda f: f)
 
     def unsafe_subscribe(self, subscriber: Subscriber):
-        source = self
+        initial = self._initial
 
-        class DeferObservable(Observable):
+        class StartWithInitialObservable(Observable):
             def observe(self, subscription: ObserveSubscription):
                 buffer_observer.underlying = subscription.observer
                 d1 = SingleAssignmentDisposable()
 
                 def action(_, __):
                     def gen_initial():
-                        yield source._initial
+                        yield initial
 
                     _ = buffer_observer.on_next(gen_initial)
+
+                    # let any elements flow to buffer_observer
                     _, d3 = conn_observer.connect()
+
                     d1.disposable = d3
 
                 d2 = subscriber.subscribe_scheduler.schedule(action)
 
                 return CompositeDisposable(d1, d2)
 
-        source = AnonymousFlowable(lambda subscriber: (DeferObservable(), {}))
+        source = AnonymousFlowable(lambda subscriber: (StartWithInitialObservable(), {}))
+
         scheduled_source = source.observe_on(scheduler=subscriber.scheduler)
 
         result_flowable = scheduled_source.share(lambda flowable: self._func(flowable))
 
-        # def default_subject_gen(scheduler: Scheduler):
-        #     return CacheServeFirstSubject(scheduler=scheduler)
-
-        ref_count_flowable = RefCountFlowable(result_flowable)  # , subject_gen=default_subject_gen)
+        ref_count_flowable = RefCountFlowable(result_flowable)
 
         defer_flowable = self._defer_selector(Flowable(ref_count_flowable))
         defer_obs, selector = defer_flowable.unsafe_subscribe(subscriber)
@@ -69,12 +70,14 @@ class DeferFlowable(FlowableBase):
                                             scheduler=subscriber.scheduler,
                                             subscribe_scheduler=subscriber.subscribe_scheduler)
 
-        class DeferObservable2(Observable):
+        class DeferObservable(Observable):
             def observe(self, subscription: ObserveSubscription):
-                volatile_subscription = ObserveSubscription(conn_observer, is_volatile=True)
-
                 d1 = obs.observe(subscription)
+
+                # once Defer operator is observe from outside,
+                volatile_subscription = ObserveSubscription(conn_observer, is_volatile=True)
                 d2 = defer_obs.observe(volatile_subscription)
+
                 return CompositeDisposable(d1, d2)
 
-        return DeferObservable2(), selector
+        return DeferObservable(), selector

@@ -1,4 +1,4 @@
-from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.ackimpl import Continue, Stop, stop_ack
 from rxbp.ack.single import Single
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
@@ -8,13 +8,15 @@ from rxbp.scheduler import Scheduler
 
 
 class DebugObservable(Observable):
-    def __init__(self, source: Observable, name: str = None, on_next=None, on_completed=None, on_ack=None,
+    def __init__(self, source: Observable, name: str = None, on_next=None, on_completed=None, on_error=None,
+                 on_ack=None,
                  on_subscribe=None, on_raw_ack=None, on_next_exception=None):
         self.source = source
         self.name = name
 
         if name is not None:
             self.on_next_func = on_next or (lambda v: print('{}.on_next {}'.format(name, v)))
+            self.on_error_func = on_error or (lambda exc: print('{}.on_error {}'.format(name, exc)))
             self.on_completed_func = on_completed or (lambda: print('{}.on_completed'.format(name)))
             self.on_subscribe_func = on_subscribe or (lambda v: print('{}.on_observe {}'.format(name, v)))
             self.on_sync_ack = on_ack or (lambda v: print('{}.on_sync_ack {}'.format(name, v)))
@@ -26,6 +28,7 @@ class DebugObservable(Observable):
             empty_func1 = lambda v: None
 
             self.on_next_func = on_next or empty_func1
+            self.on_error_func = on_error or empty_func1
             self.on_completed_func = on_completed or empty_func0
             self.on_subscribe_func = on_subscribe or empty_func1
             self.on_sync_ack = on_ack or empty_func1
@@ -38,7 +41,12 @@ class DebugObservable(Observable):
         self.on_subscribe_func(subscription)
 
         def on_next(v):
-            materialized = list(v())
+            try:
+                materialized = list(v())
+            except Exception as exc:
+                self.on_error_func(exc)
+                observer.on_error(exc)
+                return stop_ack
 
             self.on_next_func(materialized)
 
@@ -66,11 +74,15 @@ class DebugObservable(Observable):
                 ack.subscribe(ResultSingle())
             return ack
 
+        def on_error(exc):
+            self.on_error_func(exc)
+            observer.on_error(exc)
+
         def on_completed():
             self.on_completed_func()
             return observer.on_completed()
 
-        debug_observer = AnonymousObserver(on_next_func=on_next, on_error_func=observer.on_error,
+        debug_observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error,
                                          on_completed_func=on_completed)
         debug_subscription = ObserveSubscription(debug_observer, is_volatile=subscription.is_volatile)
         return self.source.observe(debug_subscription)

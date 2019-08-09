@@ -6,8 +6,6 @@ from concurrent.futures import Executor
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Callable, Union, Any
 
-from rx.disposable import Disposable, Scheduler
-from rx.disposables import MultipleAssignmentDisposable, CompositeDisposable
 
 from rxbp.schedulers.asyncioscheduler import AsyncIOScheduler
 

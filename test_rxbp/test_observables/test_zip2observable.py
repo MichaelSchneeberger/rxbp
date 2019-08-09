@@ -119,3 +119,21 @@ class TestConnectableSubscriber(TestCaseBase):
 
         self.s1.on_completed()
         self.assertTrue(self.sink.is_completed)
+
+    def test_on_error(self):
+        obs = Zip2Observable(self.s1, self.s2)
+        obs.observe(ObserveSubscription(self.sink))
+
+        self.s1.on_next_seq([1])
+        self.s1.on_error(Exception())
+
+        self.assertIsNotNone(self.sink.was_thrown)
+
+    def test_on_completed(self):
+        obs = Zip2Observable(self.s1, self.s2)
+        obs.observe(ObserveSubscription(self.sink))
+
+        self.s1.on_next_seq([1])
+        self.s2.on_error(Exception())
+
+        self.assertIsNotNone(self.sink.was_thrown)

@@ -1,4 +1,3 @@
-# from rx.concurrency import current_thread_scheduler as parent_current_thread_scheduler
 import datetime
 import logging
 import threading

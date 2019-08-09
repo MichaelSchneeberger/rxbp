@@ -187,7 +187,6 @@ class BackpressureBufferedObserver(Observer):
                             self.back_pressured = None
                         if bp is not None:
                             bp.on_next(continue_ack)
-                            bp.on_completed()
                         return
 
         try:

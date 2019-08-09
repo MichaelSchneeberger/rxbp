@@ -127,10 +127,10 @@ class PublishSubject(SubjectBase):
             observer = subscriber.observer
             index += 1
 
-            try:
-                ack = observer.on_next(gen)
-            except:
-                raise NotImplementedError
+            # try:
+            ack = observer.on_next(gen)
+            # except:
+            #     raise NotImplementedError
 
             # todo: redo this
             if isinstance(ack, Continue):

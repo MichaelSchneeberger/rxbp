@@ -11,7 +11,7 @@ class ToListObservable(Observable):
         self.source = source
 
     def observe(self, subscription: ObserveSubscription):
-        observer = subscription.is_volatile
+        observer = subscription.observer
         queue = [[]]
 
         def on_completed():

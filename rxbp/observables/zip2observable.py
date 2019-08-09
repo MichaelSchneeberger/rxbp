@@ -83,10 +83,11 @@ class Zip2Observable(Observable):
         def get_current_state(self):
             prev_state = self.raw_prev_state
 
-            if isinstance(prev_state, Zip2Observable.InitState):
-                return self
-            else:
-                return self.raw_prev_state
+            return self
+            # if isinstance(prev_state, Zip2Observable.InitState):
+            #     return self
+            # else:
+            #     return self.raw_prev_state
 
     class ZipState(ABC):
         """ The state of the zip observable actor
@@ -177,10 +178,10 @@ class Zip2Observable(Observable):
             elif isinstance(prev_state, Zip2Observable.WaitOnLeftRight):
                 if self.is_left:
                     return Zip2Observable.WaitOnRight(left_ack=self.ack, left_iter=self.iter) \
-                        .get_current_state(final_state=final_state_)
+                        .get_current_state(final_state=final_state)
                 else:
                     return Zip2Observable.WaitOnLeft(right_ack=self.ack, right_iter=self.iter) \
-                        .get_current_state(final_state=final_state_)
+                        .get_current_state(final_state=final_state)
 
             else:
                 return self
@@ -383,8 +384,7 @@ class Zip2Observable(Observable):
         else:
             self.observer.on_completed()
 
-    def _on_error_or_complete(self, next_final_state: 'Zip2Observable.TerminationState'):
-
+    def _on_error_or_complete(self, next_final_state: 'Zip2Observable.TerminationState', exc: Exception = None):
         with self.lock:
             raw_prev_final_state = self.termination_state
             raw_prev_state = self.zip_state
@@ -399,12 +399,12 @@ class Zip2Observable(Observable):
 
         if not isinstance(prev_state, Zip2Observable.Stopped) \
                 and isinstance(curr_state, Zip2Observable.Stopped):
-            self._signal_on_complete_or_on_error(raw_prev_state)
+            self._signal_on_complete_or_on_error(raw_prev_state, exc)
 
     def _on_error(self, ex):
         next_final_state = Zip2Observable.ErrorState(raw_prev_state=None, ex=ex)
 
-        self._on_error_or_complete(next_final_state=next_final_state)
+        self._on_error_or_complete(next_final_state=next_final_state, exc=ex)
 
     def _on_completed_left(self):
         next_final_state = Zip2Observable.LeftCompletedState(raw_prev_state=None)

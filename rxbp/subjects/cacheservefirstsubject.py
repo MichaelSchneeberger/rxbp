@@ -262,7 +262,7 @@ class CacheServeFirstSubject(SubjectBase):
                     raise Exception('fatal error')
 
     def observe(self, subscription: ObserveSubscription):
-        # observer = subscription.observer
+        observer = subscription.observer
         em = self.scheduler.get_execution_model()
         inner_subscription = self.InnerSubscription(source=self, subscription=subscription, scheduler=self.scheduler, em=em)
 
