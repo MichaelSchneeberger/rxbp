@@ -1,6 +1,7 @@
 from typing import List, Iterator, Iterable
 
 from rx.disposable import CompositeDisposable, SerialDisposable, SingleAssignmentDisposable, Disposable
+from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -52,7 +53,14 @@ class ConcatObservable(Observable):
                         subscription_disposable.disposable = disposable
 
                     if self.ack:
-                        disposable = self.ack.subscribe(lambda _: observe_next(), scheduler=source._subscribe_scheduler)
+                        class _(Single):
+                            def on_next(self, elem):
+                                observe_next()
+
+                            def on_error(self, exc: Exception):
+                                raise NotImplementedError
+
+                        disposable = self.ack.subscribe(_()) #, scheduler=source._subscribe_scheduler)
                         outer_subscription.disposable = disposable
                     else:
                         observe_next()

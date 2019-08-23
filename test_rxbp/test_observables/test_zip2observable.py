@@ -8,7 +8,7 @@ from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestConnectableSubscriber(TestCaseBase):
+class TestZip2Observable(TestCaseBase):
     """
     Zip2Observable is a stateful object, therefore we test methods of Zip2Observable as a function of its states
     called "zip_state" of type Zip2Observable.ZipState and "termination_state" of type Zip2Observable.TerminationState.

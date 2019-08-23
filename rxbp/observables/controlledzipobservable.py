@@ -14,7 +14,7 @@ from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
-from rxbp.subjects.publishsubject import PublishSubject
+from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
 
 
 class ControlledZipObservable(Observable):
@@ -37,9 +37,9 @@ class ControlledZipObservable(Observable):
         self.request_right = request_right
         self.match_func = match_func
 
-        # create two selector subjects used to match Flowables
-        self.left_selector = PublishSubject(scheduler=scheduler)
-        self.right_selector = PublishSubject(scheduler=scheduler)
+        # create two selector observablesubjects used to match Flowables
+        self.left_selector = ObservablePublishSubject(scheduler=scheduler)
+        self.right_selector = ObservablePublishSubject(scheduler=scheduler)
 
         self.lock = threading.RLock()
 
@@ -217,6 +217,16 @@ class ControlledZipObservable(Observable):
 
     def _iterate_over_batch(self, elem: Callable[[], Generator], is_left: bool) \
             -> AckBase:
+        """ This function is called once elements are received from left and right observable
+
+        Loop over received elements. Send elements downstream if the match function applies. Request new elements
+        from left, right or left and right observable.
+
+        :param elem: either elements received form left or right observable depending on is_left argument
+        :param is_left: if True then the _iterate_over_batch is called on left elements received
+
+        :return: acknowledgment that will be returned from `on_next` called from either left or right observable
+        """
 
         upstream_ack = AckSubject()
 
@@ -453,10 +463,11 @@ class ControlledZipObservable(Observable):
 
     def _signal_on_complete_or_on_error(self, raw_state: 'ControlledZipObservable.ControlledZipState',
                                         ex: Exception = None):
-        """ this function is called once
+        """ this function is called once, because 'on_complete' or 'on_error' are called once according to the rxbp
+        convention
 
-        :param raw_state:
-        :param ex:
+        :param raw_state: controlled zip state
+        :param ex: catched exception to be forwarded downstream
         :return:
         """
 

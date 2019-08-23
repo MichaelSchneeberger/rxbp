@@ -3,7 +3,7 @@ from typing import Any, Callable
 from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
-from rxbp.flowables.anonymousflowable import AnonymousFlowable
+from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.observable import Observable
 from rxbp.observers.anonymousobserver import AnonymousObserver
@@ -48,7 +48,7 @@ class DeferFlowable(FlowableBase):
 
                 return CompositeDisposable(d1, d2)
 
-        source = AnonymousFlowable(lambda subscriber: (StartWithInitialObservable(), {}))
+        source = AnonymousFlowableBase(lambda subscriber: (StartWithInitialObservable(), {}))
 
         scheduled_source = source.observe_on(scheduler=subscriber.scheduler)
 

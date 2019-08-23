@@ -9,7 +9,7 @@ from rxbp.selectors.selection import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
-from rxbp.subjects.publishsubject import PublishSubject
+from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
 
 
 class FilterObservable(Observable):
@@ -17,7 +17,7 @@ class FilterObservable(Observable):
 
         super().__init__()
 
-        self.selector = PublishSubject(scheduler=scheduler)
+        self.selector = ObservablePublishSubject(scheduler=scheduler)
 
         self.source = source
         self.predicate = predicate

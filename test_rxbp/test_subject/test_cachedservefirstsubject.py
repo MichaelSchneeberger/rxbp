@@ -1,6 +1,6 @@
 from rxbp.ack.ackimpl import Continue
 from rxbp.observesubscription import ObserveSubscription
-from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
+from rxbp.observablesubjects.observablecacheservefirstsubject import ObservableCacheServeFirstSubject
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.testing.testcasebase import TestCaseBase
@@ -17,7 +17,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         o1 = TestObserver()
         o2 = TestObserver()
 
-        subject = CacheServeFirstSubject(scheduler=s)
+        subject = ObservableCacheServeFirstSubject(scheduler=s)
         subject.observe(ObserveSubscription(o1))
         subject.observe(ObserveSubscription(o2))
 

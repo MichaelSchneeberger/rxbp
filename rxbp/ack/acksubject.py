@@ -37,6 +37,8 @@ class AckSubject(AckMixin, AckBase, Single):
             raise DisposedException()
 
     def subscribe(self, single: Single) -> Disposable:
+        assert isinstance(single, Single)
+
         with self._lock:
             self.check_disposed()
             self.singles.append(single)

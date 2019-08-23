@@ -17,7 +17,7 @@ from rxbp.typing import ValueType
 class FlowableBase(Generic[ValueType], ABC):
     FlowableReturnType = Tuple[Observable, Dict[Base, Optional[Observable]]]
 
-    def __init__(self, base: Base = None, selectable_bases: Set[Base] = None):
+    def __init__(self, base: Optional[Base], selectable_bases: Set[Base] = None):
         """
         :param base: two flowables with the the same base emit the same number of elements
         :param transformables: a set of bases different to the current base, a transformation is the capability to

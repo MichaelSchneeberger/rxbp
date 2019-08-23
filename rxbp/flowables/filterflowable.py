@@ -14,7 +14,9 @@ class FilterFlowable(FlowableBase):
             selectable_bases = source.selectable_bases
 
         # base becomes undefined after filtering
-        super().__init__(base=None, selectable_bases=selectable_bases)
+        base = None
+
+        super().__init__(base=base, selectable_bases=selectable_bases)
 
         self._source = source
         self._predicate = predicate

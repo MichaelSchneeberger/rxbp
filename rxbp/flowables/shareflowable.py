@@ -4,11 +4,14 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import SharedBase
-from rxbp.subjects.publishsubject import PublishSubject
+from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
 from rxbp.subscriber import Subscriber
 
 
 class ShareFlowable(FlowableBase):
+    """ for internal use
+    """
+
     def __init__(self, source: FlowableBase, func: Callable[[RefCountFlowable], FlowableBase]):
         super().__init__()
 
@@ -19,7 +22,7 @@ class ShareFlowable(FlowableBase):
         base = SharedBase(has_fan_out=True, prev_base=self._source.base)
 
         def subject_gen(scheduler: Scheduler):
-            return PublishSubject(scheduler=scheduler)
+            return ObservablePublishSubject(scheduler=scheduler)
 
         flowable = self._func(RefCountFlowable(self._source, subject_gen=subject_gen, base=base))
         obs, selector = flowable.unsafe_subscribe(subscriber)

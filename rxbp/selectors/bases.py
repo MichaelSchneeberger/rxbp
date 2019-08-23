@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Tuple, List
+from typing import Any, Tuple, List, Iterable
 
 
 class SourceMixin(ABC):
@@ -203,3 +203,42 @@ class PairwiseBase(Base, SourceMixin):
 
     def sel_auto_match(self, other: 'Base') -> bool:
         return other._sel_auto_match(other=self)
+
+
+class ConcatBase(Base, SourceMixin):
+    def __init__(self, underlying: Iterable[Base]):
+        self.underlying = list(underlying)
+
+    def equals(self, other: Base):
+        if isinstance(other, ConcatBase):
+            def gen_is_equals():
+                for left, right in zip(self.underlying, other.underlying):
+
+                    self_source = left.get_base_sequence()[0]
+                    other_source = right.get_base_sequence()[0]
+
+                    assert isinstance(self_source, SourceMixin) and isinstance(other_source, SourceMixin), \
+                        'first element in base sequence must be a Source'
+
+                    yield self_source.equals(other_source)
+            return all(gen_is_equals())
+        else:
+            return False
+
+    def get_base_sequence(self) -> List[Base]:
+        return [self]
+
+    @property
+    def buffered(self) -> bool:
+        return False
+
+    @property
+    def fan_out(self) -> bool:
+        return False
+
+    def _sel_auto_match(self, other: 'Base') -> bool:
+        return False
+
+    def sel_auto_match(self, other: 'Base') -> bool:
+        return other._sel_auto_match(other=self)
+

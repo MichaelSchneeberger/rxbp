@@ -21,12 +21,12 @@ from rxbp.observesubscription import ObserveSubscription
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase, SharedBase
-from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
-from rxbp.subjects.publishsubject import PublishSubject
-from rxbp.subjects.replaysubject import ReplaySubject
+from rxbp.observablesubjects.observablecacheservefirstsubject import ObservableCacheServeFirstSubject
+from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
+from rxbp.observablesubjects.observablereplaysubject import ObservableReplaySubject
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
-from rxbp.flowables.anonymousflowable import AnonymousFlowable
+from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
 from rxbp.typing import ElementType, ValueType
 
 
@@ -64,7 +64,7 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
         return observable, {}
 
-    return AnonymousFlowable(unsafe_subscribe_func=unsafe_subscribe_func, base=base)
+    return AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func, base=base)
 
 
 def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None):
@@ -83,7 +83,7 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
         source_observable, source_selectors = subscriptable.unsafe_subscribe(subscriber)
         return source_observable, source_selectors
 
-    return AnonymousFlowable(unsafe_subscribe_func, base=base)
+    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func, base=base))
 
 
 def concat(sources: Iterable[FlowableBase]):
@@ -176,7 +176,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                                               subscribe_scheduler=subscriber.subscribe_scheduler)
         return observable, {}
 
-    return AnonymousFlowable(unsafe_subscribe_func, base=base_)
+    return AnonymousFlowableBase(unsafe_subscribe_func, base=base_)
 
 
 def return_value(elem: Any):
@@ -187,6 +187,16 @@ def return_value(elem: Any):
     """
 
     return _from_iterable([elem], n_elements=1)
+
+
+def empty():
+    """ Converts an element into an observable
+
+    :param elem: the single item sent by the observable
+    :return: single item observable
+    """
+
+    return _from_iterable([], n_elements=1)
 
 
 def share(sources: List[Flowable], func: Callable[..., Flowable]):
@@ -206,7 +216,7 @@ def share(sources: List[Flowable], func: Callable[..., Flowable]):
     return __()
 
 
-def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None):
+def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None) -> Flowable:
     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs

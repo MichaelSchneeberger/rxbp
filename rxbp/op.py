@@ -6,30 +6,10 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
 
 
-# def buffer(size: int):
-#     def func(obs: ObservableBase):
-#         class BufferObservable(ObservableBase):
-#             def unsafe_subscribe(self, observer, scheduler, subscribe_scheduler):
-#                 buffered_subscriber = BufferedSubscriber(
-#                     observer=observer, scheduler=scheduler, buffer_size=size)
-#                 disposable = obs.unsafe_subscribe(buffered_subscriber, scheduler, subscribe_scheduler)
-#                 return disposable
-#         return BufferObservable()
-#     return ObservableOperator(func)
-
-
-# def cache():
-#     """ Converts this observable into a multicast observable that caches the items that the fastest observer has
-#     already received and the slowest observer has not yet requested. Note that this observable is subscribed when
-#     the multicast observable is subscribed for the first time. Therefore, this observable is never subscribed more
-#     than once.
-#
-#     :return: multicast observable
-#     """
-#
-#     def func(obs: ObservableBase):
-#         return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
-#     return ObservableOperator(func)
+def buffer(buffer_size: int):
+    def func(source: Flowable) -> Flowable:
+        return source.buffer(buffer_size=buffer_size)
+    return FlowableOperator(func)
 
 
 def concat(sources: Iterable[FlowableBase]):
@@ -38,13 +18,14 @@ def concat(sources: Iterable[FlowableBase]):
     :param sources:
     :return:
     """
-    def func(left: Flowable) -> FlowableBase:
+
+    def func(left: Flowable) -> Flowable:
         return left.concat(sources=sources)
     return FlowableOperator(func)
 
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         """ Prints debug messages to the console when providing the name argument
 
         :param source:
@@ -57,7 +38,7 @@ def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=No
 
 
 def execute_on(scheduler: Scheduler):
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.execute_on(scheduler=scheduler)
     return FlowableOperator(func)
 
@@ -77,7 +58,7 @@ def controlled_zip(right: FlowableBase,
     :return: zipped observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
+    def func(left: Flowable) -> Flowable:
         return left.controlled_zip(right=right, request_left=request_left, request_right=request_right, match_func=match_func)
     return FlowableOperator(func)
 
@@ -89,7 +70,7 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
+    def func(left: Flowable) -> Flowable:
         return left.filter(predicate=predicate)
     return FlowableOperator(func)
 
@@ -101,7 +82,7 @@ def filter_with_index(predicate: Callable[[Any, int], bool]):
     :return: filtered observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
+    def func(left: Flowable) -> Flowable:
         return left.filter_with_index(predicate=predicate)
     return FlowableOperator(func)
 
@@ -115,7 +96,7 @@ def flat_map(selector: Callable[[Any], FlowableBase]):
     :return: a flattened observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
+    def func(left: Flowable) -> Flowable:
         return left.flat_map(selector=selector)
     return FlowableOperator(func)
 
@@ -136,7 +117,7 @@ def map(selector: Callable[[Any], Any]):
     :return: mapped observable
     """
 
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.map(selector=selector)
     return FlowableOperator(func)
 
@@ -160,7 +141,7 @@ def merge(other: FlowableBase):
     :return: mapped observable
     """
 
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.merge(other=other)
     return FlowableOperator(func)
 
@@ -172,7 +153,7 @@ def observe_on(scheduler: Scheduler):
     :return: an observable running on specified scheduler
     """
 
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.observe_on(scheduler=scheduler)
     return FlowableOperator(func)
 
@@ -184,7 +165,7 @@ def pairwise():
     :return: paired observable
     """
 
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.pairwise()
     return FlowableOperator(func)
 
@@ -195,7 +176,7 @@ def repeat_first():
     :return: a flowable
     """
 
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.repeat_first()
     return FlowableOperator(func)
 
@@ -227,9 +208,23 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     :return: a flowable that emits the accumulated values
     """
 
-    def inner_func(source: Flowable) -> FlowableBase:
+    def inner_func(source: Flowable) -> Flowable:
         return source.scan(func=func, initial=initial)
     return FlowableOperator(inner_func)
+
+
+# def cache():
+#     """ Converts this observable into a multicast observable that caches the items that the fastest observer has
+#     already received and the slowest observer has not yet requested. Note that this observable is subscribed when
+#     the multicast observable is subscribed for the first time. Therefore, this observable is never subscribed more
+#     than once.
+#
+#     :return: multicast observable
+#     """
+#
+#     def func(obs: ObservableBase):
+#         return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
+#     return ObservableOperator(func)
 
 
 def share(func: Callable[[FlowableBase], FlowableBase]):
@@ -241,16 +236,21 @@ def share(func: Callable[[FlowableBase], FlowableBase]):
     :return: flowable returned by the share function
     """
 
-    def inner_func(source: Flowable) -> FlowableBase:
+    def inner_func(source: Flowable) -> Flowable:
         return source.share(func=func)
     return FlowableOperator(inner_func)
 
 
 def to_list():
-    def func(source: Flowable) -> FlowableBase:
+    def func(source: Flowable) -> Flowable:
         return source.to_list()
     return FlowableOperator(func)
 
+
+def use_base(val: Any):
+    def func(source: Flowable) -> Flowable:
+        return source.use_base(val=val)
+    return FlowableOperator(func)
 
 def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
@@ -259,7 +259,7 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
     :return: zipped observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
+    def func(left: Flowable) -> Flowable:
         return left.zip(right=right, selector=selector)
     return FlowableOperator(func)
 
@@ -271,7 +271,7 @@ def zip_with_index(selector: Callable[[Any, int], Any] = None):
     :return: zipped with index observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
+    def func(left: Flowable) -> Flowable:
         return left.zip_with_index(selector=selector)
     return FlowableOperator(func)
 

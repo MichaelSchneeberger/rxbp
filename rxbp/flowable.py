@@ -2,6 +2,8 @@ import itertools
 from typing import Callable, Any, Generic, Iterator, Iterable, List, Tuple
 
 import rx
+from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
+from rxbp.flowables.bufferflowable import BufferFlowable
 
 from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
@@ -10,7 +12,7 @@ from rxbp.observables.scanobservable import ScanObservable
 from rxbp.observables.tolistobservable import ToListObservable
 from rxbp.observer import Observer
 from rxbp.pipe import pipe
-from rxbp.selectors.bases import Base, PairwiseBase
+from rxbp.selectors.bases import Base, PairwiseBase, NumericalBase
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
@@ -40,6 +42,10 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Observable:
         return self.subscriptable.unsafe_subscribe(subscriber=subscriber)
+
+    def buffer(self, buffer_size: int):
+        flowable = BufferFlowable(source=self, buffer_size=buffer_size)
+        return Flowable(flowable)
 
     def concat(self, sources: Iterable[FlowableBase]):
         all_sources = itertools.chain([self], sources)
@@ -145,16 +151,29 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = MapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
-    def merge(self, other: FlowableBase):
+    def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+
+        :param selector: a mapping function applied over the generated pairs
+        :return: zipped observable
         """
 
+        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=True)
+        return Flowable(flowable)
+
+    def merge(self, other: FlowableBase):
+        """
         :param selector: (optional) selector function
         :return: paired observable
         """
 
         class MergeFlowable(FlowableBase):
             def __init__(self, source: FlowableBase):
-                super().__init__()
+
+                # the base becomes anonymous after merging
+                base = None
+
+                super().__init__(base=base)
 
                 self._source = source
 
@@ -228,7 +247,10 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         class RepeatFirstFlowable(FlowableBase):
             def __init__(self, source: FlowableBase):
-                super().__init__()
+                # unknown base, depends on the back-pressure
+                base = None
+
+                super().__init__(base=base)
 
                 self._source = source
 
@@ -257,38 +279,19 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
     def share(self, func: Callable[[FlowableBase], FlowableBase]):
         def lifted_func(f: RefCountFlowable):
-            # class DelayFlowable(FlowableBase):
-            #     def unsafe_subscribe(self, subscriber: Subscriber) -> 'FlowableBase.FlowableReturnType':
-            #         class DelayObservable(Observable):
-            #             def observe(self, observer: Observer):
-            #                 class DelayObserver(Observer):
-            #                     def on_next(self, elem: ElementType):
-            #                         source_flowable = ConcatFlowable()
-            #
-            #                         flowable = source._func(RefCountFlowable(self._source, subject_gen=subject_gen, base=base))
-            #                         obs, selector = flowable.unsafe_subscribe(subscriber)
-            #                         disposable.disposable = d
-            #
-            #                     def on_error(self, exc: Exception):
-            #                         pass
-            #
-            #                     def on_completed(self):
-            #                         pass
-            #
-            #                 disposable = obs.observe(DelayObserver())
-            #                 return disposable
             result = func(Flowable(f))
             return result
 
         flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
         return Flowable(flowable)
 
-    # def share(self, func: Callable[[FlowableBase], FlowableBase]):
-    #     def lifted_func(f: RefCountFlowable):
-    #         return func(Flowable(f))
-    #
-    #     flowable = ShareFlowable(source=self, func=lifted_func)
-    #     return Flowable(flowable)
+    def use_base(self, val: Base):
+        flowable = AnonymousFlowableBase(
+            unsafe_subscribe_func=self.unsafe_subscribe,
+            base=val,
+            selectable_bases=self.selectable_bases,
+        )
+        return Flowable(flowable)
 
     def to_list(self):
         """ Converts this observable to an rx.Observable
@@ -299,7 +302,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         class ToListFlowable(FlowableBase):
             def __init__(self, source: FlowableBase):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
+
+                # to_list emits exactly one element
+                base = NumericalBase(1)
+
+                super().__init__(base=base, selectable_bases=source.selectable_bases)
 
                 self._source = source
 
@@ -319,16 +326,6 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         """
 
         return to_rx(source=self, batched=batched)
-
-    def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
-        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
-
-        :param selector: a mapping function applied over the generated pairs
-        :return: zipped observable
-        """
-
-        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=True)
-        return Flowable(flowable)
 
     def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
         """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.

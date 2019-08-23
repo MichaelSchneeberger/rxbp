@@ -7,7 +7,10 @@ from rxbp.subscriber import Subscriber
 
 class FlatMapFlowable(FlowableBase):
     def __init__(self, source: FlowableBase, selector: Callable[[Any], FlowableBase]):
-        super().__init__()
+        # base becomes undefined after flat mapping
+        base = None
+
+        super().__init__(base=base)
 
         self._source = source
         self._selector = selector

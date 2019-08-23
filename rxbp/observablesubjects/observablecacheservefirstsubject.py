@@ -11,13 +11,12 @@ from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
 
-from rxbp.observer import Observer
 from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import ExecutionModel, Scheduler
-from rxbp.subjects.subjectbase import SubjectBase
+from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 
 
-class CacheServeFirstSubject(SubjectBase):
+class ObservableCacheServeFirstSubject(ObservableSubjectBase):
 
     def __init__(self, scheduler: Scheduler, name=None):
         super().__init__()
@@ -31,7 +30,7 @@ class CacheServeFirstSubject(SubjectBase):
         self.current_index = {}
 
         # a inner subscription is inactive if all elements in the buffer are sent
-        self.inactive_subsriptions: List[CacheServeFirstSubject.InnerSubscription] = []
+        self.inactive_subsriptions: List[ObservableCacheServeFirstSubject.InnerSubscription] = []
 
         self.buffer = self.DequeuableBuffer()
 
@@ -76,7 +75,7 @@ class CacheServeFirstSubject(SubjectBase):
                 self.queue.pop(0)
 
     class InnerSubscription:
-        def __init__(self, source: 'CacheServeFirstSubject', subscription: ObserveSubscription,
+        def __init__(self, source: 'ObservableCacheServeFirstSubject', subscription: ObserveSubscription,
                      scheduler: Scheduler, em: ExecutionModel):
             self.source = source
             self.observer = subscription.observer

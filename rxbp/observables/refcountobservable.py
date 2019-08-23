@@ -5,11 +5,11 @@ from rx.disposable import Disposable
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observesubscription import ObserveSubscription
-from rxbp.subjects.subjectbase import SubjectBase
+from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 
 
 class RefCountObservable(Observable):
-    def __init__(self, source: Observable, subject: SubjectBase):
+    def __init__(self, source: Observable, subject: ObservableSubjectBase):
         super().__init__()
 
         self.source = source

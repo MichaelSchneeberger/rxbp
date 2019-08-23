@@ -10,10 +10,10 @@ from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.observesubscription import ObserveSubscription
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.subjects.subjectbase import SubjectBase
+from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 
 
-class PublishSubject(SubjectBase):
+class ObservablePublishSubject(ObservableSubjectBase):
     def __init__(self, scheduler: Scheduler, min_num_of_subscriber: int = 1):
 
         super().__init__()
@@ -35,7 +35,8 @@ class PublishSubject(SubjectBase):
         pass
 
     class State:
-        def __init__(self, subscribers: Union[Set['PublishSubject.Subscriber'], 'PublishSubject.Empty'] = None,
+        def __init__(self, subscribers: Union[Set[
+                                                  'ObservablePublishSubject.Subscriber'], 'ObservablePublishSubject.Empty'] = None,
                      cache: List = None, error_thrown=None):
             self.subscribers = subscribers or set()
             self.cache = cache
@@ -46,18 +47,18 @@ class PublishSubject(SubjectBase):
 
             :return:
             """
-            return PublishSubject.State(cache=list(self.subscribers))
+            return ObservablePublishSubject.State(cache=list(self.subscribers))
 
         def is_done(self):
-            return isinstance(self.subscribers, PublishSubject.Empty)
+            return isinstance(self.subscribers, ObservablePublishSubject.Empty)
 
         def complete(self, error_thrown):
-            if isinstance(self.subscribers, PublishSubject.Empty):
+            if isinstance(self.subscribers, ObservablePublishSubject.Empty):
                 return self
             else:
-                return PublishSubject.State(error_thrown=error_thrown,
-                                            subscribers=PublishSubject.Empty(),
-                                            cache=None)
+                return ObservablePublishSubject.State(error_thrown=error_thrown,
+                                                      subscribers=ObservablePublishSubject.Empty(),
+                                                      cache=None)
 
     def on_subscribe_completed(self, subscriber: Subscriber, ex):
         if ex is not None:

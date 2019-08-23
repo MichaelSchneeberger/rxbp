@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
-from rxbp.observable import Observable
+from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
 
 
-class SubjectBase(Observable, Observer, ABC):
+class SubjectBase(FlowableBase, Observer, ABC):
     pass

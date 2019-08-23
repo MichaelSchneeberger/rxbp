@@ -1,9 +1,5 @@
-from rx.disposable import Disposable
-from rxbp.flowablebase import FlowableBase
-from rxbp.observable import Observable
-from rxbp.observer import Observer
-from rxbp.subjects.cacheservefirstsubject import CacheServeFirstSubject
-from rxbp.subscriber import Subscriber
+from rxbp.ack.single import Single
+from rxbp.subjects.subject import Subject
 
 
 class Service:
@@ -14,7 +10,7 @@ class Service:
         self.handler = handler
 
     def request(self):
-        pass
+        print('request')
 
     def send(self, value):
         self.handler(value)
@@ -23,6 +19,39 @@ class Service:
         self.handler = None
 
 
-class MyFlowable(FlowableBase):
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-        subject = CacheServeFirstSubject(scheduler=subscriber.scheduler)
+service = Service()
+
+# build flowable and subscribe
+# ----------------------------
+
+subject = Subject()
+subject.subscribe(print)
+
+
+# connect to Service
+# ------------------
+
+def handler(value):
+    ack = subject.on_next(value)
+
+    class _(Single):
+
+        def on_next(self, elem):
+            service.request()
+
+        def on_error(self, exc: Exception):
+            pass
+
+    ack.subscribe(_())
+
+service.register(handler=handler)
+service.request()
+
+# simulate service
+# ----------------
+
+service.send(0)
+service.send(1)
+service.send(3)
+
+service.unregister()

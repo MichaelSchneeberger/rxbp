@@ -9,15 +9,26 @@ from rxbp.testing.debugobservable import DebugObservable
 
 
 class ZipFlowable(FlowableBase):
-    def __init__(self, left: FlowableBase, right: FlowableBase,
-                 selector: Callable[[Any, Any], Any] = None, auto_match: bool = None):
+    def __init__(
+            self,
+            left: FlowableBase,
+            right: FlowableBase,
+            selector: Callable[[Any, Any], Any] = None,
+            auto_match: bool = None
+    ):
+        """
+        :param left:
+        :param right:
+        :param selector:
+        :param auto_match: if set to False then this Flowable works like a normal zip operation, if set to False then \
+        it checks if the left and right Flowable either match (by their corresponding bases) or there is a \
+        transformation (called selector) to make them match
+        """
+
         has_left_base = isinstance(left.base, Base)
         has_right_base = isinstance(right.base, Base)
-        # print('has_left_base', has_left_base)
-        # print('has_right_base', has_right_base)
 
         enforce_auto_match = auto_match if isinstance(auto_match, bool) else False
-        # print('enforce_auto_match', enforce_auto_match)
 
         def gen_matching_bases(base: Base, selectable_bases: Set[Base]):
             for other in selectable_bases:
@@ -26,61 +37,55 @@ class ZipFlowable(FlowableBase):
                 if is_matching:
                     sel_auto_match = base.sel_auto_match(other)
 
-                    # print('is_maching', is_matching)
-                    # print('sel_auto_match', sel_auto_match)
-
                     if (sel_auto_match and auto_match is None) or enforce_auto_match:
                         yield other
                         break
             yield None
 
         def gen_selectable_bases():
+            """ Generates 4 values
+            1) the base of this Flowable
+            2) a set of bases for which a selector exists that transforms the Flowable to match
+               the basis of this Flowable (not used for the auto_match of this zip Flowable, but possibly used for
+               auto_match in downstream Flowables)
+            3) (used only if auto_match==True) select left base transformation
+            4) (used only if auto_match==True) select right base transformation
+
+            raise Exception auto_match==True but bases don't match and no transformation was was found
+            """
+
             for _ in range(1):
                 if has_left_base and has_right_base:
                     is_matching = left.base.is_matching(right.base)
 
-                    # print('bases', val1, val2)
                     if is_matching:
-                        # print('sel boht bases')
-                        yield left.selectable_bases | right.selectable_bases, None, None, left.base
+                        yield left.base, left.selectable_bases | right.selectable_bases, None, None
                         break
 
                 if has_left_base:
                     other_base = next(gen_matching_bases(left.base, selectable_bases=right.selectable_bases))
                     if other_base is not None:
-                        # print('sel left base')
-                        yield right.selectable_bases, other_base, None, right.base
+                        yield right.base, right.selectable_bases, other_base, None
                         break
 
                 if has_right_base:
-                    # print('has right base')
                     other_base = next(gen_matching_bases(right.base, selectable_bases=left.selectable_bases))
                     if other_base is not None:
-                        # print('sel right base')
-                        yield left.selectable_bases, None, other_base, left.base
+                        yield left.base, left.selectable_bases, None, other_base
                         break
-
-                # print('left.selectable_bases', left.selectable_bases)
-                # print('right.selectable_bases', right.selectable_bases)
-                # print('inter_base', inter_base)
 
                 if enforce_auto_match:
                     raise AssertionError('flowable do not match')
 
-                yield {}, None, None, None
+                yield None, {}, None, None
 
-        selectable_bases, sel_left_base, sel_right_base, sel_base = next(gen_selectable_bases())
-
-        # print('sel_base', sel_base)
-        # print('sel_left_base', sel_left_base)
-        # print('sel_right_base', sel_right_base)
+        sel_base, selectable_bases, sel_left_base, sel_right_base = next(gen_selectable_bases())
 
         self._left = left
         self._right = right
         self._result_selector = selector
         self._sel_left_base = sel_left_base
         self._sel_right_base = sel_right_base
-        base = sel_left_base or sel_right_base
 
         super().__init__(base=sel_base, selectable_bases=selectable_bases)
 
