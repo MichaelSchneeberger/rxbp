@@ -11,7 +11,7 @@ from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
@@ -79,12 +79,12 @@ class ObservableReplaySubject(ObservableSubjectBase):
         self.lock = threading.RLock()
         # self.batch_size = batch_size
 
-    def observe(self, subscription: ObserveSubscription):
+    def observe(self, observer_info: ObserverInfo):
         """ Creates a new ConnectableSubscriber for each subscription, pushes the current buffer to the
         ConnectableSubscriber and connects it immediately
 
         """
-        observer = subscription.observer
+        observer = observer_info.observer
 
         def stream_on_done(buffer: Iterable, error_thrown: Exception = None) -> Disposable:
             class TObserver(Observer):
@@ -102,7 +102,7 @@ class ObservableReplaySubject(ObservableSubjectBase):
                     else:
                         observer.on_completed()
 
-            t_subscription = subscription.copy(TObserver())
+            t_subscription = observer_info.copy(TObserver())
             return IteratorAsObservable(iter(buffer), scheduler=self.scheduler, subscribe_scheduler=TrampolineScheduler()) \
                 .observe(t_subscription)
 

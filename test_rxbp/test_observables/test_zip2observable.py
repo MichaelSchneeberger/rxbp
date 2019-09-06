@@ -1,7 +1,7 @@
 from rxbp.ack.ack import Ack
 from rxbp.ack.ackimpl import continue_ack
 from rxbp.observables.zip2observable import Zip2Observable
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
@@ -35,7 +35,7 @@ class TestZip2Observable(TestCaseBase):
 
     def test_init_termination_state_wait_on_left_right_immediate_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         self.sink.immediate_continue = 10
 
@@ -69,7 +69,7 @@ class TestZip2Observable(TestCaseBase):
 
     def test_init_termination_state_wait_on_left_right_delayed_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         # state WaitOnLeftRight -> WaitOnRight
         ack1: Ack = self.s1.on_next_seq([1, 2, 3, 4])
@@ -100,7 +100,7 @@ class TestZip2Observable(TestCaseBase):
 
     def test_init_termination_state_wait_on_right_immediate_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         self.sink.immediate_continue = 10
 
@@ -122,7 +122,7 @@ class TestZip2Observable(TestCaseBase):
 
     def test_on_error(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         self.s1.on_next_seq([1])
         self.s1.on_error(Exception())
@@ -131,7 +131,7 @@ class TestZip2Observable(TestCaseBase):
 
     def test_on_completed(self):
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         self.s1.on_next_seq([1])
         self.s2.on_error(Exception())

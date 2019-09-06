@@ -3,7 +3,7 @@ from rxbp.ack.acksubject import AckSubject
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
@@ -12,8 +12,8 @@ class ObserveOnObservable(Observable):
         self.source = source
         self.scheduler = scheduler
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         def on_next(v):
             ack_subject = AckSubject()
@@ -45,5 +45,5 @@ class ObserveOnObservable(Observable):
 
         observe_on_observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error,
                                                 on_completed_func=on_completed)
-        observer_on_subscription = ObserveSubscription(observe_on_observer, is_volatile=subscription.is_volatile)
+        observer_on_subscription = ObserverInfo(observe_on_observer, is_volatile=observer_info.is_volatile)
         return self.source.observe(observer_on_subscription)

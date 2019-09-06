@@ -4,21 +4,26 @@ from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
+from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
+from rxbp.flowables.observeonflowable import ObserveOnFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.observable import Observable
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
 from rxbp.observers.connectableobserver import ConnectableObserver
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 
 
-
 class DeferFlowable(FlowableBase):
-    def __init__(self, base: Base, func: Callable[[FlowableBase], FlowableBase], initial: Any,
-                 defer_selector: Callable[[FlowableBase], FlowableBase]):
-        super().__init__()
+    def __init__(
+            self,
+            base: Base,
+            func: Callable[[Base], Base], initial: Any,
+            defer_selector: Callable[[Base], Base] = None,
+    ):
+        super().__init__(base=base)
 
         self._base = base
         self._func = func
@@ -29,8 +34,8 @@ class DeferFlowable(FlowableBase):
         initial = self._initial
 
         class StartWithInitialObservable(Observable):
-            def observe(self, subscription: ObserveSubscription):
-                buffer_observer.underlying = subscription.observer
+            def observe(self, observer_info: ObserverInfo):
+                buffer_observer.underlying = observer_info.observer
                 d1 = SingleAssignmentDisposable()
 
                 def action(_, __):
@@ -50,9 +55,10 @@ class DeferFlowable(FlowableBase):
 
         source = AnonymousFlowableBase(lambda subscriber: (StartWithInitialObservable(), {}))
 
-        scheduled_source = source.observe_on(scheduler=subscriber.scheduler)
+        scheduled_source = ObserveOnFlowable(source=source, scheduler=subscriber.scheduler)
 
-        result_flowable = scheduled_source.share(lambda flowable: self._func(flowable))
+        result_flowable = CacheServeFirstFlowable(source=scheduled_source, func=self._func)
+        # result_flowable = scheduled_source.share(lambda flowable: self._func(flowable))
 
         ref_count_flowable = RefCountFlowable(result_flowable)
 
@@ -71,11 +77,11 @@ class DeferFlowable(FlowableBase):
                                             subscribe_scheduler=subscriber.subscribe_scheduler)
 
         class DeferObservable(Observable):
-            def observe(self, subscription: ObserveSubscription):
-                d1 = obs.observe(subscription)
+            def observe(self, observer_info: ObserverInfo):
+                d1 = obs.observe(observer_info)
 
                 # once Defer operator is observe from outside,
-                volatile_subscription = ObserveSubscription(conn_observer, is_volatile=True)
+                volatile_subscription = ObserverInfo(conn_observer, is_volatile=True)
                 d2 = defer_obs.observe(volatile_subscription)
 
                 return CompositeDisposable(d1, d2)

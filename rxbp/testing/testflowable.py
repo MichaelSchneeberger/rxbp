@@ -12,7 +12,7 @@ class TestFlowable(FlowableBase):
 
         self.subscriber = subscriber
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         self.subscriber = subscriber
 
         return rxbp.empty(), {}

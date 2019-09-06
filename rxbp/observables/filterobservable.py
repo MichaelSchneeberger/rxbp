@@ -3,9 +3,8 @@ from typing import Callable, Any
 
 from rxbp.ack.ack import Ack
 from rxbp.ack.ackimpl import stop_ack
-from rxbp.ack.ackbase import AckBase
-from rxbp.observesubscription import ObserveSubscription
-from rxbp.selectors.selection import select_next, select_completed
+from rxbp.observerinfo import ObserverInfo
+from rxbp.selectors.selectionmsg import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -22,8 +21,8 @@ class FilterObservable(Observable):
         self.source = source
         self.predicate = predicate
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         def on_next(v):
             def gen_filtered_iterable():
@@ -76,5 +75,5 @@ class FilterObservable(Observable):
                 source.selector.on_completed()
                 return observer.on_completed()
 
-        filter_subscription = subscription.copy(FilterObserver())
+        filter_subscription = observer_info.copy(FilterObserver())
         return self.source.observe(filter_subscription)

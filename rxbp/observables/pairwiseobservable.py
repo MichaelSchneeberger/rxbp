@@ -3,15 +3,15 @@ import itertools
 from rxbp.ack.ackimpl import continue_ack, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
 
 class PairwiseObservable(Observable):
     def __init__(self, source):
         self.source = source
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         last_elem = [None]
 
@@ -63,5 +63,5 @@ class PairwiseObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        pairwise_subscription = subscription.copy(PairwiseObserver())
+        pairwise_subscription = observer_info.copy(PairwiseObserver())
         return self.source.observe(pairwise_subscription)

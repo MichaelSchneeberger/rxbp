@@ -1,47 +1,46 @@
 import traceback
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Set, Dict, Tuple, Optional, Generic
+from typing import Callable, Any, Tuple, Generic
 
+from rx.disposable import Disposable
 from rxbp.ack.ackimpl import continue_ack, stop_ack
-from rxbp.observable import Observable
-from rxbp.observer import Observer
 from rxbp.observers.anonymousobserver import AnonymousObserver
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.selectors.bases import Base
+from rxbp.subscription import Subscription
 from rxbp.subscriber import Subscriber
 from rxbp.typing import ValueType
 
 
 class FlowableBase(Generic[ValueType], ABC):
-    FlowableReturnType = Tuple[Observable, Dict[Base, Optional[Observable]]]
 
-    def __init__(self, base: Optional[Base], selectable_bases: Set[Base] = None):
+    def __init__(self):
         """
         :param base: two flowables with the the same base emit the same number of elements
         :param transformables: a set of bases different to the current base, a transformation is the capability to
         transform another Subscriptable to the current base, the actual transformations are defined in the `Observable`
         """
 
-        self.base = base
-        self.selectable_bases = selectable_bases or set()
+        pass
 
-    def subscribe_(self, subscriber: Subscriber, subscription: ObserveSubscription):
+    def subscribe_(self, subscriber: Subscriber, observer_info: ObserverInfo):
         def action(_, __):
-            source_observable, _ = self.unsafe_subscribe(subscriber=subscriber)
-            disposable = source_observable.observe(subscription=subscription)
+            subscription = self.unsafe_subscribe(subscriber=subscriber)
+            disposable = subscription.observable.observe(observer_info=observer_info)
             return disposable
 
         disposable = subscriber.subscribe_scheduler.schedule(action)
         return disposable
 
-    def subscribe(self,
-                  on_next: Callable[[Any], None] = None,
-                  on_error: Callable[[Any], None] = None,
-                  on_completed: Callable[[], None] = None,
-                  scheduler: Scheduler = None,
-                  subscribe_scheduler: Scheduler = None):
+    def subscribe(
+            self,
+            on_next: Callable[[Any], None] = None,
+            on_error: Callable[[Any], None] = None,
+            on_completed: Callable[[], None] = None,
+            scheduler: Scheduler = None,
+            subscribe_scheduler: Scheduler = None
+    ) -> Disposable:
 
         subscribe_scheduler_ = subscribe_scheduler or TrampolineScheduler()
         scheduler_ = scheduler or subscribe_scheduler_
@@ -65,11 +64,11 @@ class FlowableBase(Generic[ValueType], ABC):
                 return stop_ack
 
         observer = AnonymousObserver(on_next_func=on_next_with_ack, on_error_func=on_error_, on_completed_func=on_completed_)
-        subscription = ObserveSubscription(observer=observer)
+        subscription = ObserverInfo(observer=observer)
 
-        disposable = self.subscribe_(subscriber=subscriber, subscription=subscription)
+        disposable = self.subscribe_(subscriber=subscriber, observer_info=subscription)
         return disposable
 
     @abstractmethod
-    def unsafe_subscribe(self, subscriber: Subscriber) -> 'FlowableBase.FlowableReturnType':
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         ...

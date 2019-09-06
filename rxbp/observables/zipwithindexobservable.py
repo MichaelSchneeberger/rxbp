@@ -2,7 +2,7 @@ from typing import Callable, Any
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
 
 class ZipWithIndexObservable(Observable):
@@ -10,8 +10,8 @@ class ZipWithIndexObservable(Observable):
         self.source = source
         self.selector = (lambda v, i: (v, i)) if selector is None else selector
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
         count = [0]
 
         def on_next(v):
@@ -33,5 +33,5 @@ class ZipWithIndexObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        map_observer = ObserveSubscription(ZipCountObserver(), is_volatile=subscription.is_volatile)
+        map_observer = ObserverInfo(ZipCountObserver(), is_volatile=observer_info.is_volatile)
         return self.source.observe(map_observer)

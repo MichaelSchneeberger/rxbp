@@ -2,11 +2,11 @@ from typing import Callable
 from functools import reduce
 
 from rxbp.flowablebase import FlowableBase
-from .observable import Observable
+from rxbp.selectors.bases import Base
 
 
-def pipe(*operators: Callable[[FlowableBase], FlowableBase]) -> Callable[[FlowableBase], FlowableBase]:
+def pipe(*operators: Callable[[Base], Base]) -> Callable[[Base], Base]:
 
-    def compose(source: FlowableBase) -> FlowableBase:
+    def compose(source: FlowableBase) -> Base:
         return reduce(lambda obs, op: op(obs), operators, source)
     return compose

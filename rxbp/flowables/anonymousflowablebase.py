@@ -1,27 +1,25 @@
-from typing import Callable, Any, Set
+from typing import Callable
 
-from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
+from rxbp.subscription import Subscription
 
 
 class AnonymousFlowableBase(FlowableBase):
     def __init__(
             self,
-            unsafe_subscribe_func: Callable[[Subscriber], FlowableBase.FlowableReturnType],
-            base: Base = None,
-            selectable_bases: Set[Base] = None,
+            unsafe_subscribe_func: Callable[[Subscriber], Subscription],
     ):
 
-        super().__init__(base, selectable_bases)
+        super().__init__()
 
         class InnerSubscriptable(FlowableBase):
-            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+            def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
                 return unsafe_subscribe_func(subscriber)
 
-        flowable = InnerSubscriptable(base=base, selectable_bases=selectable_bases)
+        flowable = InnerSubscriptable()
 
         self.unsafe_subscribe = flowable.unsafe_subscribe
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         raise Exception('should not be called')

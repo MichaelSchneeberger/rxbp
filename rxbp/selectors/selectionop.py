@@ -1,11 +1,8 @@
-from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.selectors.mergeselectorobservable import MergeSelectorObservable
-from rxbp.selectors.selection import SelectCompleted, SelectNext
+from rxbp.selectors.observables.mergeselectorobservable import MergeSelectorObservable
+from rxbp.selectors.selectionmsg import SelectCompleted, SelectNext
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observables.mapobservable import MapObservable
-from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.scheduler import Scheduler
 from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject

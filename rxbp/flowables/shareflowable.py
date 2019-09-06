@@ -12,13 +12,13 @@ class ShareFlowable(FlowableBase):
     """ for internal use
     """
 
-    def __init__(self, source: FlowableBase, func: Callable[[RefCountFlowable], FlowableBase]):
+    def __init__(self, source: FlowableBase, func: Callable[[RefCountFlowable], Base]):
         super().__init__()
 
         self._source = source
         self._func = func
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         base = SharedBase(has_fan_out=True, prev_base=self._source.base)
 
         def subject_gen(scheduler: Scheduler):

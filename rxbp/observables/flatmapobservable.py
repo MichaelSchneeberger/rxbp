@@ -11,7 +11,7 @@ from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
@@ -75,9 +75,9 @@ class FlatMapObservable(Observable):
         def get_actual_state(self, nco: int):
             return self
 
-    def observe(self, subscription: ObserveSubscription):
+    def observe(self, observer_info: ObserverInfo):
         source = self
-        observer = subscription.observer
+        observer = observer_info.observer
 
         composite_disposable = CompositeDisposable()
 
@@ -129,7 +129,7 @@ class FlatMapObservable(Observable):
                         # to get control of activating one after the other
                         conn_observer = ConnectableObserver(inner_observer, scheduler=source._scheduler,
                                                             subscribe_scheduler=source._subscribe_scheduler)
-                        conn_subscription = subscription.copy(conn_observer)
+                        conn_subscription = observer_info.copy(conn_observer)
 
                         # observe inner observable
                         disposable = inner_observable.observe(conn_subscription)
@@ -313,7 +313,7 @@ class FlatMapObservable(Observable):
                 else:
                     raise Exception('illegal state')
 
-        concat_map_subscription = subscription.copy(OuterObserver())
+        concat_map_subscription = observer_info.copy(OuterObserver())
         d1 = self._source.observe(concat_map_subscription)
         composite_disposable.add(d1)
 

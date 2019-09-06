@@ -1,5 +1,5 @@
 from rxbp.ack.ackimpl import Continue
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.observablesubjects.observablecacheservefirstsubject import ObservableCacheServeFirstSubject
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
@@ -18,8 +18,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         o2 = TestObserver()
 
         subject = ObservableCacheServeFirstSubject(scheduler=s)
-        subject.observe(ObserveSubscription(o1))
-        subject.observe(ObserveSubscription(o2))
+        subject.observe(ObserverInfo(o1))
+        subject.observe(ObserverInfo(o2))
 
         def gen_value(v):
             def gen():

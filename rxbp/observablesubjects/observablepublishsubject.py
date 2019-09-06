@@ -7,7 +7,7 @@ from rxbp.ack.single import Single
 
 from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
@@ -67,8 +67,8 @@ class ObservablePublishSubject(ObservableSubjectBase):
             subscriber.observer.on_completed()
         return Disposable()
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
         state = self.state
         subscribers = state.subscribers
 
@@ -92,7 +92,7 @@ class ObservablePublishSubject(ObservableSubjectBase):
                 disposable = Disposable(dispose)
                 return disposable
             else:
-                return self.observe(subscription)
+                return self.observe(observer_info)
 
     def on_next(self, elem):
         state = self.state

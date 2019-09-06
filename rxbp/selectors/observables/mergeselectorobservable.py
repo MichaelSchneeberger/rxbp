@@ -5,9 +5,9 @@ from rx.disposable import CompositeDisposable
 from rxbp.ack.ackimpl import continue_ack, stop_ack
 from rxbp.ack.ackbase import AckBase
 from rxbp.ack.acksubject import AckSubject
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
-from rxbp.selectors.selection import select_next, select_completed, SelectCompleted, SelectNext
+from rxbp.selectors.selectionmsg import SelectCompleted, SelectNext
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -81,8 +81,8 @@ class MergeSelectorObservable(Observable):
         def __init__(self, left_in_ack: AckBase):
             self.left_in_ack = left_in_ack
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         def start_zipping(left_val: Any, left_iter: Iterator[Tuple[Any, ObservablePublishSubject]],
                           right_val: Optional[Any], right_iter: Iterator[Any],
@@ -381,11 +381,11 @@ class MergeSelectorObservable(Observable):
                     observer.on_completed()
 
         left_observer = LeftObserver()
-        left_subscription = ObserveSubscription(left_observer, is_volatile=subscription.is_volatile)
+        left_subscription = ObserverInfo(left_observer, is_volatile=observer_info.is_volatile)
         d1 = self.left_observable.observe(left_subscription)
 
         right_observer = RightObserver()
-        right_subscription = ObserveSubscription(right_observer, is_volatile=subscription.is_volatile)
+        right_subscription = ObserverInfo(right_observer, is_volatile=observer_info.is_volatile)
         d2 = self.right_observable.observe(right_subscription)
 
         return CompositeDisposable(d1, d2)

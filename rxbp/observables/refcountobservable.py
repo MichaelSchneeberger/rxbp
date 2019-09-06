@@ -4,7 +4,7 @@ from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 
 
@@ -19,10 +19,10 @@ class RefCountObservable(Observable):
         self.first_disposable = None
         self.lock = threading.RLock()
 
-    def observe(self, subscription: ObserveSubscription):
-        disposable = self.subject.observe(subscription)
+    def observe(self, observer_info: ObserverInfo):
+        disposable = self.subject.observe(observer_info)
 
-        if subscription.is_volatile:
+        if observer_info.is_volatile:
             self.volatile_disposables.append(disposable)
             return disposable
 
@@ -31,7 +31,7 @@ class RefCountObservable(Observable):
             current_cound = self.count
 
         if current_cound == 1:
-            subject_subscription = ObserveSubscription(self.subject, is_volatile=subscription.is_volatile)
+            subject_subscription = ObserverInfo(self.subject, is_volatile=observer_info.is_volatile)
             self.first_disposable = self.source.observe(subject_subscription)
 
         def dispose():

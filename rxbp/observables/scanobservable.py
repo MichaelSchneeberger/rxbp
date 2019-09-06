@@ -3,7 +3,7 @@ from typing import Callable, Any
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
 
 class ScanObservable(Observable):
@@ -12,8 +12,8 @@ class ScanObservable(Observable):
         self.func = func
         self.acc = initial
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         def on_next(v):
             def scan_gen():
@@ -39,5 +39,5 @@ class ScanObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        scan_observer = subscription.copy(ScanObserver())
+        scan_observer = observer_info.copy(ScanObserver())
         return self.source.observe(scan_observer)

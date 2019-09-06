@@ -3,7 +3,7 @@ from rxbp.ack.single import Single
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
@@ -36,9 +36,9 @@ class DebugObservable(Observable):
             self.on_raw_ack = on_raw_ack or empty_func1
             self.on_next_exception = on_next_exception or empty_func1
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
-        self.on_subscribe_func(subscription)
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
+        self.on_subscribe_func(observer_info)
 
         def on_next(v):
             try:
@@ -84,5 +84,5 @@ class DebugObservable(Observable):
 
         debug_observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error,
                                          on_completed_func=on_completed)
-        debug_subscription = ObserveSubscription(debug_observer, is_volatile=subscription.is_volatile)
+        debug_subscription = ObserverInfo(debug_observer, is_volatile=observer_info.is_volatile)
         return self.source.observe(debug_subscription)

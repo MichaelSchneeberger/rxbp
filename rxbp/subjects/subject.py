@@ -13,7 +13,7 @@ class Subject(SubjectBase):
 
         self._obs_subject = None
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> 'FlowableBase.FlowableReturnType':
+    def unsafe_subscribe(self, subscriber: Subscriber) -> 'Subscription':
         self._obs_subject = ObservableCacheServeFirstSubject(scheduler=subscriber.scheduler)
         return self._obs_subject, {}
 

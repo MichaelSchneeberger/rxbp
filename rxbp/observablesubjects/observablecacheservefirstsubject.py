@@ -11,7 +11,7 @@ from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
 
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import ExecutionModel, Scheduler
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 
@@ -75,7 +75,7 @@ class ObservableCacheServeFirstSubject(ObservableSubjectBase):
                 self.queue.pop(0)
 
     class InnerSubscription:
-        def __init__(self, source: 'ObservableCacheServeFirstSubject', subscription: ObserveSubscription,
+        def __init__(self, source: 'ObservableCacheServeFirstSubject', subscription: ObserverInfo,
                      scheduler: Scheduler, em: ExecutionModel):
             self.source = source
             self.observer = subscription.observer
@@ -260,10 +260,10 @@ class ObservableCacheServeFirstSubject(ObservableSubjectBase):
                 except:
                     raise Exception('fatal error')
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
         em = self.scheduler.get_execution_model()
-        inner_subscription = self.InnerSubscription(source=self, subscription=subscription, scheduler=self.scheduler, em=em)
+        inner_subscription = self.InnerSubscription(source=self, subscription=observer_info, scheduler=self.scheduler, em=em)
 
         with self.lock:
             if not self.is_stopped:

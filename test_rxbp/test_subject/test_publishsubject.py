@@ -1,7 +1,7 @@
 import unittest
 
 from rxbp.ack.ackimpl import Continue, continue_ack
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
@@ -24,7 +24,7 @@ class TestPublishSubject(unittest.TestCase):
         o1 = TestObserver()
         o1.immediate_continue = 5
 
-        subject.observe(ObserveSubscription(o1))
+        subject.observe(ObserverInfo(o1))
 
         self.assertIsInstance(s1.on_next_seq([4]), Continue)
         self.assertIsInstance(s1.on_next_seq([5]), Continue)
@@ -42,7 +42,7 @@ class TestPublishSubject(unittest.TestCase):
             for i in range(10):
                 o1 = TestObserver()
                 o1.immediate_continue = 5
-                subject.observe(ObserveSubscription(o1))
+                subject.observe(ObserverInfo(o1))
                 yield o1
 
         obs_list = list(gen_observers())
@@ -62,7 +62,7 @@ class TestPublishSubject(unittest.TestCase):
         def gen_observers():
             for i in range(10):
                 o1 = TestObserver()
-                subject.observe(ObserveSubscription(o1))
+                subject.observe(ObserverInfo(o1))
                 yield o1
 
         obs_list = list(gen_observers())
@@ -86,7 +86,7 @@ class TestPublishSubject(unittest.TestCase):
         subject.on_completed()
 
         o1 = TestObserver()
-        subject.observe(ObserveSubscription(o1))
+        subject.observe(ObserverInfo(o1))
         self.assertTrue(o1.is_completed)
 
     def test_on_error_should_terminate_current_and_future_subscribers(self):
@@ -97,7 +97,7 @@ class TestPublishSubject(unittest.TestCase):
         def gen_observers():
             for i in range(10):
                 o1 = TestObserver()
-                subject.observe(ObserveSubscription(o1))
+                subject.observe(ObserverInfo(o1))
                 yield o1
 
         obs_list = list(gen_observers())
@@ -106,7 +106,7 @@ class TestPublishSubject(unittest.TestCase):
         s1.on_error(dummy)
 
         o1 = TestObserver()
-        subject.observe(ObserveSubscription(o1))
+        subject.observe(ObserverInfo(o1))
 
         for obs in obs_list:
             self.assertListEqual(obs.received, [1])
@@ -118,7 +118,7 @@ class TestPublishSubject(unittest.TestCase):
         subject = ObservablePublishSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
         o1 = TestObserver()
-        d = subject.observe(ObserveSubscription(o1))
+        d = subject.observe(ObserverInfo(o1))
 
         s1.on_next_seq([1])
         s1.on_completed()

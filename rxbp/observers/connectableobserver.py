@@ -12,7 +12,7 @@ from rxbp.ack.single import Single
 
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
@@ -108,7 +108,7 @@ class ConnectableObserver(Observer):
                     pass
 
                 self.queue.put(EmptyObject)
-                subscription = ObserveSubscription(observer=InnerConnectableObserver(), is_volatile=self.is_volatile)
+                subscription = ObserverInfo(observer=InnerConnectableObserver(), is_volatile=self.is_volatile)
                 disposable = IteratorAsObservable(iter(self.queue.get, EmptyObject), scheduler=self.scheduler,
                                                   subscribe_scheduler=self.subscribe_scheduler) \
                     .observe(subscription)

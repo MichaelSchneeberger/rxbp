@@ -2,7 +2,7 @@ from typing import Callable, Any
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
@@ -13,8 +13,8 @@ class MapObservable(Observable):
         self.source = source
         self.selector = selector
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         def on_next(v):
 
@@ -35,5 +35,5 @@ class MapObservable(Observable):
             def on_completed(self):
                 return observer.on_completed()
 
-        map_subscription = subscription.copy(MapObserver())
+        map_subscription = observer_info.copy(MapObserver())
         return self.source.observe(map_subscription)

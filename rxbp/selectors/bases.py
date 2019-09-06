@@ -1,244 +1,232 @@
 from abc import ABC, abstractmethod
-from typing import Any, Tuple, List, Iterable
+from typing import Any, Iterable, List
+
+from rxbp.observables.concatobservable import ConcatObservable
+from rxbp.observables.mergeobservable import MergeObservable
+from rxbp.scheduler import Scheduler
+from rxbp.selectors.getselectormixin import IdentitySelector, SelectorResult, SelectorFound, NoSelectorFound, \
+    GetSelectorMixin, ObservableSelector
+from rxbp.subscriber import Subscriber
 
 
-class SourceMixin(ABC):
-    @abstractmethod
-    def equals(self, other: 'Base') -> bool:
-        ...
+class Base(GetSelectorMixin, ABC):
+    pass
 
 
-class Base(ABC):
-    # @abstractmethod
-    def is_matching(self, other: 'Base') -> bool:
-        source1 = self.get_base_sequence()[0]
-        source2 = other.get_base_sequence()[0]
-
-        assert isinstance(source1, SourceMixin) and isinstance(source2, SourceMixin), \
-            'first element in base sequence must be a Source'
-
-        return source1.equals(source2)
-
-    @abstractmethod
-    def get_base_sequence(self) -> List['Base']:
-        ...
-
-    @property
-    @abstractmethod
-    def buffered(self) -> bool:
-        ...
-
-    @property
-    @abstractmethod
-    def fan_out(self) -> bool:
-        ...
-
-    @abstractmethod
-    def _sel_auto_match(self, other: 'Base') -> bool:
-        ...
-
-    @abstractmethod
-    def sel_auto_match(self, other: 'Base') -> bool:
-        ...
-
-
-class NumericalBase(SourceMixin, Base):
+class NumericalBase(Base):
     def __init__(self, num: int):
         self.num = num
 
-    def equals(self, other: Base):
+    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
         if isinstance(other, NumericalBase) and self.num == other.num:
-            return True
+            return SelectorFound(IdentitySelector(), IdentitySelector())
         else:
-            return False
-
-    def get_base_sequence(self) -> List['Base']:
-        return [self]
-
-    @property
-    def buffered(self) -> bool:
-        return False
-
-    @property
-    def fan_out(self) -> bool:
-        return False
-
-    def _sel_auto_match(self, other: 'Base') -> bool:
-        return False
-
-    def sel_auto_match(self, other: 'Base') -> bool:
-        return other._sel_auto_match(other=self)
+            return NoSelectorFound()
 
 
-class ObjectRefBase(SourceMixin, Base):
+class ObjectRefBase(Base):
     def __init__(self, obj: Any = None):
         self.obj = obj or self
 
-    def equals(self, other: Base):
+    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
         if isinstance(other, ObjectRefBase) and self.obj == other.obj:
-            return True
+            return SelectorFound(IdentitySelector(), IdentitySelector())
         else:
-            return False
+            return NoSelectorFound()
 
-    def get_base_sequence(self) -> List['Base']:
-        return [self]
-
-    @property
-    def buffered(self) -> bool:
-        return False
-
-    @property
-    def fan_out(self) -> bool:
-        return False
-
-    def _sel_auto_match(self, other: 'Base') -> bool:
-        return False
-
-    def sel_auto_match(self, other: 'Base') -> bool:
-        return other._sel_auto_match(other=self)
-
-
-class SharedBase(Base):
-    def __init__(self, has_fan_out: bool, prev_base: Base = None):
-        self.has_fan_out = has_fan_out
-        self.prev_base = prev_base or ObjectRefBase(self)
-
-    def get_base_sequence(self) -> List['Base']:
-        return self.prev_base.get_base_sequence() + [self]
-
-    @property
-    def buffered(self) -> bool:
-        return False
-
-    @property
-    def fan_out(self) -> bool:
-        return not self.has_fan_out
-
-    def _sel_auto_match(self, other: 'Base') -> bool:
-        seq1 = self.get_base_sequence()
-        seq2 = other.get_base_sequence()
-
-        if 1 < len(seq2):
-            def gen_rest():
-                i1 = iter(seq1)
-                i2 = iter(seq2)
-
-                last1 = None
-
-                while True:
-                    try:
-                        e1 = next(i1)
-                        has_e1 = True
-                    except StopIteration:
-                        e1 = None
-                        has_e1 = False
-
-                    try:
-                        e2 = next(i2)
-                        has_e2 = True
-                    except StopIteration:
-                        e2 = None
-                        has_e2 = False
-
-                    if has_e1 and has_e2:
-
-                        # split point found
-                        if e1 != e2:
-                            yield last1, [e1] + list(i1) + [e2] + list(i2)
-                            break
-
-                        last1 = e1
-                    elif has_e1:
-                        yield last1, [e1] + list(i1) + list(i2)
-                    elif has_e1:
-                        yield last1, list(i1) + [e2] + list(i2)
-                    else:
-                        yield last1, list(i1) + list(i2)
-
-            split_point, rest = next(gen_rest())
-
-            # is the split point a base allowing "fan out"
-            fan_out = split_point.fan_out
-
-            # in case of "fan out" or buffered node, do not select auto_match
-            buffered = any(e.buffered for e in rest)
-
-            return not (fan_out or buffered)
-        else:
-            return True
-
-    def sel_auto_match(self, other: 'Base') -> bool:
-        return self._sel_auto_match(other=other)
-
-
-class PairwiseBase(Base, SourceMixin):
+class PairwiseBase(Base):
     def __init__(self, underlying: Base):
         self.underlying = underlying
 
-    def equals(self, other: Base):
+    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
         if isinstance(other, PairwiseBase):
-            self_source = self.underlying.get_base_sequence()[0]
-            other_source = other.underlying.get_base_sequence()[0]
-
-            assert isinstance(self_source, SourceMixin) and isinstance(other_source, SourceMixin), \
-                'first element in base sequence must be a Source'
-
-            return self_source.equals(other_source)
+            return self.underlying.get_selectors(other.underlying, subscriber=subscriber)
         else:
-            return False
-
-    def get_base_sequence(self) -> List[Base]:
-        return [self]
-
-    @property
-    def buffered(self) -> bool:
-        return False
-
-    @property
-    def fan_out(self) -> bool:
-        return False
-
-    def _sel_auto_match(self, other: 'Base') -> bool:
-        return False
-
-    def sel_auto_match(self, other: 'Base') -> bool:
-        return other._sel_auto_match(other=self)
+            return NoSelectorFound()
 
 
-class ConcatBase(Base, SourceMixin):
-    def __init__(self, underlying: Iterable[Base]):
+class ConcatBase(Base):
+    def __init__(
+            self,
+            underlying: Iterable[GetSelectorMixin],
+    ):
         self.underlying = list(underlying)
 
-    def equals(self, other: Base):
+    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
         if isinstance(other, ConcatBase):
-            def gen_is_equals():
-                for left, right in zip(self.underlying, other.underlying):
+            other_base = other
 
-                    self_source = left.get_base_sequence()[0]
-                    other_source = right.get_base_sequence()[0]
+            def gen_selectors():
+                for left, right in zip(self.underlying, other_base.underlying):
+                    result = left.get_selectors(right, subscriber)
+                    yield result
+            results = list(gen_selectors())
 
-                    assert isinstance(self_source, SourceMixin) and isinstance(other_source, SourceMixin), \
-                        'first element in base sequence must be a Source'
+            if all(isinstance(result, SelectorFound) for result in results):
+                typed_results: List[SelectorFound] = results
 
-                    yield self_source.equals(other_source)
-            return all(gen_is_equals())
+                left, right = zip(*[(result.left, result.right) for result in typed_results])
+                return SelectorFound(
+                    left=ObservableSelector(ConcatObservable(sources=left, subscribe_scheduler=subscriber.subscribe_scheduler)),
+                    right=ObservableSelector(ConcatObservable(sources=left, subscribe_scheduler=subscriber.subscribe_scheduler))
+                )
+            else:
+                return NoSelectorFound()
         else:
-            return False
+            return NoSelectorFound()
 
-    def get_base_sequence(self) -> List[Base]:
-        return [self]
 
-    @property
-    def buffered(self) -> bool:
-        return False
-
-    @property
-    def fan_out(self) -> bool:
-        return False
-
-    def _sel_auto_match(self, other: 'Base') -> bool:
-        return False
-
-    def sel_auto_match(self, other: 'Base') -> bool:
-        return other._sel_auto_match(other=self)
-
+# class SourceBaseMixin(ABC):
+#     @abstractmethod
+#     def equals(self, other: 'Base') -> bool:
+#         ...
+#
+#
+# class Base(ABC):
+#
+#     def get_selection_tree(self, other: 'Base') -> Tree:
+#         """
+#
+#         b1 = ConcatBase(s1, s2, s3)
+#         b2 = ConcatBase(s1, s2' {s2 -> s2'}, s3)
+#
+#         None = b1.get_selection_tree(b2)
+#         tree = b2.get_selection_tree(b1)
+#
+#         tree = UseSelector(
+#             children = [
+#                 LeaveTree(ident),
+#                 UseSelector(
+#                     children = [
+#                         LeaveTree(ident),
+#                     ],
+#                     selector_basse = s2,
+#                 )
+#             ],
+#             selector_base = ident,
+#         )
+#
+#         """
+#
+#         pass
+#
+#     # @abstractmethod
+#     def is_matching(self, other: 'Base') -> bool:
+#         """ two bases match if the source base they are derived from is the same
+#         """
+#
+#         # sources1 = self #.get_source_bases()
+#         # sources2 = other #.get_source_bases()
+#
+#         # if len(sources1) != len(sources2):
+#         #     return False
+#
+#         # def gen_source_comparison():
+#         #     for s1, s2 in zip(sources1, sources2):
+#         #
+#         #         assert isinstance(s1, SourceBaseMixin) and isinstance(s2, SourceBaseMixin), \
+#         #             'first element in base sequence must be a Source'
+#         #
+#         #         yield s1.equals(s2)
+#         #
+#         # return all(gen_source_comparison())
+#
+#         assert isinstance(self, SourceBaseMixin) and isinstance(other, SourceBaseMixin), \
+#                         'Bases "{}" and "{}" must be sources'.format(self, other)
+#
+#         return self.equals(other)
+#
+#     @abstractmethod
+#     def equals(self, other: 'Base') -> bool:
+#         ...
+#
+#     @abstractmethod
+#     def get_source_bases(self) -> List['Base']:    # todo: really neede?
+#         ...
+#
+#
+# class SourceBase(SourceBaseMixin, Base, ABC):
+#     pass
+#
+#
+# class NumericalBase(SourceBase):
+#     def __init__(self, num: int):
+#         self.num = num
+#
+#     def equals(self, other: FlowableBase):
+#         if isinstance(other, NumericalBase) and self.num == other.num:
+#             return True
+#         else:
+#             return False
+#
+#     def get_source_bases(self) -> List['Base']:
+#         return [self]
+#
+#
+# class ObjectRefBase(SourceBase):
+#     def __init__(self, obj: Any = None):
+#         self.obj = obj or self
+#
+#     def equals(self, other: FlowableBase):
+#         if isinstance(other, ObjectRefBase) and self.obj == other.obj:
+#             return True
+#         else:
+#             return False
+#
+#     def get_source_bases(self) -> List['Base']:
+#         return [self]
+#
+#
+# class SharedBase(SourceBase):
+#     def __init__(self, prev_base: FlowableBase = None):
+#         # self.has_fan_out = has_fan_out
+#         self._prev_base = prev_base or ObjectRefBase(self)
+#
+#     def get_source_bases(self) -> List['Base']:
+#         return self._prev_base.get_source_bases()
+#
+#
+# class PairwiseBase(SourceBase):
+#     def __init__(self, underlying: FlowableBase):
+#         self.underlying = underlying
+#
+#     def equals(self, other: FlowableBase):
+#         if isinstance(other, PairwiseBase):
+#             self_source = self.underlying #.get_source_bases()[0]
+#             other_source = other.underlying #.get_source_bases()[0]
+#
+#             assert isinstance(self_source, SourceBaseMixin) and isinstance(other_source, SourceBaseMixin), \
+#                 'first element in base sequence must be a Source'
+#
+#             return self_source.equals(other_source)
+#         else:
+#             return False
+#
+#     def get_source_bases(self) -> List[Base]:
+#         return [self]
+#
+#
+# class ConcatBase(SourceBase):
+#     def __init__(self, underlying: Iterable[Base]):
+#         self.underlying = list(underlying)
+#
+#     def equals(self, other: FlowableBase):
+#         if isinstance(other, ConcatBase):
+#             concat_base = other
+#             print('ok')
+#
+#             def gen_equals_results():
+#                 for s1, s2 in zip(self.underlying, concat_base.underlying):
+#                     assert isinstance(s1, SourceBaseMixin) and isinstance(s2, SourceBaseMixin), \
+#                         'first element in base sequence must be a Source'
+#
+#                     print(s1)
+#                     print(s2)
+#                     yield s1.equals(s2)
+#
+#             return all(gen_equals_results())
+#         else:
+#             return False
+#
+#     def get_source_bases(self) -> List[Base]:
+#         return [source for base in self.underlying for source in base.get_source_bases()]

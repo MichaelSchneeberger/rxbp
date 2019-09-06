@@ -1,6 +1,6 @@
 from rxbp.ack.ackimpl import continue_ack, Continue
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
@@ -32,7 +32,7 @@ class TestControlledZipObservable(TestCaseBase):
                                       request_left=lambda l, r: True,
                                       request_right=lambda l, r: isinstance(l, self.Go),
                                       match_func=lambda l, r: True)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         go = self.Go()
         stop = self.Stop()
@@ -51,7 +51,7 @@ class TestControlledZipObservable(TestCaseBase):
                                       request_left=lambda l, r: True,
                                       request_right=lambda l, r: isinstance(l, self.Go),
                                       match_func=lambda l, r: True)
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         go = self.Go()
         stop = self.Stop()

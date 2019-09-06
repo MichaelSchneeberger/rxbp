@@ -2,7 +2,7 @@ from rxbp.ack.ack import Ack
 from rxbp.ack.ackimpl import continue_ack
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.observables.zip2observable import Zip2Observable
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
@@ -28,7 +28,7 @@ class TestZip2Observable(TestCaseBase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        obs.observe(ObserveSubscription(self.sink))
+        obs.observe(ObserverInfo(self.sink))
 
         self.sink.immediate_continue = 10
 

@@ -8,7 +8,7 @@ from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
 
 
@@ -22,9 +22,9 @@ class IteratorAsObservable(Observable):
         self.subscribe_scheduler = subscribe_scheduler
         self.on_finish = on_finish
 
-    def observe(self, subscription: ObserveSubscription):
+    def observe(self, observer_info: ObserverInfo):
 
-        observer = subscription.observer
+        observer = observer_info.observer
 
         try:
             item = next(self.iterator)

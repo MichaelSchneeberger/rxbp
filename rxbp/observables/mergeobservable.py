@@ -9,27 +9,45 @@ from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
 
 class MergeObservable(Observable):
-    """
-    :param left:
-    :param right:
-    :param is_lower: if right is lower than left, request next right
-    :param is_higher: if right is higher than left, request next left
+    """ Merges the elements of two Flowables into a single Flowable
+
+        s1.merge(s2).subscribe(o, scheduler=s)
+
+    ^ callstack
+    |
+    |       o
+    |      /
+    |   merge  merge     o
+    |    /      /       /
+    |   s1     s2     ack
+    |  /      /       /
+    | s      s      ...                           time
+    --------------------------------------------->
+
+    ack: async acknowledgment returned by observer `o`
 
     Scenario 1: Send left, right arrives, out_ack returns Continue, send right, send left (preferred)
     Scenario 2: Send left, right arrives, out_ack returns Continue, send left, send right
-
     """
 
-    def __init__(self, left: Observable, right: Observable):
+    def __init__(
+            self,
+            left: Observable,
+            right: Observable,
+    ):
+        """
+        :param left: Flowable whose elements get merged
+        :param right: other Flowable whose elements get merged
+        """
         self.left = left
         self.right = right
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
 
         class State:
             pass
@@ -215,11 +233,11 @@ class MergeObservable(Observable):
                     observer.on_completed()
 
         left_observer = LeftObserver()
-        left_subscription = subscription.copy(left_observer)
+        left_subscription = observer_info.copy(left_observer)
         d1 = self.left.observe(left_subscription)
 
         right_observer = RightObserver()
-        right_subscription = subscription.copy(right_observer)
+        right_subscription = observer_info.copy(right_observer)
         d2 = self.right.observe(right_subscription)
 
         return CompositeDisposable(d1, d2)

@@ -4,5 +4,5 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
 
 
-class SubjectBase(FlowableBase, Observer, ABC):
+class SubjectBase(Base, Observer, ABC):
     pass

@@ -1,12 +1,12 @@
-class Selection:
+class SelectionMsg:
     pass
 
 
-class SelectCompleted(Selection):
+class SelectCompleted(SelectionMsg):
     pass
 
 
-class SelectNext(Selection):
+class SelectNext(SelectionMsg):
     pass
 
 

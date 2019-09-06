@@ -2,7 +2,7 @@ from rx.disposable import Disposable
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
 
 class TestObservable(Observable):
@@ -30,6 +30,6 @@ class TestObservable(Observable):
     def on_completed(self):
         return self.observer.on_completed()
 
-    def observe(self, subscription: ObserveSubscription):
-        self.observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        self.observer = observer_info.observer
         return Disposable()

@@ -5,7 +5,7 @@ from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
@@ -16,8 +16,8 @@ class ConcatObservable(Observable):
         self._sources = iter(sources)
         self._subscribe_scheduler = subscribe_scheduler
 
-    def observe(self, subscription: ObserveSubscription):
-        observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        observer = observer_info.observer
         source = self
 
         subscription_disposable = SerialDisposable()
@@ -45,7 +45,7 @@ class ConcatObservable(Observable):
                 if has_element:
                     def observe_next():
                         def action(_, __):
-                            next_subscription = ObserveSubscription(ConcatObserver(), is_volatile=subscription.is_volatile)
+                            next_subscription = ObserverInfo(ConcatObserver(), is_volatile=observer_info.is_volatile)
                             disposable = next_source.observe(next_subscription)
                             inner_subscription.disposable = disposable
 
@@ -68,7 +68,7 @@ class ConcatObservable(Observable):
                     observer.on_completed()
 
         concat_observer = ConcatObserver()
-        concat_subscription = ObserveSubscription(concat_observer, is_volatile=subscription.is_volatile)
+        concat_subscription = ObserverInfo(concat_observer, is_volatile=observer_info.is_volatile)
 
         first_source = next(self._sources)
         disposable = first_source.observe(concat_subscription)

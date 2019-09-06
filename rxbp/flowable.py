@@ -1,5 +1,5 @@
 import itertools
-from typing import Callable, Any, Generic, Iterator, Iterable, List, Tuple
+from typing import Callable, Any, Generic, Iterable
 
 import rx
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
@@ -7,47 +7,47 @@ from rxbp.flowables.bufferflowable import BufferFlowable
 
 from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
-from rxbp.observables.mergeobservable import MergeObservable
-from rxbp.observables.scanobservable import ScanObservable
-from rxbp.observables.tolistobservable import ToListObservable
-from rxbp.observer import Observer
+from rxbp.flowables.debugflowable import DebugFlowable
+from rxbp.flowables.executeonflowable import ExecuteOnFlowable
+from rxbp.flowables.mapflowable import MapFlowable
+from rxbp.flowables.mergeflowable import MergeFlowable
+from rxbp.flowables.observeonflowable import ObserveOnFlowable
+from rxbp.flowables.pairwiseflowable import PairwiseFlowable
+from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
+from rxbp.flowables.scanflowable import ScanFlowable
+from rxbp.flowables.tolistflowable import ToListFlowable
+from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.pipe import pipe
-from rxbp.selectors.bases import Base, PairwiseBase, NumericalBase
+from rxbp.selectors.bases import Base
+from rxbp.subscription import Subscription
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
-from rxbp.flowables.shareflowable import ShareFlowable
-from rxbp.flowables.zipflowable import ZipFlowable
+from rxbp.flowables.zip2flowable import Zip2Flowable
 from rxbp.observable import Observable
-from rxbp.observables.mapobservable import MapObservable
-from rxbp.observables.observeonobservable import ObserveOnObservable
-from rxbp.observables.pairwiseobservable import PairwiseObservable
-from rxbp.observables.repeatfirstobservable import RepeatFirstObservable
-from rxbp.observables.zipwithindexobservable import ZipWithIndexObservable
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
-from rxbp.testing.debugobservable import DebugObservable
 from rxbp.typing import ValueType
 
 
 class Flowable(Generic[ValueType], FlowableBase[ValueType]):
     def __init__(self, flowable: FlowableBase[ValueType]):
-        super().__init__(base=flowable.base, selectable_bases=flowable.selectable_bases)
+        super().__init__()
 
         self.subscriptable = flowable
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> Observable:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         return self.subscriptable.unsafe_subscribe(subscriber=subscriber)
 
     def buffer(self, buffer_size: int):
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return Flowable(flowable)
 
-    def concat(self, sources: Iterable[FlowableBase]):
+    def concat(self, sources: Iterable[Base]):
         all_sources = itertools.chain([self], sources)
         flowable = ConcatFlowable(sources=all_sources)
         return Flowable(flowable)
@@ -56,10 +56,10 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
                        request_left: Callable[[Any, Any], bool] = None,
                        request_right: Callable[[Any, Any], bool] = None,
                        match_func: Callable[[Any, Any], bool] = None) -> 'Flowable[ValueType]':
-        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
-        :return: zipped observable
+        :return: zipped Flowable
         """
 
         flowable = ControlledZipFlowable(left=self, right=right, request_left=request_left,
@@ -68,35 +68,18 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         return Flowable(flowable)
 
     def debug(self, name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
-        class DebugFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
 
-                self._source = source
-
-            def unsafe_subscribe(self, subscriber: Subscriber):
-                source_obs, selector = self._source.unsafe_subscribe(subscriber=subscriber)
-
-                obs = DebugObservable(source=source_obs, name=name, on_next=on_next, on_subscribe=on_subscribe,
-                                      on_ack=on_ack, on_raw_ack=on_raw_ack)
-
-                return obs, selector
-
-        return Flowable(DebugFlowable(source=self))
+        return Flowable(DebugFlowable(
+            source=self,
+            name=name,
+            on_next=on_next,
+            on_subscribe=on_subscribe,
+            on_ack=on_ack,
+            on_raw_ack=on_raw_ack,
+            on_ack_msg=on_ack_msg,
+        ))
 
     def execute_on(self, scheduler: Scheduler):
-        class ExecuteOnFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase, scheduler: Scheduler):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
-
-                self._source = source
-                self._scheduler = scheduler
-
-            def unsafe_subscribe(self, subscriber: Subscriber):
-                updated_subscriber = Subscriber(scheduler=self._scheduler,
-                                                subscribe_scheduler=subscriber.subscribe_scheduler)
-
-                return self._source.unsafe_subscribe(updated_subscriber)
 
         return Flowable(ExecuteOnFlowable(source=self, scheduler=scheduler))
 
@@ -105,7 +88,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
         filter
-        :return: filtered observable
+        :return: filtered Flowable
         """
 
         flowable = FilterFlowable(source=self, predicate=predicate)
@@ -116,7 +99,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
         filter
-        :return: filtered observable
+        :return: filtered Flowable
         """
 
         flowable = self.zip_with_index() \
@@ -125,7 +108,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return flowable
 
-    def flat_map(self, selector: Callable[[Any], FlowableBase]):
+    def flat_map(self, selector: Callable[[Any], Base]):
         flowable = FlatMapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
@@ -133,107 +116,50 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         """ Maps each item emitted by the source by applying the given function
 
         :param selector: function that defines the mapping
-        :return: mapped observable
+        :return: mapped Flowable
         """
-
-        class MapFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase, selector: Callable[[ValueType], Any]):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
-
-                self._source = source
-                self._selector = selector
-
-            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-                source_observable, source_selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-                obs = MapObservable(source=source_observable, selector=self._selector)
-                return obs, source_selectors
 
         flowable = MapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
     def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
-        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
-        :return: zipped observable
+        :return: matched Flowable
         """
 
-        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=True)
+        flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=True)
         return Flowable(flowable)
 
     def merge(self, other: FlowableBase):
-        """
+        """ Merges the elements of two Flowables into a single Flowable
+
         :param selector: (optional) selector function
-        :return: paired observable
+        :return: merged Flowable
         """
 
-        class MergeFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase):
-
-                # the base becomes anonymous after merging
-                base = None
-
-                super().__init__(base=base)
-
-                self._source = source
-
-            def unsafe_subscribe(self, subscriber: Subscriber):
-                left_obs, _ = self._source.unsafe_subscribe(subscriber=subscriber)
-                right_obs, _ = other.unsafe_subscribe(subscriber=subscriber)
-                obs = MergeObservable(left=left_obs, right=right_obs)
-
-                return obs, {}
-
-        return Flowable(MergeFlowable(source=self))
+        return Flowable(MergeFlowable(source=self, other=other))
 
     def observe_on(self, scheduler: Scheduler):
         """ Operator that specifies a specific scheduler, on which observers will observe events
 
         :param scheduler: a rxbackpressure scheduler
-        :return: an observable running on specified scheduler
+        :return: an Flowable running on specified scheduler
         """
-
-        class ObserveOnFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase, scheduler: Scheduler):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
-
-                self._source = source
-                self._scheduler = scheduler
-
-            def unsafe_subscribe(self, subscriber: Subscriber):
-                source_obs, selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-                obs = ObserveOnObservable(source=source_obs, scheduler=scheduler)
-
-                return obs, selectors
 
         return Flowable(ObserveOnFlowable(source=self, scheduler=scheduler))
 
     def pairwise(self):
-        """ Creates an observable that pairs each neighbouring two items from the source
+        """ Creates an Flowable that pairs each neighbouring two items from the source
 
         :param selector: (optional) selector function
-        :return: paired observable
+        :return: paired Flowable
         """
-
-        class PairwiseFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase):
-                if isinstance(source.base, Base):
-                    base = PairwiseBase(source.base)
-                else:
-                    base = None
-                super().__init__(base=base)
-
-                self._source = source
-
-            def unsafe_subscribe(self, subscriber: Subscriber):
-                source_obs, selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-                obs = PairwiseObservable(source=source_obs)
-
-                return obs, selectors
 
         return Flowable(PairwiseFlowable(source=self))
 
-    def pipe(self, *operators: Callable[[FlowableBase], FlowableBase]):
+    def pipe(self, *operators: Callable[[Base], Base]):
         return Flowable(pipe(*operators)(self))
 
     def run(self, scheduler: Scheduler = None):
@@ -245,39 +171,14 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         :return:
         """
 
-        class RepeatFirstFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase):
-                # unknown base, depends on the back-pressure
-                base = None
-
-                super().__init__(base=base)
-
-                self._source = source
-
-            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-                source_observable, source_selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-                obs = RepeatFirstObservable(source=source_observable, scheduler=subscriber.scheduler)
-                return obs, source_selectors
-
         flowable = RepeatFirstFlowable(source=self)
         return Flowable(flowable)
 
     def scan(self, func: Callable[[Any, Any], Any], initial: Any):
-        source = self
-
-        class ScanFlowable(FlowableBase):
-            def __init__(self):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
-
-            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-                source_observable, source_selectors = source.unsafe_subscribe(subscriber=subscriber)
-                obs = ScanObservable(source=source_observable, func=func, initial=initial)
-                return obs, source_selectors
-
-        flowable = ScanFlowable()
+        flowable = ScanFlowable(source=self, func=func, initial=initial)
         return Flowable(flowable)
 
-    def share(self, func: Callable[[FlowableBase], FlowableBase]):
+    def share(self, func: Callable[[Base], Base]):
         def lifted_func(f: RefCountFlowable):
             result = func(Flowable(f))
             return result
@@ -285,7 +186,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
         return Flowable(flowable)
 
-    def use_base(self, val: Base):
+    def use_base(self, val: FlowableBase):
         flowable = AnonymousFlowableBase(
             unsafe_subscribe_func=self.unsafe_subscribe,
             base=val,
@@ -294,32 +195,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         return Flowable(flowable)
 
     def to_list(self):
-        """ Converts this observable to an rx.Observable
-
-        :param scheduler:
-        :return:
-        """
-
-        class ToListFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase):
-
-                # to_list emits exactly one element
-                base = NumericalBase(1)
-
-                super().__init__(base=base, selectable_bases=source.selectable_bases)
-
-                self._source = source
-
-            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-                source_observable, source_selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-                obs = ToListObservable(source=source_observable)
-                return obs, source_selectors
-
         flowable = ToListFlowable(source=self)
         return Flowable(flowable)
 
     def to_rx(self, batched: bool = None) -> rx.Observable:
-        """ Converts this observable to an rx.Observable
+        """ Converts this Flowable to an rx.Observable
 
         :param scheduler:
         :return:
@@ -328,33 +208,21 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         return to_rx(source=self, batched=batched)
 
     def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
-        """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
-        :return: zipped observable
+        :return: zipped Flowable
         """
 
-        flowable =  ZipFlowable(left=self, right=right, selector=selector, auto_match=False)
+        flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=False)
         return Flowable(flowable)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
         """ Zips each item emmited by the source with their indices
 
         :param selector: a mapping function applied over the generated pairs
-        :return: zipped with index observable
+        :return: zipped with index Flowable
         """
-
-        class ZipWithIndexFlowable(FlowableBase):
-            def __init__(self, source: FlowableBase, selector: Callable[[ValueType], Any]):
-                super().__init__(base=source.base, selectable_bases=source.selectable_bases)
-
-                self._source = source
-                self._selector = selector
-
-            def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-                source_observable, source_selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-                obs = ZipWithIndexObservable(source=source_observable, selector=self._selector)
-                return obs, source_selectors
 
         flowable = ZipWithIndexFlowable(source=self, selector=selector)
         return Flowable(flowable)

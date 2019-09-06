@@ -1,31 +1,23 @@
 import functools
 import itertools
-from typing import Iterator, Iterable, Any, Callable, List, Tuple, Optional, Union
+from typing import Iterator, Iterable, Any, Callable, List, Tuple
 
 import rx
 from rx import operators
-from rx.disposable import CompositeDisposable, Disposable, SingleAssignmentDisposable
 
 from rxbp.flowable import Flowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.deferflowable import DeferFlowable
-from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
-from rxbp.observer import Observer
-from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
-from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase, SharedBase
-from rxbp.observablesubjects.observablecacheservefirstsubject import ObservableCacheServeFirstSubject
-from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
-from rxbp.observablesubjects.observablereplaysubject import ObservableReplaySubject
+from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase
+from rxbp.subscription import Subscription, SubscriptionInfo
 from rxbp.subscriber import Subscriber
-from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
 from rxbp.typing import ElementType, ValueType
 
@@ -40,10 +32,7 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
 
     batch_size_ = batch_size or 1
 
-    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
-
-
-
+    def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
         def gen():
             for peak_first in iterator:
                 def generate_batch():
@@ -62,12 +51,12 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
 
         observable = IteratorAsObservable(iterator=gen(), scheduler=subscriber.scheduler,
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
-        return observable, {}
+        return Subscription(info=SubscriptionInfo(base=base), observable=observable)
 
-    return AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func, base=base)
+    return AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func)
 
 
-def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None):
+def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None, base: Base = None):
     """ Converts an iterable into an observable
 
     :param iterable:
@@ -75,31 +64,47 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
     :return:
     """
 
-    base = NumericalBase(n_elements)
+    if base is not None:
+        base = base
+    elif n_elements is not None:
+        base = NumericalBase(n_elements)
+    else:
+        base = None
 
-    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    # selector_info = SelectorInfo(base=base)
+
+    def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
         iterator = iter(iterable)
         subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=base)
-        source_observable, source_selectors = subscriptable.unsafe_subscribe(subscriber)
-        return source_observable, source_selectors
+        subscription = subscriptable.unsafe_subscribe(subscriber)
+        return subscription
 
-    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func, base=base))
+    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func))
 
 
-def concat(sources: Iterable[FlowableBase]):
+def concat(sources: Iterable[Base]):
     return Flowable(ConcatFlowable(sources=sources))
 
 
-def defer(func: Callable[[FlowableBase], FlowableBase],
+def defer(func: Callable[[Flowable], Base],
           initial: Any,
-          defer_selector: Callable[[FlowableBase], FlowableBase] = None,
+          defer_selector: Callable[[Flowable], Base] = None,
           base: Base = None):
 
-    return Flowable(DeferFlowable(base=base, func=func, initial=initial, defer_selector=defer_selector))
+    def lifted_func(f: FlowableBase):
+        result = func(Flowable(f))
+        return result
+
+    return Flowable(DeferFlowable(
+        base=base,
+        func=lifted_func,
+        initial=initial,
+        defer_selector=defer_selector,
+    ))
 
 
-def from_iterable(iterable: Iterable, batch_size: int = None):
-    return _from_iterable(iterable=iterable, batch_size=batch_size)
+def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None):
+    return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
 
 
 def from_range(arg1: int, arg2: int = None, batch_size: int = None):
@@ -137,14 +142,14 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
     else:
         base_ = ObjectRefBase(source)
 
-    def unsafe_subscribe_func(subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
         class ToBackpressureObservable(Observable):
             def __init__(self, scheduler: Scheduler, subscribe_scheduler: Scheduler):
                 self.scheduler = scheduler
                 self.subscribe_scheduler = subscribe_scheduler
 
-            def observe(self, subscription: ObserveSubscription):
-                observer = subscription.observer
+            def observe(self, observer_info: ObserverInfo):
+                observer = observer_info.observer
                 def iterable_to_gen(v: ValueType) -> ElementType:
                     def gen():
                         yield from v

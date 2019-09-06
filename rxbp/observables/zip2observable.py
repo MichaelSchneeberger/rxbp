@@ -10,13 +10,32 @@ from rxbp.ack.acksubject import AckSubject
 
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 
 
 class Zip2Observable(Observable):
-    def __init__(self, left: Observable, right: Observable, selector: Callable[[Any, Any], Any] = None):
-        """ An observable that zips the elements of a left and right observable
+    """ An observable that zips the elements of a left and right observable.
 
+    Common scenario with synchronous acknowledgment (if possible):
+
+        s1.zip(s2).subscribe(o, scheduler=s)
+
+    ^ callstack         zip          zip
+    |                   /            /
+    |             o   s1       o   s1
+    |            /   / ack1   /   / ack1
+    |    zip   zip --       zip --
+    |    /     /            /
+    |   s1    s2----------- -----------     ...
+    |  /     /
+    | s     s                                 time
+    --------------------------------------------->
+
+    ack1: asynchronous acknowledgment returned by zip.on_next called by s1
+    """
+
+    def __init__(self, left: Observable, right: Observable, selector: Callable[[Any, Any], Any] = None):
+        """
         :param left: left observable
         :param right: right observable
         :param selector: a result selector function that maps each zipped element to some result
@@ -416,17 +435,17 @@ class Zip2Observable(Observable):
 
         self._on_error_or_complete(next_final_state=next_final_state)
 
-    def observe(self, subscription: ObserveSubscription):
-        self.observer = subscription.observer
+    def observe(self, observer_info: ObserverInfo):
+        self.observer = observer_info.observer
 
         left_observer = AnonymousObserver(on_next_func=self._on_next_left, on_error_func=self._on_error,
                                           on_completed_func=self._on_completed_left)
-        left_subscription = subscription.copy(left_observer)
+        left_subscription = observer_info.copy(left_observer)
         d1 = self.left.observe(left_subscription)
 
         right_observer = AnonymousObserver(on_next_func=self._on_next_right, on_error_func=self._on_error,
                                            on_completed_func=self._on_completed_right)
-        right_subscription = subscription.copy(right_observer)
+        right_subscription = observer_info.copy(right_observer)
         d2 = self.right.observe(right_subscription)
 
         return CompositeDisposable(d1, d2)

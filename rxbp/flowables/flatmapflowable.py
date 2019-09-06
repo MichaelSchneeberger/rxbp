@@ -2,11 +2,13 @@ from typing import Any, Callable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.flatmapobservable import FlatMapObservable
+from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
+from rxbp.subscription import Subscription
 
 
 class FlatMapFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, selector: Callable[[Any], FlowableBase]):
+    def __init__(self, source: FlowableBase, selector: Callable[[Any], Base]):
         # base becomes undefined after flat mapping
         base = None
 
@@ -15,7 +17,7 @@ class FlatMapFlowable(FlowableBase):
         self._source = source
         self._selector = selector
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         source_observable, source_selectors = self._source.unsafe_subscribe(subscriber=subscriber)
 
         def observable_selector(elem: Any):

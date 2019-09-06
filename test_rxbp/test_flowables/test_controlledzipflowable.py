@@ -1,6 +1,6 @@
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.observesubscription import ObserveSubscription
+from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testflowable import TestFlowable

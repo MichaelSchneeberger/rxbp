@@ -4,6 +4,7 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.selectors.selectionop import merge_selectors
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.subscriber import Subscriber
+from rxbp.subscription import Subscription
 
 
 class ControlledZipFlowable(FlowableBase):
@@ -37,7 +38,7 @@ class ControlledZipFlowable(FlowableBase):
         self._request_right = request_right if request_right is not None else lambda _, __: True
         self._match_func = match_func if match_func is not None else lambda _, __: True
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> FlowableBase.FlowableReturnType:
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         """
         1) subscribe to upstream flowables
         2) create ControlledZipObservable which provides a left_selector and right_selector observable
