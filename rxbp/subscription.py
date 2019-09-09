@@ -52,13 +52,13 @@ class SubscriptionInfo(GetSelectorMixin):
         if self.base is not None and other.selectors is not None:
             result = find_selectors(self.base, other.selectors)
 
-            if not isinstance(result, NoSelectorFound):
-                return result
+            if isinstance(result, SelectorFound):
+                return SelectorFound(left=result.right, right=result.left)
 
         if other.base is not None and self.selectors is not None:
             result = find_selectors(other.base, self.selectors)
 
-            if not isinstance(result, NoSelectorFound):
+            if isinstance(result, SelectorFound):
                 return result
 
         return NoSelectorFound()

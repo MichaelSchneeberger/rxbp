@@ -1,4 +1,4 @@
-from typing import Iterator, Any, List
+from typing import Iterator, Any, List, Generator, Callable
 
 import rx
 from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
@@ -7,20 +7,28 @@ from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
+from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
+from rxbp.selectors.selectionmsg import select_next, select_completed
 
 
 class IteratorAsObservable(Observable):
-    def __init__(self, iterator: Iterator, scheduler: Scheduler, subscribe_scheduler: Scheduler,
-                 on_finish: Disposable = Disposable()):
+    def __init__(
+            self,
+            iterator: Generator[Callable[[], Generator[Any, Any, None]], Any, None],
+            scheduler: Scheduler,
+            subscribe_scheduler: Scheduler,
+            on_finish: Disposable = Disposable(),
+    ):
         super().__init__()
 
         self.iterator = iterator
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
         self.on_finish = on_finish
+        # self.selector = ObservablePublishSubject(scheduler=scheduler)
 
     def observe(self, observer_info: ObserverInfo):
 
@@ -101,6 +109,13 @@ class IteratorAsObservable(Observable):
 
             try:
                 ack = observer.on_next(current_item)
+
+                # def gen_select_msg():
+                #     for _ in range(len(current_item)):
+                #         yield select_next
+                #     yield select_completed
+                #
+                # self.selector.on_next(gen_select_msg)
 
                 if not has_next:
                     try:

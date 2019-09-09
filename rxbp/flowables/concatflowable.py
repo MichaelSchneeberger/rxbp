@@ -1,34 +1,36 @@
-from typing import Callable, Any, Iterator, Iterable
+from typing import Iterable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.selectors.bases import NumericalBase, Base
+from rxbp.observables.refcountobservable import RefCountObservable
+from rxbp.observablesubjects.observablecacheservefirstsubject import ObservableCacheServeFirstSubject
+from rxbp.selectors.bases import ConcatBase
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription
+from rxbp.subscription import Subscription, SubscriptionInfo
 
 
 class ConcatFlowable(FlowableBase):
-    def __init__(self, sources: Iterable[Base]):
-        sources = list(sources)
+    def __init__(self, sources: Iterable[FlowableBase]):
 
-        # the base becomes anonymous after concatenating
-        # if all(isinstance(source.base, NumericalBase) for source in sources):
-        #     base = NumericalBase(sum(source.base.num for source in sources))
-        # else:
-        underlying = list(source.base for source in sources)
-        all_bases = all(isinstance(base, Base) for base in underlying)
-        if all_bases:
-            # base = ConcatBase(underlying=underlying)
-            raise NotImplementedError
-        else:
-            base = None
+        super().__init__()
 
-        super().__init__(base=base)
-
-        self._sources = sources
+        self._sources = list(sources)
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-        source_observables, _ = zip(*[source.unsafe_subscribe(subscriber) for source in self._sources])
+        def gen_subscriptions():
+            for source in self._sources:
+                subscription = source.unsafe_subscribe(subscriber)
 
-        observable = ConcatObservable(sources=source_observables, subscribe_scheduler=subscriber.subscribe_scheduler)
-        return observable, {}
+                subject = ObservableCacheServeFirstSubject(scheduler=subscriber.scheduler)
+                observable = RefCountObservable(source=subscription.observable, subject=subject)
+
+                yield subscription.info, observable
+
+        infos, sources = zip(*gen_subscriptions())
+
+        observable = ConcatObservable(
+            sources=sources,
+            scheduler=subscriber.scheduler,
+            subscribe_scheduler=subscriber.subscribe_scheduler,
+        )
+        return Subscription(info=SubscriptionInfo(ConcatBase(infos, sources)), observable=observable)

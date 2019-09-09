@@ -4,16 +4,19 @@ from rx.disposable import CompositeDisposable, SerialDisposable, SingleAssignmen
 from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
+from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
 class ConcatObservable(Observable):
-    def __init__(self, sources: Iterable[Observable], subscribe_scheduler: Scheduler):
+    def __init__(self, sources: List[Observable], scheduler: Scheduler, subscribe_scheduler: Scheduler):
         super().__init__()
 
         self._sources = iter(sources)
+        # self.selectors = [ObservablePublishSubject(scheduler=scheduler) for _ in sources]
+        # self._selectors = iter(self.selectors)
         self._subscribe_scheduler = subscribe_scheduler
 
     def observe(self, observer_info: ObserverInfo):

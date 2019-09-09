@@ -3,6 +3,7 @@ from typing import Callable, Any
 
 from rxbp.ack.ack import Ack
 from rxbp.ack.ackimpl import stop_ack
+from rxbp.ack.merge import _merge
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.selectionmsg import select_next, select_completed
 from rxbp.observable import Observable
@@ -57,7 +58,7 @@ class FilterObservable(Observable):
 
                 ack1: Ack = observer.on_next(gen_output)
 
-                return ack1.merge(sel_ack)
+                return _merge(ack1, sel_ack)
             else:
                 return sel_ack
 

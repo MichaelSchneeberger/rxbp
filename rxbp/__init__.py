@@ -1,5 +1,6 @@
 from . import op
-from .sources import defer, from_iterable, from_range, from_list, return_value, from_rx, concat, share, zip, match, \
+# from . import source
+from .source import defer, from_iterable, from_range, from_list, return_value, from_rx, concat, share, zip, match, \
     merge, empty
 
 

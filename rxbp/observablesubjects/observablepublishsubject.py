@@ -139,7 +139,8 @@ class ObservablePublishSubject(ObservableSubjectBase):
             elif isinstance(ack, Stop): #and ack.exception is not None:
                     self.unsubscribe(observer)
             else:
-                has_value = ack.has_value
+                # has_value = ack.has_value
+                has_value = False
 
                 if not has_value:
                     if result is None:

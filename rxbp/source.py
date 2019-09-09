@@ -6,6 +6,7 @@ import rx
 from rx import operators
 
 from rxbp.flowable import Flowable
+from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.deferflowable import DeferFlowable
 from rxbp.observable import Observable
@@ -43,14 +44,15 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
                 # generate buffer in memory
                 buffer = list(generate_batch())
 
+                # buffer needs to be an argument of the generator
                 def gen_result(buffer=buffer):
-                    for e in buffer:
-                        yield e
+                    yield from buffer
 
                 yield gen_result
 
         observable = IteratorAsObservable(iterator=gen(), scheduler=subscriber.scheduler,
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
+
         return Subscription(info=SubscriptionInfo(base=base), observable=observable)
 
     return AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func)
@@ -70,8 +72,6 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
         base = NumericalBase(n_elements)
     else:
         base = None
-
-    # selector_info = SelectorInfo(base=base)
 
     def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
         iterator = iter(iterable)
@@ -107,6 +107,9 @@ def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None)
     return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
 
 
+# from_ = from_iterable
+
+
 def from_range(arg1: int, arg2: int = None, batch_size: int = None):
     if arg2 is None:
         start = 0
@@ -116,6 +119,10 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
         stop = arg2
 
     return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
+
+
+# range = from_range
+# range_ = from_range
 
 
 def from_list(buffer: List, batch_size: int = None):
@@ -192,6 +199,10 @@ def return_value(elem: Any):
     """
 
     return _from_iterable([elem], n_elements=1)
+
+
+# now = return_value
+# just = return_value
 
 
 def empty():
