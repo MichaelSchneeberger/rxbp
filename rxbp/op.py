@@ -227,7 +227,7 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
 #     return ObservableOperator(func)
 
 
-def share(func: Callable[[FlowableBase], FlowableBase]):
+def share(func: Callable[[Flowable], FlowableBase]):
     """ Share takes a function and exposes a multi-cast flowable via the function's arguments. The multi-cast
     flowable back-pressures, when the first subscriber back-pressures. In case of more than one subscribers,
     the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures

@@ -74,6 +74,7 @@ class Zip2Flowable(FlowableBase):
                     raise NotImplementedError
 
             else:
+                # print([k.base for k in left_subscription.info.selectors.keys()])
                 raise Exception('bases do not match of "{}" and "{}"'.format(left_subscription.info.base, right_subscription.info.base))
 
         else:

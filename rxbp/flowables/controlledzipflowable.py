@@ -51,6 +51,8 @@ class ControlledZipFlowable(FlowableBase):
         left_subscription = self._left.unsafe_subscribe(subscriber=subscriber)
         right_subscription = self._right.unsafe_subscribe(subscriber=subscriber)
 
+        # print(left_subscription.info.base)
+
         # 2) create ControlledZipObservable
         observable = ControlledZipObservable(
             left=left_subscription.observable,

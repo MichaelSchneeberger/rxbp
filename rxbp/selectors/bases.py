@@ -19,6 +19,9 @@ class NumericalBase(Base):
     def __init__(self, num: int):
         self.num = num
 
+    def __str__(self):
+        return '{}({})'.format(self.__class__.__name__, self.num)
+
     def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
         if isinstance(other, NumericalBase) and self.num == other.num:
             return SelectorFound(IdentitySelector(), IdentitySelector())
@@ -29,6 +32,9 @@ class NumericalBase(Base):
 class ObjectRefBase(Base):
     def __init__(self, obj: Any = None):
         self.obj = obj or self
+
+    def __str__(self):
+        return '{}({})'.format(self.__class__.__name__, 'noname') #self.obj)
 
     def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
         if isinstance(other, ObjectRefBase) and self.obj == other.obj:

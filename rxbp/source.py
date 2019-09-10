@@ -186,9 +186,9 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
         observable = ToBackpressureObservable(scheduler=subscriber.scheduler,
                                               subscribe_scheduler=subscriber.subscribe_scheduler)
-        return observable, {}
+        return Subscription(info=SubscriptionInfo(base=base_), observable=observable)
 
-    return AnonymousFlowableBase(unsafe_subscribe_func, base=base_)
+    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func))
 
 
 def return_value(elem: Any):

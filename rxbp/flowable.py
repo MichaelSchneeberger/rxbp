@@ -122,7 +122,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = MapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
-    def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+    def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None) -> 'Flowable':
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
