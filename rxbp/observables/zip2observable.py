@@ -7,10 +7,12 @@ from rx.disposable import CompositeDisposable
 from rxbp.ack.ackimpl import stop_ack
 from rxbp.ack.ackbase import AckBase
 from rxbp.ack.acksubject import AckSubject
+from rxbp.observer import Observer
 
 from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
+from rxbp.typing import ValueType, ElementType
 
 
 class Zip2Observable(Observable):
@@ -438,13 +440,35 @@ class Zip2Observable(Observable):
     def observe(self, observer_info: ObserverInfo):
         self.observer = observer_info.observer
 
-        left_observer = AnonymousObserver(on_next_func=self._on_next_left, on_error_func=self._on_error,
-                                          on_completed_func=self._on_completed_left)
+        source = self
+
+        class ZipLeftObserver(Observer):
+
+            def on_next(self, elem: ElementType) -> AckBase:
+                return source._on_next_left(elem)
+
+            def on_error(self, exc: Exception):
+                source._on_error(exc)
+
+            def on_completed(self):
+                source._on_completed_left()
+
+        class ZipRightObserver(Observer):
+
+            def on_next(self, elem: ElementType) -> AckBase:
+                return source._on_next_right(elem)
+
+            def on_error(self, exc: Exception):
+                source._on_error(exc)
+
+            def on_completed(self):
+                source._on_completed_right()
+
+        left_observer = ZipLeftObserver()
         left_subscription = observer_info.copy(left_observer)
         d1 = self.left.observe(left_subscription)
 
-        right_observer = AnonymousObserver(on_next_func=self._on_next_right, on_error_func=self._on_error,
-                                           on_completed_func=self._on_completed_right)
+        right_observer = ZipRightObserver()
         right_subscription = observer_info.copy(right_observer)
         d2 = self.right.observe(right_subscription)
 

@@ -1,3 +1,13 @@
+"""
+This example demonstrates a use-case of a Subject.
+
+Subjects are only then needed, if it cannot be achieved with the rxbp sources and
+operators. When using Subjects, we actually build our own rxbp source or operator
+extension if we want it or not. And therefore, we are responsible to correctly
+apply `on_next`, `on_completed` and `on_error`  downstream function, as well as
+react to a dispose call. It is important to be aware of this distinction!
+"""
+
 from rxbp.ack.single import Single
 from rxbp.subjects.subject import Subject
 
@@ -43,6 +53,7 @@ def handler(value):
             pass
 
     ack.subscribe(_())
+
 
 service.register(handler=handler)
 service.request()

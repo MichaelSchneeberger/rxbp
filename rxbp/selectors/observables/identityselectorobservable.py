@@ -32,17 +32,14 @@ class IdentitySelectorObservable(Observable):
                 #             inner_ack.subscribe(ack_subject)
 
                 buffer = list(elem())
-                # print(buffer)
+                # print('IdentityObserver.on_next({})'.format(buffer))
+                # print('IdentityObserver.observer = {}'.format(observer))
                 select_msg_buffer = [select_next for _ in range(len(buffer))] + [select_completed]
-                # print(select_msg_buffer)
 
                 def gen():
                     yield from select_msg_buffer
 
-                # ack_subject = AckSubject()
                 ack = observer.on_next(gen)
-                # ack.subscribe(IdentitySingle())
-
                 return ack
 
             def on_error(self, exc: Exception):

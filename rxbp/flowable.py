@@ -19,7 +19,7 @@ from rxbp.flowables.tolistflowable import ToListFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.pipe import pipe
 from rxbp.selectors.bases import Base
-from rxbp.subscription import Subscription
+from rxbp.subscription import Subscription, SubscriptionInfo
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
@@ -47,7 +47,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return Flowable(flowable)
 
-    def concat(self, sources: Iterable[Base]):
+    def concat(self, sources: Iterable[FlowableBase]):
         all_sources = itertools.chain([self], sources)
         flowable = ConcatFlowable(sources=all_sources)
         return Flowable(flowable)
@@ -108,7 +108,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return flowable
 
-    def flat_map(self, selector: Callable[[Any], Base]):
+    def flat_map(self, selector: Callable[[Any], FlowableBase]):
         flowable = FlatMapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
@@ -159,7 +159,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return Flowable(PairwiseFlowable(source=self))
 
-    def pipe(self, *operators: Callable[[Base], Base]):
+    def pipe(self, *operators: Callable[[FlowableBase], FlowableBase]):
         return Flowable(pipe(*operators)(self))
 
     def run(self, scheduler: Scheduler = None):
@@ -178,7 +178,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return Flowable(flowable)
 
-    def share(self, func: Callable[[Base], Base]):
+    def share(self, func: Callable[[FlowableBase], FlowableBase]):
         def lifted_func(f: RefCountFlowable):
             result = func(Flowable(f))
             return result
@@ -186,11 +186,14 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
         return Flowable(flowable)
 
-    def use_base(self, val: FlowableBase):
+    def use_base(self, val: Base):
+        def unsafe_unsafe_subscribe(subscriber: Subscriber) -> Subscription:
+            subscription = self.unsafe_subscribe(subscriber=subscriber)
+
+            return Subscription(SubscriptionInfo(base=val), observable=subscription.observable)
+
         flowable = AnonymousFlowableBase(
-            unsafe_subscribe_func=self.unsafe_subscribe,
-            base=val,
-            selectable_bases=self.selectable_bases,
+            unsafe_subscribe_func=unsafe_unsafe_subscribe,
         )
         return Flowable(flowable)
 

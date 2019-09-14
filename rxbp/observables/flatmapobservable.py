@@ -13,7 +13,7 @@ from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
-from rxbp.typing import ElementType
+from rxbp.typing import ValueType, ElementType
 
 
 class FlatMapObservable(Observable):

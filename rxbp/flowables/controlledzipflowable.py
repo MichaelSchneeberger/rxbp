@@ -18,21 +18,8 @@ class ControlledZipFlowable(FlowableBase):
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
     ):
-        # if left.base is None:
-        #     left_selectable_bases = left.selectable_bases
-        # else:
-        #     left_selectable_bases = left.selectable_bases | {left.base}
-        #
-        # if right.base is None:
-        #     right_selectable_bases = right.selectable_bases
-        # else:
-        #     right_selectable_bases = right.selectable_bases | {right.base}
-        #
-        # # the base becomes anonymous after control zipping
-        # # use `use_base` operator to manually define a new base
-        # base = None
 
-        # super().__init__(base=base, selectable_bases=left_selectable_bases | right_selectable_bases)
+        super().__init__()
 
         self._left = left
         self._right = right

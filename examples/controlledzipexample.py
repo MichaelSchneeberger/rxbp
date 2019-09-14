@@ -1,9 +1,10 @@
-""" This example demonstrates a use-case of the `controlled_zip` operator.
+"""
+This example demonstrates a use-case of the `controlled_zip` operator.
 
-The goal of the use-case is to map time samples to the corresponding time interval.
+The goal of the use-case is to map time samples to a corresponding time interval.
 The time samples and time intervals are represented by Flowables, which are then
 combined via the `controlled_zip` operator. The resulting Flowable emits an element
-for each time sample that has a corresponding time interval.
+for each time sample that fits some time interval.
 """
 
 from random import random

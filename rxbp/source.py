@@ -20,7 +20,7 @@ from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase
 from rxbp.subscription import Subscription, SubscriptionInfo
 from rxbp.subscriber import Subscriber
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
-from rxbp.typing import ElementType, ValueType
+from rxbp.typing import ValueType, ElementType
 
 
 def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None):
@@ -82,14 +82,16 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
     return Flowable(AnonymousFlowableBase(unsafe_subscribe_func))
 
 
-def concat(sources: Iterable[Base]):
+def concat(sources: Iterable[FlowableBase]):
     return Flowable(ConcatFlowable(sources=sources))
 
 
-def defer(func: Callable[[Flowable], Base],
-          initial: Any,
-          defer_selector: Callable[[Flowable], Base] = None,
-          base: Base = None):
+def defer(
+        func: Callable[[Flowable], FlowableBase],
+        initial: Any,
+        defer_selector: Callable[[Flowable], FlowableBase] = None,
+        base: Base = None,
+):
 
     def lifted_func(f: FlowableBase):
         result = func(Flowable(f))
@@ -212,7 +214,7 @@ def empty():
     :return: single item observable
     """
 
-    return _from_iterable([], n_elements=1)
+    return _from_iterable([], n_elements=0)
 
 
 def share(sources: List[Flowable], func: Callable[..., Flowable]):

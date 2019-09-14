@@ -7,7 +7,7 @@ from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
 
 from rxbp.observable import Observable
-from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
+from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
@@ -34,32 +34,35 @@ class IteratorAsObservable(Observable):
 
         observer = observer_info.observer
 
-        try:
-            item = next(self.iterator)
-            has_next = True
-        except StopIteration:
-            has_next = False
-        except Exception as e:
-            # stream errors
-            observer.on_error(e)
-            return Disposable()
+        # try:
+        # if not has_next:
+        #     observer.on_completed()
+        #     return Disposable()
+        # else:
+        d1 = BooleanDisposable()
 
-        try:
+        def action(_, __):
+            try:
+                item = next(self.iterator)
+                has_next = True
+            except StopIteration:
+                has_next = False
+            except Exception as e:
+                # stream errors
+                observer.on_error(e)
+                return Disposable()
+
             if not has_next:
                 observer.on_completed()
-                return Disposable()
             else:
-                d1 = BooleanDisposable()
+                # start sending items
+                self.fast_loop(item, observer, self.scheduler, d1, self.scheduler.get_execution_model(),
+                               sync_index=0)
 
-                def action(_, __):
-                    # start sending items
-                    self.fast_loop(item, observer, self.scheduler, d1, self.scheduler.get_execution_model(),
-                                   sync_index=0)
-
-                d2 = self.subscribe_scheduler.schedule(action)
-                return CompositeDisposable(d1, d2)
-        except:
-            raise Exception('fatal error')
+        d2 = self.subscribe_scheduler.schedule(action)
+        return CompositeDisposable(d1, d2)
+        # except:
+        #     raise Exception('fatal error')
 
     def trigger_cancel(self, scheduler: SchedulerBase):
         try:

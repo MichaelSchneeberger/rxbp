@@ -14,18 +14,20 @@ from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
+from rxbp.subscription import Subscription, SubscriptionInfo
 
 
 class DeferFlowable(FlowableBase):
     def __init__(
             self,
             base: Base,
-            func: Callable[[Base], Base], initial: Any,
-            defer_selector: Callable[[Base], Base] = None,
+            func: Callable[[FlowableBase], FlowableBase], initial: Any,
+            defer_selector: Callable[[FlowableBase], FlowableBase] = None,
     ):
-        super().__init__(base=base)
+        super().__init__()
 
         self._base = base
+        
         self._func = func
         self._initial = initial
         self._defer_selector = defer_selector or (lambda f: f)
@@ -53,7 +55,11 @@ class DeferFlowable(FlowableBase):
 
                 return CompositeDisposable(d1, d2)
 
-        source = AnonymousFlowableBase(lambda subscriber: (StartWithInitialObservable(), {}))
+        class StartWithInitialValueFlowable(FlowableBase):
+            def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+                return Subscription(info=SubscriptionInfo(base=None), observable=StartWithInitialObservable())
+
+        source = StartWithInitialValueFlowable()
 
         scheduled_source = ObserveOnFlowable(source=source, scheduler=subscriber.scheduler)
 
@@ -63,9 +69,10 @@ class DeferFlowable(FlowableBase):
         ref_count_flowable = RefCountFlowable(result_flowable)
 
         defer_flowable = self._defer_selector(Flowable(ref_count_flowable))
-        defer_obs, selector = defer_flowable.unsafe_subscribe(subscriber)
+        defer_subscription = defer_flowable.unsafe_subscribe(subscriber)
 
-        obs, selector = ref_count_flowable.unsafe_subscribe(subscriber)
+        # obs, selector
+        ref_count_subscription = ref_count_flowable.unsafe_subscribe(subscriber)
 
         buffer_observer = BackpressureBufferedObserver(underlying=None,
                                                        scheduler=subscriber.scheduler,
@@ -78,12 +85,12 @@ class DeferFlowable(FlowableBase):
 
         class DeferObservable(Observable):
             def observe(self, observer_info: ObserverInfo):
-                d1 = obs.observe(observer_info)
+                d1 = ref_count_subscription.observable.observe(observer_info)
 
                 # once Defer operator is observe from outside,
                 volatile_subscription = ObserverInfo(conn_observer, is_volatile=True)
-                d2 = defer_obs.observe(volatile_subscription)
+                d2 = defer_subscription.observable.observe(volatile_subscription)
 
                 return CompositeDisposable(d1, d2)
 
-        return DeferObservable(), selector
+        return Subscription(info=ref_count_subscription.info, observable=DeferObservable())

@@ -2,7 +2,7 @@ import unittest
 
 from rxbp.ack.ackimpl import Continue, continue_ack
 from rxbp.observerinfo import ObserverInfo
-from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
+from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
@@ -14,7 +14,7 @@ class TestPublishSubject(unittest.TestCase):
         self.scheduler = TestScheduler()
 
     def test_should_emit_from_the_point_of_subscription_forward(self):
-        subject = ObservablePublishSubject(scheduler=self.scheduler)
+        subject = PublishOSubject(scheduler=self.scheduler)
         s1 = TestObservable(observer=subject)
 
         self.assertIsInstance(s1.on_next_seq([1]), Continue)
@@ -35,7 +35,7 @@ class TestPublishSubject(unittest.TestCase):
         self.assertTrue(o1.is_completed)
 
     def test_should_work_synchronously_for_synchronous_subscribers(self):
-        subject = ObservablePublishSubject(self.scheduler)
+        subject = PublishOSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
 
         def gen_observers():
@@ -56,7 +56,7 @@ class TestPublishSubject(unittest.TestCase):
         self.assertTrue(all(o.is_completed for o in obs_list))
 
     def test_should_work_with_asynchronous_subscribers(self):
-        subject = ObservablePublishSubject(self.scheduler)
+        subject = PublishOSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
 
         def gen_observers():
@@ -82,7 +82,7 @@ class TestPublishSubject(unittest.TestCase):
         self.assertTrue(all(o.is_completed for o in obs_list))
 
     def test_subscribe_after_complete_should_complete_immediately(self):
-        subject = ObservablePublishSubject(self.scheduler)
+        subject = PublishOSubject(self.scheduler)
         subject.on_completed()
 
         o1 = TestObserver()
@@ -90,7 +90,7 @@ class TestPublishSubject(unittest.TestCase):
         self.assertTrue(o1.is_completed)
 
     def test_on_error_should_terminate_current_and_future_subscribers(self):
-        subject = ObservablePublishSubject(self.scheduler)
+        subject = PublishOSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
         dummy = Exception('dummy')
 
@@ -115,7 +115,7 @@ class TestPublishSubject(unittest.TestCase):
         self.assertEqual(o1.was_thrown, dummy)
 
     def test_unsubscribe_after_on_complete(self):
-        subject = ObservablePublishSubject(self.scheduler)
+        subject = PublishOSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
         o1 = TestObserver()
         d = subject.observe(ObserverInfo(o1))

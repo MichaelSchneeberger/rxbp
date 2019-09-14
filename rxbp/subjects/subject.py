@@ -1,10 +1,10 @@
 from typing import Any
 
 from rxbp.ack.ackimpl import continue_ack
-from rxbp.observablesubjects.observablecacheservefirstsubject import ObservableCacheServeFirstSubject
+from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.subjects.subjectbase import SubjectBase
 from rxbp.subscriber import Subscriber
-from rxbp.typing import ElementType
+from rxbp.subscription import Subscription, SubscriptionInfo
 
 
 class Subject(SubjectBase):
@@ -13,9 +13,9 @@ class Subject(SubjectBase):
 
         self._obs_subject = None
 
-    def unsafe_subscribe(self, subscriber: Subscriber) -> 'Subscription':
-        self._obs_subject = ObservableCacheServeFirstSubject(scheduler=subscriber.scheduler)
-        return self._obs_subject, {}
+    def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+        self._obs_subject = CacheServeFirstOSubject(scheduler=subscriber.scheduler)
+        return Subscription(SubscriptionInfo(base=None), self._obs_subject)
 
     def on_next(self, elem: Any):
         def gen_val():

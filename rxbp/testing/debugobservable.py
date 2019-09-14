@@ -40,49 +40,51 @@ class DebugObservable(Observable):
         observer = observer_info.observer
         self.on_subscribe_func(observer_info)
 
-        def on_next(v):
-            try:
-                materialized = list(v())
-            except Exception as exc:
-                self.on_error_func(exc)
+        source = self
+
+        class DebugObserver(Observer):
+            def on_next(self, v):
+                try:
+                    materialized = list(v())
+                except Exception as exc:
+                    source.on_error_func(exc)
+                    observer.on_error(exc)
+                    return stop_ack
+
+                source.on_next_func(materialized)
+
+                def gen():
+                    yield from materialized
+
+                try:
+                    ack = observer.on_next(gen)
+                except Exception as e:
+                    # self.on_next_exception(e)
+                    raise
+
+                if isinstance(ack, Continue) or isinstance(ack, Stop):
+                    source.on_sync_ack(ack)
+                else:
+                    source.on_raw_ack(ack)
+
+                    class ResultSingle(Single):
+                        def on_next(_, elem):
+                            source.on_async_ack(elem)
+
+                        def on_error(self, exc: Exception):
+                            pass
+
+                    ack.subscribe(ResultSingle())
+                return ack
+
+            def on_error(self, exc):
+                source.on_error_func(exc)
                 observer.on_error(exc)
-                return stop_ack
 
-            self.on_next_func(materialized)
+            def on_completed(self):
+                source.on_completed_func()
+                return observer.on_completed()
 
-            def gen():
-                yield from materialized
-
-            try:
-                ack = observer.on_next(gen)
-            except Exception as e:
-                # self.on_next_exception(e)
-                raise
-
-            if isinstance(ack, Continue) or isinstance(ack, Stop):
-                self.on_sync_ack(ack)
-            else:
-                self.on_raw_ack(ack)
-
-                class ResultSingle(Single):
-                    def on_next(_, elem):
-                        self.on_async_ack(elem)
-
-                    def on_error(self, exc: Exception):
-                        pass
-
-                ack.subscribe(ResultSingle())
-            return ack
-
-        def on_error(exc):
-            self.on_error_func(exc)
-            observer.on_error(exc)
-
-        def on_completed():
-            self.on_completed_func()
-            return observer.on_completed()
-
-        debug_observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error,
-                                         on_completed_func=on_completed)
+        debug_observer = DebugObserver()
         debug_subscription = ObserverInfo(debug_observer, is_volatile=observer_info.is_volatile)
         return self.source.observe(debug_subscription)

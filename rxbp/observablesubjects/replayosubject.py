@@ -1,7 +1,6 @@
 import threading
 from typing import Iterable, Set, List
 
-import rx
 from rx.disposable import Disposable
 from rxbp.ack.ackimpl import Continue, Stop
 from rxbp.ack.observeon import _observe_on
@@ -14,11 +13,10 @@ from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
+from rxbp.observablesubjects.osubjectbase import OSubjectBase
 
 
-
-class ObservableReplaySubject(ObservableSubjectBase):
+class ReplayOSubject(OSubjectBase):
 
     class State:
         def __init__(self,
@@ -37,14 +35,14 @@ class ObservableReplaySubject(ObservableSubjectBase):
             self.error_thrown = error_thrown
 
         def copy(self, buffer=None, length=None, subscribers=None):
-            return ObservableReplaySubject.State(buffer=buffer if buffer is not None else self.buffer,
-                                                 capacity=self.capacity,
-                                                 subscribers=subscribers if subscribers is not None else self.subscribers,
-                                                 length=length if length is not None else self.length,
-                                                 is_done=self.is_done,
-                                                 error_thrown=self.error_thrown)
+            return ReplayOSubject.State(buffer=buffer if buffer is not None else self.buffer,
+                                        capacity=self.capacity,
+                                        subscribers=subscribers if subscribers is not None else self.subscribers,
+                                        length=length if length is not None else self.length,
+                                        is_done=self.is_done,
+                                        error_thrown=self.error_thrown)
 
-        def append_elem(self, elem) -> 'ObservableReplaySubject.State':
+        def append_elem(self, elem) -> 'ReplayOSubject.State':
             if self.capacity == 0:
                 return self.copy(buffer = self.buffer + [elem])
             elif self.length >= self.capacity:
@@ -67,11 +65,11 @@ class ObservableReplaySubject(ObservableSubjectBase):
             return self.copy(subscribers=subscribers)
 
         def mark_done(self, ex: Exception):
-            return ObservableReplaySubject.State(buffer=self.buffer, capacity=self.capacity, subscribers=set(),
-                                                 length=self.length, is_done=True, error_thrown=ex)
+            return ReplayOSubject.State(buffer=self.buffer, capacity=self.capacity, subscribers=set(),
+                                        length=self.length, is_done=True, error_thrown=ex)
 
     def __init__(self, scheduler: SchedulerBase, subscribe_scheduler: Scheduler, initial_state: State = None):
-        self.state: ObservableReplaySubject.State = initial_state or ObservableReplaySubject.State(buffer=[], capacity=0)
+        self.state: ReplayOSubject.State = initial_state or ReplayOSubject.State(buffer=[], capacity=0)
 
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler

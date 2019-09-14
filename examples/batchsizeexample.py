@@ -1,10 +1,11 @@
-""" This example demonstrates how elements can be send in batches over the Flowable
+"""
+This example demonstrates how elements can be send in batches over the Flowable
 stream.
 
 All rxbp sources (should) have an argument `batch_size`, which defines the
 number of elements that flow in a batch through the Flowable stream. Increasing
 the `batch_size` can result in much lower execution time as demonstrated in this
-example. In this case, it beats the RxPY implementation by a factor of 2.
+example. In this case, it beats the RxPY implementation by a factor of at least 2.
 """
 
 import time

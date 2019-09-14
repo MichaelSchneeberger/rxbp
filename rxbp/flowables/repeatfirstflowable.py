@@ -9,11 +9,11 @@ class RepeatFirstFlowable(FlowableBase):
         # unknown base, depends on the back-pressure
         base = None
 
-        super().__init__(base=base)
+        super().__init__()
 
         self._source = source
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-        source_observable, source_selectors = self._source.unsafe_subscribe(subscriber=subscriber)
-        obs = RepeatFirstObservable(source=source_observable, scheduler=subscriber.scheduler)
-        return obs, source_selectors
+        subscription = self._source.unsafe_subscribe(subscriber=subscriber)
+        observable = RepeatFirstObservable(source=subscription.observable, scheduler=subscriber.scheduler)
+        return Subscription(info=subscription.info, observable=observable)

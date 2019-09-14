@@ -14,7 +14,7 @@ from rxbp.selectors.selectionmsg import select_next, select_completed
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
-from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
+from rxbp.observablesubjects.publishosubject import PublishOSubject
 
 
 class ControlledZipObservable(Observable):
@@ -38,8 +38,8 @@ class ControlledZipObservable(Observable):
         self.match_func = match_func
 
         # create two selector observablesubjects used to match Flowables
-        self.left_selector = ObservablePublishSubject(scheduler=scheduler)
-        self.right_selector = ObservablePublishSubject(scheduler=scheduler)
+        self.left_selector = PublishOSubject(scheduler=scheduler)
+        self.right_selector = PublishOSubject(scheduler=scheduler)
 
         self.lock = threading.RLock()
 
@@ -293,7 +293,8 @@ class ControlledZipObservable(Observable):
             # save old value before left_val is overwritten
             old_left_val = left_val
 
-            if self.request_left(left_val, right_val):
+            request_left = self.request_left(left_val, right_val)
+            if request_left:
                 left_index_buffer.append(select_completed)
                 try:
                     left_val = next(left_iter)
@@ -308,6 +309,8 @@ class ControlledZipObservable(Observable):
                 except StopIteration:
                     do_back_pressure_right = True
                     break
+            elif not request_left:
+                raise Exception('either `request_left` or `request_right` condition needs to be True')
 
             if do_back_pressure_left:
                 break

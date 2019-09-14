@@ -13,10 +13,10 @@ from rxbp.ack.single import Single
 
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import ExecutionModel, Scheduler
-from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
+from rxbp.observablesubjects.osubjectbase import OSubjectBase
 
 
-class ObservableCacheServeFirstSubject(ObservableSubjectBase):
+class CacheServeFirstOSubject(OSubjectBase):
 
     def __init__(self, scheduler: Scheduler, name=None):
         super().__init__()
@@ -30,7 +30,7 @@ class ObservableCacheServeFirstSubject(ObservableSubjectBase):
         self.current_index = {}
 
         # a inner subscription is inactive if all elements in the buffer are sent
-        self.inactive_subsriptions: List[ObservableCacheServeFirstSubject.InnerSubscription] = []
+        self.inactive_subsriptions: List[CacheServeFirstOSubject.InnerSubscription] = []
 
         self.buffer = self.DequeuableBuffer()
 
@@ -75,7 +75,7 @@ class ObservableCacheServeFirstSubject(ObservableSubjectBase):
                 self.queue.pop(0)
 
     class InnerSubscription:
-        def __init__(self, source: 'ObservableCacheServeFirstSubject', subscription: ObserverInfo,
+        def __init__(self, source: 'CacheServeFirstOSubject', subscription: ObserverInfo,
                      scheduler: Scheduler, em: ExecutionModel):
             self.source = source
             self.observer = subscription.observer
@@ -85,13 +85,11 @@ class ObservableCacheServeFirstSubject(ObservableSubjectBase):
 
         def notify_on_next(self, value) -> AckBase:
             # inner subscription gets only notified if all items from buffer are sent and ack received
-
             with self.source.lock:
                 # increase current index
                 self.source.current_index[self] += 1
 
             current_index = self.source.current_index[self]
-
             ack = self.observer.on_next(value)
 
             if isinstance(ack, Continue):

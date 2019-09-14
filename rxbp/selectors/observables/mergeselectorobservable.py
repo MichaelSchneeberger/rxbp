@@ -11,7 +11,7 @@ from rxbp.selectors.selectionmsg import SelectCompleted, SelectNext
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
-from rxbp.observablesubjects.observablepublishsubject import ObservablePublishSubject
+from rxbp.observablesubjects.publishosubject import PublishOSubject
 
 
 class MergeSelectorObservable(Observable):
@@ -84,7 +84,7 @@ class MergeSelectorObservable(Observable):
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
 
-        def start_zipping(left_val: Any, left_iter: Iterator[Tuple[Any, ObservablePublishSubject]],
+        def start_zipping(left_val: Any, left_iter: Iterator[Tuple[Any, PublishOSubject]],
                           right_val: Optional[Any], right_iter: Iterator[Any],
                           is_sync: MergeSelectorObservable.ConcurrentType) \
                 -> AckBase:
