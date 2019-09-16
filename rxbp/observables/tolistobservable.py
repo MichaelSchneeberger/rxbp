@@ -36,6 +36,5 @@ class ToListObservable(Observable):
             def on_completed(self):
                 return on_completed()
 
-        map_observer = ToListObserver()
-        map_subscription = ObserverInfo(map_observer, is_volatile=observer_info.is_volatile)
-        return self.source.observe(map_subscription)
+        to_list_observer = ToListObserver()
+        return self.source.observe(observer_info.copy(observer=to_list_observer))

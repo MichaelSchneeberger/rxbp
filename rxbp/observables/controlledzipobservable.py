@@ -64,7 +64,17 @@ class ControlledZipObservable(Observable):
         def get_current_state(self):
             return self
 
-    class LeftCompletedState(TerminationState):
+    class LeftCompletedState(TerminationState, ABC):
+        pass
+
+    class RightCompletedState(TerminationState, ABC):
+        pass
+
+    class BothCompletedState(LeftCompletedState, RightCompletedState):
+        def get_current_state(self):
+            return self
+
+    class LeftCompletedStateImpl(LeftCompletedState):
         def __init__(self, raw_prev_state: Optional['ControlledZipObservable.TerminationState']):
             self.raw_prev_state = raw_prev_state
 
@@ -73,10 +83,12 @@ class ControlledZipObservable(Observable):
 
             if isinstance(prev_state, ControlledZipObservable.InitState):
                 return self
+            elif isinstance(prev_state, ControlledZipObservable.RightCompletedState):
+                return ControlledZipObservable.BothCompletedState()
             else:
                 return self.raw_prev_state
 
-    class RightCompletedState(TerminationState):
+    class RightCompletedStateImpl(RightCompletedState):
         def __init__(self, raw_prev_state: Optional['ControlledZipObservable.TerminationState']):
             self.raw_prev_state = raw_prev_state
 
@@ -85,6 +97,8 @@ class ControlledZipObservable(Observable):
 
             if isinstance(prev_state, ControlledZipObservable.InitState):
                 return self
+            elif isinstance(prev_state, ControlledZipObservable.LeftCompletedState):
+                return ControlledZipObservable.BothCompletedState()
             else:
                 return self.raw_prev_state
 
@@ -513,11 +527,11 @@ class ControlledZipObservable(Observable):
         self._on_error_or_complete(next_final_state=next_final_state)
 
     def _on_completed_left(self):
-        next_final_state = ControlledZipObservable.LeftCompletedState(raw_prev_state=None)
+        next_final_state = ControlledZipObservable.LeftCompletedStateImpl(raw_prev_state=None)
         self._on_error_or_complete(next_final_state=next_final_state)
 
     def _on_completed_right(self):
-        next_final_state = ControlledZipObservable.RightCompletedState(raw_prev_state=None)
+        next_final_state = ControlledZipObservable.RightCompletedStateImpl(raw_prev_state=None)
         self._on_error_or_complete(next_final_state=next_final_state)
 
     def observe(self, observer_info: ObserverInfo):

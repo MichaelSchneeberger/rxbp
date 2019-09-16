@@ -9,6 +9,7 @@ from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.executeonflowable import ExecuteOnFlowable
+from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.mergeflowable import MergeFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
@@ -174,6 +175,15 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = RepeatFirstFlowable(source=self)
         return Flowable(flowable)
 
+    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None):
+        """ Repeat the first item forever
+
+        :return:
+        """
+
+        flowable = FirstFlowable(source=self, raise_exception=raise_exception)
+        return Flowable(flowable)
+
     def scan(self, func: Callable[[Any, Any], Any], initial: Any):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return Flowable(flowable)
@@ -186,7 +196,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
         return Flowable(flowable)
 
-    def use_base(self, val: Base):
+    def set_base(self, val: Base):
         def unsafe_unsafe_subscribe(subscriber: Subscriber) -> Subscription:
             subscription = self.unsafe_subscribe(subscriber=subscriber)
 

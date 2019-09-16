@@ -9,7 +9,6 @@ from rxbp.ack.ackbase import AckBase
 from rxbp.ack.acksubject import AckSubject
 from rxbp.observer import Observer
 
-from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.typing import ValueType, ElementType
@@ -72,7 +71,17 @@ class Zip2Observable(Observable):
         def get_current_state(self):
             return self
 
-    class LeftCompletedState(TerminationState):
+    class LeftCompletedState(TerminationState, ABC):
+        pass
+
+    class RightCompletedState(TerminationState, ABC):
+        pass
+
+    class BothCompletedState(LeftCompletedState, RightCompletedState):
+        def get_current_state(self):
+            return self
+
+    class LeftCompletedStateImpl(LeftCompletedState):
         def __init__(self, raw_prev_state: Optional['Zip2Observable.TerminationState']):
             self.raw_prev_state = raw_prev_state
 
@@ -84,7 +93,7 @@ class Zip2Observable(Observable):
             else:
                 return self.raw_prev_state
 
-    class RightCompletedState(TerminationState):
+    class RightCompletedStateImpl(RightCompletedState):
         def __init__(self, raw_prev_state: Optional['Zip2Observable.TerminationState']):
             self.raw_prev_state = raw_prev_state
 
@@ -428,12 +437,12 @@ class Zip2Observable(Observable):
         self._on_error_or_complete(next_final_state=next_final_state, exc=ex)
 
     def _on_completed_left(self):
-        next_final_state = Zip2Observable.LeftCompletedState(raw_prev_state=None)
+        next_final_state = Zip2Observable.LeftCompletedStateImpl(raw_prev_state=None)
 
         self._on_error_or_complete(next_final_state=next_final_state)
 
     def _on_completed_right(self):
-        next_final_state = Zip2Observable.RightCompletedState(raw_prev_state=None)
+        next_final_state = Zip2Observable.RightCompletedStateImpl(raw_prev_state=None)
 
         self._on_error_or_complete(next_final_state=next_final_state)
 

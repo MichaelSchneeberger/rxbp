@@ -101,13 +101,16 @@ def flat_map(selector: Callable[[Any], FlowableBase]):
     return FlowableOperator(func)
 
 
-# def flat_zip(right: ObservableBase, inner_selector: Callable[[Any], ObservableBase], left_selector: Callable[[Any], Any]=None,
-#              result_selector: Callable[[Any, Any, Any], Any] = None):
-#     def func(obs: ObservableBase):
-#         return FlatZipObservable(left=obs, right=right,
-#                                  inner_selector=inner_selector, left_selector=left_selector,
-#                                  result_selector=result_selector)
-#     return ObservableOperator(func)
+def first(raise_exception: Callable[[Callable[[], None]], None] = None):
+    """ Maps each item emitted by the source by applying the given function
+
+    :param selector: function that defines the mapping applied to each element
+    :return: mapped observable
+    """
+
+    def func(source: Flowable) -> Flowable:
+        return source.first(raise_exception=raise_exception)
+    return FlowableOperator(func)
 
 
 def map(selector: Callable[[Any], Any]):
@@ -247,7 +250,7 @@ def to_list():
     return FlowableOperator(func)
 
 
-def use_base(val: Any):
+def set_base(val: Any):
     def func(source: Flowable) -> Flowable:
         return source.use_base(val=val)
     return FlowableOperator(func)
