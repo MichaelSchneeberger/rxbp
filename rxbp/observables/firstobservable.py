@@ -31,6 +31,7 @@ class FirstObservable(Observable):
             def on_next(self, v):
                 source.is_first = False
                 observer.on_next(v)
+                observer.on_completed()
                 return stop_ack
 
             def on_error(self, exc):
@@ -49,8 +50,8 @@ class FirstObservable(Observable):
                     except:
                         exc = sys.exc_info()
                         observer.on_error(exc)
-                else:
-                    observer.on_completed()
+                # else:
+                #     observer.on_completed()
 
         first_observer = FirstObserver()
         map_subscription = ObserverInfo(first_observer, is_volatile=observer_info.is_volatile)

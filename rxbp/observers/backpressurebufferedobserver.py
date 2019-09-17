@@ -1,7 +1,6 @@
 import threading
 from queue import Queue
 
-import rx
 from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on

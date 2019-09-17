@@ -22,12 +22,12 @@ class BufferFlowable(FlowableBase):
             def observe(self, observer_info: ObserverInfo):
                 observer = observer_info.observer
 
-                buffered_subscriber = BackpressureBufferedObserver(
+                buffered_observer = BackpressureBufferedObserver(
                     underlying=observer, scheduler=subscriber.scheduler,
                     subscribe_scheduler=subscriber.subscribe_scheduler,
                     buffer_size=source._buffer_size,
                 )
-                disposable = subscription.observable.observe(buffered_subscriber)
+                disposable = subscription.observable.observe(ObserverInfo(observer=buffered_observer))
                 return disposable
         observable = BufferObservable()
 

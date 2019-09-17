@@ -252,7 +252,7 @@ def to_list():
 
 def set_base(val: Any):
     def func(source: Flowable) -> Flowable:
-        return source.use_base(val=val)
+        return source.set_base(val=val)
     return FlowableOperator(func)
 
 def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):

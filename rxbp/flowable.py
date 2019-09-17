@@ -160,7 +160,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return Flowable(PairwiseFlowable(source=self))
 
-    def pipe(self, *operators: Callable[[FlowableBase], FlowableBase]):
+    def pipe(self, *operators: Callable[[FlowableBase], FlowableBase]) -> 'Flowable':
         return Flowable(pipe(*operators)(self))
 
     def run(self, scheduler: Scheduler = None):
