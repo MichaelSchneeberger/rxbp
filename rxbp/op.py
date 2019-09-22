@@ -87,7 +87,7 @@ def filter_with_index(predicate: Callable[[Any, int], bool]):
     return FlowableOperator(func)
 
 
-def flat_map(selector: Callable[[Any], FlowableBase]):
+def flat_map(selector: Callable[[Any], Flowable]):
     """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
     as input and returns an inner observable. The resulting observable concatenates the items of each inner
     observable.
@@ -125,27 +125,51 @@ def map(selector: Callable[[Any], Any]):
     return FlowableOperator(func)
 
 
-def match(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+# def match(right: Flowable, selector: Callable[[Any, Any], Any] = None):
+#     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+#
+#     :param selector: a mapping function applied over the generated pairs
+#     :return: zipped observable
+#     """
+#
+#     def func(left: Flowable) -> Flowable:
+#         return left.match(right=right, selector=selector)
+#     return FlowableOperator(func)
+
+
+def match(*others: Flowable):
     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
     :return: zipped observable
     """
 
-    def func(left: Flowable) -> FlowableBase:
-        return left.match(right=right, selector=selector)
+    def func(left: Flowable) -> Flowable:
+        return left.match(*others)
     return FlowableOperator(func)
 
 
-def merge(other: FlowableBase):
+# def merge(other: Flowable):
+#     """ Maps each item emitted by the source by applying the given function
+#
+#     :param selector: function that defines the mapping applied to each element
+#     :return: mapped observable
+#     """
+#
+#     def func(source: Flowable) -> Flowable:
+#         return source.merge(other=other)
+#     return FlowableOperator(func)
+
+
+def merge(*others: Flowable):
     """ Maps each item emitted by the source by applying the given function
 
     :param selector: function that defines the mapping applied to each element
     :return: mapped observable
     """
 
-    def func(source: Flowable) -> Flowable:
-        return source.merge(other=other)
+    def func(left: Flowable) -> Flowable:
+        return left.merge(*others)
     return FlowableOperator(func)
 
 
@@ -230,7 +254,7 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
 #     return ObservableOperator(func)
 
 
-def share(func: Callable[[Flowable], FlowableBase]):
+def share(func: Callable[[Flowable], Flowable]):
     """ Share takes a function and exposes a multi-cast flowable via the function's arguments. The multi-cast
     flowable back-pressures, when the first subscriber back-pressures. In case of more than one subscribers,
     the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures
@@ -255,7 +279,19 @@ def set_base(val: Any):
         return source.set_base(val=val)
     return FlowableOperator(func)
 
-def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+
+# def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+#     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+#
+#     :param selector: a mapping function applied over the generated pairs
+#     :return: zipped observable
+#     """
+#
+#     def func(left: Flowable) -> Flowable:
+#         return left.zip(right=right, selector=selector)
+#     return FlowableOperator(func)
+
+def zip(*others: Flowable):
     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
@@ -263,7 +299,7 @@ def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
     """
 
     def func(left: Flowable) -> Flowable:
-        return left.zip(right=right, selector=selector)
+        return left.zip(*others)
     return FlowableOperator(func)
 
 

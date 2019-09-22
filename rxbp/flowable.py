@@ -1,5 +1,6 @@
+import functools
 import itertools
-from typing import Callable, Any, Generic, Iterable
+from typing import Callable, Any, Generic, Iterable, Tuple
 
 import rx
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
@@ -128,24 +129,79 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = MapFlowable(source=self, selector=selector)
         return Flowable(flowable)
 
-    def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None) -> 'Flowable':
+    # def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None) -> 'Flowable':
+    #     """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
+    #
+    #     :param selector: a mapping function applied over the generated pairs
+    #     :return: matched Flowable
+    #     """
+    #
+    #     flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=True)
+    #     return Flowable(flowable)
+
+    def match(self, *others: 'Flowable'):
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
         :return: matched Flowable
         """
 
-        flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=True)
-        return Flowable(flowable)
+        if len(others) == 0:
+            return self.map(lambda v: (v,))
+        else:
+            sources = (self,) + others
 
-    def merge(self, other: FlowableBase):
-        """ Merges the elements of two Flowables into a single Flowable
+            def gen_stack():
+                for source in reversed(sources):
+                    def _(right: Flowable = None, left: Flowable = source):
+                        if right is None:
+                            return left.map(lambda v: (v,))
+                        else:
+                            def inner_result_selector(v1: Any, v2: Tuple[Any]):
+                                return (v1,) + v2
 
-        :param selector: (optional) selector function
-        :return: merged Flowable
+                            flowable =  Zip2Flowable(left=self, right=right, func=inner_result_selector, auto_match=True)
+                            return flowable
+
+                    yield _
+
+            obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            return Flowable(obs)
+
+    # def merge(self, other: FlowableBase):
+    #     """ Merges the elements of two Flowables into a single Flowable
+    #
+    #     :param selector: (optional) selector function
+    #     :return: merged Flowable
+    #     """
+    #
+    #     return Flowable(MergeFlowable(source=self, other=other))
+
+    def merge(self, *others: 'Flowable'):
+        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
+
+        :param selector: a mapping function applied over the generated pairs
+        :return: zipped Flowable
         """
 
-        return Flowable(MergeFlowable(source=self, other=other))
+        if len(others) == 0:
+            return self
+        else:
+            sources = (self,) + others
+
+            def gen_stack():
+                for source in reversed(sources):
+                    def _(right: Flowable = None, left: Flowable = source):
+                        if right is None:
+                            return left
+                        else:
+                            flowable = MergeFlowable(source=self, other=right)
+                            return flowable
+
+                    yield _
+
+            obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            return Flowable(obs)
 
     def observe_on(self, scheduler: Scheduler):
         """ Operator that specifies a specific scheduler, on which observers will observe events
@@ -193,7 +249,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return Flowable(flowable)
 
-    def share(self, func: Callable[[FlowableBase], FlowableBase]):
+    def share(self, func: Callable[['Flowable'], 'Flowable']):
         def lifted_func(f: RefCountFlowable):
             result = func(Flowable(f))
             return result
@@ -225,15 +281,44 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return to_rx(source=self, batched=batched)
 
-    def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+    # def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
+    #     """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
+    #
+    #     :param selector: a mapping function applied over the generated pairs
+    #     :return: zipped Flowable
+    #     """
+    #
+    #     flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=False)
+    #     return Flowable(flowable)
+
+    def zip(self, *others: 'Flowable'):
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
         :return: zipped Flowable
         """
 
-        flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=False)
-        return Flowable(flowable)
+        if len(others) == 0:
+            return self.map(lambda v: (v,))
+        else:
+            sources = (self,) + others
+
+            def gen_stack():
+                for source in reversed(sources):
+                    def _(right: Flowable = None, left: Flowable = source):
+                        if right is None:
+                            return left.map(lambda v: (v,))
+                        else:
+                            def inner_result_selector(v1: Any, v2: Tuple[Any]):
+                                return (v1,) + v2
+
+                            flowable =  Zip2Flowable(left=self, right=right, func=inner_result_selector, auto_match=False)
+                            return flowable
+
+                    yield _
+
+            obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            return Flowable(obs)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
         """ Zips each item emmited by the source with their indices

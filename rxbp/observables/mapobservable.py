@@ -4,6 +4,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ElementType
 
 
 class MapObservable(Observable):
@@ -15,20 +16,17 @@ class MapObservable(Observable):
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
-
-        def on_next(v):
-
-            # `map` does not consume elements from the iterator/list
-            # it is not its responsibility to catch an exception
-            def map_gen():
-                for e in v:
-                    yield self.selector(e)
-
-            return observer.on_next(map_gen())
+        selector = self.selector
 
         class MapObserver(Observer):
-            def on_next(self, v):
-                return on_next(v)
+            def on_next(self, elem: ElementType):
+                # `map` does not consume elements from the iterator/list
+                # it is not its responsibility to catch an exception
+                def map_gen():
+                    for v in elem:
+                        yield selector(v)
+
+                return observer.on_next(map_gen())
 
             def on_error(self, exc):
                 return observer.on_error(exc)

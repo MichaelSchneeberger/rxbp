@@ -12,6 +12,7 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
+from rxbp.typing import ElementType
 
 
 def to_rx(source: FlowableBase, batched: bool = None):
@@ -53,8 +54,8 @@ def to_rx(source: FlowableBase, batched: bool = None):
                 def is_volatile(self):
                     return False
 
-                def on_next(self, v):
-                    for e in v():
+                def on_next(self, elem: ElementType):
+                    for e in elem:
                         observer.on_next(e)
                     return continue_ack
 

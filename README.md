@@ -20,18 +20,17 @@ pip3 install --pre rxbp
 Example
 -------
 
-The *rxbackpressure* syntax is similar to RxPY.
+*rxbackpressure* has a similar syntax like RxPY.
 
 ```python
 # example taken from RxPY
 import rxbp
-from rxbp import op
 
 source = rxbp.from_(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
 
 composed = source.pipe(
-    op.map(lambda s: len(s)),
-    op.filter(lambda i: i >= 5)
+    rxbp.op.map(lambda s: len(s)),
+    rxbp.op.filter(lambda i: i >= 5)
 )
 composed.subscribe(lambda value: print("Received {0}".format(value)))
 ```
@@ -39,13 +38,13 @@ composed.subscribe(lambda value: print("Received {0}".format(value)))
 Integrate RxPY
 --------------
 
-A RxPY Observable can be converted to a Flowable via the `from_rx` method.
-Equivalently, a Flowable can be converted to a RxPY Observable via the `to_rx` method.
+A RxPY Observable can be converted to a `Flowable` by using the `from_rx` method.
+Equivalently, a `Flowable` can be converted to a RxPY Observable 
+by using the `to_rx` method.
 
 ```python
 import rx
 import rxbp
-from rxbp import op
 
 rx_source = rx.of("Alpha", "Beta", "Gamma", "Delta", "Epsilon")
 
@@ -53,8 +52,8 @@ rx_source = rx.of("Alpha", "Beta", "Gamma", "Delta", "Epsilon")
 source = rxbp.from_rx(rx_source)
 
 composed = source.pipe(
-    op.map(lambda s: len(s)),
-    op.filter(lambda i: i >= 5)
+    rxbp.op.map(lambda s: len(s)),
+    rxbp.op.filter(lambda i: i >= 5)
 )
 
 # convert Flowable to Observable
@@ -66,18 +65,32 @@ Differences from RxPY
 
 ### Flowable
 
-The Flowable is a data type for modeling and processing asynchronous and reactive 
-streaming of events with non-blocking back-pressure. It is the equivalent of the 
-RxPY Observable.
+Similar to a RxPY Observable, a `Flowable` implements a `subscribe` method, which
+makes it possible to describe a data flow from source to sink. The description is
+done with *rxbackpressure* operators exposed by `rxbp.op`.
+
+Like in
+functional programming, usings *rxbackpressure* operators does not create
+any mutable states but rather concatenates functions without calling them
+yet. Or in other words, we first describe what we want to do, and then 
+we execute the plan. A `Flowable` is executed by calling its `subscribe`
+method. This will then start a chain reaction where downsream `Flowables`
+call the `subscribe` method of their linked upstream `Flowable` until
+the sources start emitting data. Once a `Flowable` is subscribed, we
+allow it to have mutable states where it make sense.
+ 
+Compared to RxPY Observables, a `Flowable` uses `Observers` that are
+able to back-pressure an `on_next` method call.
 
 ### share operator
 
-The `share` method does not return a multicast object directly. Instead, it takes a function 
-exposing a multicast Flowable via its arguments.
+The `share` method does not return a multicast object directly. 
+Instead, it takes a function exposing a multicast `Flowable` via its arguments.
+This has the advantage that the `share` operation works even if the
+resulting `Flowable` is subscribed more than once.
 
 ```python
 import rxbp
-from rxbp import op
 
 rxbp.range(10).pipe(
     rxbp.op.share(lambda f1: f1.pipe(
@@ -102,13 +115,18 @@ The previous code outputs:
 
 ### match operator (experimental)
 
-The `match` operator tries to match two Flowables, otherwise it raises an exception.
-Two observables match if they have the same base or if there exists a mapping that maps 
-the one base to the base of the other Flowable. These mappings are called "selectors",
-and returned by the `unsafe_subscribe` method of each Flowable.
+The `match` operator tries to match two `Flowable`, 
+otherwise it raises an exception.
+Two observables match if they have the same base or if there exists 
+a mapping that maps 
+one base to the base of the other `Flowable`. These mappings 
+are called "selectors" and propagated internally when subscribing
+to a `Flowable`.
 
-If two Flowables have the same base, they should match in the sense of the `zip` operator,
-e.g. every pair of elements that get zipped from the two Flowables should belong together.
+If two Flowables have the same base, 
+they should match in the sense of the `zip` operator,
+e.g. every pair of elements that get zipped from the two
+ Flowables should belong together.
 
 ```python
 import rxbp
@@ -136,15 +154,20 @@ The previous code outputs:
 When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
-A Flowable is used when some asynchronous stage can't process the values 
-fast enough and need a way to tell the upstream producer to slow down. But even 
-if the generation of a values cannot be directly controlled, 
-back-pressure can reduce the memory consumption by holding back the values in a buffer, and emitting them
-in a synchronized fashion. Values from a Flowable need to be pulled by the downstream consumer,
-which can lead to situations where the stream stops "flowing" due to bad back-pressure coordination.
+A `Flowable` is used when some asynchronous stage cannot process the
+data fast enough or needs to synchronize the data with some other event.
+Let's take the `zip` operator for instance. It gets elements from
+two or more sources and emits a tuple once it received one
+element from each source. But what happens if one source emits the
+elements before the others do? Without back-pressure, the `zip` operation
+has to buffer the elements until it receives data from the other sources.
+This might be ok depending on how much data needs to be buffered. But
+often we can not risk having too much data buffered somewhere in our
+stream, which might cause a out of memory exception. Therefore, it
+is better to back-pressure data sources until that data is needed.
 
-An RxPY Observable on the other hand is push based. That means it emits elements as soon as
-it receives them. 
+The advantage of a RxPY Observable is that it is generally faster
+and more lightweight.
 
 
 Implemented builders and operators
