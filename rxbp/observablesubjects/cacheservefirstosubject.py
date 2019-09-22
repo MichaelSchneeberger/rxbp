@@ -1,3 +1,4 @@
+import sys
 import threading
 
 from typing import List
@@ -14,6 +15,7 @@ from rxbp.ack.single import Single
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import ExecutionModel, Scheduler
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.typing import ElementType
 
 
 class CacheServeFirstOSubject(OSubjectBase):
@@ -280,16 +282,20 @@ class CacheServeFirstOSubject(OSubjectBase):
         observer.on_completed()
         return Disposable()
 
-    def on_next(self, value):
+    def on_next(self, elem: ElementType):
 
-        try:
-            materialized_values = list(value())
-        except Exception as exc:
-            self.on_error(exc)
-            return stop_ack
+        if isinstance(elem, list):
+            materialized_values = elem
+        else:
+            try:
+                materialized_values = list(elem)
+            except:
+                exc = sys.exc_info()
+                self.on_error(exc)
+                return stop_ack
 
-        def gen():
-            yield from materialized_values
+        # def gen():
+        #     yield from materialized_values
 
         current_ack = AckSubject()
 
@@ -301,7 +307,7 @@ class CacheServeFirstOSubject(OSubjectBase):
             self.inactive_subsriptions = []
 
             # add item to buffer
-            self.buffer.append(OnNext(gen))
+            self.buffer.append(OnNext(materialized_values))
 
             # current ack is used by subscriptions that weren't inactive, but reached the top of the buffer
             self.current_ack = current_ack
@@ -314,7 +320,7 @@ class CacheServeFirstOSubject(OSubjectBase):
         def gen_inner_ack():
             # send notification to inactive subscriptions
             for inner_subscription in inactive_subsriptions:
-                inner_ack = inner_subscription.notify_on_next(gen)
+                inner_ack = inner_subscription.notify_on_next(materialized_values)
                 yield inner_ack
 
         inner_ack_list = list(gen_inner_ack())

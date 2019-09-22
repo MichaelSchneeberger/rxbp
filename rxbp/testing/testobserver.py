@@ -1,6 +1,7 @@
-from rxbp.ack.ackimpl import Continue
+from rxbp.ack.ackimpl import Continue, continue_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.observer import Observer
+from rxbp.typing import ElementType
 
 
 class TestObserver(Observer):
@@ -8,19 +9,21 @@ class TestObserver(Observer):
     returns an asynchroneous acknowledgment
     """
 
-    def __init__(self):
+    def __init__(self, immediate_coninue: int = None):
         self.received = []
         self.is_completed = False
         self.was_thrown = None
-        self.immediate_continue = 0
+        self.immediate_continue = immediate_coninue
         self.ack = None
 
-    def on_next(self, v):
-        values = list(v())
+    def on_next(self, elem: ElementType):
+        values = list(elem)
         self.received += values
-        if 0 < self.immediate_continue:
+        if self.immediate_continue is None:
+            return continue_ack
+        elif 0 < self.immediate_continue:
             self.immediate_continue -= 1
-            return Continue()
+            return continue_ack
         else:
             self.ack = AckSubject()
             return self.ack

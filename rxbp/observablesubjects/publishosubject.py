@@ -11,6 +11,7 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.typing import ElementType
 
 
 class PublishOSubject(OSubjectBase):
@@ -94,7 +95,7 @@ class PublishOSubject(OSubjectBase):
             else:
                 return self.observe(observer_info)
 
-    def on_next(self, elem):
+    def on_next(self, elem: ElementType):
         state = self.state
         subscribers = state.cache
 
@@ -115,12 +116,15 @@ class PublishOSubject(OSubjectBase):
     def on_completed(self):
         self.send_oncomplete_or_error()
 
-    def send_on_next_to_all(self, subscribers: List, elem):
+    def send_on_next_to_all(self, subscribers: List, elem: ElementType):
         result = None
 
-        materialized_values = list(elem())
-        def gen():
-            yield from materialized_values
+        if isinstance(elem, list):
+            materialized_values = elem
+        else:
+            materialized_values = list(elem)
+        # def gen():
+        #     yield from materialized_values
 
         index = 0
         while index < len(subscribers):
@@ -129,7 +133,7 @@ class PublishOSubject(OSubjectBase):
             index += 1
 
             # try:
-            ack = observer.on_next(gen)
+            ack = observer.on_next(materialized_values)
             # except:
             #     raise NotImplementedError
 

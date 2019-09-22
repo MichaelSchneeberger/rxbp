@@ -9,6 +9,7 @@ from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ElementType
 
 
 class ConcatObservable(Observable):
@@ -21,15 +22,13 @@ class ConcatObservable(Observable):
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
-        source = self
 
         class ConcatObserver(Observer):
             def __init__(self):
                 self.ack = None
 
-            def on_next(self, v):
-                # print('concat.on_next({})'.format(list(v())))
-                self.ack = observer.on_next(v)
+            def on_next(self, elem: ElementType):
+                self.ack = observer.on_next(elem)
                 return self.ack
 
             def on_error(self, exc):
@@ -38,13 +37,8 @@ class ConcatObservable(Observable):
             def on_completed(self):
                 try:
                     next_source = next(iter_conn_obs)
-                    has_element = True
-                except StopIteration:
-                    has_element = False
-
-                if has_element:
                     next_source.connect()
-                else:
+                except StopIteration:
                     observer.on_completed()
 
         concat_observer = ConcatObserver()

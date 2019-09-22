@@ -18,12 +18,13 @@ class MapObservable(Observable):
 
         def on_next(v):
 
-            # `map` does not consume elements from buffer, it is not its responsibility to try catch an exception
+            # `map` does not consume elements from the iterator/list
+            # it is not its responsibility to catch an exception
             def map_gen():
-                for e in v():
+                for e in v:
                     yield self.selector(e)
 
-            return observer.on_next(map_gen)
+            return observer.on_next(map_gen())
 
         class MapObserver(Observer):
             def on_next(self, v):

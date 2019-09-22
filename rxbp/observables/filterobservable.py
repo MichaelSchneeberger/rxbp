@@ -10,6 +10,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.typing import ElementType
 
 
 class FilterObservable(Observable):
@@ -25,9 +26,9 @@ class FilterObservable(Observable):
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
 
-        def on_next(v):
+        def on_next(elem: ElementType):
             def gen_filtered_iterable():
-                for e in v():
+                for e in elem:
                     if self.predicate(e):
                         yield True, e
                     else:
@@ -48,7 +49,7 @@ class FilterObservable(Observable):
                         yield select_next
                     yield select_completed
 
-            sel_ack = self.selector.on_next(gen_selector)
+            sel_ack = self.selector.on_next(gen_selector())
 
             if should_run:
                 def gen_output():
@@ -56,7 +57,7 @@ class FilterObservable(Observable):
                         if sel:
                             yield elem
 
-                ack1: Ack = observer.on_next(gen_output)
+                ack1: Ack = observer.on_next(gen_output())
 
                 return _merge(ack1, sel_ack)
             else:

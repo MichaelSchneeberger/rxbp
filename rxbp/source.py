@@ -36,19 +36,12 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
     def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
         def gen():
             for peak_first in iterator:
-                def generate_batch():
+                def generate_batch(peak_first=peak_first):
                     yield peak_first
                     for more in itertools.islice(iterator, batch_size_ - 1):
                         yield more
 
-                # generate buffer in memory
-                buffer = list(generate_batch())
-
-                # buffer needs to be an argument of the generator
-                def gen_result(buffer=buffer):
-                    yield from buffer
-
-                yield gen_result
+                yield generate_batch()
 
         observable = IteratorAsObservable(iterator=gen(), scheduler=subscriber.scheduler,
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
@@ -109,9 +102,6 @@ def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None)
     return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
 
 
-# from_ = from_iterable
-
-
 def from_range(arg1: int, arg2: int = None, batch_size: int = None):
     if arg2 is None:
         start = 0
@@ -128,7 +118,33 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
 
 
 def from_list(buffer: List, batch_size: int = None):
-    return _from_iterable(iterable=buffer, batch_size=batch_size, n_elements=len(buffer))
+    # return _from_iterable(iterable=buffer, batch_size=batch_size, n_elements=len(buffer))
+
+    base = NumericalBase(len(buffer))
+
+    def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
+
+        if batch_size is None or batch_size == 1:
+            iterator = ([e] for e in buffer)
+        else:
+            n_full_slices = int(len(buffer) / batch_size)
+
+            def gen():
+                idx = 0
+                for _ in range(n_full_slices):
+                    next_idx = idx + batch_size
+                    yield buffer[idx:next_idx]
+                    idx = next_idx
+                yield buffer[idx:]
+
+            iterator = gen()
+
+        observable = IteratorAsObservable(iterator=iterator, scheduler=subscriber.scheduler,
+                                          subscribe_scheduler=subscriber.subscribe_scheduler)
+
+        return Subscription(info=SubscriptionInfo(base=base), observable=observable)
+
+    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func))
 
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,

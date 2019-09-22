@@ -1,3 +1,4 @@
+import sys
 import threading
 from abc import ABC, abstractmethod
 from typing import Callable, Any, List, Optional
@@ -91,8 +92,16 @@ class FlatMapObservable(Observable):
 
             def on_next(self, outer_elem: ElementType):
 
-                # materialize received values immediately
-                outer_vals = list(outer_elem())
+                if isinstance(outer_elem, list):
+                    outer_vals = outer_elem
+                else:
+                    try:
+                        # materialize received values immediately
+                        outer_vals = list(outer_elem)
+                    except:
+                        exc = sys.exc_info()
+                        self.on_error(exc)
+                        return stop_ack
 
                 with source._lock:
                     # blindly set state to Active, verify correctness of current state later
@@ -221,16 +230,16 @@ class FlatMapObservable(Observable):
                 self.completed = False
                 self.exception = None
 
-            def on_next(self, v):
+            def on_next(self, elem: ElementType):
 
                 # on_next, on_completed, on_error are called ordered/non-concurrently
-                ack = self.downstream_observer.on_next(v)
+                ack = self.downstream_observer.on_next(elem)
 
                 # if ack==Stop, then also update outer observer
                 if isinstance(ack, Stop):
                     with source._lock:
                         source._state = FlatMapObservable.Completed()
-                elif not isinstance(v, Continue):
+                elif not isinstance(elem, Continue):
                     class ResultSingle(Single):
                         def on_error(self, exc: Exception):
                             raise NotImplementedError

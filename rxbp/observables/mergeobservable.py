@@ -10,6 +10,7 @@ from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
+from rxbp.typing import ElementType
 
 
 class MergeObservable(Observable):
@@ -67,7 +68,7 @@ class MergeObservable(Observable):
 
         lock = threading.RLock()
 
-        def on_next_left(left_elem: Callable[[], Generator]):
+        def on_next_left(left_elem: ElementType):
             # print('match left element received')
 
             ack = AckSubject()
@@ -128,7 +129,7 @@ class MergeObservable(Observable):
 
             return ack
 
-        def on_next_right(right_elem: Callable[[], Generator]):
+        def on_next_right(right_elem: ElementType):
             # print('match right element received')
 
             ack = AckSubject()
@@ -171,7 +172,7 @@ class MergeObservable(Observable):
             # right was first
             elif isinstance(meas_left_state, ElementReceived):
 
-                class ReusltSingle(Single):
+                class ResultSingle(Single):
                     def on_error(self, exc: Exception):
                         raise NotImplementedError
 
@@ -181,7 +182,7 @@ class MergeObservable(Observable):
 
                             out_ack.subscribe(ack)
 
-                meas_left_state.ack.subscribe(ReusltSingle())
+                meas_left_state.ack.subscribe(ResultSingle())
 
             else:
                 raise Exception('illegal state "{}"'.format(meas_left_state))

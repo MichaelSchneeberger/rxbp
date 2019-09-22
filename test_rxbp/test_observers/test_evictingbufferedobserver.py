@@ -11,14 +11,13 @@ class TestEvictingBufferedObserver(TestCaseBase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
+        self.sink = TestObserver(immediate_coninue=0)
 
     def test_should_block_onnext_until_connected(self):
         s: TestScheduler = self.scheduler
 
-        o1 = TestObserver()
-
         strategy = DropOld(4)
-        evicting_obs = EvictingBufferedObserver(o1, scheduler=s, strategy=strategy, subscribe_scheduler=s)
+        evicting_obs = EvictingBufferedObserver(self.sink, scheduler=s, strategy=strategy, subscribe_scheduler=s)
         s1 = TestObservable(observer=evicting_obs)
 
         s1.on_next_single(1)
@@ -32,14 +31,14 @@ class TestEvictingBufferedObserver(TestCaseBase):
         ack = s1.on_next_single(5)
         self.assertIsInstance(ack, Continue)
 
-        self.assertEqual(len(o1.received), 0)
+        self.assertEqual(len(self.sink.received), 0)
 
         self.scheduler.advance_by(1)
 
-        self.assertEqual(o1.received, [2])
+        self.assertEqual([2], self.sink.received)
 
-        o1.ack.on_next(continue_ack)
+        self.sink.ack.on_next(continue_ack)
 
         self.scheduler.advance_by(1)
 
-        self.assertEqual(o1.received, [2, 3])
+        self.assertEqual(self.sink.received, [2, 3])

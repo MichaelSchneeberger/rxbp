@@ -220,12 +220,12 @@ class Zip2Observable(Observable):
         def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
             return self
 
-    def _iterate_over_batch(self, elem: Callable[[], Generator], is_left: bool):
+    def _iterate_over_batch(self, elem: ElementType, is_left: bool):
 
         upstream_ack = AckSubject()
-        iter = elem()
+        iterable = iter(elem)
 
-        next_state = Zip2Observable.ZipElements(is_left=is_left, ack=upstream_ack, iter=iter)
+        next_state = Zip2Observable.ZipElements(is_left=is_left, ack=upstream_ack, iter=iterable)
         with self.lock:
             raw_prev_state = self.zip_state
             raw_prev_termination_state = self.termination_state
@@ -242,17 +242,16 @@ class Zip2Observable(Observable):
             return upstream_ack
         elif not is_left and isinstance(prev_state, Zip2Observable.WaitOnRight):
             left_iter = prev_state.left_iter
-            right_iter = iter
+            right_iter = iterable
             other_upstream_ack = prev_state.left_ack
         elif is_left and isinstance(prev_state, Zip2Observable.WaitOnLeft):
-            left_iter = iter
+            left_iter = iterable
             right_iter = prev_state.right_iter
             other_upstream_ack = prev_state.right_ack
         else:
             raise Exception('unknown state "{}", is_left {}'.format(prev_state, is_left))
 
         n1 = [None]
-
         def zip_gen():
             while True:
                 n1[0] = None
@@ -267,11 +266,11 @@ class Zip2Observable(Observable):
         # buffer elements
         zipped_elements = list(zip_gen())
 
-        def result_gen():
-            for e in zipped_elements:
-                yield e
+        # def result_gen():
+        #     for e in zipped_elements:
+        #         yield e
 
-        downstream_ack = self.observer.on_next(result_gen)
+        downstream_ack = self.observer.on_next(zipped_elements)
 
         if n1[0] is None:
             new_left_iter = None
@@ -374,7 +373,7 @@ class Zip2Observable(Observable):
 
             return upstream_ack
 
-    def _on_next_left(self, elem):
+    def _on_next_left(self, elem: ElementType):
         try:
             return_ack = self._iterate_over_batch(elem=elem, is_left=True)
         except Exception as exc:
@@ -382,7 +381,7 @@ class Zip2Observable(Observable):
             return stop_ack
         return return_ack
 
-    def _on_next_right(self, elem):
+    def _on_next_right(self, elem: ElementType):
         try:
             return_ack = self._iterate_over_batch(elem=elem, is_left=False)
         except Exception as exc:

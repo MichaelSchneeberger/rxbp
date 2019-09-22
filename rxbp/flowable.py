@@ -13,6 +13,7 @@ from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.mergeflowable import MergeFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
+from rxbp.flowables.optfilterflowable import OptFilterFlowable
 from rxbp.flowables.pairwiseflowable import PairwiseFlowable
 from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
 from rxbp.flowables.scanflowable import ScanFlowable
@@ -93,6 +94,10 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         """
 
         flowable = FilterFlowable(source=self, predicate=predicate)
+        return Flowable(flowable)
+
+    def opt_filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
+        flowable = OptFilterFlowable(source=self, predicate=predicate)
         return Flowable(flowable)
 
     def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'Flowable[ValueType]':

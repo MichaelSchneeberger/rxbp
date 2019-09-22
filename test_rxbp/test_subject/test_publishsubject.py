@@ -17,18 +17,18 @@ class TestPublishSubject(unittest.TestCase):
         subject = PublishOSubject(scheduler=self.scheduler)
         s1 = TestObservable(observer=subject)
 
-        self.assertIsInstance(s1.on_next_seq([1]), Continue)
-        self.assertIsInstance(s1.on_next_seq([2]), Continue)
-        self.assertIsInstance(s1.on_next_seq([3]), Continue)
+        self.assertIsInstance(s1.on_next_iter([1]), Continue)
+        self.assertIsInstance(s1.on_next_iter([2]), Continue)
+        self.assertIsInstance(s1.on_next_iter([3]), Continue)
 
         o1 = TestObserver()
         o1.immediate_continue = 5
 
         subject.observe(ObserverInfo(o1))
 
-        self.assertIsInstance(s1.on_next_seq([4]), Continue)
-        self.assertIsInstance(s1.on_next_seq([5]), Continue)
-        self.assertIsInstance(s1.on_next_seq([6]), Continue)
+        self.assertIsInstance(s1.on_next_iter([4]), Continue)
+        self.assertIsInstance(s1.on_next_iter([5]), Continue)
+        self.assertIsInstance(s1.on_next_iter([6]), Continue)
         s1.on_completed()
 
         self.assertEqual(sum(o1.received), 15)
@@ -47,9 +47,9 @@ class TestPublishSubject(unittest.TestCase):
 
         obs_list = list(gen_observers())
 
-        self.assertIsInstance(s1.on_next_seq([1]), Continue)
-        self.assertIsInstance(s1.on_next_seq([2]), Continue)
-        self.assertIsInstance(s1.on_next_seq([3]), Continue)
+        self.assertIsInstance(s1.on_next_iter([1]), Continue)
+        self.assertIsInstance(s1.on_next_iter([2]), Continue)
+        self.assertIsInstance(s1.on_next_iter([3]), Continue)
         s1.on_completed()
 
         self.assertEqual(sum(sum(o.received) for o in obs_list), 60)
@@ -68,7 +68,7 @@ class TestPublishSubject(unittest.TestCase):
         obs_list = list(gen_observers())
 
         for i in range(10):
-            ack = s1.on_next_seq([i])
+            ack = s1.on_next_iter([i])
             self.assertFalse(ack.has_value)
 
             for o in obs_list:
@@ -102,7 +102,7 @@ class TestPublishSubject(unittest.TestCase):
 
         obs_list = list(gen_observers())
 
-        s1.on_next_seq([1])
+        s1.on_next_iter([1])
         s1.on_error(dummy)
 
         o1 = TestObserver()
@@ -120,7 +120,7 @@ class TestPublishSubject(unittest.TestCase):
         o1 = TestObserver()
         d = subject.observe(ObserverInfo(o1))
 
-        s1.on_next_seq([1])
+        s1.on_next_iter([1])
         s1.on_completed()
 
         self.scheduler.advance_by(1)

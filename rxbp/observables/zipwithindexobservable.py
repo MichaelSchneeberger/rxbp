@@ -3,6 +3,7 @@ from typing import Callable, Any
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
+from rxbp.typing import ElementType
 
 
 class ZipWithIndexObservable(Observable):
@@ -12,20 +13,20 @@ class ZipWithIndexObservable(Observable):
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
-        count = [0]
-
-        def on_next(v):
-            def map_gen():
-                for e in v():
-                    result = self.selector(e, count[0])
-                    count[0] += 1
-                    yield result
-
-            return observer.on_next(map_gen)
+        selector = self.selector
 
         class ZipCountObserver(Observer):
-            def on_next(self, v):
-                return on_next(v)
+            def __init__(self):
+                self.count = 0
+
+            def on_next(self, elem: ElementType):
+                def map_gen():
+                    for v in elem:
+                        result = selector(v, self.count)
+                        self.count += 1
+                        yield result
+
+                return observer.on_next(map_gen())
 
             def on_error(self, exc):
                 return observer.on_error(exc)

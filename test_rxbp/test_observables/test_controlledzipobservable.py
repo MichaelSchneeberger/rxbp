@@ -39,10 +39,10 @@ class TestControlledZipObservable(TestCaseBase):
 
         self.sink.immediate_continue = 10
 
-        ack1 = self.s1.on_next_seq([go, stop, stop, go])
+        ack1 = self.s1.on_next_iter([go, stop, stop, go])
         self.assertListEqual(self.sink.received, [])
 
-        ack2 = self.s2.on_next_seq([1, 2, 3])
+        ack2 = self.s2.on_next_iter([1, 2, 3])
         self.assertListEqual(self.sink.received, [(go, 1), (stop, 2), (stop, 2), (go, 2)])
 
     def test_use_case_1_async_ack(self):
@@ -56,16 +56,16 @@ class TestControlledZipObservable(TestCaseBase):
         go = self.Go()
         stop = self.Stop()
 
-        ack1 = self.s1.on_next_seq([go, stop])
+        ack1 = self.s1.on_next_iter([go, stop])
         self.assertListEqual(self.sink.received, [])
 
-        ack2 = self.s2.on_next_seq([1, 2, 3])
+        ack2 = self.s2.on_next_iter([1, 2, 3])
         self.assertListEqual(self.sink.received, [(go, 1), (stop, 2)])
 
         self.sink.ack.on_next(continue_ack)
         self.assertTrue(ack1.has_value)
 
-        ack3 = self.s1.on_next_seq([stop, go])
+        ack3 = self.s1.on_next_iter([stop, go])
         self.assertListEqual(self.sink.received, [(go, 1), (stop, 2), (stop, 2), (go, 2)])
 
         self.sink.ack.on_next(continue_ack)

@@ -42,13 +42,13 @@ class TestZip2Observable(TestCaseBase):
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         # state WaitOnLeftRight -> WaitOnRight
-        ack1 = self.s1.on_next_seq([1, 2, 3, 4])
+        ack1 = self.s1.on_next_iter([1, 2, 3, 4])
         self.assertListEqual(self.sink.received, [])
 
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnRight
-        ack2 = self.s2.on_next_seq([11, 12])
+        ack2 = self.s2.on_next_iter([11, 12])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
@@ -56,14 +56,14 @@ class TestZip2Observable(TestCaseBase):
         self.assertTrue(ack2.has_value)
 
         # state WaitOnRight -> WaitOnLeftRight
-        self.s2.on_next_seq([13, 14])
+        self.s2.on_next_iter([13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         self.s1.on_completed()
         self.assertTrue(self.sink.is_completed)
 
-        self.s2.on_next_seq([13, 14])
+        self.s2.on_next_iter([13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.Stopped)
 
@@ -72,12 +72,12 @@ class TestZip2Observable(TestCaseBase):
         obs.observe(ObserverInfo(self.sink))
 
         # state WaitOnLeftRight -> WaitOnRight
-        ack1: Ack = self.s1.on_next_seq([1, 2, 3, 4])
+        ack1: Ack = self.s1.on_next_iter([1, 2, 3, 4])
         self.assertListEqual(self.sink.received, [])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnRight
-        ack2 = self.s2.on_next_seq([11, 12])
+        ack2 = self.s2.on_next_iter([11, 12])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
         self.assertFalse(ack1.has_value)
@@ -89,7 +89,7 @@ class TestZip2Observable(TestCaseBase):
         self.assertTrue(ack2.has_value)
 
         # state WaitOnRight -> WaitOnLeftRight
-        ack2 = self.s2.on_next_seq([13, 14])
+        ack2 = self.s2.on_next_iter([13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
@@ -105,12 +105,12 @@ class TestZip2Observable(TestCaseBase):
         self.sink.immediate_continue = 10
 
         # state WaitOnLeftRight -> WaitOnRight
-        ack1 = self.s1.on_next_seq([1, 2])
+        ack1 = self.s1.on_next_iter([1, 2])
         self.assertListEqual(self.sink.received, [])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnLeft
-        ack2 = self.s2.on_next_seq([11, 12, 13, 14])
+        ack2 = self.s2.on_next_iter([11, 12, 13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
         self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeft)
 
@@ -124,7 +124,7 @@ class TestZip2Observable(TestCaseBase):
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(self.sink))
 
-        self.s1.on_next_seq([1])
+        self.s1.on_next_iter([1])
         self.s1.on_error(Exception())
 
         self.assertIsNotNone(self.sink.was_thrown)
@@ -133,7 +133,7 @@ class TestZip2Observable(TestCaseBase):
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(self.sink))
 
-        self.s1.on_next_seq([1])
+        self.s1.on_next_iter([1])
         self.s2.on_error(Exception())
 
         self.assertIsNotNone(self.sink.was_thrown)

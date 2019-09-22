@@ -1,6 +1,5 @@
 from rxbp.ack.ackimpl import Continue, Stop, stop_ack
 from rxbp.ack.single import Single
-from rxbp.observers.anonymousobserver import AnonymousObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -45,7 +44,7 @@ class DebugObservable(Observable):
         class DebugObserver(Observer):
             def on_next(self, v):
                 try:
-                    materialized = list(v())
+                    materialized = list(v)
                 except Exception as exc:
                     source.on_error_func(exc)
                     observer.on_error(exc)
@@ -53,11 +52,8 @@ class DebugObservable(Observable):
 
                 source.on_next_func(materialized)
 
-                def gen():
-                    yield from materialized
-
                 try:
-                    ack = observer.on_next(gen)
+                    ack = observer.on_next(materialized)
                 except Exception as e:
                     # self.on_next_exception(e)
                     raise

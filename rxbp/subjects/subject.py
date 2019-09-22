@@ -18,11 +18,11 @@ class Subject(SubjectBase):
         return Subscription(SubscriptionInfo(base=None), self._obs_subject)
 
     def on_next(self, elem: Any):
-        def gen_val():
-            yield elem
+        # def gen_val():
+        #     yield elem
 
         if self._obs_subject is not None:
-            return self._obs_subject.on_next(gen_val)
+            return self._obs_subject.on_next([elem])
         else:
             return continue_ack
 

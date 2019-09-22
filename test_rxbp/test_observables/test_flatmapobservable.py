@@ -34,7 +34,7 @@ class TestZip2Observable(TestCaseBase):
 
         ack1 = self.s1.on_next_single(self.s2)
 
-        ack2 = self.s2.on_next_seq([1, 2])
+        ack2 = self.s2.on_next_iter([1, 2])
         self.assertListEqual(self.sink.received, [1, 2])
 
         self.s2.on_completed()
@@ -42,5 +42,5 @@ class TestZip2Observable(TestCaseBase):
         self.assertTrue(ack1.has_value)
         ack1 = self.s1.on_next_single(self.s3)
 
-        ack2 = self.s3.on_next_seq([3, 4])
+        ack2 = self.s3.on_next_iter([3, 4])
         self.assertListEqual(self.sink.received, [1, 2, 3, 4])

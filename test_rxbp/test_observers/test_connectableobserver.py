@@ -25,7 +25,7 @@ class TestConnectableObserver(TestCaseBase):
         conn_obs = ConnectableObserver(o1, scheduler=s, subscribe_scheduler=TrampolineScheduler())
         s1 = TestObservable(observer=conn_obs)
 
-        f = s1.on_next_seq([10])
+        f = s1.on_next_iter([10])
         s1.on_completed()
         s.advance_by(1)
 
@@ -90,7 +90,7 @@ class TestConnectableObserver(TestCaseBase):
                                           subscribe_scheduler=self.scheduler)
         s1 = TestObservable(observer=conn_obs)
 
-        s1.on_next_seq([10])
+        s1.on_next_iter([10])
         conn_obs.push_first(self._gen_value(1))
         conn_obs.push_first(self._gen_value(2))
         conn_obs.push_complete()
@@ -125,7 +125,7 @@ class TestConnectableObserver(TestCaseBase):
         conn_obs = ConnectableObserver(TestObserver(), scheduler=s, subscribe_scheduler=self.scheduler)
         s1 = TestObservable(observer=conn_obs)
 
-        s1.on_next_seq([10])
+        s1.on_next_iter([10])
         conn_obs.push_first(1)
         conn_obs.push_first(2)
         conn_obs.push_error(Exception('dummy exception'))

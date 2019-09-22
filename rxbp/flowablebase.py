@@ -4,7 +4,7 @@ from typing import Callable, Any, Tuple, Generic
 
 from rx.disposable import Disposable
 from rxbp.ack.ackimpl import continue_ack, stop_ack
-from rxbp.observers.anonymousobserver import AnonymousObserver
+from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
@@ -54,17 +54,23 @@ class FlowableBase(Generic[ValueType], ABC):
         on_error_ = default_on_error if on_error is None else on_error
         on_completed_ = on_completed or (lambda: None)
 
-        def on_next_with_ack(v):
-            try:
-                for value in v():
-                    on_next_(value)
-                return continue_ack
-            except Exception as exc:
-                on_error_(exc)
-                return stop_ack
+        class SubscribeObserver(Observer):
+            def on_next(self, v):
+                try:
+                    for value in v:
+                        on_next_(value)
+                    return continue_ack
+                except Exception as exc:
+                    on_error_(exc)
+                    return stop_ack
 
-        observer = AnonymousObserver(on_next_func=on_next_with_ack, on_error_func=on_error_, on_completed_func=on_completed_)
-        subscription = ObserverInfo(observer=observer)
+            def on_error(self, exc: Exception):
+                on_error_(exc)
+
+            def on_completed(self):
+                on_completed_()
+
+        subscription = ObserverInfo(observer=SubscribeObserver())
 
         disposable = self.subscribe_(subscriber=subscriber, observer_info=subscription)
         return disposable

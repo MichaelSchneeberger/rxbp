@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 
 from rxbp.ack.ackbase import AckBase
-from rxbp.typing import ValueType
+from rxbp.typing import ElementType
 
 
 class Observer(ABC):
     @abstractmethod
-    def on_next(self, elem: ValueType) -> AckBase:
+    def on_next(self, elem: ElementType) -> AckBase:
         ...
 
     @abstractmethod

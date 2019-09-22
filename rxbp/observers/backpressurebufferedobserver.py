@@ -8,6 +8,7 @@ from rxbp.ack.single import Single
 
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ElementType
 
 
 class BackpressureBufferedObserver(Observer):
@@ -30,7 +31,7 @@ class BackpressureBufferedObserver(Observer):
 
         self.lock = threading.RLock()
 
-    def on_next(self, v):
+    def on_next(self, elem: ElementType):
         if self.upstream_is_complete or self.downstream_is_complete:
             return stop_ack
         else:
@@ -42,7 +43,7 @@ class BackpressureBufferedObserver(Observer):
             if is_back_pressured is None:
                 # buffer is not full, no back-pressure is needed
                 if to_push < self.buffer_size:
-                    self.queue.put(item=v)
+                    self.queue.put(item=elem)
                     self.push_to_consumer(to_push)
                     return continue_ack
 
@@ -50,12 +51,12 @@ class BackpressureBufferedObserver(Observer):
                 else:
                     ack = AckSubject()
                     self.back_pressured = ack
-                    self.queue.put(item=v)
+                    self.queue.put(item=elem)
                     self.push_to_consumer(to_push)
                     return ack
 
             else:
-                self.queue.put(item=v)
+                self.queue.put(item=elem)
                 self.push_to_consumer(to_push)
                 return is_back_pressured
 

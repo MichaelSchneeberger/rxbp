@@ -17,7 +17,7 @@ from rxbp.selectors.selectionmsg import select_next, select_completed
 class IteratorAsObservable(Observable):
     def __init__(
             self,
-            iterator: Generator[Callable[[], Generator[Any, Any, None]], Any, None],
+            iterator: Iterator[Iterator[Any]],
             scheduler: Scheduler,
             subscribe_scheduler: Scheduler,
             on_finish: Disposable = Disposable(),
@@ -112,13 +112,6 @@ class IteratorAsObservable(Observable):
 
             try:
                 ack = observer.on_next(current_item)
-
-                # def gen_select_msg():
-                #     for _ in range(len(current_item)):
-                #         yield select_next
-                #     yield select_completed
-                #
-                # self.selector.on_next(gen_select_msg)
 
                 if not has_next:
                     try:

@@ -30,7 +30,12 @@ class FirstObservable(Observable):
         class FirstObserver(Observer):
             def on_next(self, v):
                 source.is_first = False
-                observer.on_next(v)
+                first_elem = next(v())
+
+                def gen_first():
+                    yield first_elem
+
+                observer.on_next(gen_first)
                 observer.on_completed()
                 return stop_ack
 
