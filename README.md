@@ -82,24 +82,61 @@ allow it to have mutable states where it make sense.
 Compared to RxPY Observables, a `Flowable` uses `Observers` that are
 able to back-pressure an `on_next` method call.
 
-### share operator
+### MultiCast (experimental)
 
-The `share` method does not return a multicast object directly. 
-Instead, it takes a function exposing a multicast `Flowable` via its arguments.
-This has the advantage that the `share` operation works even if the
-resulting `Flowable` is subscribed more than once.
+A `MultiCast` is used when a `Flowable` emits elements to more than
+one `Observer`, and in case of nested Flowables like 
+`Flowable[Flowable]`.
+
+In RxPY, there are operators called `publish` and `share`,
+which create a multicast observable that can then be subscribed
+by more than one downstream subscriber. In *rxbackpressure*, however,
+there is no such operator, and there are good reasons to not have one.
+The problem is that an RxPY observable sequence using a multicast 
+observable can only be subscribed once. This is because calling
+the `subscribe` method of a multicast observable more than once will
+not rerun the observable but register the subscriber to a multicast
+subscription.
+
+``` python
+import rx
+from rx import operators as op
+
+o = rx.range(4).pipe(
+    op.share(),
+)
+
+o.subscribe(print)
+o.subscribe(print)
+```
+
+The previous code outputs:
+
+```
+0
+1
+2
+3
+```
+
+To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`.
+A `MultiCast` represents a collection of `Flowable` and can
+ be though of as `Flowable[T[Flowable]]` where T is defined by the user.
+It provide operators `rxbp.multicast.op` to share `Flowables` but also
+work with nested `Flowables` in a safe way.
 
 ```python
 import rxbp
 
-rxbp.range(10).pipe(
-    rxbp.op.share(lambda f1: f1.pipe(
-        rxbp.op.zip(f1.pipe(
+f = rxbp.to_multicast(rxbp.range(10)).pipe(
+    rxbp.multicast.op.share(lambda base: base[0].pipe(
+        rxbp.op.zip(base[0].pipe(
             rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),
-        )
+        ),
     )),
-).subscribe(print)
+).to_flowable()
+f.subscribe(print)
 ```
 
 The previous code outputs:
@@ -170,16 +207,17 @@ The advantage of a RxPY Observable is that it is generally faster
 and more lightweight.
 
 
-Implemented builders and operators
-----------------------------------
+Implemented builders and operators (Flowable)
+---------------------------------------------
 
 ### Create a Flowable
 
-- `return_value` - creates a Flowable that emits a single element
 - `from_` - create a Flowable that emits each element of an iterable
-- `from_iterator` - see `from_`
-- `range` - creates a Flowable that emits elements defined by the range
+- `from_iterable` - see `from_`
+- `from_list` - create a Flowable that emits each element of a list
 - `from_rx` - creates a Flowable from a rx Observable that buffers each element emitted by the Observable
+- `return_value` - creates a Flowable that emits a single element
+- `range` - creates a Flowable that emits elements defined by the range
 
 ### Transforming operators
 
@@ -190,7 +228,6 @@ Implemented builders and operators
 - `pairwise` - pairing two consecutive elements emitted by the Flowable
 - `repeat_first` - repeat the first element by the Flowable forever (until disposed)
 - `scan` - Applies an accumulator function over a Flowable sequence and returns each intermediate result.
-- `share` - exposes a multicast flowable that allows multible subscriptions
 - `zip_with_index` - The same as `map`, except that the selector function takes 
 index in addition to the value
 
@@ -212,3 +249,10 @@ a strict sequence.
 ### Create a rx Observable
 
 - `to_rx` - create a rx Observable from a Observable
+
+Implemented builders and operators (MultiCast)
+---------------------------------------------
+
+### Create a MultiCast
+
+- `to_multicast` - exposes a multicast flowable that allows multible subscriptions

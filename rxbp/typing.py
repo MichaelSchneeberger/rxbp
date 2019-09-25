@@ -12,4 +12,4 @@ ValueType = TypeVar('ValueType')
 # an iterator.
 ElementType = Union[Iterator[ValueType], List[ValueType]]
 
-BaseType = TypeVar('BaseType')
+# MultiCastBase = TypeVar('BaseType')

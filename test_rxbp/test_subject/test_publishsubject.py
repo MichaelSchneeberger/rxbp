@@ -110,9 +110,9 @@ class TestPublishSubject(unittest.TestCase):
 
         for obs in obs_list:
             self.assertListEqual(obs.received, [1])
-            self.assertEqual(obs.was_thrown, dummy)
+            self.assertEqual(obs.exception, dummy)
 
-        self.assertEqual(o1.was_thrown, dummy)
+        self.assertEqual(o1.exception, dummy)
 
     def test_unsubscribe_after_on_complete(self):
         subject = PublishOSubject(self.scheduler)

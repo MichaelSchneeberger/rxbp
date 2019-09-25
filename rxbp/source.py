@@ -3,12 +3,14 @@ import itertools
 from typing import Iterator, Iterable, Any, Callable, List, Tuple
 
 import rx
+import rxbp
 from rx import operators
 
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.deferflowable import DeferFlowable
+from rxbp.multicast.multicast import MultiCast
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
@@ -300,21 +302,21 @@ def match(*sources: Flowable) -> Flowable:
         return sources[0].match(*sources[1:])
 
 
-def share(sources: List[Flowable], func: Callable[..., Flowable]):
-    def gen_stack():
-        for source in reversed(sources):
-            def _(func: Callable[..., Flowable], source=source):
-                def __(*args):
-                    def ___(f: Flowable):
-                        new_args = args + (f,)
-                        return func(*new_args)
-
-                    return source.share(___)
-                return __
-            yield _
-
-    __ = functools.reduce(lambda acc, _: _(acc), gen_stack(), func)
-    return __()
+# def share(sources: List[Flowable], func: Callable[..., Flowable]):
+    # def gen_stack():
+    #     for source in reversed(sources):
+    #         def _(func: Callable[..., Flowable], source=source):
+    #             def __(*args):
+    #                 def ___(f: Flowable):
+    #                     new_args = args + (f,)
+    #                     return func(*new_args)
+    #
+    #                 return source.share(___)
+    #             return __
+    #         yield _
+    #
+    # __ = functools.reduce(lambda acc, _: _(acc), gen_stack(), func)
+    # return __()
 
 
 # def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None) -> Flowable:

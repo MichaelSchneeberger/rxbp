@@ -1,8 +1,9 @@
 from . import op
-from . import stream
-# from . import source
-from .source import defer, from_iterable, from_range, from_list, return_value, from_rx, concat, share, zip, match, \
+from . import multicast
+
+from .source import defer, from_iterable, from_range, from_list, return_value, from_rx, concat, zip, match, \
     merge, empty
+from .multicast.source import from_flowables as to_multicast
 
 
 from_ = from_iterable

@@ -1,6 +1,8 @@
 from typing import Any, Callable, Iterable, Iterator
 
+import rxbp
 from rxbp.flowable import Flowable
+from rxbp.multicast.multicast import MultiCast
 from rxbp.scheduler import Scheduler
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
@@ -254,7 +256,7 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
 #     return ObservableOperator(func)
 
 
-def share(func: Callable[[Flowable], Flowable]):
+def share(func: Callable[[Flowable], Flowable]) -> MultiCast:
     """ Share takes a function and exposes a multi-cast flowable via the function's arguments. The multi-cast
     flowable back-pressures, when the first subscriber back-pressures. In case of more than one subscribers,
     the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures
@@ -263,9 +265,10 @@ def share(func: Callable[[Flowable], Flowable]):
     :return: flowable returned by the share function
     """
 
-    def inner_func(source: Flowable) -> Flowable:
-        return source.share(func=func)
-    return FlowableOperator(inner_func)
+    # def inner_func(source: Flowable) -> Flowable:
+    #     return source.share(func=func)
+    # return FlowableOperator(inner_func)
+    rxbp.multicast.source.from_flowables()
 
 
 def to_list():

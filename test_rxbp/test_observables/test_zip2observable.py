@@ -127,7 +127,7 @@ class TestZip2Observable(TestCaseBase):
         self.s1.on_next_iter([1])
         self.s1.on_error(Exception())
 
-        self.assertIsNotNone(self.sink.was_thrown)
+        self.assertIsNotNone(self.sink.exception)
 
     def test_on_completed(self):
         obs = Zip2Observable(self.s1, self.s2)
@@ -136,4 +136,4 @@ class TestZip2Observable(TestCaseBase):
         self.s1.on_next_iter([1])
         self.s2.on_error(Exception())
 
-        self.assertIsNotNone(self.sink.was_thrown)
+        self.assertIsNotNone(self.sink.exception)
