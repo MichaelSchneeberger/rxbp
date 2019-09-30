@@ -65,33 +65,34 @@ Differences from RxPY
 
 ### Flowable
 
-Similar to a RxPY Observable, a `Flowable` implements a `subscribe` method, which
-makes it possible to describe a data flow from source to sink. The description is
-done with *rxbackpressure* operators exposed to `rxbp.op`.
+Similar to a RxPY Observable, a `Flowable` implements a `subscribe` 
+method, which is a mechanism that makes it possible to describe a 
+data flow from its source to some sink. The description is
+done with *rxbackpressure* operators exposed by `rxbp.op`.
 
-Like in
-functional programming, usings *rxbackpressure* operators does not create
-any mutable states but rather concatenates functions without calling them
-yet. Or in other words, we first describe what we want to do, and then 
-we execute the plan. A `Flowable` is executed by calling its `subscribe`
-method. This will then start a chain reaction where downsream `Flowables`
-call the `subscribe` method of their linked upstream `Flowable` until
+Like in functional programming, usings *rxbackpressure* operators 
+does not create any mutable states but rather concatenates functions 
+without calling them yet. Or, we first describe what we intend to 
+do in form of a plan, and then we execute the plan. A `Flowable` is 
+executed by calling its `subscribe` method. This will start a chain 
+reactions, where downsream each `Flowables` calls the `subscribe` 
+method of its upstream `Flowable` until
 the sources start emitting data. Once a `Flowable` is subscribed, we
-allow it to have mutable states where it make sense.
+allow it to have mutable states.
  
 Compared to RxPY Observables, a `Flowable` uses `Observers` that are
-able to back-pressure an `on_next` method call.
+able to back-pressure on an `on_next` method call.
 
 ### MultiCast (experimental)
 
 A `MultiCast` is used when a `Flowable` emits elements to more than
 one `Observer`, and in case of nested Flowables like 
-`Flowable[Flowable]`.
+`Flowable[T[Flowable]]`.
 
 In RxPY, there are operators called `publish` and `share`,
 which create a multicast observable that can then be subscribed
 by more than one downstream subscriber. In *rxbackpressure*, however,
-there is no such operator, and there are good reasons to not have one.
+there is no such operator, and there are good reasons for that.
 The problem is that an RxPY observable sequence using a multicast 
 observable can only be subscribed once. This is because calling
 the `subscribe` method of a multicast observable more than once will
@@ -119,10 +120,11 @@ The previous code outputs:
 3
 ```
 
-To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`.
+To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
+type.
 A `MultiCast` represents a collection of `Flowable` and can
  be though of as `Flowable[T[Flowable]]` where T is defined by the user.
-It provide operators `rxbp.multicast.op` to share `Flowables` but also
+It provide operators through `rxbp.multicast.op` to share `Flowables` but also
 work with nested `Flowables` in a safe way.
 
 ```python
@@ -192,7 +194,7 @@ When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
 A `Flowable` is used when some asynchronous stage cannot process the
-data fast enough or needs to synchronize the data with some other event.
+data fast enough, or needs to synchronize the data with some other event.
 Let's take the `zip` operator for instance. It gets elements from
 two or more sources and emits a tuple once it received one
 element from each source. But what happens if one source emits the
@@ -200,8 +202,9 @@ elements before the others do? Without back-pressure, the `zip` operation
 has to buffer the elements until it receives data from the other sources.
 This might be ok depending on how much data needs to be buffered. But
 often we can not risk having too much data buffered somewhere in our
-stream, which might cause a out of memory exception. Therefore, it
-is better to back-pressure data sources until that data is needed.
+stream, which might cause an out of memory exception. Therefore, it
+is better to back-pressure data sources until that data is actually
+needed.
 
 The advantage of a RxPY Observable is that it is generally faster
 and more lightweight.
