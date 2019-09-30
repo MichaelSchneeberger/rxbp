@@ -7,6 +7,7 @@ from rxbp.ack.ackimpl import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
+from rxbp.typing import ElementType
 
 
 class FirstObservable(Observable):
@@ -28,14 +29,14 @@ class FirstObservable(Observable):
         source = self
 
         class FirstObserver(Observer):
-            def on_next(self, v):
+            def on_next(self, elem: ElementType):
                 source.is_first = False
-                first_elem = next(v())
+                first_elem = next(iter(elem))
 
                 def gen_first():
                     yield first_elem
 
-                observer.on_next(gen_first)
+                observer.on_next(gen_first())
                 observer.on_completed()
                 return stop_ack
 

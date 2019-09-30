@@ -1,24 +1,32 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
-from typing import Callable, Generic
+from typing import Generic
 
 import rxbp
 
 from rxbp.flowable import Flowable
-from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
+from rxbp.multicast.typing import MultiCastValue
 
 
 class MultiCastBase(Generic[MultiCastValue], ABC):
-    def to_flowable(
-            self,
-            func: Callable[[MultiCastValue], Flowable[ValueType]] = None,
-    ) -> Flowable[ValueType]:
-        if func is None:
-            func = lambda v: v
+    @dataclass
+    class LiftedFlowable:
+        source: Flowable
+
+    def to_flowable(self) -> Flowable[ValueType]:
+        def flat_map_func(v: MultiCastValue):
+            if isinstance(v, MultiCastBase.LiftedFlowable):
+                return v.source
+            else:
+                return v
 
         return self.source.pipe(
-            rxbp.op.flat_map(func),
+            rxbp.op.filter(lambda v: isinstance(v, MultiCastBase.LiftedFlowable) or isinstance(v, Flowable)),
+            rxbp.op.first(),
+            rxbp.op.subscribe_on(),
+            rxbp.op.flat_map(flat_map_func),
         )
 
     @property

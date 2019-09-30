@@ -14,7 +14,7 @@ class TestObserver(Observer):
         self.is_completed = False
         self.exception = None
         self.immediate_continue = immediate_coninue
-        self.ack = None
+        self.ack: AckSubject = None
 
     def on_next(self, elem: ElementType):
         values = list(elem)

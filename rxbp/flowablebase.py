@@ -14,24 +14,11 @@ from rxbp.typing import ValueType
 
 
 class FlowableBase(Generic[ValueType], ABC):
+    """ See `Flowable` for more information.
 
-    def __init__(self):
-        """
-        :param base: two flowables with the the same base emit the same number of elements
-        :param transformables: a set of bases different to the current base, a transformation is the capability to
-        transform another Subscriptable to the current base, the actual transformations are defined in the `Observable`
-        """
-
-        pass
-
-    def subscribe_(self, subscriber: Subscriber, observer_info: ObserverInfo):
-        def action(_, __):
-            subscription = self.unsafe_subscribe(subscriber=subscriber)
-            disposable = subscription.observable.observe(observer_info=observer_info)
-            return disposable
-
-        disposable = subscriber.subscribe_scheduler.schedule(action)
-        return disposable
+    Two class are used to implement `Flowable`. `FlowableBase` implements the basic interface including the `subscribe`
+    method. `Flowable` implements the base Flowable operators, which are accessible through `rxbp.op`.
+    """
 
     def subscribe(
             self,
@@ -41,6 +28,13 @@ class FlowableBase(Generic[ValueType], ABC):
             scheduler: Scheduler = None,
             subscribe_scheduler: Scheduler = None
     ) -> Disposable:
+        """ Calling `subscribe` method starts some kind of process that
+
+         start a chain reaction where downsream `Flowables`
+    call the `subscribe` method of their linked upstream `Flowable` until
+    the sources start emitting data. Once a `Flowable` is subscribed, we
+    allow it to have mutable states where it make sense.
+        """
 
         subscribe_scheduler_ = subscribe_scheduler or TrampolineScheduler()
         scheduler_ = scheduler or subscribe_scheduler_
@@ -73,6 +67,16 @@ class FlowableBase(Generic[ValueType], ABC):
         subscription = ObserverInfo(observer=SubscribeObserver())
 
         disposable = self.subscribe_(subscriber=subscriber, observer_info=subscription)
+        return disposable
+
+    def subscribe_(self, subscriber: Subscriber, observer_info: ObserverInfo):
+        subscription = self.unsafe_subscribe(subscriber=subscriber)
+
+        def action(_, __):
+            disposable = subscription.observable.observe(observer_info=observer_info)
+            return disposable
+
+        disposable = subscriber.subscribe_scheduler.schedule(action)
         return disposable
 
     @abstractmethod

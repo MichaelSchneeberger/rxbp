@@ -45,6 +45,12 @@ def execute_on(scheduler: Scheduler):
     return FlowableOperator(func)
 
 
+def subscribe_on(scheduler: Scheduler = None):
+    def func(source: Flowable) -> Flowable:
+        return source.subscribe_on(scheduler=scheduler)
+    return FlowableOperator(func)
+
+
 def controlled_zip(right: FlowableBase,
                    request_left: Callable[[Any, Any], bool] = None,
                    request_right: Callable[[Any, Any], bool] = None,
@@ -256,7 +262,7 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
 #     return ObservableOperator(func)
 
 
-def share(func: Callable[[Flowable], Flowable]) -> MultiCast:
+def share(func: Callable[[Flowable], Flowable]):
     """ Share takes a function and exposes a multi-cast flowable via the function's arguments. The multi-cast
     flowable back-pressures, when the first subscriber back-pressures. In case of more than one subscribers,
     the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures
@@ -265,10 +271,10 @@ def share(func: Callable[[Flowable], Flowable]) -> MultiCast:
     :return: flowable returned by the share function
     """
 
-    # def inner_func(source: Flowable) -> Flowable:
-    #     return source.share(func=func)
-    # return FlowableOperator(inner_func)
-    rxbp.multicast.source.from_flowables()
+    def inner_func(source: Flowable) -> Flowable:
+        return source.share(func=func)
+    return FlowableOperator(inner_func)
+    # rxbp.multicast.source.from_flowables()
 
 
 def to_list():

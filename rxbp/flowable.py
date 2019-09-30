@@ -18,6 +18,7 @@ from rxbp.flowables.optfilterflowable import OptFilterFlowable
 from rxbp.flowables.pairwiseflowable import PairwiseFlowable
 from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
 from rxbp.flowables.scanflowable import ScanFlowable
+from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.flowables.tolistflowable import ToListFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.pipe import pipe
@@ -38,6 +39,23 @@ from rxbp.typing import ValueType
 
 
 class Flowable(Generic[ValueType], FlowableBase[ValueType]):
+    """ A `Flowable` implements a `subscribe` method, which
+    makes it possible to describe a data flow from source to sink. The description is
+    done with *rxbackpressure* operators exposed to `rxbp.op`.
+
+    Like in functional programming, usings *rxbackpressure* operators does not create
+    any mutable states but rather concatenates functions without calling them
+    yet. Or in other words, we first describe what we want to do, and then
+    we execute the plan. A `Flowable` is executed by calling its `subscribe`
+    method. This will start a chain reaction where downsream `Flowables`
+    call the `subscribe` method of their linked upstream `Flowable` until
+    the sources start emitting data. Once a `Flowable` is subscribed, we
+    allow it to have mutable states where it make sense.
+
+    Compared to RxPY Observables, a `Flowable` uses `Observers` that are
+    able to back-pressure an `on_next` method call.
+    """
+
     def __init__(self, flowable: FlowableBase[ValueType]):
         super().__init__()
 
@@ -83,8 +101,10 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         ))
 
     def execute_on(self, scheduler: Scheduler):
-
         return Flowable(ExecuteOnFlowable(source=self, scheduler=scheduler))
+
+    def subscribe_on(self, scheduler: Scheduler):
+        return Flowable(SubscribeOnFlowable(source=self, scheduler=scheduler))
 
     def filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
         """ Only emits those items for which the given predicate holds

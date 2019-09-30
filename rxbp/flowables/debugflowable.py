@@ -21,6 +21,8 @@ class DebugFlowable(FlowableBase):
         self._on_ack_msg = on_ack_msg
 
     def unsafe_subscribe(self, subscriber: Subscriber):
+        print(f'{self._name}.on_subscribe( subscribe_scheduler={subscriber.subscribe_scheduler} )')
+
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
 
         observable = DebugObservable(source=subscription.observable, name=self._name, on_next=self._on_next, on_subscribe=self._on_subscribe,

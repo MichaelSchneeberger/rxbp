@@ -39,18 +39,18 @@ class TestZip2Observable(TestCaseBase):
 
         self.sink.immediate_continue = 10
 
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         # state WaitOnLeftRight -> WaitOnRight
         ack1 = self.s1.on_next_iter([1, 2, 3, 4])
         self.assertListEqual(self.sink.received, [])
 
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnRight
         ack2 = self.s2.on_next_iter([11, 12])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         self.assertFalse(ack1.has_value)
         self.assertTrue(ack2.has_value)
@@ -58,14 +58,14 @@ class TestZip2Observable(TestCaseBase):
         # state WaitOnRight -> WaitOnLeftRight
         self.s2.on_next_iter([13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         self.s1.on_completed()
         self.assertTrue(self.sink.is_completed)
 
         self.s2.on_next_iter([13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.Stopped)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.Stopped)
 
     def test_init_termination_state_wait_on_left_right_delayed_ack(self):
         obs = Zip2Observable(self.s1, self.s2)
@@ -74,12 +74,12 @@ class TestZip2Observable(TestCaseBase):
         # state WaitOnLeftRight -> WaitOnRight
         ack1: Ack = self.s1.on_next_iter([1, 2, 3, 4])
         self.assertListEqual(self.sink.received, [])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnRight
         ack2 = self.s2.on_next_iter([11, 12])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
         self.assertFalse(ack1.has_value)
         self.assertFalse(ack2.has_value)
 
@@ -91,7 +91,7 @@ class TestZip2Observable(TestCaseBase):
         # state WaitOnRight -> WaitOnLeftRight
         ack2 = self.s2.on_next_iter([13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         self.sink.ack.on_next(continue_ack)
         # back-pressure both
@@ -107,12 +107,12 @@ class TestZip2Observable(TestCaseBase):
         # state WaitOnLeftRight -> WaitOnRight
         ack1 = self.s1.on_next_iter([1, 2])
         self.assertListEqual(self.sink.received, [])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnRight)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnLeft
         ack2 = self.s2.on_next_iter([11, 12, 13, 14])
         self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
-        self.assertIsInstance(obs.zip_state.get_current_state(obs.termination_state), Zip2Observable.WaitOnLeft)
+        self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeft)
 
         self.assertTrue(ack1.has_value)
         self.assertFalse(ack2.has_value)

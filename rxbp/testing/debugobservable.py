@@ -4,6 +4,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ElementType
 
 
 class DebugObservable(Observable):
@@ -42,9 +43,9 @@ class DebugObservable(Observable):
         source = self
 
         class DebugObserver(Observer):
-            def on_next(self, v):
+            def on_next(self, elem: ElementType):
                 try:
-                    materialized = list(v)
+                    materialized = list(elem)
                 except Exception as exc:
                     source.on_error_func(exc)
                     observer.on_error(exc)
