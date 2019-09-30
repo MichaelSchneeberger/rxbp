@@ -75,9 +75,9 @@ does not create any mutable states but rather concatenates functions
 without calling them yet. Or, we first describe what we intend to 
 do in form of a plan, and then we execute the plan. A `Flowable` is 
 executed by calling its `subscribe` method. This will start a chain 
-reactions, where downsream each `Flowables` calls the `subscribe` 
+reaction, where each downsream `Flowables` calls the `subscribe` 
 method of its upstream `Flowable` until
-the sources start emitting data. Once a `Flowable` is subscribed, we
+the sources start emitting the data. Once a `Flowable` is subscribed, we
 allow it to have mutable states.
  
 Compared to RxPY Observables, a `Flowable` uses `Observers` that are
