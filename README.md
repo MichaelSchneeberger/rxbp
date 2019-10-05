@@ -258,4 +258,23 @@ Implemented builders and operators (MultiCast)
 
 ### Create a MultiCast
 
-- `from_flowable` - creates a `MultiCast` from a flowable
+- `from_flowable` - creates a *Multicast* from a *Flowable* by making it
+a *SharedFlowable*
+- `return_value` - creates a *Multicast* from some object
+- `from_event` - creates a *Multicast* from the first element emitted
+by a *Flowable*
+
+### Transforming operators
+
+- `filter` - Only emits those *Multicast* values for which the given predicate hold.
+- `flat_map` - Maps each *Multicast* value by applying a given function and flattens the result.
+- `lift` - Lift the current `MultiCast[T1]` to a `MultiCast[T2[MultiCast[T1]]]`.
+- `map` - Maps each *Multicast* value by applying a given function.
+- `merge` - Merges two or more *Multicast* streams together
+- `share` - Shares a new *Flowable*
+- `split` - Splits the *Multicast* stream in two, and applies the given operators to each side.
+- `zip` - Zips a set of *Flowables* together, which were selected by a predicate.
+
+### Other operators 
+
+- `debug` - prints the objects flowing through the *Multicast* stream

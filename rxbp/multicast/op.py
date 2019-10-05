@@ -156,54 +156,14 @@ def lift(
     return MultiCastOperator(op_func)
 
 
-# def create_on_event(
-#     selector: Callable[[Any], MultiCastValue],
-#     event: Callable[[MultiCastFlowable], bool] = None,
-# ):
-#     """ Emits `MultiCastBases` with `MultiCastBases` defined by a lift_func
-#     """
-#
-#     if event is None:
-#         event_ = (lambda v: True)
-#     else:
-#         event_ = event
-#
-#     def func(multi_cast: MultiCast):
-#
-#         class ReactOnMultiCast(MultiCastBase):
-#             def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
-#
-#                 def flat_map_func(v: MultiCastValue):
-#                     if isinstance(v, MultiCastBase.LiftedFlowable):
-#                         flowable = v.source.pipe()
-#                     else:
-#                         flowable = v
-#
-#                     return flowable.pipe(
-#                         rxbp.op.subscribe_on(scheduler=info.subscribe_scheduler)
-#                     )
-#
-#                 source = multi_cast.get_source(info=info).pipe(
-#                     rxbp.op.filter(lambda v: isinstance(v, MultiCastBase.LiftedFlowable) or isinstance(v, Flowable)),
-#                     rxbp.op.filter(event_),
-#                     rxbp.op.flat_map(flat_map_func),
-#                     rxbp.op.map(selector=selector),
-#                 )
-#
-#                 return source
-#
-#         return MultiCast(ReactOnMultiCast())
-#     return MultiCastOperator(func)
-
-
 def share(
-    flowable: Callable[[MultiCastValue], Flowable],
+    func: Callable[[MultiCastValue], Flowable],
     selector: Callable[[MultiCastValue, Flowable], MultiCastValue] = None,
 ):
     """ Shares a `Flowable` defined by a function `share` that maps `MultiCast` value to a `Flowable`.
     A `selector` function is then used used extend the `MultiCast` value with the shared `Flowable`.
 
-    :param flowable: a function that maps `MultiCast` value to a `Flowable`
+    :param func: a function that maps `MultiCast` value to a `Flowable`
     :param selector: a function that maps `MultiCast` value and the shared `Flowable` to some new `MultiCast` value
     """
 
@@ -216,7 +176,7 @@ def share(
                     selector_ = selector
 
                 def flat_map_func(base: MultiCastValue):
-                    return flowable(base).pipe(
+                    return func(base).pipe(
                         rxbp.op.share(lambda f: rxbp.return_value(f)),
                         rxbp.op.map(lambda f: selector_(base, f)),
                     )
