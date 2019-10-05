@@ -188,6 +188,9 @@ class MergeObservable(Observable):
                         right_ack=meas_prev_state.ack,
                     )
 
+                elif isinstance(meas_prev_state, MergeObservable.Stopped):
+                    meas_state = meas_prev_state
+
                 else:
                     raise Exception(f'illegal state "{meas_prev_state}"')
 
@@ -219,6 +222,9 @@ class MergeObservable(Observable):
                             right_ack=self.ack,
                         )
 
+                elif isinstance(meas_prev_state, MergeObservable.Stopped):
+                    meas_state = meas_prev_state
+
                 else:
                     raise Exception(f'illegal state "{meas_prev_state}"')
 
@@ -242,34 +248,34 @@ class MergeObservable(Observable):
                 meas_prev_state = self.raw_prev_state.get_measured_state(self.raw_prev_termination_state)
 
                 if isinstance(meas_prev_state, MergeObservable.NoneReceivedWaitAck):
-                    raw_meas_state = MergeObservable.NoneReceived()
+                    meas_state = MergeObservable.NoneReceived()
 
                 elif isinstance(meas_prev_state, MergeObservable.SingleReceived):
-                    raw_meas_state = MergeObservable.NoneReceivedWaitAck()
+                    meas_state = MergeObservable.NoneReceivedWaitAck()
 
                 elif isinstance(meas_prev_state, MergeObservable.BothReceivedContinueLeft):
-                    raw_meas_state = MergeObservable.LeftReceived(
+                    meas_state = MergeObservable.LeftReceived(
                         elem=meas_prev_state.right_elem,
                         ack=self.ack,
                     )
 
                 elif isinstance(meas_prev_state, MergeObservable.BothReceivedContinueRight):
-                    raw_meas_state = MergeObservable.RightReceived(
+                    meas_state = MergeObservable.RightReceived(
                         elem=meas_prev_state.left_elem,
                         ack=self.ack,
                     )
 
                 elif isinstance(meas_prev_state, MergeObservable.Stopped):
-                    raw_meas_state = meas_prev_state
+                    meas_state = meas_prev_state
 
                 else:
                     raise Exception(f'illegal state "{meas_prev_state}"')
 
-                self.meas_state = raw_meas_state
+                self.meas_state = meas_state
             else:
-                raw_meas_state = self.meas_state
+                meas_state = self.meas_state
 
-            return raw_meas_state.get_measured_state(termination_state)
+            return meas_state.get_measured_state(termination_state)
 
     class Stopped(MergeState):
         def get_measured_state(self, termination_state: 'MergeObservable.TerminationState'):
@@ -311,7 +317,7 @@ class MergeObservable(Observable):
                 meas_prev_state = next_state.raw_prev_state.get_measured_state(next_state.raw_prev_termination_state)
                 meas_state = next_state.get_measured_state(next_state.raw_prev_termination_state)
 
-                print(meas_state)
+                # print(meas_state)
 
                 # acknowledgment already sent to left and right
                 if isinstance(meas_state, MergeObservable.NoneReceived):
@@ -384,9 +390,12 @@ class MergeObservable(Observable):
             pass
 
         # keep waiting for right and acknowledment
-        elif isinstance(meas_state, MergeObservable.Stopped) and not isinstance(meas_prev_state, MergeObservable.Stopped):
-            self.observer.on_completed()
-            return stop_ack
+        elif isinstance(meas_state, MergeObservable.Stopped):
+            if isinstance(meas_prev_state, MergeObservable.Stopped):
+                self.observer.on_completed()
+                return stop_ack
+            else:
+                pass
 
         else:
             raise Exception(f'illegal state "{meas_state}"')

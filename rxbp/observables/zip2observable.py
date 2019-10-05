@@ -64,11 +64,11 @@ class Zip2Observable(Observable):
         """
 
         @abstractmethod
-        def get_current_state(self):
+        def get_measured_state(self):
             ...
 
     class InitState(TerminationState):
-        def get_current_state(self):
+        def get_measured_state(self):
             return self
 
     class LeftCompletedState(TerminationState, ABC):
@@ -78,14 +78,14 @@ class Zip2Observable(Observable):
         pass
 
     class BothCompletedState(LeftCompletedState, RightCompletedState):
-        def get_current_state(self):
+        def get_measured_state(self):
             return self
 
     class LeftCompletedStateImpl(LeftCompletedState):
         def __init__(self, raw_prev_state: Optional['Zip2Observable.TerminationState']):
             self.raw_prev_state = raw_prev_state
 
-        def get_current_state(self):
+        def get_measured_state(self):
             prev_state = self.raw_prev_state
 
             if isinstance(prev_state, Zip2Observable.InitState):
@@ -97,7 +97,7 @@ class Zip2Observable(Observable):
         def __init__(self, raw_prev_state: Optional['Zip2Observable.TerminationState']):
             self.raw_prev_state = raw_prev_state
 
-        def get_current_state(self):
+        def get_measured_state(self):
             prev_state = self.raw_prev_state
 
             if isinstance(prev_state, Zip2Observable.InitState):
@@ -110,7 +110,7 @@ class Zip2Observable(Observable):
             self.raw_prev_state = raw_prev_state
             self.ex = ex
 
-        def get_current_state(self):
+        def get_measured_state(self):
             prev_state = self.raw_prev_state
 
             return self
@@ -123,11 +123,11 @@ class Zip2Observable(Observable):
         """ The state of the zip observable actor
 
         The true state (at the point when it is read) is only known by calling  the
-        `get_current_state` method.
+        `get_measured_state` method.
         """
 
         @abstractmethod
-        def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
+        def get_measured_state(self, final_state: 'Zip2Observable.TerminationState'):
             ...
 
     class WaitOnLeft(ZipState):
@@ -141,7 +141,7 @@ class Zip2Observable(Observable):
             self.right_ack = right_ack
             self.right_iter = right_iter
 
-        def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
+        def get_measured_state(self, final_state: 'Zip2Observable.TerminationState'):
             if isinstance(final_state, Zip2Observable.LeftCompletedState) or isinstance(final_state, Zip2Observable.ErrorState):
                 return Zip2Observable.Stopped()
             else:
@@ -154,7 +154,7 @@ class Zip2Observable(Observable):
             self.left_iter = left_iter
             self.left_ack = left_ack
 
-        def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
+        def get_measured_state(self, final_state: 'Zip2Observable.TerminationState'):
             if isinstance(final_state, Zip2Observable.RightCompletedState) or isinstance(final_state, Zip2Observable.ErrorState):
                 return Zip2Observable.Stopped()
             else:
@@ -167,7 +167,7 @@ class Zip2Observable(Observable):
         In this state, the left and right buffer are empty.
         """
 
-        def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
+        def get_measured_state(self, final_state: 'Zip2Observable.TerminationState'):
             if isinstance(final_state, Zip2Observable.InitState):
                 return self
             else:
@@ -177,7 +177,7 @@ class Zip2Observable(Observable):
         """ Zip observable actor is zipping the values just received by a source and
          from the buffer.
 
-        In this state the actual termination state is ignored in the `get_current_state`
+        In this state the actual termination state is ignored in the `get_measured_state`
         method.
         """
 
@@ -196,10 +196,10 @@ class Zip2Observable(Observable):
             self.raw_prev_state = None
             self.raw_prev_terminal_state = None
 
-        def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
+        def get_measured_state(self, final_state: 'Zip2Observable.TerminationState'):
             # overwrite final state
-            final_state_ = self.raw_prev_terminal_state.get_current_state()
-            prev_state = self.raw_prev_state.get_current_state(final_state=final_state_)
+            final_state_ = self.raw_prev_terminal_state.get_measured_state()
+            prev_state = self.raw_prev_state.get_measured_state(final_state=final_state_)
 
             if isinstance(prev_state, Zip2Observable.Stopped):
                 return prev_state
@@ -208,16 +208,16 @@ class Zip2Observable(Observable):
             elif isinstance(prev_state, Zip2Observable.WaitOnLeftRight):
                 if self.is_left:
                     return Zip2Observable.WaitOnRight(left_ack=self.ack, left_iter=self.iter) \
-                        .get_current_state(final_state=final_state)
+                        .get_measured_state(final_state=final_state)
                 else:
                     return Zip2Observable.WaitOnLeft(right_ack=self.ack, right_iter=self.iter) \
-                        .get_current_state(final_state=final_state)
+                        .get_measured_state(final_state=final_state)
 
             else:
                 return self
 
     class Stopped(ZipState):
-        def get_current_state(self, final_state: 'Zip2Observable.TerminationState'):
+        def get_measured_state(self, final_state: 'Zip2Observable.TerminationState'):
             return self
 
     def _iterate_over_batch(self, elem: ElementType, is_left: bool):
@@ -233,8 +233,8 @@ class Zip2Observable(Observable):
             next_state.raw_prev_terminal_state = raw_prev_termination_state
             self.zip_state = next_state
 
-        prev_termination_state = raw_prev_termination_state.get_current_state()
-        prev_state = raw_prev_state.get_current_state(prev_termination_state)
+        prev_termination_state = raw_prev_termination_state.get_measured_state()
+        prev_state = raw_prev_state.get_measured_state(prev_termination_state)
 
         if isinstance(prev_state, Zip2Observable.Stopped):
             return stop_ack
@@ -324,14 +324,14 @@ class Zip2Observable(Observable):
             # set next state
             self.zip_state = next_state
 
-        prev_termination_state = raw_prev_termination_state.get_current_state()
+        prev_termination_state = raw_prev_termination_state.get_measured_state()
 
         # stop back-pressuring both sources, because there is no need to request elements
         # from completed source
         if isinstance(prev_termination_state, Zip2Observable.LeftCompletedState) and do_back_pressure_left:
 
             # current state should be Stopped
-            assert isinstance(next_state.get_current_state(prev_termination_state), Zip2Observable.Stopped)
+            assert isinstance(next_state.get_measured_state(prev_termination_state), Zip2Observable.Stopped)
 
             self._signal_on_complete_or_on_error(raw_state=next_state)
             other_upstream_ack.on_next(stop_ack)
@@ -420,11 +420,11 @@ class Zip2Observable(Observable):
             next_final_state.raw_prev_state = raw_prev_final_state
             self.termination_state = next_final_state
 
-        prev_final_state = raw_prev_final_state.get_current_state()
-        prev_state = raw_prev_state.get_current_state(final_state=prev_final_state)
+        prev_final_state = raw_prev_final_state.get_measured_state()
+        prev_state = raw_prev_state.get_measured_state(final_state=prev_final_state)
 
-        curr_final_state = next_final_state.get_current_state()
-        curr_state = raw_prev_state.get_current_state(final_state=curr_final_state)
+        curr_final_state = next_final_state.get_measured_state()
+        curr_state = raw_prev_state.get_measured_state(final_state=curr_final_state)
 
         if not isinstance(prev_state, Zip2Observable.Stopped) \
                 and isinstance(curr_state, Zip2Observable.Stopped):

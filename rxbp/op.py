@@ -274,7 +274,6 @@ def share(func: Callable[[Flowable], Flowable]):
     def inner_func(source: Flowable) -> Flowable:
         return source.share(func=func)
     return FlowableOperator(inner_func)
-    # rxbp.multicast.source.from_flowables()
 
 
 def to_list():

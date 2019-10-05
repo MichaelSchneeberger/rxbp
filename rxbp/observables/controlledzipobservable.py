@@ -120,7 +120,7 @@ class ControlledZipObservable(Observable):
         """ The state of the controlled zip observable actor
 
         The true state (at the point when it is read) is only known by calling  the
-        `get_current_state` method.
+        `get_measured_state` method.
         """
 
         @abstractmethod
@@ -182,7 +182,7 @@ class ControlledZipObservable(Observable):
         """ Zip observable actor is zipping the values just received by a source and
          from the buffer.
 
-        In this state the actual termination state is ignored in the `get_current_state`
+        In this state the actual termination state is ignored in the `get_measured_state`
         method.
         """
 

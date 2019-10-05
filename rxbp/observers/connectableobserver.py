@@ -14,6 +14,7 @@ from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ElementType
 
 
 class ConnectableObserver(Observer):
@@ -170,7 +171,7 @@ class ConnectableObserver(Observer):
         if throw_exception:
             raise Exception('Observer was already connected, so cannot pushFirst')
 
-    def on_next(self, elem):
+    def on_next(self, elem: ElementType):
         if not self.is_connected:
             def __(v):
                 if isinstance(v, Continue):

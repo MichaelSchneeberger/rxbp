@@ -3,10 +3,10 @@ RxPy back-pressure extension
 ============================
 
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
-library, that integrates back-pressure into observables.
+library, that integrates back-pressure into observables (called `Flowable`)
 
 The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), 
-and has still experimental status. 
+and has still an experimental status. 
 
 Installation
 ------------
@@ -78,7 +78,7 @@ executed by calling its `subscribe` method. This will start a chain
 reaction, where each downsream `Flowables` calls the `subscribe` 
 method of its upstream `Flowable` until
 the sources start emitting the data. Once a `Flowable` is subscribed, we
-allow it to have mutable states.
+allow it to have internal mutable states for performance reasons.
  
 Compared to RxPY Observables, a `Flowable` uses `Observers` that are
 able to back-pressure on an `on_next` method call.
@@ -86,8 +86,8 @@ able to back-pressure on an `on_next` method call.
 ### MultiCast (experimental)
 
 A `MultiCast` is used when a `Flowable` emits elements to more than
-one `Observer`, and in case of nested Flowables like 
-`Flowable[T[Flowable]]`.
+one `Observer`, and can be though of a nested `Flowable` of type
+ `Flowable[T[Flowable]]`.
 
 In RxPY, there are operators called `publish` and `share`,
 which create a multicast observable that can then be subscribed
@@ -130,7 +130,7 @@ work with nested `Flowables` in a safe way.
 ```python
 import rxbp
 
-f = rxbp.to_multicast(rxbp.range(10)).pipe(
+f = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
     rxbp.multicast.op.share(lambda base: base[0].pipe(
         rxbp.op.zip(base[0].pipe(
             rxbp.op.map(lambda v: v + 1),
@@ -155,11 +155,11 @@ The previous code outputs:
 ### match operator (experimental)
 
 The `match` operator tries to match two `Flowable`, 
-otherwise it raises an exception.
+and raises an exception otherwise.
 Two observables match if they have the same base or if there exists 
 a mapping that maps 
 one base to the base of the other `Flowable`. These mappings 
-are called "selectors" and propagated internally when subscribing
+are called *selectors* and propagated internally when subscribing
 to a `Flowable`.
 
 If two Flowables have the same base, 
@@ -202,7 +202,7 @@ elements before the others do? Without back-pressure, the `zip` operation
 has to buffer the elements until it receives data from the other sources.
 This might be ok depending on how much data needs to be buffered. But
 often we can not risk having too much data buffered somewhere in our
-stream, which might cause an out of memory exception. Therefore, it
+stream, which might lead to an out of memory exception. Therefore, it
 is better to back-pressure data sources until that data is actually
 needed.
 
@@ -258,4 +258,4 @@ Implemented builders and operators (MultiCast)
 
 ### Create a MultiCast
 
-- `to_multicast` - exposes a multicast flowable that allows multible subscriptions
+- `from_flowable` - creates a `MultiCast` from a flowable

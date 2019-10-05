@@ -1,5 +1,5 @@
 from rxbp.ack.ack import Ack
-from rxbp.ack.ackimpl import continue_ack, Continue
+from rxbp.ack.ackimpl import continue_ack, Continue, Stop
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.observerinfo import ObserverInfo
@@ -14,6 +14,7 @@ class TestMergeObservable(TestCaseBase):
         self.scheduler = TestScheduler()
         self.s1 = TestObservable()
         self.s2 = TestObservable()
+        self.exception = Exception('test')
 
     def test_emit_simultaneously_synchronous_ack(self):
         sink = TestObserver()
@@ -61,7 +62,7 @@ class TestMergeObservable(TestCaseBase):
         self.s2.on_completed()
         self.assertTrue(sink.is_completed)
 
-    def test_emit_simultaneously_1_asynchronous_ack(self):
+    def test_emit_and_complete_2_asynchronous_ack(self):
         sink = TestObserver(immediate_coninue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
@@ -83,7 +84,7 @@ class TestMergeObservable(TestCaseBase):
         self.assertEqual([1, 2], sink.received)
         self.assertTrue(sink.is_completed)
 
-    def test_emit_simultaneously_2_asynchronous_ack(self):
+    def test_emit_and_complete_3_asynchronous_ack(self):
         sink = TestObserver(immediate_coninue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
@@ -114,7 +115,7 @@ class TestMergeObservable(TestCaseBase):
         self.assertEqual([1, 1, 2], sink.received)
         self.assertTrue(sink.is_completed)
 
-    def test_emit_fill_and_empty_asynchronous_ack(self):
+    def test_fill_and_empty_asynchronous_ack(self):
         sink = TestObserver(immediate_coninue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
@@ -138,3 +139,21 @@ class TestMergeObservable(TestCaseBase):
 
         self.s2.on_completed()
         self.assertTrue(sink.is_completed)
+
+    def test_emit_and_error_asynchronous_ack(self):
+        sink = TestObserver(immediate_coninue=0)
+        obs = MergeObservable(self.s1, self.s2)
+        obs.observe(ObserverInfo(sink))
+
+        _ = self.s1.on_next_single(1)
+        self.assertEqual([1], sink.received)
+
+        left_ack = self.s1.on_next_single(1)
+        self.assertEqual([1], sink.received)
+
+        self.s1.on_error(self.exception)
+        self.assertEqual(self.exception, sink.exception)
+
+        right_ack = self.s2.on_next_single(2)
+        self.assertIsInstance(right_ack, Stop)
+        self.assertEqual([1], sink.received)

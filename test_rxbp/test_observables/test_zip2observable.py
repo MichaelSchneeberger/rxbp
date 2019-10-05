@@ -31,25 +31,23 @@ class TestZip2Observable(TestCaseBase):
         self.scheduler = TestScheduler()
         self.s1 = TestObservable()
         self.s2 = TestObservable()
-        self.sink = TestObserver()
 
     def test_init_termination_state_wait_on_left_right_immediate_ack(self):
+        sink = TestObserver()
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserverInfo(self.sink))
-
-        self.sink.immediate_continue = 10
+        obs.observe(ObserverInfo(sink))
 
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         # state WaitOnLeftRight -> WaitOnRight
         ack1 = self.s1.on_next_iter([1, 2, 3, 4])
-        self.assertListEqual(self.sink.received, [])
+        self.assertListEqual(sink.received, [])
 
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnRight
         ack2 = self.s2.on_next_iter([11, 12])
-        self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
+        self.assertListEqual(sink.received, [(1, 11), (2, 12)])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         self.assertFalse(ack1.has_value)
@@ -57,83 +55,85 @@ class TestZip2Observable(TestCaseBase):
 
         # state WaitOnRight -> WaitOnLeftRight
         self.s2.on_next_iter([13, 14])
-        self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
+        self.assertListEqual(sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
         self.s1.on_completed()
-        self.assertTrue(self.sink.is_completed)
+        self.assertTrue(sink.is_completed)
 
         self.s2.on_next_iter([13, 14])
-        self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
+        self.assertListEqual(sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.Stopped)
 
     def test_init_termination_state_wait_on_left_right_delayed_ack(self):
+        sink = TestObserver(immediate_coninue=0)
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserverInfo(self.sink))
+        obs.observe(ObserverInfo(sink))
 
         # state WaitOnLeftRight -> WaitOnRight
         ack1: Ack = self.s1.on_next_iter([1, 2, 3, 4])
-        self.assertListEqual(self.sink.received, [])
+        self.assertListEqual(sink.received, [])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnRight
         ack2 = self.s2.on_next_iter([11, 12])
-        self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
+        self.assertListEqual(sink.received, [(1, 11), (2, 12)])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
         self.assertFalse(ack1.has_value)
         self.assertFalse(ack2.has_value)
 
-        self.sink.ack.on_next(continue_ack)
+        sink.ack.on_next(continue_ack)
         # back-pressure right
         self.assertFalse(ack1.has_value)
         self.assertTrue(ack2.has_value)
 
         # state WaitOnRight -> WaitOnLeftRight
         ack2 = self.s2.on_next_iter([13, 14])
-        self.assertListEqual(self.sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
+        self.assertListEqual(sink.received, [(1, 11), (2, 12), (3, 13), (4, 14)])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeftRight)
 
-        self.sink.ack.on_next(continue_ack)
+        sink.ack.on_next(continue_ack)
         # back-pressure both
         self.assertTrue(ack1.has_value)
         self.assertTrue(ack2.has_value)
 
     def test_init_termination_state_wait_on_right_immediate_ack(self):
+        sink = TestObserver()
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserverInfo(self.sink))
-
-        self.sink.immediate_continue = 10
+        obs.observe(ObserverInfo(sink))
 
         # state WaitOnLeftRight -> WaitOnRight
         ack1 = self.s1.on_next_iter([1, 2])
-        self.assertListEqual(self.sink.received, [])
+        self.assertListEqual(sink.received, [])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnRight)
 
         # state WaitOnRight -> WaitOnLeft
         ack2 = self.s2.on_next_iter([11, 12, 13, 14])
-        self.assertListEqual(self.sink.received, [(1, 11), (2, 12)])
+        self.assertListEqual(sink.received, [(1, 11), (2, 12)])
         self.assertIsInstance(obs.zip_state.get_measured_state(obs.termination_state), Zip2Observable.WaitOnLeft)
 
         self.assertTrue(ack1.has_value)
         self.assertFalse(ack2.has_value)
 
         self.s1.on_completed()
-        self.assertTrue(self.sink.is_completed)
+        self.assertTrue(sink.is_completed)
 
     def test_on_error(self):
+        sink = TestObserver()
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserverInfo(self.sink))
+        obs.observe(ObserverInfo(sink))
 
         self.s1.on_next_iter([1])
         self.s1.on_error(Exception())
 
-        self.assertIsNotNone(self.sink.exception)
+        self.assertIsNotNone(sink.exception)
 
     def test_on_completed(self):
+        sink = TestObserver()
         obs = Zip2Observable(self.s1, self.s2)
-        obs.observe(ObserverInfo(self.sink))
+        obs.observe(ObserverInfo(sink))
 
         self.s1.on_next_iter([1])
         self.s2.on_error(Exception())
 
-        self.assertIsNotNone(self.sink.exception)
+        self.assertIsNotNone(sink.exception)
