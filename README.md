@@ -124,8 +124,8 @@ To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
 type.
 A `MultiCast` represents a collection of `Flowable` and can
  be though of as `Flowable[T[Flowable]]` where T is defined by the user.
-It provide operators through `rxbp.multicast.op` to share `Flowables` but also
-work with nested `Flowables` in a safe way.
+It provide operators through `rxbp.multicast.op` to share `Flowables` 
+in a safe way.
 
 ```python
 import rxbp
@@ -168,11 +168,12 @@ e.g. every pair of elements that get zipped from the two
  Flowables should belong together.
 
 ```python
+import rxbp.depricated
 import rxbp
 from rxbp import op
 
 rxbp.range(10).pipe(
-    rxbp.op.share(lambda f1: f1.pipe(
+    rxbp.depricated.share(lambda f1: f1.pipe(
         rxbp.op.match(f1.pipe(
             rxbp.op.filter(lambda v: v % 2 == 0)),
         )

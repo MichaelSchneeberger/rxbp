@@ -1,6 +1,7 @@
 from typing import List, Callable, Any
 
 import rxbp
+import rxbp.depricated
 
 from rxbp.flowable import Flowable
 from rxbp.multicast.multicastbase import MultiCastBase, MultiCastFlowable
@@ -12,8 +13,8 @@ from rxbp.multicast.multicast import MultiCast
 
 def split(
         left_ops: List[MultiCastOperator],
-        sel_left: Callable[[MultiCastValue], bool] = None,
-        sel_right: Callable[[MultiCastValue], bool] = None,
+        filter_left: Callable[[MultiCastValue], bool] = None,
+        filter_right: Callable[[MultiCastValue], bool] = None,
         right_ops: List[MultiCastOperator] = None,
 ):
     """ Splits the `MultiCast` stream in two, applies the given `MultiCast` operators on each of them, and merges the
@@ -26,24 +27,24 @@ def split(
        share  right                         merge
 
     :param left_ops: `MultiCast` operators applied to the left
-    :param sel_left: (optional) a function that returns True, if the current element is passed left,
-    :param sel_right: (optional) a function that returns True, if the current element is passed right,
+    :param filter_left: (optional) a function that returns True, if the current element is passed left,
+    :param filter_right: (optional) a function that returns True, if the current element is passed right,
     :param right_ops: (optional) `MultiCast` operators applied to the right
     """
 
-    if sel_left is None:
-        sel_left = (lambda v: True)
+    if filter_left is None:
+        filter_left = (lambda v: True)
 
-    if sel_right is None:
-        sel_right = (lambda v: True)
+    if filter_right is None:
+        filter_right = (lambda v: True)
 
     def op_func(multicast: MultiCast):
         class SplitMultiCast(MultiCastBase):
             def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
                 def share_source(source: Flowable):
 
-                    left_source = source.filter(sel_left)
-                    right_source = source.filter(sel_right)
+                    left_source = source.filter(filter_left)
+                    right_source = source.filter(filter_right)
 
                     class LeftOpsStream(MultiCastBase):
                         def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
@@ -177,7 +178,7 @@ def share(
 
                 def flat_map_func(base: MultiCastValue):
                     return func(base).pipe(
-                        rxbp.op.share(lambda f: rxbp.return_value(f)),
+                        rxbp.depricated.share(lambda f: rxbp.return_value(f)),
                         rxbp.op.map(lambda f: selector_(base, f)),
                     )
 
