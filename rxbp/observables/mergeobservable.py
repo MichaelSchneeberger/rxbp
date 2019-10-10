@@ -12,7 +12,6 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.mergestates import MergeStates
-from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.states.rawstates.rawmergestates import RawMergeStates
 from rxbp.states.rawstates.rawterminationstates import RawTerminationStates
 from rxbp.typing import ElementType
@@ -55,7 +54,7 @@ class MergeObservable(Observable):
 
         # MergeObservable states
         self.observer = None
-        self.termination_state = RawTerminationStates.InitTerminationState()
+        self.termination_state = RawTerminationStates.InitState()
         self.state = RawMergeStates.NoneReceived()
 
         self.lock = threading.RLock()
@@ -162,11 +161,11 @@ class MergeObservable(Observable):
 
         return next_state.ack
 
-    def _signal_on_complete_or_on_error(self, prev_state: MergeStates.MergeState, ex: Exception = None):
+    def _signal_on_complete_or_on_error(self, prev_state: MergeStates.MergeState, exc: Exception = None):
         """ this function is called once
 
         :param raw_state:
-        :param ex:
+        :param exc:
         :return:
         """
 
@@ -179,8 +178,8 @@ class MergeObservable(Observable):
             pass
 
         # terminate observer
-        if ex:
-            self.observer.on_error(ex)
+        if exc:
+            self.observer.on_error(exc)
         else:
             self.observer.on_completed()
 

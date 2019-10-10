@@ -24,7 +24,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         def gen_value(v):
             def gen():
                 yield v
-            return gen
+            return gen()
 
         # -----------------
         # 2 inactive, one returns continue => subject returns continue

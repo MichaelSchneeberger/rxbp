@@ -11,7 +11,7 @@ class RawTerminationStates:
         def get_measured_state(self) -> TerminationStates.TerminationState:
             ...
 
-    class InitTerminationState(TerminationState):
+    class InitState(TerminationState):
         def get_measured_state(self):
             return TerminationStates.InitState()
 

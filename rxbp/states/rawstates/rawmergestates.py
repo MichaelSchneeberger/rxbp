@@ -98,7 +98,7 @@ class RawMergeStates:
             self.ack = ack
 
             self.prev_raw_termination_state: RawTerminationStates.TerminationState = None
-            self.prev_raw_state: 'RawMergeStates.RawMergeState' = None
+            self.prev_raw_state: 'RawMergeStates.MergeState' = None
 
             self.raw_state: MergeStates.MergeState = None
 
@@ -175,7 +175,7 @@ class RawMergeStates:
             self.ack = ack
 
             self.prev_raw_termination_state: RawTerminationStates.TerminationState = None
-            self.prev_raw_state: 'RawMergeStates.RawMergeState' = None
+            self.prev_raw_state: 'RawMergeStates.MergeState' = None
 
             self.raw_state: RawMergeStates.MergeState = None
 
@@ -212,7 +212,3 @@ class RawMergeStates:
                 raw_state = self.raw_state
 
             return raw_state.get_measured_state(raw_termination_state)
-
-    class Stopped(MergeState):
-        def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
-            return MergeStates.Stopped()

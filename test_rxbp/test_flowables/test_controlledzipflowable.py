@@ -19,19 +19,19 @@ class TestControlledZipFlowable(TestCaseBase):
         self.s2 = TestFlowable(base=2)
         self.sink = TestObserver()
 
-    def test_use_case_1(self):
-        flowable = ControlledZipFlowable(
-            left=self.s1,
-            right=self.s2,
-            request_left=lambda l, r: True,
-            request_right=lambda l, r: True,
-            match_func=lambda l, r: True,
-        )
-
-        obs, bases = flowable.unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler,
-            subscribe_scheduler=self.scheduler,
-        ))
-
-        assert 1 in bases
-        assert 2 in bases
+    # def test_use_case_1(self):
+    #     flowable = ControlledZipFlowable(
+    #         left=self.s1,
+    #         right=self.s2,
+    #         request_left=lambda l, r: True,
+    #         request_right=lambda l, r: True,
+    #         match_func=lambda l, r: True,
+    #     )
+    #
+    #     obs, bases = flowable.unsafe_subscribe(Subscriber(
+    #         scheduler=self.scheduler,
+    #         subscribe_scheduler=self.scheduler,
+    #     ))
+    #
+    #     assert 1 in bases
+    #     assert 2 in bases

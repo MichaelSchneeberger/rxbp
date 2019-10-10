@@ -3,15 +3,16 @@ RxPy back-pressure extension
 ============================
 
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
-library, that integrates back-pressure into observables (called `Flowable`)
-
+library, that integrates back-pressure into the *Observable* pattern
+in form of *Flowables*.
+ 
 The *rxbackpressure* library is inspired by [Monix](https://github.com/monix/monix), 
-and has still an experimental status. 
+and **has still an experimental status**. 
 
 Installation
 ------------
 
-rxbp v3.x runs on Python 3.6 or above. To install rxbp alpha version:
+rxbp v3.x runs on Python 3.7 or above. To install rxbp alpha version:
 
 ```
 pip3 install --pre rxbp
@@ -38,8 +39,8 @@ composed.subscribe(lambda value: print("Received {0}".format(value)))
 Integrate RxPY
 --------------
 
-A RxPY Observable can be converted to a `Flowable` by using the `from_rx` method.
-Equivalently, a `Flowable` can be converted to a RxPY Observable 
+A RxPY Observable can be converted to a *Flowable* by using the `from_rx` method.
+Equivalently, a *Flowable* can be converted to a RxPY Observable 
 by using the `to_rx` method.
 
 ```python
@@ -65,7 +66,7 @@ Differences from RxPY
 
 ### Flowable
 
-Similar to a RxPY Observable, a `Flowable` implements a `subscribe` 
+Similar to a RxPY Observable, a *Flowable* implements a `subscribe` 
 method, which is a mechanism that makes it possible to describe a 
 data flow from its source to some sink. The description is
 done with *rxbackpressure* operators exposed by `rxbp.op`.
@@ -73,20 +74,20 @@ done with *rxbackpressure* operators exposed by `rxbp.op`.
 Like in functional programming, usings *rxbackpressure* operators 
 does not create any mutable states but rather concatenates functions 
 without calling them yet. Or, we first describe what we intend to 
-do in form of a plan, and then we execute the plan. A `Flowable` is 
+do in form of a plan, and then we execute the plan. A *Flowable* is 
 executed by calling its `subscribe` method. This will start a chain 
 reaction, where each downsream `Flowables` calls the `subscribe` 
-method of its upstream `Flowable` until
-the sources start emitting the data. Once a `Flowable` is subscribed, we
+method of its upstream *Flowable* until
+the sources start emitting the data. Once a *Flowable* is subscribed, we
 allow it to have internal mutable states for performance reasons.
  
-Compared to RxPY Observables, a `Flowable` uses `Observers` that are
+Compared to RxPY Observables, a *Flowable* uses `Observers` that are
 able to back-pressure on an `on_next` method call.
 
 ### MultiCast (experimental)
 
-A `MultiCast` is used when a `Flowable` emits elements to more than
-one `Observer`, and can be though of a nested `Flowable` of type
+A `MultiCast` is used when a *Flowable* emits elements to more than
+one `Observer`, and can be though of a nested *Flowable* of type
  `Flowable[T[Flowable]]`.
 
 In RxPY, there are operators called `publish` and `share`,
@@ -122,7 +123,7 @@ The previous code outputs:
 
 To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
 type.
-A `MultiCast` represents a collection of `Flowable` and can
+A `MultiCast` represents a collection of *Flowable* and can
  be though of as `Flowable[T[Flowable]]` where T is defined by the user.
 It provide operators through `rxbp.multicast.op` to share `Flowables` 
 in a safe way.
@@ -154,13 +155,13 @@ The previous code outputs:
 
 ### match operator (experimental)
 
-The `match` operator tries to match two `Flowable`, 
+The `match` operator tries to match two *Flowable*, 
 and raises an exception otherwise.
 Two observables match if they have the same base or if there exists 
 a mapping that maps 
-one base to the base of the other `Flowable`. These mappings 
+one base to the base of the other *Flowable*. These mappings 
 are called *selectors* and propagated internally when subscribing
-to a `Flowable`.
+to a *Flowable*.
 
 If two Flowables have the same base, 
 they should match in the sense of the `zip` operator,
@@ -194,7 +195,7 @@ The previous code outputs:
 When to use an Flowable, when RxPY Observable?
 -----------------------------------------
 
-A `Flowable` is used when some asynchronous stage cannot process the
+A *Flowable* is used when some asynchronous stage cannot process the
 data fast enough, or needs to synchronize the data with some other event.
 Let's take the `zip` operator for instance. It gets elements from
 two or more sources and emits a tuple once it received one
@@ -211,8 +212,8 @@ The advantage of a RxPY Observable is that it is generally faster
 and more lightweight.
 
 
-Implemented builders and operators (Flowable)
----------------------------------------------
+Flowable
+--------
 
 ### Create a Flowable
 
@@ -254,8 +255,8 @@ a strict sequence.
 
 - `to_rx` - create a rx Observable from a Observable
 
-Implemented builders and operators (MultiCast)
----------------------------------------------
+MultiCast
+---------
 
 ### Create a MultiCast
 
