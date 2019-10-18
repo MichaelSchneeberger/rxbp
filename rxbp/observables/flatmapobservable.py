@@ -15,6 +15,8 @@ from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.states.measuredstates.flatmapstates import FlatMapStates
+from rxbp.states.rawstates.rawflatmapstates import RawFlatMapStates
 from rxbp.typing import ValueType, ElementType
 
 
@@ -34,96 +36,10 @@ class FlatMapObservable(Observable):
         self._delay_errors = delay_errors
 
         self.lock = threading.RLock()
-        self.state = FlatMapObservable.InitialState()
+        self.state = RawFlatMapStates.InitialState()
         self.composite_disposable = CompositeDisposable()
 
         self.observer_info = None
-
-    class State(ABC):
-        @abstractmethod
-        def get_measured_state(self) -> 'FlatMapObservable.State':
-            ...
-
-    class InitialState(State):
-        def get_measured_state(self) -> 'FlatMapObservable.State':
-            return self
-
-    class WaitOnOuter(State):
-        def __init__(self):
-            self.prev_state: Optional['FlatMapObservable.State'] = None
-
-        def get_measured_state(self):
-            meas_prev_state = self.prev_state.get_measured_state()
-
-            if any([
-                isinstance(meas_prev_state, FlatMapObservable.Stopped),
-                isinstance(meas_prev_state, FlatMapObservable.OnOuterException),
-                isinstance(meas_prev_state, FlatMapObservable.OnOuterCompleted)
-            ]):
-                return FlatMapObservable.Stopped()
-
-            else:
-                return self
-
-    class Active(State):
-        """ Outer value received, inner observable possibly already subscribed
-        """
-
-        def __init__(self):
-            self.prev_state: Optional['FlatMapObservable.State'] = None
-
-        def get_measured_state(self):
-            meas_prev_state = self.prev_state.get_measured_state()
-
-            if any([
-                isinstance(meas_prev_state, FlatMapObservable.Stopped),
-                isinstance(meas_prev_state, FlatMapObservable.OnOuterException),
-            ]):
-                return FlatMapObservable.Stopped()
-
-            elif isinstance(meas_prev_state, FlatMapObservable.OnOuterCompleted):
-                return meas_prev_state
-
-            else:
-                return self
-
-    class OnOuterCompleted(State):
-        # outer observer does not complete the output observer (except in WaitOnNextChild); however, it signals
-        #   that output observer should be completed if inner observer completes
-        def __init__(self):
-            self.prev_state: Optional['FlatMapObservable.State'] = None
-
-        def get_measured_state(self):
-            meas_prev_state = self.prev_state.get_measured_state()
-
-            if isinstance(meas_prev_state, FlatMapObservable.Stopped):
-                return meas_prev_state
-            elif isinstance(meas_prev_state, FlatMapObservable.WaitOnOuter):
-                return FlatMapObservable.Stopped()
-            else:
-                return self
-
-    class OnOuterException(State):
-        def __init__(self, exc: Exception):
-            self.exc = exc
-
-            self.prev_state: Optional['FlatMapObservable.State'] = None
-
-        def get_measured_state(self):
-            meas_prev_state = self.prev_state.get_measured_state()
-
-            if isinstance(meas_prev_state, FlatMapObservable.Stopped):
-                return meas_prev_state
-            elif isinstance(meas_prev_state, FlatMapObservable.WaitOnOuter):
-                return FlatMapObservable.Stopped()
-            else:
-                return self
-
-    class Stopped(State):
-        """ either inner observable completed or raise exception
-        """
-        def get_measured_state(self):
-            return self
 
     class InnerObserver(Observer):
         def __init__(
@@ -144,7 +60,7 @@ class FlatMapObservable(Observable):
 
             # if ack==Stop, then update state
             if isinstance(ack, Stop):
-                self.outer.state = FlatMapObservable.Stopped()
+                self.outer.state = RawFlatMapStates.Stopped()
                 self.outer_upstream_ack.on_next(ack)
 
             elif not isinstance(ack, Continue):
@@ -154,14 +70,14 @@ class FlatMapObservable(Observable):
 
                     def on_next(_, ack):
                         if isinstance(ack, Stop):
-                            self.outer.state = FlatMapObservable.Stopped()
+                            self.outer.state = RawFlatMapStates.Stopped()
                             self.outer_upstream_ack.on_next(ack)
                 ack.subscribe(ResultSingle())
 
             return ack
 
         def on_error(self, err):
-            next_state = FlatMapObservable.Stopped()
+            next_state = RawFlatMapStates.Stopped()
 
             with self.outer.lock:
                 prev_state = self.outer.state
@@ -169,7 +85,7 @@ class FlatMapObservable(Observable):
 
             prev_meas_state = prev_state.get_measured_state()
 
-            if not isinstance(prev_meas_state, FlatMapObservable.Stopped):
+            if not isinstance(prev_meas_state, FlatMapStates.Stopped):
                 self.outer.observer_info.observer.on_error(err)
 
                 # stop outer stream as well
@@ -179,20 +95,17 @@ class FlatMapObservable(Observable):
             """ on_next* (on_completed | on_error)?
             """
 
-            # last_ack = self.last_ack
-
             if self.next_conn_observer is None:
-                next_state = FlatMapObservable.WaitOnOuter()
+                next_state = RawFlatMapStates.WaitOnOuter()
 
             else:
-                next_state = FlatMapObservable.Active()
+                next_state = RawFlatMapStates.Active()
 
             with self.outer.lock:
-                prev_state = self.outer.state
-                next_state.prev_state = prev_state
+                next_state.raw_prev_state = self.outer.state
                 self.outer.state = next_state
 
-            prev_meas_state = prev_state.get_measured_state()
+            prev_meas_state = next_state.raw_prev_state.get_measured_state()
             meas_state = next_state.get_measured_state()
 
             # possible previous states
@@ -202,21 +115,21 @@ class FlatMapObservable(Observable):
 
             # connect next child observer
             if any([
-                isinstance(meas_state, FlatMapObservable.Active),
-                isinstance(meas_state, FlatMapObservable.OnOuterCompleted),
+                isinstance(meas_state, FlatMapStates.Active),
+                isinstance(meas_state, FlatMapStates.OnOuterCompleted),
             ]):
                 self.next_conn_observer.connect()
 
-            elif isinstance(meas_state, FlatMapObservable.WaitOnOuter):
+            elif isinstance(meas_state, FlatMapStates.WaitOnOuter):
                 self.outer_upstream_ack.on_next(continue_ack)
 
-            elif isinstance(meas_state, FlatMapObservable.Stopped):
+            elif isinstance(meas_state, FlatMapStates.Stopped):
 
-                if isinstance(prev_meas_state, FlatMapObservable.OnOuterCompleted):
+                if isinstance(prev_meas_state, FlatMapStates.OnOuterCompleted):
                     self.outer.observer_info.observer.on_completed()
-                elif isinstance(prev_meas_state, FlatMapObservable.OnOuterException):
+                elif isinstance(prev_meas_state, FlatMapStates.OnOuterException):
                     self.outer.observer_info.observer.on_next(prev_meas_state.exc)
-                elif isinstance(prev_meas_state, FlatMapObservable.Stopped):
+                elif isinstance(prev_meas_state, FlatMapStates.Stopped):
                     pass
                 else:
                     raise Exception(f'illegal case "{prev_meas_state}"')
@@ -226,12 +139,11 @@ class FlatMapObservable(Observable):
             else:
                 raise Exception(f'illegal state "{meas_state}"')
 
-    def _report_invalid_state(self, state: 'FlatMapObservable.State', method: str):
+    def _report_invalid_state(self, state: FlatMapStates.State, method: str):
         self._scheduler.report_failure(
-            Exception('State {} in the ConcatMap.{} implementation is invalid'.format(state, method)))
+            Exception('State {} in the FlatMap.{} implementation is invalid'.format(state, method)))
 
     def _on_next(self, outer_elem: ElementType):
-
         if isinstance(outer_elem, list):
             outer_vals = outer_elem
         else:
@@ -243,25 +155,24 @@ class FlatMapObservable(Observable):
                 self._on_error(exc)
                 return stop_ack
 
-        next_state = FlatMapObservable.Active()
+        next_state = RawFlatMapStates.Active()
 
         with self.lock:
-            prev_state = self.state
-            next_state.prev_state = prev_state
+            next_state.raw_prev_state = self.state
             self.state = next_state
 
-        meas_state = next_state.get_measured_state()
+        meas_state = next_state.raw_prev_state.get_measured_state()
 
-        if isinstance(meas_state, FlatMapObservable.Stopped):
+        if isinstance(meas_state, FlatMapStates.Stopped):
             return stop_ack
 
-        # previous state should be WaitOnOuter
-        if not (isinstance(prev_state, FlatMapObservable.InitialState) or isinstance(prev_state, FlatMapObservable.WaitOnOuter)):
-            # - state should not be Completed, because only outer observer can complete the observable,
-            #   in that case `on_next` should not be called anymore (by rxbp convention)
-
-            self._report_invalid_state(prev_state, 'on_next (1)')
-            return stop_ack
+        # # previous state should be WaitOnOuter
+        # if not (isinstance(meas_state, FlatMapStates.InitialState) or isinstance(meas_state, FlatMapStates.WaitOnOuter)):
+        #     # - state should not be Completed, because only outer observer can complete the observable,
+        #     #   in that case `on_next` should not be called anymore (by rxbp convention)
+        #
+        #     self._report_invalid_state(meas_state, 'on_next (1)')
+        #     return stop_ack
 
         # the ack that might be returned by this `on_next`
         async_upstream_ack = AckSubject()
@@ -311,38 +222,38 @@ class FlatMapObservable(Observable):
         return async_upstream_ack
 
     def _on_error(self, exc):
-        next_state = FlatMapObservable.OnOuterException(exc=exc)
+        next_state = RawFlatMapStates.OnOuterException(exc=exc)
 
         with self.lock:
-            prev_state = self.state
-            next_state.prev_state = prev_state
+            next_state.raw_prev_state = self.state
             self.state = next_state
 
-        meas_prev_state = prev_state.get_measured_state()
+        meas_prev_state = next_state.raw_prev_state.get_measured_state()
         meas_state = next_state.get_measured_state()
 
-        # only if state is WaitOnNextChild, complete observer
-        if isinstance(meas_state, FlatMapObservable.Stopped):
+        # print(meas_state)
 
-            if not isinstance(meas_prev_state, FlatMapObservable.Stopped):
+        # only if state is WaitOnNextChild, complete observer
+        if isinstance(meas_state, FlatMapStates.Stopped):
+
+            if not isinstance(meas_prev_state, FlatMapStates.Stopped):
                 # calls to root.on_next and root.on_error or root.on_completed happen in order,
                 # therefore state is not changed concurrently in WaitOnNextChild
                 self.observer_info.observer.on_error(exc)
 
     def _on_completed(self):
-        next_state = FlatMapObservable.OnOuterCompleted()
+        next_state = RawFlatMapStates.OnOuterCompleted()
 
         with self.lock:
-            prev_state = self.state
-            next_state.prev_state = prev_state
+            next_state.raw_prev_state = self.state
             self.state = next_state
 
-        meas_prev_state = prev_state.get_measured_state()
+        meas_prev_state = next_state.raw_prev_state.get_measured_state()
         meas_state = next_state.get_measured_state()
 
-        if isinstance(meas_state, FlatMapObservable.Stopped):
+        if isinstance(meas_state, FlatMapStates.Stopped):
 
-            if not isinstance(meas_prev_state, FlatMapObservable.Stopped):
+            if not isinstance(meas_prev_state, FlatMapStates.Stopped):
                 # calls to root.on_next and root.on_completed happen in order,
                 # therefore state is not changed concurrently at the WaitOnNextChild
                 self.observer_info.observer.on_completed()

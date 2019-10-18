@@ -89,6 +89,7 @@ class BackpressureBufferedObserver(Observer):
                 ack = self.underlying.on_next(next)
                 return ack
             except:
+                print(f'next value = "{list(next)}"')
                 raise NotImplementedError
 
         def signal_complete():
@@ -181,7 +182,7 @@ class BackpressureBufferedObserver(Observer):
                         remaining = self.items_to_push
                     processed = 0
 
-                    if remaining == 0:
+                    if remaining <= 0:
                         with self.lock:
                             bp = self.back_pressured
                             self.back_pressured = None

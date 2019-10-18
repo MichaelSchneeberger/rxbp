@@ -1,13 +1,12 @@
-from typing import Callable, Any, Set
+from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase, FlowableBase
-from rxbp.selectors.getselectormixin import NoSelectorFound, SelectorFound, IdentitySelector, ObservableSelector
+from rxbp.flowablebase import FlowableBase
+from rxbp.selectors.getselectormixin import SelectorFound, IdentitySelector, ObservableSelector
 from rxbp.selectors.selectionop import select_observable
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
-from rxbp.testing.debugobservable import DebugObservable
 
 
 class Zip2Flowable(FlowableBase):

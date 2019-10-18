@@ -1,12 +1,11 @@
 import functools
 import itertools
-from typing import Callable, Any, Generic, Iterable, Tuple
+from typing import Callable, Any, Generic, Tuple
 
 import rx
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
 from rxbp.flowables.bufferflowable import BufferFlowable
 
-from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.executeonflowable import ExecuteOnFlowable
@@ -14,7 +13,7 @@ from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.mergeflowable import MergeFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
-from rxbp.flowables.optfilterflowable import OptFilterFlowable
+from rxbp.flowables.fastfilterflowable import FastFilterFlowable
 from rxbp.flowables.pairwiseflowable import PairwiseFlowable
 from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
 from rxbp.flowables.scanflowable import ScanFlowable
@@ -68,7 +67,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return Flowable(flowable)
 
-    def concat(self, sources: Iterable[FlowableBase]):
+    def concat(self, *sources: FlowableBase):
         all_sources = itertools.chain([self], sources)
         flowable = ConcatFlowable(sources=all_sources)
         return Flowable(flowable)
@@ -117,8 +116,8 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = FilterFlowable(source=self, predicate=predicate)
         return Flowable(flowable)
 
-    def opt_filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
-        flowable = OptFilterFlowable(source=self, predicate=predicate)
+    def fast_filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
+        flowable = FastFilterFlowable(source=self, predicate=predicate)
         return Flowable(flowable)
 
     def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'Flowable[ValueType]':
@@ -270,11 +269,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         return Flowable(flowable)
 
     def share(self, func: Callable[['Flowable'], 'Flowable']):
-        def lifted_func(f: RefCountFlowable):
-            result = func(Flowable(f))
-            return result
+        # def lifted_func(f: RefCountFlowable):
+        #     result = func(Flowable(f))
+        #     return result
 
-        flowable = CacheServeFirstFlowable(source=self, func=lifted_func)
+        flowable = func(Flowable(RefCountFlowable(source=self)))
         return Flowable(flowable)
 
     def set_base(self, val: Base):

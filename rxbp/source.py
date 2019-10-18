@@ -90,23 +90,23 @@ def empty():
     return _from_iterable([], n_elements=0)
 
 
-def defer(
-        func: Callable[[Flowable], FlowableBase],
-        initial: Any,
-        defer_selector: Callable[[Flowable], FlowableBase] = None,
-        base: Base = None,
-):
-
-    def lifted_func(f: FlowableBase):
-        result = func(Flowable(f))
-        return result
-
-    return Flowable(DeferFlowable(
-        base=base,
-        func=lifted_func,
-        initial=initial,
-        defer_selector=defer_selector,
-    ))
+# def defer(
+#         func: Callable[[Flowable], FlowableBase],
+#         initial: Any,
+#         defer_selector: Callable[[Flowable], FlowableBase] = None,
+#         base: Base = None,
+# ):
+#
+#     def lifted_func(f: FlowableBase):
+#         result = func(Flowable(f))
+#         return result
+#
+#     return Flowable(DeferFlowable(
+#         base=base,
+#         func=lifted_func,
+#         initial=initial,
+#         defer_selector=defer_selector,
+#     ))
 
 
 def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None):
@@ -188,7 +188,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                 observer = observer_info.observer
 
                 if isinstance(overflow_strategy, DropOld) or isinstance(overflow_strategy, ClearBuffer):
-                    subscriber = EvictingBufferedObserver(observer=observer, scheduler=self.scheduler,
+                    rx_observer = EvictingBufferedObserver(observer=observer, scheduler=self.scheduler,
                                                           subscribe_scheduler=self.subscribe_scheduler,
                                                           strategy=overflow_strategy)
                 else:
@@ -199,14 +199,14 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                     else:
                         raise AssertionError('only BackPressure is currently supported as overflow strategy')
 
-                    subscriber = BackpressureBufferedObserver(underlying=observer, scheduler=self.scheduler,
+                    rx_observer = BackpressureBufferedObserver(underlying=observer, scheduler=self.scheduler,
                                                               subscribe_scheduler=self.subscribe_scheduler,
                                                               buffer_size=buffer_size)
 
                 disposable = source.pipe(
                     operators.buffer_with_count(batch_size_),
-                ).subscribe(on_next=subscriber.on_next, on_error=subscriber.on_error,
-                            on_completed=subscriber.on_completed, scheduler=self.scheduler)
+                ).subscribe(on_next=rx_observer.on_next, on_error=rx_observer.on_error,
+                            on_completed=rx_observer.on_completed, scheduler=self.scheduler)
                 return disposable
 
         observable = ToBackpressureObservable(scheduler=subscriber.scheduler,

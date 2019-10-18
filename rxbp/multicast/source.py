@@ -1,22 +1,27 @@
 from typing import Any, List, Callable, Union, Iterable
 
+import rx
 import rxbp
 from rxbp.flowable import Flowable
+from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.multicast import MultiCast
+from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.rxextensions.debug_ import debug
+from rxbp.torx import to_rx
 
 
 def return_value(val: Any):
     class FromObjectMultiCast(MultiCastBase):
-        def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
-            return rxbp.return_value(val)
+        def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+            return rx.return_value(val, scheduler=info.multicast_scheduler)
 
     return MultiCast(FromObjectMultiCast())
 
 
 def from_iterable(vals: Iterable[Any]):
     class FromIterableMultiCast(MultiCastBase):
-        def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
+        def get_source(self, info: MultiCastInfo) -> Flowable:
             return rxbp.from_(vals)
 
     return MultiCast(FromIterableMultiCast())
@@ -36,7 +41,7 @@ def from_flowable(
         return multicast
     else:
         class ToFlowableStream(MultiCastBase):
-            def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
+            def get_source(self, info: MultiCastInfo) -> Flowable:
                 return multicast.source.map(lambda args: func(*args))
 
         return MultiCast(ToFlowableStream())
@@ -50,17 +55,19 @@ def from_event(
     """
 
     class ReactOnMultiCast(MultiCastBase):
-        def get_source(self, info: MultiCastBase.MultiCastInfo) -> Flowable:
-            source_ = source.pipe(
-                rxbp.op.subscribe_on(scheduler=info.subscribe_scheduler),
+        def get_source(self, info: MultiCastInfo) -> Flowable:
+            subscribe_on_flowable = Flowable(SubscribeOnFlowable(source, scheduler=info.source_scheduler))
+            first_flowable = subscribe_on_flowable.pipe(
                 rxbp.op.first(raise_exception=lambda f: f()),
             )
 
             if func is None:
-                return source_
+                result = first_flowable
             else:
-                return source_.pipe(
+                result = first_flowable.pipe(
                     rxbp.op.map(selector=func),
                 )
+
+            return to_rx(result, subscribe_schduler=info.multicast_scheduler)
 
     return MultiCast(ReactOnMultiCast())

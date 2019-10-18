@@ -3,13 +3,14 @@ from rxbp.ack.ackimpl import continue_ack, Continue
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.observerinfo import ObserverInfo
+from rxbp.states.measuredstates.flatmapstates import FlatMapStates
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestZip2Observable(TestCaseBase):
+class TestFlatMapObservable(TestCaseBase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
@@ -40,7 +41,7 @@ class TestZip2Observable(TestCaseBase):
 
         self.s2.on_completed()
         self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(obs.state.get_measured_state(), FlatMapObservable.WaitOnOuter)
+        self.assertIsInstance(obs.state.get_measured_state(), FlatMapStates.WaitOnOuter)
 
         ack1 = self.s1.on_next_single(self.s3)
         ack2 = self.s3.on_next_iter([3, 4])
@@ -49,7 +50,7 @@ class TestZip2Observable(TestCaseBase):
 
         self.s3.on_completed()
         self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(obs.state.get_measured_state(), FlatMapObservable.WaitOnOuter)
+        self.assertIsInstance(obs.state.get_measured_state(), FlatMapStates.WaitOnOuter)
 
         self.s1.on_completed()
         self.assertTrue(sink.is_completed)

@@ -1,12 +1,9 @@
-from typing import Callable, Any, Set
+from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase, FlowableBase
-from rxbp.selectors.selectionop import select_observable
+from rxbp.flowablebase import FlowableBase
 from rxbp.observables.zip2observable import Zip2Observable
-from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.testing.debugobservable import DebugObservable
 
 
 class MatchFlowable(FlowableBase):

@@ -9,13 +9,13 @@ from rxbp.ack.ackimpl import continue_ack
 from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import SchedulerBase
+from rxbp.scheduler import SchedulerBase, Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
 from rxbp.typing import ElementType
 
 
-def to_rx(source: FlowableBase, batched: bool = None):
+def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Scheduler = None):
     """ Converts this observable to an rx.Observable
 
     :param scheduler:
@@ -75,7 +75,7 @@ def to_rx(source: FlowableBase, batched: bool = None):
 
                 to_rx_observer.on_next = on_next
 
-            trampoline_scheduler = TrampolineScheduler()
+            trampoline_scheduler = subscribe_schduler or TrampolineScheduler()
             scheduler_ = RxBPScheduler(scheduler=scheduler) if scheduler is not None else trampoline_scheduler
             subscriber = Subscriber(scheduler=scheduler_, subscribe_scheduler=trampoline_scheduler)
             subscription = ObserverInfo(observer=to_rx_observer)

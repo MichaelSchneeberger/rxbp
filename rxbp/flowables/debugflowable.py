@@ -1,7 +1,7 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.testing.debugobservable import DebugObservable
+from rxbp.observables.debugobservable import DebugObservable
 
 
 class DebugFlowable(FlowableBase):

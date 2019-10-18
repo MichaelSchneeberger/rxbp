@@ -76,7 +76,7 @@ does not create any mutable states but rather concatenates functions
 without calling them yet. Or, we first describe what we intend to 
 do in form of a plan, and then we execute the plan. A *Flowable* is 
 executed by calling its `subscribe` method. This will start a chain 
-reaction, where each downsream `Flowables` calls the `subscribe` 
+reaction, where each downsream *Flowables* calls the `subscribe` 
 method of its upstream *Flowable* until
 the sources start emitting the data. Once a *Flowable* is subscribed, we
 allow it to have internal mutable states for performance reasons.
@@ -125,8 +125,7 @@ To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
 type.
 A `MultiCast` represents a collection of *Flowable* and can
  be though of as `Flowable[T[Flowable]]` where T is defined by the user.
-It provide operators through `rxbp.multicast.op` to share `Flowables` 
-in a safe way.
+Operators on *MultiCasts* are exposed through `rxbp.multicast.op`.
 
 ```python
 import rxbp
@@ -192,7 +191,7 @@ The previous code outputs:
 (9, 9)
 ```
 
-When to use an Flowable, when RxPY Observable?
+When to use a Flowable, when RxPY Observable?
 -----------------------------------------
 
 A *Flowable* is used when some asynchronous stage cannot process the

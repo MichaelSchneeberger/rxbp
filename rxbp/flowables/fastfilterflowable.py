@@ -1,12 +1,12 @@
 from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.observables.optfilterobservable import OptFilterObservable
+from rxbp.observables.fastfilterobservable import FastFilterObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
 
 
-class OptFilterFlowable(FlowableBase):
+class FastFilterFlowable(FlowableBase):
     def __init__(
             self,
             source: FlowableBase,
@@ -20,7 +20,7 @@ class OptFilterFlowable(FlowableBase):
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber)
 
-        observable = OptFilterObservable(
+        observable = FastFilterObservable(
             source=subscription.observable,
             predicate=self._predicate,
         )

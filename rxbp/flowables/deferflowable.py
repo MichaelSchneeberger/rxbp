@@ -3,7 +3,6 @@ from typing import Any, Callable
 from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
-from rxbp.flowables.cacheservefirstflowable import CacheServeFirstFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.observable import Observable
@@ -39,10 +38,7 @@ class DeferFlowable(FlowableBase):
                 d1 = SingleAssignmentDisposable()
 
                 def action(_, __):
-                    def gen_initial():
-                        yield initial
-
-                    _ = buffer_observer.on_next(gen_initial)
+                    _ = buffer_observer.on_next([initial])
 
                     # let any elements flow to buffer_observer
                     _, d3 = conn_observer.connect()
@@ -61,10 +57,10 @@ class DeferFlowable(FlowableBase):
 
         scheduled_source = ObserveOnFlowable(source=source, scheduler=subscriber.scheduler)
 
-        result_flowable = CacheServeFirstFlowable(source=scheduled_source, func=self._func)
+        # result_flowable = CacheServeFirstFlowable(source=scheduled_source, func=self._func)
         # result_flowable = scheduled_source.share(lambda flowable: self._func(flowable))
 
-        ref_count_flowable = RefCountFlowable(result_flowable)
+        ref_count_flowable = self._func(Flowable(RefCountFlowable(scheduled_source)))
 
         defer_flowable = self._defer_selector(Flowable(ref_count_flowable))
         defer_subscription = defer_flowable.unsafe_subscribe(subscriber)
