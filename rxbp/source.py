@@ -1,16 +1,12 @@
-import functools
 import itertools
-from typing import Iterator, Iterable, Any, Callable, List, Tuple
+from typing import Iterator, Iterable, Any, List
 
 import rx
-import rxbp
 from rx import operators
 
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.concatflowable import ConcatFlowable
-from rxbp.flowables.deferflowable import DeferFlowable
-from rxbp.multicast.multicast import MultiCast
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
@@ -90,25 +86,6 @@ def empty():
     return _from_iterable([], n_elements=0)
 
 
-# def defer(
-#         func: Callable[[Flowable], FlowableBase],
-#         initial: Any,
-#         defer_selector: Callable[[Flowable], FlowableBase] = None,
-#         base: Base = None,
-# ):
-#
-#     def lifted_func(f: FlowableBase):
-#         result = func(Flowable(f))
-#         return result
-#
-#     return Flowable(DeferFlowable(
-#         base=base,
-#         func=lifted_func,
-#         initial=initial,
-#         defer_selector=defer_selector,
-#     ))
-
-
 def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None):
     return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
 
@@ -122,10 +99,6 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
         stop = arg2
 
     return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
-
-
-# range = from_range
-# range_ = from_range
 
 
 def from_list(buffer: List, batch_size: int = None):
@@ -226,28 +199,6 @@ def return_value(elem: Any):
     return _from_iterable([elem], n_elements=1)
 
 
-# # def merge(sources: List[Flowable]) -> Flowable:
-#     """
-#     """
-#
-#     assert isinstance(sources, tuple), 'rxbp.source.merge takes a list of Flowable sources in opposition to' \
-#                                        ' rxbp.op.merge that takes a single Flowable source'
-#
-#     def gen_stack():
-#         for source in sources:
-#             def _(right: Flowable = None, left: Flowable = source):
-#                 if right is None:
-#                     return left
-#                 else:
-#                     return left.merge(right)
-#
-#             yield _
-#
-#     obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
-#
-#     return obs
-
-
 def merge(*sources: Flowable) -> Flowable:
     """
     """
@@ -256,37 +207,6 @@ def merge(*sources: Flowable) -> Flowable:
         return empty()
     else:
         return sources[0].merge(*sources[1:])
-
-
-# def match(sources: List[Flowable], result_selector: Callable[..., Any] = None):
-#     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
-#
-#     :param selector: a mapping function applied over the generated pairs
-#     :return: zipped observable
-#     """
-#
-#     assert isinstance(sources, list), 'rxbp.source.match takes a list of Flowable sources in opposition to' \
-#                                       ' rxbp.op.match that takes a single Flowable source'
-#
-#     def gen_stack():
-#         for source in sources:
-#             def _(left: Flowable = None, right: Flowable = source):
-#                 if left is None:
-#                     return right.map(lambda v: (v,))
-#                 else:
-#                     def inner_result_selector(v1, v2):
-#                         return v1 + (v2,)
-#
-#                     return left.match(right, selector=inner_result_selector)
-#
-#             yield _
-#
-#     obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
-#
-#     if result_selector is None:
-#         return obs
-#     else:
-#         return obs.map(lambda t: result_selector(*t))
 
 
 def match(*sources: Flowable) -> Flowable:
@@ -300,54 +220,6 @@ def match(*sources: Flowable) -> Flowable:
         return empty()
     else:
         return sources[0].match(*sources[1:])
-
-
-# def share(sources: List[Flowable], func: Callable[..., Flowable]):
-    # def gen_stack():
-    #     for source in reversed(sources):
-    #         def _(func: Callable[..., Flowable], source=source):
-    #             def __(*args):
-    #                 def ___(f: Flowable):
-    #                     new_args = args + (f,)
-    #                     return func(*new_args)
-    #
-    #                 return source.share(___)
-    #             return __
-    #         yield _
-    #
-    # __ = functools.reduce(lambda acc, _: _(acc), gen_stack(), func)
-    # return __()
-
-
-# def zip(sources: List[Flowable], result_selector: Callable[..., Any] = None) -> Flowable:
-#     """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
-#
-#     :param selector: a mapping function applied over the generated pairs
-#     :return: zipped observable
-#     """
-#
-#     # assert isinstance(sources, list), 'rxbp.source.zip takes a list of Flowable sources in opposition to' \
-#     #                                   ' rxbp.op.zip that takes a single Flowable source'
-#
-#     def gen_stack():
-#         for source in reversed(sources):
-#             def _(right: Flowable = None, left: Flowable = source):
-#                 if right is None:
-#                     return left.map(lambda v: (v,))
-#                 else:
-#                     def inner_result_selector(v1: Any, v2: Tuple[Any]):
-#                         return (v1,) + v2
-#
-#                     return left.zip(right, selector=inner_result_selector)
-#
-#             yield _
-#
-#     obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
-#
-#     if result_selector is None:
-#         return obs
-#     else:
-#         return obs.map(lambda t: result_selector(*t))
 
 
 def zip(*sources: Flowable) -> Flowable: #, result_selector: Callable[..., Any] = None) -> Flowable:

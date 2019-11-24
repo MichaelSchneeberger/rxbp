@@ -15,7 +15,6 @@ class Zip2Flowable(FlowableBase):
             left: FlowableBase,
             right: FlowableBase,
             func: Callable[[Any, Any], Any] = None,
-            auto_match: bool = None
     ):
         """
         :param left:
@@ -31,73 +30,35 @@ class Zip2Flowable(FlowableBase):
         self._left = left
         self._right = right
         self._func = func
-        self._auto_match = auto_match
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         left_subscription = self._left.unsafe_subscribe(subscriber=subscriber)
         right_subscription = self._right.unsafe_subscribe(subscriber=subscriber)
 
-        if self._auto_match is True:
-            result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
+        result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
 
-            if isinstance(result, SelectorFound):
-                base = None
+        # The resulting zip Flowable propagates selectors from left and right downstream if the bases of
+        # left and right Flowable match
+        if isinstance(result, SelectorFound):
+            if isinstance(result.left, IdentitySelector) and isinstance(result.right, IdentitySelector):
+                base = left_subscription.info.base
+
                 selectors = {}
-
-                if isinstance(result.left, IdentitySelector):
-                    base = left_subscription.info.base
-                    if left_subscription.info.selectors is not None:
-                        selectors = {**selectors, **left_subscription.info.selectors}
-                    sel_left_obs = left_subscription.observable
-                elif isinstance(result.left, ObservableSelector):
-                    sel_left_obs = select_observable(
-                        left_subscription.observable,
-                        result.left.observable,
-                        scheduler=subscriber.scheduler,
-                    )
-                else:
-                    raise Exception('illegal selector "{}"'.format(result.left))
-
-                if isinstance(result.right, IdentitySelector):
-                    base = right_subscription.info.base
-                    if right_subscription.info.selectors is not None:
-                        selectors = {**selectors, **right_subscription.info.selectors}
-                    sel_right_obs = right_subscription.observable
-                elif isinstance(result.right, ObservableSelector):
-                    sel_right_obs = select_observable(
-                        right_subscription.observable,
-                        result.right.observable,
-                        scheduler=subscriber.scheduler,
-                    )
-                else:
-                    raise NotImplementedError
-
-            else:
-                left_base_name = left_subscription.info.base.get_name() if isinstance(left_subscription.info.base, Base) else 'None'
-                right_base_name = right_subscription.info.base.get_name() if isinstance(right_subscription.info.base, Base) else 'None'
-                raise Exception('bases do not match of "{}" and "{}"'.format(left_base_name, right_base_name))
-
-        else:
-            sel_left_obs = left_subscription.observable
-            sel_right_obs = right_subscription.observable
-
-            result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
-            if isinstance(result, SelectorFound):
-                if isinstance(result.left, IdentitySelector) and isinstance(result.right, IdentitySelector):
-                    base = left_subscription.info.base
-
-                    selectors = {}
-                    if left_subscription.info.selectors is not None:
-                        selectors = {**selectors, **left_subscription.info.selectors}
-                    if right_subscription.info.selectors is not None:
-                        selectors = {**selectors, **right_subscription.info.selectors}
-                else:
-                    base = None
-                    selectors = None
+                if left_subscription.info.selectors is not None:
+                    selectors = {**selectors, **left_subscription.info.selectors}
+                if right_subscription.info.selectors is not None:
+                    selectors = {**selectors, **right_subscription.info.selectors}
             else:
                 base = None
                 selectors = None
+        else:
+            base = None
+            selectors = None
 
-        observable = Zip2Observable(left=sel_left_obs, right=sel_right_obs, selector=self._func)
+        observable = Zip2Observable(
+            left=left_subscription.observable,
+            right=right_subscription.observable,
+            selector=self._func,
+        )
 
         return Subscription(info=SubscriptionInfo(base=base, selectors=selectors), observable=observable)

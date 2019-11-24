@@ -67,7 +67,7 @@ Differences from RxPY
 ### Flowable
 
 Similar to a RxPY Observable, a *Flowable* implements a `subscribe` 
-method, which is a mechanism that makes it possible to describe a 
+method, which is a mechanism that allows to describe a 
 data flow from its source to some sink. The description is
 done with *rxbackpressure* operators exposed by `rxbp.op`.
 

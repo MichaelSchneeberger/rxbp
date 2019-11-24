@@ -28,10 +28,8 @@ class IteratorAsObservable(Observable):
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
         self.on_finish = on_finish
-        # self.selector = ObservablePublishSubject(scheduler=scheduler)
 
     def observe(self, observer_info: ObserverInfo):
-
         observer = observer_info.observer
 
         # try:

@@ -101,6 +101,18 @@ def filter_with_index(predicate: Callable[[Any, int], bool]):
     return FlowableOperator(func)
 
 
+def first(raise_exception: Callable[[Callable[[], None]], None] = None):
+    """ Maps each item emitted by the source by applying the given function
+
+    :param selector: function that defines the mapping applied to each element
+    :return: mapped Flowable
+    """
+
+    def func(source: Flowable) -> Flowable:
+        return source.first(raise_exception=raise_exception)
+    return FlowableOperator(func)
+
+
 def flat_map(selector: Callable[[Any], Flowable]):
     """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
     as input and returns an inner observable. The resulting observable concatenates the items of each inner
@@ -112,18 +124,6 @@ def flat_map(selector: Callable[[Any], Flowable]):
 
     def func(left: Flowable) -> Flowable:
         return left.flat_map(selector=selector)
-    return FlowableOperator(func)
-
-
-def first(raise_exception: Callable[[Callable[[], None]], None] = None):
-    """ Maps each item emitted by the source by applying the given function
-
-    :param selector: function that defines the mapping applied to each element
-    :return: mapped Flowable
-    """
-
-    def func(source: Flowable) -> Flowable:
-        return source.first(raise_exception=raise_exception)
     return FlowableOperator(func)
 
 
@@ -213,21 +213,15 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     return FlowableOperator(inner_func)
 
 
-# def subscribe_on(scheduler: Scheduler = None):
-#     def func(source: Flowable) -> Flowable:
-#         return source.subscribe_on(scheduler=scheduler)
-#     return FlowableOperator(func)
+def set_base(val: Any):
+    def func(source: Flowable) -> Flowable:
+        return source.set_base(val=val)
+    return FlowableOperator(func)
 
 
 def to_list():
     def func(source: Flowable) -> Flowable:
         return source.to_list()
-    return FlowableOperator(func)
-
-
-def set_base(val: Any):
-    def func(source: Flowable) -> Flowable:
-        return source.set_base(val=val)
     return FlowableOperator(func)
 
 

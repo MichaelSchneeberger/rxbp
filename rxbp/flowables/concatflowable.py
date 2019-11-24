@@ -6,8 +6,6 @@ from rxbp.ack.merge import _merge
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.observables.refcountobservable import RefCountObservable
-from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observer import Observer

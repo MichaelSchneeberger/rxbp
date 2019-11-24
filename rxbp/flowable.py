@@ -11,6 +11,7 @@ from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.executeonflowable import ExecuteOnFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.mapflowable import MapFlowable
+from rxbp.flowables.matchflowable import MatchFlowable
 from rxbp.flowables.mergeflowable import MergeFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
 from rxbp.flowables.fastfilterflowable import FastFilterFlowable
@@ -30,7 +31,6 @@ from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.zip2flowable import Zip2Flowable
-from rxbp.observable import Observable
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.flowablebase import FlowableBase
@@ -38,15 +38,15 @@ from rxbp.typing import ValueType
 
 
 class Flowable(Generic[ValueType], FlowableBase[ValueType]):
-    """ A `Flowable` implements a `subscribe` method, which
-    makes it possible to describe a data flow from source to sink. The description is
+    """ A `Flowable` implements a `subscribe` method allowing to describe a
+    data flow from source to sink. The "description" is
     done with *rxbackpressure* operators exposed to `rxbp.op`.
 
     Like in functional programming, usings *rxbackpressure* operators does not create
     any mutable states but rather concatenates functions without calling them
     yet. Or in other words, we first describe what we want to do, and then
     we execute the plan. A `Flowable` is executed by calling its `subscribe`
-    method. This will start a chain reaction where downsream `Flowables`
+    method. This will start a chain reaction, where downsream `Flowables`
     call the `subscribe` method of their linked upstream `Flowable` until
     the sources start emitting data. Once a `Flowable` is subscribed, we
     allow it to have mutable states where it make sense.
@@ -102,8 +102,9 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
     def execute_on(self, scheduler: Scheduler):
         return Flowable(ExecuteOnFlowable(source=self, scheduler=scheduler))
 
-    def subscribe_on(self, scheduler: Scheduler):
-        return Flowable(SubscribeOnFlowable(source=self, scheduler=scheduler))
+    def fast_filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
+        flowable = FastFilterFlowable(source=self, predicate=predicate)
+        return Flowable(flowable)
 
     def filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
         """ Only emits those items for which the given predicate holds
@@ -114,10 +115,6 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         """
 
         flowable = FilterFlowable(source=self, predicate=predicate)
-        return Flowable(flowable)
-
-    def fast_filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
-        flowable = FastFilterFlowable(source=self, predicate=predicate)
         return Flowable(flowable)
 
     def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'Flowable[ValueType]':
@@ -134,6 +131,15 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return flowable
 
+    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None):
+        """ Repeat the first item forever
+
+        :return:
+        """
+
+        flowable = FirstFlowable(source=self, raise_exception=raise_exception)
+        return Flowable(flowable)
+
     def flat_map(self, selector: Callable[[Any], FlowableBase]):
         flowable = FlatMapFlowable(source=self, selector=selector)
         return Flowable(flowable)
@@ -147,16 +153,6 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         flowable = MapFlowable(source=self, selector=selector)
         return Flowable(flowable)
-
-    # def match(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None) -> 'Flowable':
-    #     """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
-    #
-    #     :param selector: a mapping function applied over the generated pairs
-    #     :return: matched Flowable
-    #     """
-    #
-    #     flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=True)
-    #     return Flowable(flowable)
 
     def match(self, *others: 'Flowable'):
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
@@ -179,22 +175,13 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
                             def inner_result_selector(v1: Any, v2: Tuple[Any]):
                                 return (v1,) + v2
 
-                            flowable =  Zip2Flowable(left=self, right=right, func=inner_result_selector, auto_match=True)
+                            flowable =  MatchFlowable(left=left, right=right, func=inner_result_selector)
                             return flowable
 
                     yield _
 
             obs = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
             return Flowable(obs)
-
-    # def merge(self, other: FlowableBase):
-    #     """ Merges the elements of two Flowables into a single Flowable
-    #
-    #     :param selector: (optional) selector function
-    #     :return: merged Flowable
-    #     """
-    #
-    #     return Flowable(MergeFlowable(source=self, other=other))
 
     def merge(self, *others: 'Flowable'):
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
@@ -214,7 +201,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
                         if right is None:
                             return left
                         else:
-                            flowable = MergeFlowable(source=self, other=right)
+                            flowable = MergeFlowable(source=left, other=right)
                             return flowable
 
                     yield _
@@ -255,15 +242,6 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         flowable = RepeatFirstFlowable(source=self)
         return Flowable(flowable)
 
-    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None):
-        """ Repeat the first item forever
-
-        :return:
-        """
-
-        flowable = FirstFlowable(source=self, raise_exception=raise_exception)
-        return Flowable(flowable)
-
     def scan(self, func: Callable[[Any, Any], Any], initial: Any):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return Flowable(flowable)
@@ -300,16 +278,6 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return to_rx(source=self, batched=batched)
 
-    # def zip(self, right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
-    #     """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
-    #
-    #     :param selector: a mapping function applied over the generated pairs
-    #     :return: zipped Flowable
-    #     """
-    #
-    #     flowable =  Zip2Flowable(left=self, right=right, func=selector, auto_match=False)
-    #     return Flowable(flowable)
-
     def zip(self, *others: 'Flowable'):
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
@@ -331,7 +299,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
                             def inner_result_selector(v1: Any, v2: Tuple[Any]):
                                 return (v1,) + v2
 
-                            flowable =  Zip2Flowable(left=self, right=right, func=inner_result_selector, auto_match=False)
+                            flowable =  Zip2Flowable(left=left, right=right, func=inner_result_selector)
                             return flowable
 
                     yield _

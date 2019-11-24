@@ -17,7 +17,7 @@ class FlowableBase(Generic[ValueType], ABC):
     """ See `Flowable` for more information.
 
     Two class are used to implement `Flowable`. `FlowableBase` implements the basic interface including the `subscribe`
-    method. `Flowable` implements the base Flowable operators, which are accessible through `rxbp.op`.
+    method. `Flowable` implements the `pipe` operator.
     """
 
     def subscribe(
