@@ -12,9 +12,8 @@ from rx import operators as rxop
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
-from rxbp.multicast.singleflowable import SingleFlowable
+from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
@@ -34,8 +33,8 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
 
                 def flat_map_func(v: MultiCastValue):
-                    if isinstance(v, SingleFlowable):
-                        return v.source
+                    if isinstance(v, SingleFlowableMixin):
+                        return v.get_single_flowable()
                     else:
                         return v
 
@@ -47,7 +46,7 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                 )
 
                 source_flowable = rxbp.from_rx(source.get_source(info=info).pipe(
-                    rxop.filter(lambda v: isinstance(v, SingleFlowable) or isinstance(v, FlowableBase)),
+                    rxop.filter(lambda v: isinstance(v, SingleFlowableMixin) or isinstance(v, FlowableBase)),
                     rxop.first(),
                 ))
                 return Flowable(SubscribeOnFlowable(source_flowable, scheduler=info.multicast_scheduler)).pipe(
@@ -57,5 +56,5 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
         return Flowable(MultiCastToFlowable())
 
 
-MultiCastFlowable = Union[SingleFlowable, Flowable]
+MultiCastFlowable = Union[SingleFlowableMixin, Flowable]
 

@@ -8,7 +8,7 @@ from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.rxextensions.liftobservable import LiftObservable
-from rxbp.multicast.singleflowable import SingleFlowable
+from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase, MultiCastFlowable
 from rxbp.multicast.multicastoperator import MultiCastOperator
@@ -104,8 +104,8 @@ def zip(
                 )
 
                 def flat_map_func(v: MultiCastValue):
-                    if isinstance(v, SingleFlowable):
-                        return v.source
+                    if isinstance(v, SingleFlowableMixin):
+                        return v.get_single_flowable()
                     if isinstance(v, Flowable):
                         return v
                     else:

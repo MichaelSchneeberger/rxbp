@@ -10,6 +10,7 @@ from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.bufferflowable import BufferFlowable
+from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowabledict import FlowableDict
@@ -17,6 +18,7 @@ from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
+from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
@@ -75,16 +77,22 @@ class DeferMultiCast(MultiCastBase):
         def map_to_flowable_dict(base: MultiCastBase):
             if isinstance(base, Flowable):
                 states = {curr_index: base}
+
             elif isinstance(base, list):
                 assert all(isinstance(e, Flowable) for e in base)
 
                 states = {curr_index + idx: val for idx, val in enumerate(base)}
+
             elif isinstance(base, dict):
                 assert all(isinstance(e, Flowable) for e in base.values())
-
                 states = base
+
             elif isinstance(base, FlowableStateMixin):
                 states = base.get_flowable_state()
+
+                if isinstance(base, SingleFlowableMixin):
+                    states = {**states, curr_index: base.get_single_flowable()}
+
             else:
                 raise Exception(f'illegal base "{base}"')
 
@@ -94,23 +102,40 @@ class DeferMultiCast(MultiCastBase):
         output = self.func(init)
 
         def map_func(base: MultiCastValue):
-            # the first state that is subscribed initializes the defer loop
+
+            def select_first_index(state):
+                class SingleFlowableDict(SingleFlowableMixin, FlowableDict):
+                    def get_single_flowable(self) -> Flowable:
+                        return state[0]
+
+                return SingleFlowableDict(state)
+
+            def select_none(state):
+                return FlowableDict(state)
+
             if isinstance(base, Flowable) and len(initial_dict) == 1:
-                states = {list(initial_dict.keys())[0]: base}
+                deferred_values = {list(initial_dict.keys())[0]: base}      # deferred values refer to the values returned by the defer function
+                select_flowable_dict = select_none
+
             elif isinstance(base, list):
-                states = {idx: val for idx, val in enumerate(base)}
+                deferred_values = {idx: val for idx, val in enumerate(base)}
+                select_flowable_dict = select_first_index
+
             elif isinstance(base, dict):
-                states = base
+                deferred_values = base
+                select_flowable_dict = select_none
+
             elif isinstance(base, FlowableStateMixin):
-                states: Dict[Any, Flowable] = base.get_flowable_state()
+                deferred_values: Dict[Any, Flowable] = base.get_flowable_state()
+                select_flowable_dict = select_none
+
             else:
                 raise Exception(f'illegal case "{base}"')
 
+            shared_deferred_values = {key: RefCountFlowable(value) for key, value in deferred_values.items()}
+
             lock = threading.RLock()
             is_first = [True]
-            # is_subscribed = [False]
-            # is_connected = [False]
-            # breaking_the_loop = [None]
 
             class DeferFlowable(FlowableBase):
                 def __init__(self, source: FlowableBase, key: Any):
@@ -118,22 +143,25 @@ class DeferMultiCast(MultiCastBase):
                     self.key = key
 
                 def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-                    # print('DeferFlowable.subscribe')
 
-                    create_loop = False
+                    close_loop = False
                     with lock:
                         if is_first[0]:
                             is_first[0] = False
-                            create_loop = True
+                            close_loop = True
 
-                    if create_loop:
-                        def gen_flowable_per_deferred_state():
+                    # close defer loop only if first element has received
+                    if close_loop:
+
+                        def gen_index_for_each_deferred_state():
+                            """ for each value returned by the defer function """
                             for key in initial_dict.keys():
                                 def for_func(key=key):
-                                    return states[key].map(lambda v: (key, v))
+                                    return Flowable(MapFlowable(shared_deferred_values[key], selector=lambda v: (key, v)))
                                 yield for_func()
+                        indexed_deferred_values = gen_index_for_each_deferred_state()
 
-                        zipped = rxbp.zip(*gen_flowable_per_deferred_state()).pipe(
+                        zipped = rxbp.zip(*indexed_deferred_values).pipe(
                             rxbp.op.map(lambda v: dict(v)),
                         )
 
@@ -141,27 +169,30 @@ class DeferMultiCast(MultiCastBase):
 
                         class BreakingTheLoopFlowable(FlowableBase):
                             def __init__(self):
-                                self.observer = None
                                 self.disposable = SingleAssignmentDisposable()
 
-                            def connect(self):
-                                subscription = buffered.unsafe_subscribe(subscriber)
-                                volatile = ObserverInfo(observer=self.observer, is_volatile=True)
-                                disposable = subscription.observable.observe(volatile)
-                                self.disposable.set_disposable(disposable)
-
                             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+
                                 class BreakingTheLoopObservable(Observable):
                                     def observe(_, observer_info: ObserverInfo) -> Disposable:
-                                        self.observer = observer_info.observer
-                                        self.connect()
+                                        """
+                                        this method should only be called once
+                                        stop calling another observe method here
+                                        """
+
+                                        observer = observer_info.observer
+
+                                        subscription = buffered.unsafe_subscribe(subscriber)
+
+                                        observer_info = ObserverInfo(observer=observer, is_volatile=True)
+                                        disposable = subscription.observable.observe(observer_info)
+
+                                        self.disposable.set_disposable(disposable)
 
                                         def action(_, __):
-                                            self.observer.on_next([initial])
+                                            observer.on_next([initial])
 
                                         d2 = subscriber.subscribe_scheduler.schedule(action)
-
-                                        # return self.disposable
 
                                         return CompositeDisposable(self.disposable, d2)
 
@@ -172,20 +203,12 @@ class DeferMultiCast(MultiCastBase):
 
                         start.flowable = BreakingTheLoopFlowable()
 
-                    subscription = states[self.key].unsafe_subscribe(subscriber)
+                    # subscribe method call might close the defer loop
+                    subscription = self.source.unsafe_subscribe(subscriber)
 
                     class DeferObservable(Observable):
                         def observe(self, observer_info: ObserverInfo):
                             disposable = subscription.observable.observe(observer_info)
-
-                            # connect = False
-                            # with lock:
-                            #     if not is_connected[0]:
-                            #         is_connected[0] = True
-                            #         connect = True
-                            #
-                            # if connect:
-                            #     breaking_the_loop[0].connect()
 
                             return disposable
 
@@ -193,10 +216,10 @@ class DeferMultiCast(MultiCastBase):
 
                     return Subscription(info=SubscriptionInfo(None), observable=defer_observable)
 
-            # do this over all states
-            new_states = {k: Flowable(DeferFlowable(v, k)) for k, v in states.items()}
+            # create a flowable for all deferred values
+            new_states = {k: Flowable(DeferFlowable(v, k)) for k, v in shared_deferred_values.items()}
 
-            return FlowableDict(new_states)
+            return select_flowable_dict(new_states)
 
         return output.get_source(info=info).pipe(
             rxop.map(map_func),

@@ -10,7 +10,7 @@ import rx
 from rx.disposable import Disposable, BooleanDisposable
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
 
-from rxbp.ack.ackimpl import Continue, Stop, stop_ack
+from rxbp.ack.ackimpl import Continue, Stop, stop_ack, continue_ack
 from rxbp.ack.ackbase import AckBase
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on
@@ -163,15 +163,16 @@ class CacheServeFirstOSubject(OSubjectBase):
         class AsyncAckSingle(Single):
             current_index: int
             inner_subscription: 'CacheServeFirstOSubject.InnerSubscription'
+            ack_update: AckBase = None
 
             def on_next(self, ack: AckBase):
-
                 # start fast_loop
                 if isinstance(ack, Continue):
                     with self.inner_subscription.lock:
                         has_elem, notification = self.inner_subscription.shared_state.get_element_for(
                             self.inner_subscription,
                             self.current_index,
+                            self.ack_update
                         )
 
                     if has_elem:
@@ -211,6 +212,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                 single = self.AsyncAckSingle(
                     inner_subscription=self,
                     current_index=current_index,
+                    ack_update=continue_ack,
                 )
 
                 _observe_on(source=ack, scheduler=self.scheduler).subscribe(single)

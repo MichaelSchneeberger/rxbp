@@ -1,10 +1,8 @@
-from typing import List, Iterator, Iterable
+from typing import List
 
-from rx.disposable import CompositeDisposable, SerialDisposable, SingleAssignmentDisposable, Disposable
-from rxbp.ack.single import Single
+from rx.disposable import CompositeDisposable
 
 from rxbp.observable import Observable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver
@@ -32,7 +30,10 @@ class ConcatObservable(Observable):
                 return self.ack
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                observer.on_error(exc)
+
+                for conn_obs in iter_conn_obs:
+                    conn_obs.dispose()
 
             def on_completed(self):
                 try:

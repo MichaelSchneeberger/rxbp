@@ -14,6 +14,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.source = TestObservable()
         self.subject = CacheServeFirstOSubject(scheduler=self.scheduler)
         self.source.observe(ObserverInfo(self.subject))
+        self.exc = Exception('dummy')
 
     def test_initialize(self):
         CacheServeFirstOSubject(scheduler=self.scheduler)
@@ -54,26 +55,24 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertIsInstance(self.subject.state,
                               CacheServeFirstOSubject.CompletedState)
 
-    def test_on_next_two_subscriber_synchronously(self):
+    def test_on_error(self):
         """
-                                     on_next
-        inactive_subscriptions = [s1, s2] -> inactive_subscriptions = [s1, s2]
+               on_completed
+        NormalState -> ErrorState
         """
 
         # preparation
         o1 = TestObserver()
-        o2 = TestObserver()
         self.subject.observe(ObserverInfo(o1))
-        self.subject.observe(ObserverInfo(o2))
+        exc = Exception('dummy')
 
         # state change
-        ack = self.source.on_next_single(1)
+        self.source.on_error(exc)
 
         # verification
-        self.assertIsInstance(ack, Continue)
-        self.assertEqual([1], o1.received)
-        self.assertEqual([1], o2.received)
-        self.assertEqual(0, len(self.subject.shared_state.queue))
+        self.assertEqual(exc, o1.exception)
+        self.assertIsInstance(self.subject.state,
+                              CacheServeFirstOSubject.ExceptionState)
 
     def test_on_next_assynchronously(self):
         """
@@ -114,17 +113,34 @@ class TestCachedServeFirstSubject(TestCaseBase):
         )
 
     def test_on_next_multiple_elements_asynchronously(self):
+        """
+                 on_next
+        queue = [] -> queue = [OnNext(2)]
+        """
+
+        # preparation
         o1 = TestObserver(immediate_coninue=0)
         self.subject.observe(ObserverInfo(o1))
-
         self.source.on_next_single(1)
+
+        # state change
         self.source.on_next_single(2)
+
+        # verification
         self.assertEqual([1], o1.received)
+        queue = self.subject.shared_state.queue
+        self.assertEqual(1, len(queue))
+        self.assertEqual([2], queue[0].value)
 
     def test_on_next_assynchronously_enter_fast_loop(self):
+        """
+                        ack.on_next
+        queue = [OnNext(2)] -> queue = []
+        """
+
+        #preparation
         o1 = TestObserver(immediate_coninue=0)
         self.subject.observe(ObserverInfo(o1))
-
         self.source.on_next_single(1)
         self.source.on_next_single(2)
 
@@ -132,56 +148,102 @@ class TestCachedServeFirstSubject(TestCaseBase):
         o1.ack.on_next(continue_ack)
         self.scheduler.advance_by(1)
 
+        # verification
         self.assertEqual([1, 2], o1.received)
 
-    def test_on_next_assynchronously_enter_fast_loop2(self):
+    def test_on_next_assynchronously_iterate_in_fast_loop(self):
+        """
+                 on_next
+        queue = [] -> queue = [OnNext(2)]
+        """
+
+        # preparation
         o1 = TestObserver(immediate_coninue=0)
         self.subject.observe(ObserverInfo(o1))
-
         self.source.on_next_single(1)
         self.source.on_next_single(2)
         self.source.on_next_single(3)
 
-        o1.immediate_continue = 1
+        # state change
+        o1.immediate_continue = 1           # needs immediate continue to loop
         o1.ack.on_next(continue_ack)
         self.scheduler.advance_by(1)
 
+        # validation
         self.assertEqual([1, 2, 3], o1.received)
+        self.assertEqual(0, len(self.subject.shared_state.queue))
 
-    def test_on_next_assynchronously_enter_fast_loop3(self):
+    def test_on_next_assynchronously_reenter_fast_loop(self):
+        """
+                        ack.on_next
+        queue = [OnNext(3)] -> queue = []
+        """
+
+        # preparations
         o1 = TestObserver(immediate_coninue=0)
         self.subject.observe(ObserverInfo(o1))
-
         self.source.on_next_single(1)
         self.source.on_next_single(2)
         self.source.on_next_single(3)
-
         o1.ack.on_next(continue_ack)
         self.scheduler.advance_by(1)
 
+        # state change
         o1.ack.on_next(continue_ack)
         self.scheduler.advance_by(1)
 
+        # validation
         self.assertEqual([1, 2, 3], o1.received)
+        self.assertEqual(0, len(self.subject.shared_state.queue))
+
+    def test_on_next_two_subscribers_synchronously(self):
+        """
+                                     on_next
+        inactive_subscriptions = [s1, s2] -> inactive_subscriptions = [s1, s2]
+        """
+
+        # preparation
+        o1 = TestObserver()
+        o2 = TestObserver()
+        self.subject.observe(ObserverInfo(o1))
+        self.subject.observe(ObserverInfo(o2))
+
+        # state change
+        ack = self.source.on_next_single(1)
+
+        # verification
+        self.assertIsInstance(ack, Continue)
+        self.assertEqual([1], o1.received)
+        self.assertEqual([1], o2.received)
+        self.assertEqual(0, len(self.subject.shared_state.queue))
 
     def test_on_next_multiple_elements_two_subscribers_asynchronously(self):
+        """
+                                       on_next
+        inactive_subscriptions = [s1, s2] -> inactive_subscriptions = [s1, s2]
+                               queue = [] -> queue = [OnNext(2)]
+        """
+
+        # preparation
         o1 = TestObserver(immediate_coninue=0)
         o2 = TestObserver(immediate_coninue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
-
         self.source.on_next_single(1)
+
+        # state change
         self.source.on_next_single(2)
 
+        # validation
         self.assertEqual([1], o1.received)
         self.assertEqual([1], o2.received)
+        self.assertEqual(1, len(self.subject.shared_state.queue))
 
     def test_on_next_enter_fast_loop_two_subscribers_asynchronously(self):
         o1 = TestObserver(immediate_coninue=0)
         o2 = TestObserver(immediate_coninue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
-
         self.source.on_next_single(1)
         self.source.on_next_single(2)
 
@@ -211,88 +273,25 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual([1, 2, 3], o1.received)
         self.assertEqual([1, 2, 3], o2.received)
 
-    # def test_should_block_onnext_until_connected2(self):
-    #     s: TestScheduler = self.scheduler
-    #
-    #     o1 = TestObserver(immediate_coninue=0)
-    #     o2 = TestObserver(immediate_coninue=0)
-    #
-    #     subject = CacheServeFirstOSubject(scheduler=s)
-    #     subject.observe(ObserverInfo(o1))
-    #     subject.observe(ObserverInfo(o2))
-    #
-    #     def gen_value(v):
-    #         def gen():
-    #             yield v
-    #         return gen()
-    #
-    #     # -----------------
-    #     # 2 inactive, one returns continue => subject returns continue
-    #
-    #     o1.immediate_continue = 1
-    #     ack = subject.on_next(gen_value(10))
-    #
-    #     self.assertListEqual(o1.received, [10])
-    #     self.assertListEqual(o2.received, [10])
-    #     self.assertIsInstance(ack, Continue)
-    #     self.assertEqual(len(subject.shared_state.inactive_subscriptions), 1)
-    #
-    #     # -----------------
-    #     # 1 inactive, asynchroneous ackowledgement
-    #
-    #     o1.immediate_continue = 0
-    #     ack = subject.on_next(gen_value(20))
-    #
-    #     self.assertListEqual(o1.received, [10, 20])
-    #     self.assertListEqual(o2.received, [10])
-    #     self.assertFalse(ack.has_value)
-    #
-    #     o1.ack.on_next(Continue())
-    #     self.scheduler.advance_by(1)
-    #
-    #     self.assertTrue(ack.has_value)
-    #     self.assertIsInstance(ack.value, Continue)
-    #
-    #     # -----------------
-    #     # 1 inactive, revive other observer
-    #
-    #     o1.immediate_continue = 0
-    #     ack = subject.on_next(gen_value(30))
-    #
-    #     self.assertListEqual(o1.received, [10, 20, 30])
-    #     self.assertListEqual(o2.received, [10])
-    #
-    #     ack = subject.on_next(gen_value(40))
-    #     ack = subject.on_next(gen_value(50))
-    #
-    #     o2.immediate_continue = 1
-    #     o2.ack.on_next(Continue())
-    #     s.advance_by(1)
-    #
-    #     self.assertListEqual(o1.received, [10, 20, 30])
-    #     self.assertListEqual(o2.received, [10, 20, 30])
-    #
-    #     o2.immediate_continue = 1
-    #     o2.ack.on_next(Continue())
-    #     s.advance_by(1)
-    #
-    #     self.assertListEqual(o1.received, [10, 20, 30])
-    #     self.assertListEqual(o2.received, [10, 20, 30, 40, 50])
-    #
-    #     self.assertFalse(ack.has_value)
-    #
-    #     o1.immediate_continue = 2
-    #     o1.ack.on_next(Continue())
-    #     s.advance_by(1)
-    #
-    #     self.assertTrue(ack.has_value)
-    #     self.assertListEqual(o1.received, [10, 20, 30, 40, 50])
-    #     self.assertListEqual(o2.received, [10, 20, 30, 40, 50])
-    #
-    #     ack = subject.on_next(gen_value(60))
-    #
-    #     o2.ack.on_next(Continue())
-    #     s.advance_by(1)
-    #
-    #     self.assertListEqual(o1.received, [10, 20, 30, 40, 50, 60])
-    #     self.assertListEqual(o2.received, [10, 20, 30, 40, 50, 60])
+    def test_on_error_two_subscribers_asynchronously(self):
+        o1 = TestObserver()
+        o2 = TestObserver(immediate_coninue=0)
+        self.subject.observe(ObserverInfo(o1))
+        self.subject.observe(ObserverInfo(o2))
+        self.source.on_next_single(1)
+
+        self.source.on_error(self.exc)
+
+        self.assertEqual(self.exc, o1.exception)
+        self.assertEqual(None, o2.exception)
+
+    def test_on_error_asynchronously(self):
+        o1 = TestObserver(immediate_coninue=0)
+        self.subject.observe(ObserverInfo(o1))
+        self.source.on_next_single(1)
+        self.source.on_error(self.exc)
+
+        o1.ack.on_next(continue_ack)
+        self.scheduler.advance_by(1)
+
+        self.assertEqual(self.exc, o1.exception)

@@ -4,7 +4,7 @@ Multicasting
 
 
 
-One annoying problem with RxPY is when an *Observer* misses an event,
+An problem with RxPY is that an *Observer* might miss events,
 because it got subscribed too late to an *Observable*. Especially,
 when working with *multicasting*, it happens quite unexpected as
 described [here](https://github.com/ReactiveX/RxPY/issues/309).
@@ -65,7 +65,7 @@ The previous code outputs:
 
 This is nice, but often we want to create a multicast Flowable in one
 place and consume its elements in another place. With the `share` 
-operator, this was possible by "tunneling" (or lifting) a Flowable. 
+operator, this was possible by "tunneling" a Flowable. 
 By "tunneling", we mean to convert a Flowable to a Flowable of
 multicast Flowable(s) with type `Flowable[Flowable]`. This is 
 achieved by using `rxbp.return_value` inside the shared function.

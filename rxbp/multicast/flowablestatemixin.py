@@ -10,6 +10,7 @@ class FlowableStateMixin(Generic[ValueType], ABC):
     def get_flowable_state(self) -> Dict[Any, Flowable[ValueType]]:
         ...
 
+    @staticmethod
     @abstractmethod
-    def set_flowable_state(self, val: Dict[Any, Flowable[ValueType]]) -> Any:
+    def set_flowable_state(val: Dict[Any, Flowable[ValueType]]) -> Any:
         ...

@@ -4,10 +4,12 @@ import rx
 import rxbp
 from rxbp.flowable import Flowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
+from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.rxextensions.debug_ import debug
+from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
 from rxbp.torx import to_rx
 
 
@@ -29,22 +31,38 @@ def from_iterable(vals: Iterable[Any]):
 
 def from_flowable(
         source: Flowable,
-        func: Callable[[Flowable], MultiCastBase] = None,
+        key: Any = None,
+        # func: Callable[[Flowable], MultiCastBase] = None,
 ):
+
+    def selector(_, source):
+        class SingleFlowableDict(SingleFlowableMixin, FlowableDict):
+            def get_single_flowable(self) -> Flowable:
+                return source
+
+        return SingleFlowableDict(states={key: source})
+
     multicast = return_value(())
 
-    multicast = multicast.pipe(
-        rxbp.multicast.op.share(lambda _: source, lambda _, flowable: flowable),
-    )
-
-    if func is None:
-        return multicast
+    if key is None:
+        multicast = multicast.pipe(
+            rxbp.multicast.op.share(lambda _: source, lambda _, source: source),
+        )
     else:
-        class ToFlowableStream(MultiCastBase):
-            def get_source(self, info: MultiCastInfo) -> Flowable:
-                return multicast.source.map(lambda args: func(*args))
+        multicast = multicast.pipe(
+            rxbp.multicast.op.share(lambda _: source, selector),
+        )
 
-        return MultiCast(ToFlowableStream())
+    return multicast
+
+    # if func is None:
+    #     return multicast
+    # else:
+    #     class ToFlowableStream(MultiCastBase):
+    #         def get_source(self, info: MultiCastInfo) -> Flowable:
+    #             return multicast.source.map(lambda args: func(*args))
+    #
+    #     return MultiCast(ToFlowableStream())
 
 
 def from_event(
