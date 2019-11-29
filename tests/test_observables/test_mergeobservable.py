@@ -1,17 +1,16 @@
-from rxbp.ack.ack import Ack
-from rxbp.ack.ackimpl import continue_ack, Continue, Stop
+import unittest
+
+from rxbp.ack.ackimpl import continue_ack, Continue
 from rxbp.observables.mergeobservable import MergeObservable
-from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.mergestates import MergeStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
-from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestMergeObservable(TestCaseBase):
+class TestMergeObservable(unittest.TestCase):
     def setUp(self):
         self.scheduler = TestScheduler()
         self.s1 = TestObservable()
