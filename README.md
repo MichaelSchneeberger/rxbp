@@ -2,6 +2,8 @@
 RxPy back-pressure extension
 ============================
 
+[![Coverage Status](https://coveralls.io/repos/github/MichaelSchneeberger/rxbackpressure/badge.svg?branch=master)](https://coveralls.io/github/MichaelSchneeberger/rxbackpressure?branch=master)
+
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
 library, that integrates back-pressure into the *Observable* pattern
 in form of *Flowables*.

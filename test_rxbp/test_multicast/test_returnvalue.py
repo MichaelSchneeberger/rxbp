@@ -25,20 +25,20 @@ class TestReturnValue(unittest.TestCase):
         )
         self.o = MockObserver(self.source_scheduler)
 
-    def test_initialize(self):
-        rxbp.multicast.return_value('test')
-
-    def test_send_item_on_subscribe_scheduler(self):
-        mc = rxbp.multicast.return_value('test')
-
-        source = mc.get_source(self.info)
-        source.subscribe(self.o)
-
-        self.assertEqual(0, len(self.o.messages))
-
-        self.multicast_scheduler.advance_by(1)
-
-        self.o.messages = [
-            on_next(0, "test"),
-            on_completed(0),
-        ]
+    # def test_initialize(self):
+    #     rxbp.multicast.return_value('test')
+    #
+    # def test_send_item_on_subscribe_scheduler(self):
+    #     mc = rxbp.multicast.return_value('test')
+    #
+    #     source = mc.get_source(self.info)
+    #     source.subscribe(self.o)
+    #
+    #     self.assertEqual(0, len(self.o.messages))
+    #
+    #     self.multicast_scheduler.advance_by(1)
+    #
+    #     self.o.messages = [
+    #         on_next(0, "test"),
+    #         on_completed(0),
+    #     ]
