@@ -60,8 +60,10 @@ class DeferMultiCast(MultiCastBase):
         if isinstance(initial, list):
             curr_index = len(initial)
             initial_dict = {idx: val for idx, val in enumerate(initial)}
+
         elif isinstance(initial, dict):
             initial_dict = initial
+
         else:
             raise Exception(f'illegal base "{initial}"')
 
@@ -113,20 +115,34 @@ class DeferMultiCast(MultiCastBase):
             def select_none(state):
                 return FlowableDict(state)
 
+            match_error_message = f'defer function returned "{base}" which does not match initial "{initial}"'
+
             if isinstance(base, Flowable) and len(initial_dict) == 1:
+                assert not isinstance(initial, dict), match_error_message
+
+                if isinstance(initial, list):
+                    assert len(base) == 1, match_error_message
+
                 deferred_values = {list(initial_dict.keys())[0]: base}      # deferred values refer to the values returned by the defer function
                 select_flowable_dict = select_none
 
             elif isinstance(base, list):
+                assert isinstance(initial, list) and len(initial) == len(base)
+
                 deferred_values = {idx: val for idx, val in enumerate(base)}
                 select_flowable_dict = select_first_index
 
-            elif isinstance(base, dict):
-                deferred_values = base
-                select_flowable_dict = select_none
+            elif isinstance(base, dict) or isinstance(base, FlowableStateMixin):
+                if isinstance(base, FlowableStateMixin):
+                    deferred_values = base.get_flowable_state()
+                else:
+                    deferred_values = base
 
-            elif isinstance(base, FlowableStateMixin):
-                deferred_values: Dict[Any, Flowable] = base.get_flowable_state()
+                match_error_message = f'defer function returned "{deferred_values.keys()}", ' \
+                                      f'which does not match initial "{initial.keys()}"'
+
+                assert isinstance(initial, dict) and set(initial.keys()) <= set(deferred_values.keys()), match_error_message
+
                 select_flowable_dict = select_none
 
             else:

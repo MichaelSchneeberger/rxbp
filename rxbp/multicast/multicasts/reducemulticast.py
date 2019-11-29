@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import rx
 from rx import operators as rxop, Observable
@@ -20,29 +20,50 @@ class ReduceMultiCast(MultiCastBase):
 
     def get_source(self, info: MultiCastInfo):
         source = self.source.get_source(info=info).pipe(
-            rxop.filter(lambda v: isinstance(v, FlowableStateMixin)),
+            rxop.filter(lambda v: isinstance(v, FlowableStateMixin)
+                                  or isinstance(v, dict)
+                                  or isinstance(v, Flowable)
+                                  or isinstance(v, list)),
         )
 
-        def func(first: FlowableStateMixin, lifted_obs: Observable):
+        def func(first: Union[FlowableStateMixin, dict], lifted_obs: Observable):
+            if isinstance(first, dict):
+                to_state = lambda s: s
+                from_state = lambda s: s
+            elif isinstance(first, FlowableStateMixin):
+                to_state = lambda s: s.get_flowable_state()
+                from_state = lambda s: s.set_flowable_state(s)
+            elif isinstance(first, list):
+                to_state = lambda l: {idx: elem for idx, elem in enumerate(l)}
+                from_state = lambda s: list(s.values())
+            elif isinstance(first, Flowable):
+                to_state = lambda s: {0: s}
+                from_state = lambda s: s[0]
+            else:
+                raise Exception(f'illegal element "{first}"')
+
+            first_state = to_state(first)
+
             class ReduceObservable(Observable):
                 def __init__(self, first: FlowableStateMixin):
                     super().__init__()
 
                     self.first = first
 
-                def _subscribe_core(self,
+                def _subscribe_core(
+                        self,
                         observer: rx.typing.Observer,
                         scheduler: Optional[rx.typing.Scheduler] = None
-                        ) -> rx.typing.Disposable:
+                ) -> rx.typing.Disposable:
                     shared_source = lifted_obs.pipe(
                         rxop.share(),
                     )
 
                     def gen_flowables():
-                        for key in first.get_flowable_state().keys():
+                        for key in first_state.keys():
                             def for_func(key=key):
                                 def selector(v: FlowableStateMixin):
-                                    flowable = v.get_flowable_state()[key]
+                                    flowable = to_state(v)[key]
                                     return flowable
 
                                 flowable = Flowable(FlatMapNoBackpressureFlowable(rxbp.from_rx(shared_source), selector))
@@ -52,7 +73,7 @@ class ReduceMultiCast(MultiCastBase):
                             yield for_func()
 
                     conn_flowables = dict(gen_flowables())
-                    result = self.first.set_flowable_state(conn_flowables)
+                    result = from_state(conn_flowables)
 
                     observer.on_next(result)
                     observer.on_completed()

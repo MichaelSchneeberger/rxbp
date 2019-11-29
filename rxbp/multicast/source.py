@@ -1,10 +1,11 @@
-from typing import Any, List, Callable, Union, Iterable
+from typing import Any, List, Callable, Union, Iterable, Dict
 
 import rx
 import rxbp
 from rxbp.flowable import Flowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.flowabledict import FlowableDict
+from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
@@ -13,56 +14,94 @@ from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
 from rxbp.torx import to_rx
 
 
-def return_value(val: Any):
+def empty(is_list: bool = None, is_dict: bool = None):
+    if is_list is True:
+        init_val = []
+    elif is_dict is True:
+        init_val = {}
+    else:
+        init_val = {}
+
     class FromObjectMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-            return rx.return_value(val, scheduler=info.multicast_scheduler)
+            return rx.return_value(init_val, scheduler=info.multicast_scheduler)
 
     return MultiCast(FromObjectMultiCast())
 
 
-def from_iterable(vals: Iterable[Any]):
-    class FromIterableMultiCast(MultiCastBase):
-        def get_source(self, info: MultiCastInfo) -> Flowable:
-            return rxbp.from_(vals)
+# def return_value(val: Any):
+#     class FromObjectMultiCast(MultiCastBase):
+#         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+#             return rx.return_value(val, scheduler=info.multicast_scheduler)
+#
+#     return MultiCast(FromObjectMultiCast())
 
-    return MultiCast(FromIterableMultiCast())
+
+# def from_iterable(vals: Iterable[Any]):
+#     class FromIterableMultiCast(MultiCastBase):
+#         def get_source(self, info: MultiCastInfo) -> Flowable:
+#             return rxbp.from_(vals)
+#
+#     return MultiCast(FromIterableMultiCast())
 
 
 def from_flowable(
-        source: Flowable,
-        key: Any = None,
-        # func: Callable[[Flowable], MultiCastBase] = None,
+        *source: Union[Flowable, Dict[Any, Flowable], FlowableStateMixin],
 ):
 
-    def selector(_, source):
-        class SingleFlowableDict(SingleFlowableMixin, FlowableDict):
-            def get_single_flowable(self) -> Flowable:
-                return source
+    if len(source) == 0:
+        return empty()
 
-        return SingleFlowableDict(states={key: source})
+    first = source[0]
 
-    multicast = return_value(())
+    if isinstance(first, Flowable):
+        assert all(isinstance(s, Flowable) for s in source)
 
-    if key is None:
-        multicast = multicast.pipe(
-            rxbp.multicast.op.share(lambda _: source, lambda _, source: source),
-        )
+        multicast = empty(is_list=True)
+
+        if len(source) == 1:
+            append = lambda _, v: v
+        else:
+            append = lambda l, v: l + [s]
+
+        for s in source:
+            def for_func(s=s):
+                return multicast.pipe(
+                    rxbp.multicast.op.share(lambda _: s, append),
+                )
+
+            multicast = for_func()
+
+    elif isinstance(first, dict):
+
+        multicast = empty(is_dict=True)
+
+        for key, s in first.items():
+            def for_func(key=key, s=s):
+                return multicast.pipe(
+                    rxbp.multicast.op.share(lambda _: s, lambda d, source: {**d, key: source}),
+                )
+
+            multicast = for_func()
+
+    elif isinstance(first, FlowableStateMixin):
+
+        multicast = empty(is_dict=True)
+
+        state = first.get_flowable_state()
+
+        for key, s in state.items():
+            def for_func(key=key, s=s):
+                return multicast.pipe(
+                    rxbp.multicast.op.share(lambda _: s, lambda d, source: first.set_flowable_state({**d, key: source})),
+                )
+
+            multicast = for_func()
+
     else:
-        multicast = multicast.pipe(
-            rxbp.multicast.op.share(lambda _: source, selector),
-        )
+        raise Exception(f'unexpected argument "{first}"')
 
     return multicast
-
-    # if func is None:
-    #     return multicast
-    # else:
-    #     class ToFlowableStream(MultiCastBase):
-    #         def get_source(self, info: MultiCastInfo) -> Flowable:
-    #             return multicast.source.map(lambda args: func(*args))
-    #
-    #     return MultiCast(ToFlowableStream())
 
 
 def from_event(

@@ -86,47 +86,46 @@ def split(
     return MultiCastOperator(op_func)
 
 
-def zip(
-    predicates: List[Callable[[MultiCastFlowable], bool]],
-    # selector: Callable[..., MultiCastValue],
-):
-    """ Zips a set of `Flowables` together, which were selected by a `predicate`.
-
-    :param predicates: a list of functions that return True, if the current element is used for the zip operation
-    :param selector: a function that maps the selected `Flowables` to some `MultiCast` value
-    """
-
-    def op_func(multicast: MultiCast):
-        class ZipMultiCast(MultiCastBase):
-            def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-                shared_source = multicast.get_source(info=info).pipe(
-                    rxop.share(),
-                )
-
-                def flat_map_func(v: MultiCastValue):
-                    if isinstance(v, SingleFlowableMixin):
-                        return v.get_single_flowable()
-                    if isinstance(v, Flowable):
-                        return v
-                    else:
-                        raise Exception(f'illegal case {v}')
-
-                def gen_flowables():
-                    for predicate in predicates:
-                        yield shared_source.pipe(
-                            # rxop.filter(
-                            #     lambda v: isinstance(v, MultiCastBase.LiftedFlowable) or isinstance(v, Flowable)),
-                            rxop.filter(predicate),
-                            rxop.map(flat_map_func),
-                        )
-
-                return rx.zip(*gen_flowables()).pipe(
-                    rxop.map(lambda t: FlowableDict({idx: v for idx, v in enumerate(t)})),
-                )
-
-        return MultiCast(ZipMultiCast())
-
-    return MultiCastOperator(func=op_func)
+# def zip(
+#     *predicates: Callable[[MultiCastFlowable], bool],
+# ):
+#     """ Zips a set of `Flowables` together, which were selected by a `predicate`.
+#
+#     :param predicates: a list of functions that return True, if the current element is used for the zip operation
+#     :param selector: a function that maps the selected `Flowables` to some `MultiCast` value
+#     """
+#
+#     def op_func(multicast: MultiCast):
+#         class ZipMultiCast(MultiCastBase):
+#             def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+#                 shared_source = multicast.get_source(info=info).pipe(
+#                     rxop.share(),
+#                 )
+#
+#                 def flat_map_func(v: MultiCastValue):
+#                     if isinstance(v, SingleFlowableMixin):
+#                         return v.get_single_flowable()
+#                     if isinstance(v, Flowable):
+#                         return v
+#                     else:
+#                         raise Exception(f'illegal case {v}')
+#
+#                 def gen_flowables():
+#                     for predicate in predicates:
+#                         yield shared_source.pipe(
+#                             # rxop.filter(
+#                             #     lambda v: isinstance(v, MultiCastBase.LiftedFlowable) or isinstance(v, Flowable)),
+#                             rxop.filter(predicate),
+#                             rxop.map(flat_map_func),
+#                         )
+#
+#                 return rx.zip(*gen_flowables()).pipe(
+#                     rxop.map(lambda t: FlowableDict({idx: v for idx, v in enumerate(t)})),
+#                 )
+#
+#         return MultiCast(ZipMultiCast())
+#
+#     return MultiCastOperator(func=op_func)
 
 
 def filter(
@@ -257,10 +256,8 @@ def merge(*others: MultiCast):
     def op_func(multicast: MultiCast):
         class MergeMultiCast(MultiCastBase):
             def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-                multicasts = [multicast] + list(others)
-                return rx.merge(*[e.get_source(info=info) for e in multicasts]).pipe(
-                    # rx_debug('d1'),
-                )
+                multicasts = reversed([multicast] + list(others))
+                return rx.merge(*[e.get_source(info=info) for e in multicasts])
 
         return MultiCast(MergeMultiCast())
 

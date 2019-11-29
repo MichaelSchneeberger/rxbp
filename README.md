@@ -274,7 +274,6 @@ by a *Flowable*
 - `merge` - Merges two or more *Multicast* streams together
 - `share` - Shares a new *Flowable*
 - `split` - Splits the *Multicast* stream in two, and applies the given operators to each side.
-- `zip` - Zips a set of *Flowables* together, which were selected by a predicate.
 
 ### Other operators 
 

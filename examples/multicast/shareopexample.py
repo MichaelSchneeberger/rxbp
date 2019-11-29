@@ -3,11 +3,11 @@ This example demonstrates a use-case of a MultiCast.
 """
 
 import rxbp
+from rxbp.multicast.flowabledict import FlowableDict
 
-result = rxbp.multicast.from_flowable(                          # start the multicast from a Flowable
-    key='input',
-    source=rxbp.range(10),
-).pipe(
+base = FlowableDict({'input': rxbp.range(10)})
+
+result = rxbp.multicast.from_flowable(base).pipe(               # start the multicast from a Flowable
     rxbp.multicast.op.share(                                    # create a new shared Flowable
         func=lambda fdict: fdict['input'].pipe(                 # ... by creating it from the dictionary
             rxbp.op.filter(lambda v: v % 2 == 0),
@@ -26,7 +26,7 @@ result = rxbp.multicast.from_flowable(                          # start the mult
             rxbp.op.zip(fdict['output2'].pipe(
                 rxbp.op.to_list(),
             ))
-        ))
-).to_flowable().run()
+        ))                                                      # return a single Flowable
+).to_flowable().run()                                           # convert multi-cast to a (single) flowable
 
 print(result)

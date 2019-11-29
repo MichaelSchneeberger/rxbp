@@ -6,6 +6,7 @@ from rxbp.typing import ValueType
 
 
 class FlowableStateMixin(Generic[ValueType], ABC):
+
     @abstractmethod
     def get_flowable_state(self) -> Dict[Any, Flowable[ValueType]]:
         ...
