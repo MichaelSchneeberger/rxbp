@@ -36,8 +36,7 @@ class PublishOSubject(OSubjectBase):
         pass
 
     class State:
-        def __init__(self, subscribers: Union[Set[
-                                                  'PublishOSubject.Subscriber'], 'PublishOSubject.Empty'] = None,
+        def __init__(self, subscribers: Union[Set['PublishOSubject.Subscriber'], 'PublishOSubject.Empty'] = None,
                      cache: List = None, error_thrown=None):
             self.subscribers = subscribers or set()
             self.cache = cache
