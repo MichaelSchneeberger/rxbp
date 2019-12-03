@@ -3,7 +3,7 @@ from typing import Optional
 
 from rx import Observable
 from rx.core import typing
-from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime
+from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime, ScheduledAction, ScheduledPeriodicAction
 from rxbp.ack.ackimpl import continue_ack
 
 from rxbp.flowablebase import FlowableBase
@@ -34,18 +34,18 @@ def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Schedu
                 def now(self) -> datetime:
                     return self.scheduler.now
 
-                def schedule(self, action: 'ScheduledAction', state: TState = None) -> Disposable:
+                def schedule(self, action: ScheduledAction, state: TState = None) -> Disposable:
                     return self.scheduler.schedule(action=action, state=state)
 
-                def schedule_relative(self, duetime: RelativeTime, action: 'ScheduledAction',
+                def schedule_relative(self, duetime: RelativeTime, action: ScheduledAction,
                                       state: TState = None) -> Disposable:
                     return self.scheduler.schedule_relative(duetime=duetime, action=action, state=state)
 
-                def schedule_absolute(self, duetime: AbsoluteTime, action: 'ScheduledAction',
+                def schedule_absolute(self, duetime: AbsoluteTime, action: ScheduledAction,
                                       state: TState = None) -> Disposable:
                     return self.scheduler.schedule_absolute(duetime=duetime, action=action, state=state)
 
-                def schedule_periodic(self, period: RelativeTime, action: 'ScheduledPeriodicAction',
+                def schedule_periodic(self, period: RelativeTime, action: ScheduledPeriodicAction,
                                       state: Optional[TState] = None) -> Disposable:
                     raise NotImplementedError
 
