@@ -10,29 +10,7 @@ from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testobserversubscribeinner import TestObserverSubscribeInner
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.typing import ValueType
-
-
-class TakeWhileObservable(Observable):
-    """
-    Forwards elements downstream as long as a specified condition for the current element.
-
-    ``` python
-    # take first 5 elements
-    first_five = rxbp.range(10).pipe(
-        rxbp.op.take_while(lambda v: v<5),
-    )
-    ```
-
-    The above example creates 10 values `[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]` and takes the
-    first five values `[0, 1, 2, 3, 4, 5]`.
-    """
-
-    def __init__(self, source: Observable, func: Callable[[ValueType], bool]):
-        pass
-
-    def observe(self, observer_info: ObserverInfo) -> Disposable:
-        pass
-
+from rxbp.observables.takewhileobservable import TakeWhileObservable
 
 class TestControlledZipObservable(TestCaseBase):
     """
@@ -50,11 +28,11 @@ class TestControlledZipObservable(TestCaseBase):
         obs.observe(ObserverInfo(sink))
 
         self.source.on_completed()
-        self.assertTrue(sink.is_completed, True)
+        self.assertTrue(sink.is_completed)
 
     def test_single_non_matching_element_synchronously(self):
         # `immediate_coninue=None` means to return a `Continue` acknowledgment always
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))
@@ -64,7 +42,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertListEqual(sink.received, [])
 
     def test_single_matching_elements_synchronously(self):
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))
@@ -82,7 +60,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertListEqual(sink.received, [1, 1])
 
     def test_list_and_complete_synchronously(self):
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))
@@ -96,7 +74,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(sink.is_completed)
 
     def test_list_synchronously(self):
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))
@@ -111,7 +89,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(sink.is_completed)
 
     def test_iterable_synchronously(self):
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))
@@ -127,7 +105,7 @@ class TestControlledZipObservable(TestCaseBase):
 
     def test_failure_synchronously(self):
         # `immediate_coninue=None` means to return a `Continue` acknowledgment always
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))
@@ -145,7 +123,7 @@ class TestControlledZipObservable(TestCaseBase):
 
     def test_failure_after_non_matching_element_synchronously(self):
         # `immediate_coninue=None` means to return a `Continue` acknowledgment always
-        sink = TestObserver(immediate_coninue=None)
+        sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, func=lambda v: v)
         obs.observe(ObserverInfo(sink))

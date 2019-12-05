@@ -104,3 +104,7 @@ venv.bak/
 .mypy_cache/
 
 .idea/
+
+.vscode
+.pytest_cache
+

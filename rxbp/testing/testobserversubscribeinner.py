@@ -34,7 +34,7 @@ class TestObserverSubscribeInner(Observer):
         values = list(v())
         self.received.append(values)
         for value in values:
-            observer = TestObserver(immediate_coninue=self.inner_immediate_continue)
+            observer = TestObserver(immediate_continue=self.inner_immediate_continue)
             self.inner_obs.append(observer)
             self.inner_selector(value).observe(observer)
 

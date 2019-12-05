@@ -11,7 +11,7 @@ class TestEvictingBufferedObserver(TestCaseBase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
-        self.sink = TestObserver(immediate_coninue=0)
+        self.sink = TestObserver(immediate_continue=0)
 
     def test_should_block_onnext_until_connected(self):
         s: TestScheduler = self.scheduler

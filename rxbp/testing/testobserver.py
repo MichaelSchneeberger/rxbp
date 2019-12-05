@@ -6,14 +6,14 @@ from rxbp.typing import ElementType
 
 class TestObserver(Observer):
     """ A test observer that immediately returns a Continue acknowledgment for some number of times, otherwise it
-    returns an asynchroneous acknowledgment
+    returns an asynchronous acknowledgment
     """
 
-    def __init__(self, immediate_coninue: int = None):
+    def __init__(self, immediate_continue: int = None):
         self.received = []
         self.is_completed = False
         self.exception = None
-        self.immediate_continue = immediate_coninue
+        self.immediate_continue = immediate_continue
         self.ack = None
 
     def on_next(self, elem: ElementType):
