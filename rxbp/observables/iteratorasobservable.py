@@ -1,3 +1,4 @@
+import traceback
 from typing import Iterator, Any, List, Generator, Callable
 
 import rx
@@ -28,17 +29,10 @@ class IteratorAsObservable(Observable):
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
         self.on_finish = on_finish
-        # self.selector = ObservablePublishSubject(scheduler=scheduler)
 
     def observe(self, observer_info: ObserverInfo):
-
         observer = observer_info.observer
 
-        # try:
-        # if not has_next:
-        #     observer.on_completed()
-        #     return Disposable()
-        # else:
         d1 = BooleanDisposable()
 
         def action(_, __):
@@ -61,8 +55,6 @@ class IteratorAsObservable(Observable):
 
         d2 = self.subscribe_scheduler.schedule(action)
         return CompositeDisposable(d1, d2)
-        # except:
-        #     raise Exception('fatal error')
 
     def trigger_cancel(self, scheduler: SchedulerBase):
         try:

@@ -2,7 +2,6 @@ from typing import Any, Callable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.flatmapobservable import FlatMapObservable
-from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
 

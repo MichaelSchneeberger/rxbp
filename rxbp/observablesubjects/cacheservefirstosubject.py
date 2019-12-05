@@ -1,141 +1,222 @@
 import sys
 import threading
+import types
 
-from typing import List
+from dataclasses import dataclass
 
-from rx.disposable import Disposable
-from rx.core.notification import OnNext, OnCompleted, OnError
-from rx.disposable import BooleanDisposable
-from rxbp.ack.ackimpl import Continue, Stop, stop_ack
+from typing import List, Dict, Optional, Any, Tuple
+
+import rx
+from rx.disposable import Disposable, BooleanDisposable
+from rx.core.notification import OnNext, OnCompleted, OnError, Notification
+
+from rxbp.ack.ackimpl import Continue, Stop, stop_ack, continue_ack
 from rxbp.ack.ackbase import AckBase
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
-
+from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import ExecutionModel, Scheduler
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.typing import ElementType
 
 
 class CacheServeFirstOSubject(OSubjectBase):
+    """ A observable Subject that does not back-pressure on a `on_next` call
+    and buffers the last elements according to the slowest subscriber.
+    """
+
+    class SharedState:
+        """ Buffers all elements from the most recently received element to the earliest element
+        that has not yet been sent to all subscribers
+        """
+
+        def __init__(self):
+
+            # notification buffer
+            self.first_idx = -1
+            self.queue: List[Notification] = []
+
+            # contains inner subscriptions that are currently inactive, e.g. they sent
+            # all elements in the buffer
+            self.inactive_subscriptions = []
+
+            # used for deque the buffer
+            self.current_index: Dict['CacheServeFirstOSubject.InnerSubscription', int] = {}
+
+            # the inner subscription reaching the end of the buffer requests a new element
+            self.current_ack: Optional[AckSubject] = None
+
+        def add_inner_subscription(self, subscription):
+            self.inactive_subscriptions.append(subscription)
+
+        def dispose(self):
+
+            self.queue = None
+            self.inactive_subscriptions = None
+            self.current_index = None
+            self.current_ack = None
+
+            self.add_inner_subscription = types.MethodType(lambda _: None, self)
+            self.on_next = types.MethodType(lambda _, __: ([], 0), self)
+            self.on_completed = types.MethodType(lambda: [], self)
+            self.on_error = types.MethodType(lambda _: [], self)
+            self.get_element_for = types.MethodType(lambda _, __, ___: (False, None), self)
+            self.should_dequeue = types.MethodType(lambda _: False, self)
+            self.dequeue = types.MethodType(lambda: None, self)
+
+        def get_element_for(self, subscription, index: int, ack: AckBase = None) -> Tuple[bool, Any]:
+            last_index = self.first_idx + len(self.queue)
+
+            if index < last_index:
+                return True, self.queue[index - self.first_idx]
+
+            else:
+                self.inactive_subscriptions.append(subscription)
+
+                if ack is not None:
+                    self.current_ack.on_next(ack)
+
+                return False, None
+
+        def on_next(self, elem: ElementType, ack: AckSubject) -> Tuple[List, int]:
+            self.queue.append(OnNext(elem))
+            self.current_ack = ack
+
+            inactive_subscriptions = self.inactive_subscriptions
+            self.inactive_subscriptions = []
+
+            last_index = self.first_idx + len(self.queue)
+
+            return inactive_subscriptions, last_index
+
+        def on_completed(self) -> List:
+            self.queue.append(OnCompleted())
+
+            inactive_subscriptions = self.inactive_subscriptions
+            self.inactive_subscriptions = []
+
+            return inactive_subscriptions
+
+        def on_error(self, exception: Exception) -> List:
+            self.queue.append(OnError(exception))
+
+            inactive_subscriptions = self.inactive_subscriptions
+            self.inactive_subscriptions = []
+
+            return inactive_subscriptions
+
+        def should_dequeue(self, index: int):
+            result = index <= min(self.current_index.values())
+            return result
+
+        def dequeue(self):
+            self.first_idx += 1
+            self.queue.pop(0)
+
+    class State(MeasuredState):
+        pass
+
+    @dataclass
+    class NormalState(State):
+        pass
+
+    class CompletedState(State):
+        pass
+
+    class ExceptionState(State):
+        def __init__(self, exc):
+            self.exc = exc
 
     def __init__(self, scheduler: Scheduler, name=None):
         super().__init__()
 
         self.name = name
         self.scheduler = scheduler
-        self.is_disposed = False
-        self.is_stopped = False
 
-        # track current index of each inner subscription
-        self.current_index = {}
-
-        # a inner subscription is inactive if all elements in the buffer are sent
-        self.inactive_subsriptions: List[CacheServeFirstOSubject.InnerSubscription] = []
-
-        self.buffer = self.DequeuableBuffer()
-
-        self.exception = None
-        self.current_ack = None
-
-        self.is_done = False
+        # mutable state
+        self.state = self.NormalState()
+        self.shared_state = self.SharedState()
 
         self.lock = threading.RLock()
 
-    class DequeuableBuffer:
-        def __init__(self):
-            self.first_idx = 0
-            self.queue = []
-
-        @property
-        def last_idx(self):
-            return self.first_idx + len(self.queue)
-
-        def __len__(self):
-            return len(self.queue)
-
-        def has_element_at(self, idx):
-            return idx < self.last_idx
-
-        def append(self, value):
-            self.queue.append(value)
-
-        def get(self, idx):
-            if idx < self.first_idx:
-                raise Exception('index {} is smaller than first index {}'.format(idx, self.first_idx))
-            elif idx - self.first_idx >= len(self.queue):
-                raise Exception(
-                    'index {} is bigger or equal than length of queue {}'.format(idx - self.first_idx, len(self.queue)))
-            return self.queue[idx - self.first_idx]
-
-        def dequeue(self, idx):
-            # empty buffer up until some index
-            # with self.lock:
-            while self.first_idx <= idx and len(self.queue) > 0:
-                self.first_idx += 1
-                self.queue.pop(0)
-
     class InnerSubscription:
-        def __init__(self, source: 'CacheServeFirstOSubject', subscription: ObserverInfo,
-                     scheduler: Scheduler, em: ExecutionModel):
-            self.source = source
-            self.observer = subscription.observer
-            self.is_volatile = subscription.is_volatile
+        def __init__(
+                self,
+                shared_state: 'CacheServeFirstOSubject.SharedState',
+                lock: threading.RLock,
+                observer: Observer,
+                scheduler: Scheduler,
+                em: ExecutionModel,
+                disposable: BooleanDisposable,
+        ):
+            self.shared_state = shared_state
+            self.lock = lock
+            self.observer = observer
             self.scheduler = scheduler
             self.em = em
+            self.disposable = disposable
 
-        def notify_on_next(self, value) -> AckBase:
-            # inner subscription gets only notified if all items from buffer are sent and ack received
-            with self.source.lock:
-                # increase current index
-                self.source.current_index[self] += 1
+        @dataclass
+        class AsyncAckSingle(Single):
+            current_index: int
+            inner_subscription: 'CacheServeFirstOSubject.InnerSubscription'
+            ack_update: AckBase = None
 
-            current_index = self.source.current_index[self]
-            ack = self.observer.on_next(value)
+            def on_next(self, ack: AckBase):
+                # start fast_loop
+                if isinstance(ack, Continue):
+                    with self.inner_subscription.lock:
+                        has_elem, notification = self.inner_subscription.shared_state.get_element_for(
+                            self.inner_subscription,
+                            self.current_index,
+                            self.ack_update
+                        )
+
+                    if has_elem:
+                        self.inner_subscription.fast_loop(self.current_index, notification, 0)
+
+                    else:
+                        pass
+
+                elif isinstance(ack, Stop):
+                    self.inner_subscription.signal_stop()
+
+                else:
+                    raise Exception(f'acknowledgment {ack} not recognized')
+
+            def on_error(self, exc: Exception):
+                raise NotImplementedError
+
+        def notify_on_next(self, notification: Notification, current_index: int) -> Optional[AckBase]:
+            """ inner subscription gets only notified if all items from buffer are sent, and
+            last ack received """
+
+            # state is written without lock, because current_index is only used for dequeueing
+            self.shared_state.current_index[self] = current_index
+
+            ack = self.observer.on_next(notification)
 
             if isinstance(ack, Continue):
-                self.source.inactive_subsriptions.append(self)
+                # append right away again to inactive subscription list
+                self.shared_state.inactive_subscriptions.append(self)
                 return ack
+
             elif isinstance(ack, Stop):
-                # with self.source.lock:
-                #     del self.source.current_index[self]
-                #     if len(self.source.current_ack) == 0:
-                #         self.source.is_done = True
                 self.signal_stop()
                 return ack
+
             else:
-                inner_ack = AckSubject()
+                single = self.AsyncAckSingle(
+                    inner_subscription=self,
+                    current_index=current_index,
+                    ack_update=continue_ack,
+                )
 
-                def _(v):
-                    if isinstance(v, Continue):
-                        with self.source.lock:
-                            if current_index + 1 < self.source.buffer.last_idx:
-                                has_elem = True
-                            else:
-                                # no new item has been added since call to 'notify_on_next'
-                                has_elem = False
-                                self.source.inactive_subsriptions.append(self)
-
-                        if has_elem:
-                            disposable = BooleanDisposable()
-                            self.fast_loop(current_index, 0, disposable)
-                    elif isinstance(v, Stop):
-                        self.signal_stop()
-                    else:
-                        raise Exception('no recognized acknowledgment {}'.format(v))
-
-                    inner_ack.on_next(v)
-
-                class ResultSingle(Single):
-                    def on_next(self, elem):
-                        _(elem)
-
-                    def on_error(self, exc: Exception):
-                        raise NotImplementedError
-
-                _observe_on(source=ack, scheduler=self.scheduler).subscribe(ResultSingle())
-                return inner_ack
+                _observe_on(source=ack, scheduler=self.scheduler).subscribe(single)
+                return None
 
         def notify_on_completed(self):
             self.observer.on_completed()
@@ -144,146 +225,110 @@ class CacheServeFirstOSubject(OSubjectBase):
             self.observer.on_error(exc)
 
         def signal_stop(self):
-            with self.source.lock:
-                del self.source.current_index[self]
+            with self.lock:
+                del self.shared_state.current_index[self]
 
-                num_subscriber = len([True for inner_sub in self.source.current_index.keys() if inner_sub.is_volatile is False])
-                # num_subscriber = len(self.source.current_index)
+        def fast_loop(self, current_index: int, notification: Notification, sync_index: int):
 
-                # todo: bug here
-                if num_subscriber == 0:
-                    self.source.is_done = True
-
-        def fast_loop(self, current_idx: int, sync_index: int, disposable: BooleanDisposable):
+            # a while loop instead of recursive function calls is faster and avoids a stack overflow error
             while True:
-                current_idx += 1
 
-                # buffer has an element at current_idx
-                notification = self.source.buffer.get(current_idx)
+                current_index += 1
+                self.shared_state.current_index[self] = current_index
 
-                is_last = False
-                with self.source.lock:
-                    # is this subscription last?
-                    self.source.current_index[self] = current_idx
-                    if min(self.source.current_index.values()) == current_idx:
-                        # dequeing is required
-                        self.source.buffer.dequeue(current_idx - 1)
+                dequeue_buffer = self.shared_state.should_dequeue(current_index)
+                if dequeue_buffer:
+                    with self.lock:
+                        self.shared_state.dequeue()
 
                 try:
                     if isinstance(notification, OnCompleted):
                         self.observer.on_completed()
                         break
+
                     elif isinstance(notification, OnError):
                         self.observer.on_error(notification.exception)
                         break
+
                     else:
                         ack = self.observer.on_next(notification.value)
 
-                    has_next = False
-                    with self.source.lock:
-                        # does it has element in the buffer?
-                        if current_idx + 1 < self.source.buffer.last_idx:
-                            has_next = True
-                        else:
-                            if isinstance(ack, Continue):
-                                self.source.inactive_subsriptions.append(self)
-                                self.source.current_ack.on_next(ack)
-                            elif isinstance(ack, Stop):
-                                self.signal_stop()
-                                break
-                            else:
-                                def _(v):
-                                    if isinstance(v, Continue):
-                                        with self.source.lock:
-                                            if current_idx + 1 < self.source.buffer.last_idx:
-                                                has_elem = True
-                                            else:
-                                                has_elem = False
-                                                self.source.inactive_subsriptions.append(self)
-                                                self.source.current_ack.on_next(v)
+                    # synchronous or asynchronous acknowledgment
+                    if isinstance(ack, Continue):
+                        with self.lock:
+                            has_elem, notification = self.shared_state.get_element_for(
+                                self, current_index, ack)
 
-                                        if has_elem:
-                                            disposable = BooleanDisposable()
-                                            self.fast_loop(current_idx, 0, disposable)
-                                    elif isinstance(v, Stop):
-                                        self.signal_stop()
-                                    else:
-                                        raise Exception('no recognized acknowledgment {}'.format(v))
+                        if has_elem:
 
-                                class ResultSingle(Single):
-                                    def on_next(self, elem):
-                                        _(elem)
-
-                                    def on_error(self, exc: Exception):
-                                        raise NotImplementedError
-
-                                _observe_on(source=ack, scheduler=self.scheduler).subscribe(ResultSingle())
-
-                    if not has_next:
-                        break
-                    else:
-                        if isinstance(ack, Continue):
+                            # use frame index to either continue looping over elements or
+                            # schedule to send element with a scheduler
                             next_index = self.em.next_frame_index(sync_index)
-                        elif isinstance(ack, Stop):
-                            next_index = -1
+
+                            if 0 < next_index:
+                                continue
+
+                            else:
+                                self.fast_loop(current_index, notification, sync_index=0)
+                                break
+
                         else:
-                            next_index = 0
-
-                        if next_index > 0:
-                            sync_index = next_index
-                        elif next_index == 0 and not disposable.is_disposed:
-                            def on_next(v):
-                                if isinstance(v, Continue):
-                                    self.fast_loop(current_idx, sync_index=0, disposable=disposable)
-                                elif isinstance(v, Stop):
-                                    self.signal_stop()
-                                else:
-                                    raise Exception('no recognized acknowledgment {}'.format(v))
-
-                            def on_error(err):
-                                self.signal_stop()
-                                self.observer.on_error(err)
-
-                            class ResultSingle(Single):
-                                def on_next(self, elem):
-                                    on_next(elem)
-
-                                def on_error(self, exc: Exception):
-                                    on_error(exc)
-
-                            _observe_on(source=ack, scheduler=self.scheduler).subscribe(ResultSingle())
-
                             break
-                        else:
-                            self.signal_stop()
-                            break
+
+                    elif isinstance(ack, Stop):
+                        self.signal_stop()
+                        break
+
+                    else:
+                        single = self.AsyncAckSingle(
+                            inner_subscription=self,
+                            current_index=current_index,
+                        )
+
+                        _observe_on(source=ack, scheduler=self.scheduler).subscribe(single)
+                        break
+
                 except:
-                    raise Exception('fatal error')
+                    pass
 
-    def observe(self, observer_info: ObserverInfo):
+                raise Exception('fatal error')
+
+    def observe(self, observer_info: ObserverInfo) -> rx.typing.Disposable:
+        """ Create a new inner subscription and append it to the inactive subscriptions list (because there
+        are no elements to be send yet)
+        """
+
         observer = observer_info.observer
         em = self.scheduler.get_execution_model()
-        inner_subscription = self.InnerSubscription(source=self, subscription=observer_info, scheduler=self.scheduler, em=em)
+        disposable = BooleanDisposable()
+        inner_subscription = self.InnerSubscription(
+            shared_state=self.shared_state,
+            lock=self.lock,
+            observer=observer,
+            scheduler=self.scheduler,
+            em=em,
+            disposable=disposable,
+        )
 
         with self.lock:
-            if not self.is_stopped:
-                # get current buffer index
-                current_idx = self.buffer.last_idx - 1
-                self.current_index[inner_subscription] = current_idx
-                self.inactive_subsriptions.append(inner_subscription)
-                return Disposable()
+            prev_state = self.state
 
-            exception = self.exception
+            self.shared_state.add_inner_subscription(inner_subscription)
 
-        if exception:
-            observer.on_error(exception)
+        if isinstance(prev_state, self.ExceptionState):
+            observer.on_error(prev_state.exc)
             return Disposable()
 
-        observer.on_completed()
-        return Disposable()
+        elif isinstance(prev_state, self.CompletedState):
+            observer.on_completed()
+            return Disposable()
+
+        else:
+            return disposable
 
     def on_next(self, elem: ElementType):
 
+        # received elements need to be materialized before being multi-casted
         if isinstance(elem, list):
             materialized_values = elem
         else:
@@ -294,86 +339,66 @@ class CacheServeFirstOSubject(OSubjectBase):
                 self.on_error(exc)
                 return stop_ack
 
-        # def gen():
-        #     yield from materialized_values
-
         current_ack = AckSubject()
 
         with self.lock:
-            # concurrent situation with acknowledgment in inner subscription or new subscriptions
+            inactive_subsriptions, current_index = self.shared_state.on_next(
+                elem=materialized_values, ack=current_ack)
 
-            # empty inactive subscriptions; they are added to the list once they reach the top of the buffer again
-            inactive_subsriptions = self.inactive_subsriptions
-            self.inactive_subsriptions = []
-
-            # add item to buffer
-            self.buffer.append(OnNext(materialized_values))
-
-            # current ack is used by subscriptions that weren't inactive, but reached the top of the buffer
-            self.current_ack = current_ack
-
-            is_done = self.is_done
-
-        if is_done:
-            return stop_ack
-
+        # send notification to inactive subscriptions
         def gen_inner_ack():
-            # send notification to inactive subscriptions
             for inner_subscription in inactive_subsriptions:
-                inner_ack = inner_subscription.notify_on_next(materialized_values)
+                inner_ack = inner_subscription.notify_on_next(
+                    materialized_values, current_index)
                 yield inner_ack
-
         inner_ack_list = list(gen_inner_ack())
+
+        dequeue_buffer = self.shared_state.should_dequeue(current_index)
+        if dequeue_buffer:
+            with self.lock:
+                self.shared_state.dequeue()
 
         continue_ack = [ack for ack in inner_ack_list if isinstance(ack, Continue)]
 
+        # return any Continue or Stop ack
         if 0 < len(continue_ack):
-            # return any Continue ack
             return continue_ack[0]
+
         else:
-            # return merged acknowledgments from inner subscriptions
-
-            ack_list = [current_ack] + inner_ack_list
-
-            upper_ack = AckSubject()
-
-            for ack in ack_list:
-                ack.subscribe(upper_ack)
-
-            return upper_ack
+            return current_ack
 
     def on_completed(self):
-        with self.lock:
-            # concurrent situation with acknowledgment in inner subscription or new subscriptions
+        state = self.CompletedState()
 
-            # inner subscriptions that return Continue or Stop need to be added to inactive subscriptions again
-            inactive_subsriptions = self.inactive_subsriptions
-            self.inactive_subsriptions = []
+        with self.lock:
+            prev_state = self.state
+            self.state = state
 
             # add item to buffer
-            self.buffer.append(OnCompleted())
+            inactive_subsriptions = self.shared_state.on_completed()
 
         # send notification to inactive subscriptions
-        for inner_subscription in inactive_subsriptions:
-            inner_subscription.notify_on_completed()
+        if isinstance(prev_state, self.NormalState):    # todo: necessary?
+            for inner_subscription in inactive_subsriptions:
+                inner_subscription.notify_on_completed()
 
-    def on_error(self, exception):
+    def on_error(self, exception: Exception):
+        state = self.ExceptionState(exception)
+
         with self.lock:
-            # concurrent situation with acknowledgment in inner subscription or new subscriptions
-            # inner subscriptions that return Continue or Stop need to be added to inactive subscriptions again
-            inactive_subsriptions = self.inactive_subsriptions
-            self.inactive_subsriptions = []
+            prev_state = self.state
+            self.state = state
 
             # add item to buffer
-            self.buffer.append(OnError(exception))
+            inactive_subsriptions = self.shared_state.on_error(exception)
 
         # send notification to inactive subscriptions
-        for inner_subscription in inactive_subsriptions:
-            inner_subscription.notify_on_error(exception)
+        if isinstance(prev_state, self.NormalState):    # todo: necessary?
+            for inner_subscription in inactive_subsriptions:
+                inner_subscription.notify_on_error(exception)
 
     def dispose(self):
         """Unsubscribe all observers and release resources."""
 
         with self.lock:
-            self.is_disposed = True
-            self.current_index = None
+            self.shared_state.dispose()

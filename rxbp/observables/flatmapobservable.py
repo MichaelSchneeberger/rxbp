@@ -5,6 +5,7 @@ from typing import Callable, Any, List, Optional
 
 from rx.disposable import Disposable, CompositeDisposable
 from rxbp.ack.ack import Ack
+from rxbp.ack.ackbase import AckBase
 from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.single import Single
@@ -14,317 +15,265 @@ from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.states.measuredstates.flatmapstates import FlatMapStates
+from rxbp.states.rawstates.rawflatmapstates import RawFlatMapStates
 from rxbp.typing import ValueType, ElementType
 
 
 class FlatMapObservable(Observable):
-    def __init__(self, source: Observable, selector: Callable[[Any], Observable], scheduler: Scheduler,
-                 subscribe_scheduler: Scheduler, delay_errors: bool = False):
+    def __init__(
+            self,
+            source: Observable,
+            selector: Callable[[Any], Observable],
+            scheduler: Scheduler,
+            subscribe_scheduler: Scheduler,
+            delay_errors: bool = False,
+    ):
         self._source = source
         self._selector = selector
         self._scheduler = scheduler
         self._subscribe_scheduler = subscribe_scheduler
         self._delay_errors = delay_errors
 
-        self._lock = threading.RLock()
+        self.lock = threading.RLock()
+        self.state = RawFlatMapStates.InitialState()
+        self.composite_disposable = CompositeDisposable()
 
-        self._state = FlatMapObservable.WaitOnOuter(prev_state=None, ack=continue_ack)
-        self._conn_observers: Optional[List[ConnectableObserver]] = []
-        self._is_inner_active = False
+        self.observer_info = None
 
-    class State(ABC):
-        @abstractmethod
-        def get_actual_state(self, nco: int) -> 'FlatMapObservable.State':
+    class InnerObserver(Observer):
+        def __init__(
+                self,
+                outer: 'FlatMapObservable',
+                next_conn_observer: Optional[ConnectableObserver],
+                outer_upstream_ack: AckSubject,
+        ):
+            self.outer = outer
+            self.next_conn_observer = next_conn_observer
+            self.outer_upstream_ack = outer_upstream_ack
+
+        def on_next(self, elem: ElementType):
+            # print(f'FlatMap.on_next({elem})')
+
+            # on_next, on_completed, on_error are called ordered/non-concurrently
+            ack = self.outer.observer_info.observer.on_next(elem)
+
+            # if ack==Stop, then update state
+            if isinstance(ack, Stop):
+                self.outer.state = RawFlatMapStates.Stopped()
+                self.outer_upstream_ack.on_next(ack)
+
+            elif not isinstance(ack, Continue):
+                class ResultSingle(Single):
+                    def on_error(self, exc: Exception):
+                        raise NotImplementedError
+
+                    def on_next(_, ack):
+                        if isinstance(ack, Stop):
+                            self.outer.state = RawFlatMapStates.Stopped()
+                            self.outer_upstream_ack.on_next(ack)
+                ack.subscribe(ResultSingle())
+
+            return ack
+
+        def on_error(self, err):
+            next_state = RawFlatMapStates.Stopped()
+
+            with self.outer.lock:
+                prev_state = self.outer.state
+                self.outer.state = next_state
+
+            prev_meas_state = prev_state.get_measured_state()
+
+            if not isinstance(prev_meas_state, FlatMapStates.Stopped):
+                self.outer.observer_info.observer.on_error(err)
+
+                # stop outer stream as well
+                self.outer_upstream_ack.on_next(stop_ack)
+
+        def on_completed(self):
+            """ on_next* (on_completed | on_error)?
             """
-            :param nco: number of current inner observer
-            """
 
-            return self
+            if self.next_conn_observer is None:
+                next_state = RawFlatMapStates.WaitOnOuter()
 
-    class WaitOnOuter(State):
-        def __init__(self, prev_state: Optional['FlatMapObservable.State'], ack: Ack):
-            self.prev_state = prev_state
-            self.ack = ack
-
-        def get_actual_state(self, nco: int):
-            if self.prev_state is None or isinstance(self.prev_state, FlatMapObservable.Active):
-                return self
             else:
-                return self.prev_state
+                next_state = RawFlatMapStates.Active()
 
-    class Active(State):
-        def get_actual_state(self, nco: int):
-            if nco == 0:    # number of connectable observables is zero
-                return FlatMapObservable.WaitOnOuter(prev_state=None, ack=continue_ack)
+            with self.outer.lock:
+                next_state.raw_prev_state = self.outer.state
+                self.outer.state = next_state
+
+            prev_meas_state = next_state.raw_prev_state.get_measured_state()
+            meas_state = next_state.get_measured_state()
+
+            # possible previous states
+            # - Active -> outer on_next call completed before this
+            # - WaitOnActiveChild -> outer on_next call completes after this
+            # - WaitComplete -> outer.on_complete or outer.on_error was called
+
+            # connect next child observer
+            if any([
+                isinstance(meas_state, FlatMapStates.Active),
+                isinstance(meas_state, FlatMapStates.OnOuterCompleted),
+            ]):
+                self.next_conn_observer.connect()
+
+            elif isinstance(meas_state, FlatMapStates.WaitOnOuter):
+                self.outer_upstream_ack.on_next(continue_ack)
+
+            elif isinstance(meas_state, FlatMapStates.Stopped):
+
+                if isinstance(prev_meas_state, FlatMapStates.OnOuterCompleted):
+                    self.outer.observer_info.observer.on_completed()
+                elif isinstance(prev_meas_state, FlatMapStates.OnOuterException):
+                    self.outer.observer_info.observer.on_next(prev_meas_state.exc)
+                elif isinstance(prev_meas_state, FlatMapStates.Stopped):
+                    pass
+                else:
+                    raise Exception(f'illegal case "{prev_meas_state}"')
+
+                return
+
             else:
-                return self
+                raise Exception(f'illegal state "{meas_state}"')
 
-    class WaitInnerOnCompleteOrOnError(State):
-        # outer observer does not complete the output observer (except in WaitOnNextChild); however, it signals
-        #   that output observer should be completed if inner observer completes
-        def __init__(self, ex, disposable: Disposable = None):
-            self.ex = ex
-            self.disposable = disposable
+    def _report_invalid_state(self, state: FlatMapStates.State, method: str):
+        self._scheduler.report_failure(
+            Exception('State {} in the FlatMap.{} implementation is invalid'.format(state, method)))
 
-        def get_actual_state(self, nco: int):
-            if nco == 0:    # number of connectable observables is zero
-                return self
-            else:
-                return FlatMapObservable.Active()
+    def _on_next(self, outer_elem: ElementType):
+        if isinstance(outer_elem, list):
+            outer_vals = outer_elem
+        else:
+            try:
+                # materialize received values immediately
+                outer_vals = list(outer_elem)
+            except:
+                exc = sys.exc_info()
+                self._on_error(exc)
+                return stop_ack
 
-    class Completed(State):
-        def get_actual_state(self, nco: int):
-            return self
+        next_state = RawFlatMapStates.Active()
+
+        with self.lock:
+            next_state.raw_prev_state = self.state
+            self.state = next_state
+
+        meas_state = next_state.raw_prev_state.get_measured_state()
+
+        if isinstance(meas_state, FlatMapStates.Stopped):
+            return stop_ack
+
+        # # previous state should be WaitOnOuter
+        # if not (isinstance(meas_state, FlatMapStates.InitialState) or isinstance(meas_state, FlatMapStates.WaitOnOuter)):
+        #     # - state should not be Completed, because only outer observer can complete the observable,
+        #     #   in that case `on_next` should not be called anymore (by rxbp convention)
+        #
+        #     self._report_invalid_state(meas_state, 'on_next (1)')
+        #     return stop_ack
+
+        # the ack that might be returned by this `on_next`
+        async_upstream_ack = AckSubject()
+
+        conn_observer = None
+
+        for val in reversed(outer_vals[1:]):
+
+            # create a new `InnerObserver` for each inner observable
+            inner_observer = FlatMapObservable.InnerObserver(
+                outer=self,
+                next_conn_observer=conn_observer,
+                outer_upstream_ack=async_upstream_ack,
+            )
+
+            # add ConnectableObserver to observe all inner observables simultaneously, and
+            # to get control of activating one after the other
+            conn_observer = ConnectableObserver(
+                underlying=inner_observer,
+                scheduler=self._scheduler,
+                subscribe_scheduler=self._subscribe_scheduler,
+            )
+            conn_subscription = self.observer_info.copy(conn_observer)
+
+            # apply selector to get inner observable (per element received)
+            inner_observable = self._selector(val)
+
+            # observe inner observable
+            disposable = inner_observable.observe(conn_subscription)
+            self.composite_disposable.add(disposable)
+
+        # create a new `InnerObserver` for each inner observable
+        inner_observer = FlatMapObservable.InnerObserver(
+            outer=self,
+            next_conn_observer=conn_observer,
+            outer_upstream_ack=async_upstream_ack,
+        )
+        observer_info = self.observer_info.copy(inner_observer)
+
+        # apply selector to get inner observable (per element received)
+        inner_observable = self._selector(outer_vals[0])
+
+        # observe inner observable
+        disposable = inner_observable.observe(observer_info)
+        self.composite_disposable.add(disposable)
+
+        return async_upstream_ack
+
+    def _on_error(self, exc):
+        next_state = RawFlatMapStates.OnOuterException(exc=exc)
+
+        with self.lock:
+            next_state.raw_prev_state = self.state
+            self.state = next_state
+
+        meas_prev_state = next_state.raw_prev_state.get_measured_state()
+        meas_state = next_state.get_measured_state()
+
+        # print(meas_state)
+
+        # only if state is WaitOnNextChild, complete observer
+        if isinstance(meas_state, FlatMapStates.Stopped):
+
+            if not isinstance(meas_prev_state, FlatMapStates.Stopped):
+                # calls to root.on_next and root.on_error or root.on_completed happen in order,
+                # therefore state is not changed concurrently in WaitOnNextChild
+                self.observer_info.observer.on_error(exc)
+
+    def _on_completed(self):
+        next_state = RawFlatMapStates.OnOuterCompleted()
+
+        with self.lock:
+            next_state.raw_prev_state = self.state
+            self.state = next_state
+
+        meas_prev_state = next_state.raw_prev_state.get_measured_state()
+        meas_state = next_state.get_measured_state()
+
+        if isinstance(meas_state, FlatMapStates.Stopped):
+
+            if not isinstance(meas_prev_state, FlatMapStates.Stopped):
+                # calls to root.on_next and root.on_completed happen in order,
+                # therefore state is not changed concurrently at the WaitOnNextChild
+                self.observer_info.observer.on_completed()
 
     def observe(self, observer_info: ObserverInfo):
-        source = self
-        observer = observer_info.observer
+        self.observer_info = observer_info
 
-        composite_disposable = CompositeDisposable()
+        class FlatMapOuterObserver(Observer):
 
-        def report_invalid_state(state: FlatMapObservable.State, method: str):
-            self._scheduler.report_failure(
-                Exception('State {} in the ConcatMap.{} implementation is invalid'.format(state, method)))
+            def on_next(_, elem: ElementType) -> AckBase:
+                return self._on_next(elem)
 
-        class OuterObserver(Observer):
-            def __init__(self):
-                self.errors = [] if source._delay_errors else None
+            def on_error(_, exc: Exception):
+                self._on_error(exc)
 
-            def on_next(self, outer_elem: ElementType):
+            def on_completed(_):
+                self._on_completed()
 
-                if isinstance(outer_elem, list):
-                    outer_vals = outer_elem
-                else:
-                    try:
-                        # materialize received values immediately
-                        outer_vals = list(outer_elem)
-                    except:
-                        exc = sys.exc_info()
-                        self.on_error(exc)
-                        return stop_ack
+        observer = FlatMapOuterObserver()
+        disposable = self._source.observe(observer_info.copy(observer))
+        self.composite_disposable.add(disposable)
 
-                with source._lock:
-                    # blindly set state to Active, verify correctness of current state later
-                    prev_state = source._state
-                    source._state = FlatMapObservable.Active()
-
-                # previous state should be WaitOnOuter
-                if not isinstance(prev_state, FlatMapObservable.WaitOnOuter):
-                    # - state should not be Completed, because only outer observer can complete the observable,
-                    #   in that case `on_next` should not be called anymore (by rxbp convention)
-
-                    report_invalid_state(prev_state, 'on_next (1)')
-                    return stop_ack
-
-                # the ack that might be returned by this `on_next`
-                async_upstream_ack = AckSubject()
-
-                def gen_inner_observers():
-
-                    # number of received values
-                    vals_len = len(outer_vals)
-
-                    for idx, val in enumerate(outer_vals):
-
-                        # apply selector to get inner observable (per element received)
-                        inner_observable = source._selector(val)
-
-                        # create a new `InnerObserver` for each inner observable
-                        inner_observer = InnerObserver(downstream_observer=observer, scheduler=source._scheduler,
-                                                       async_upstream_ack=async_upstream_ack,
-                                                       concat_observer=self, idx=vals_len - idx)
-
-                        # add ConnectableObserver to observe all inner observables simultaneously, and
-                        # to get control of activating one after the other
-                        conn_observer = ConnectableObserver(inner_observer, scheduler=source._scheduler,
-                                                            subscribe_scheduler=source._subscribe_scheduler)
-                        conn_subscription = observer_info.copy(conn_observer)
-
-                        # observe inner observable
-                        disposable = inner_observable.observe(conn_subscription)
-                        composite_disposable.add(disposable)
-
-                        yield conn_observer
-
-                # collect connectable observers
-                source._conn_observers = list(gen_inner_observers())
-
-                # connect first inner observer
-                source._conn_observers[0].connect()
-
-                # possible state transitions
-                # - Active -> state did not change
-                # - WaitOnOuter -> inner observable completed in the meantime
-                # - Completed -> inner observable got an error
-
-                with source._lock:
-                    raw_state: FlatMapObservable.State = source._state
-                    nco = len(source._conn_observers)
-
-                    # in inner active mode, it is the job of the inner observer to connect the acknowledgment
-                    # active power mode requires _is_inner_active == True and state == Active
-                    source._is_inner_active = True
-
-                prev_state = raw_state.get_actual_state(nco=nco)
-
-                # inner observable completed during subscription; reset state
-                if isinstance(prev_state, FlatMapObservable.WaitOnOuter):
-
-                    # non-concurrent situation
-                    source._is_inner_active = False
-
-                    return prev_state.ack
-
-                # no state transition happened during child subscription
-                elif isinstance(prev_state, FlatMapObservable.Active):
-                    return async_upstream_ack
-
-                elif isinstance(prev_state, FlatMapObservable.Completed):
-                    return stop_ack
-
-                else:
-                    report_invalid_state(prev_state, 'on_next (2)')
-                    return stop_ack
-
-            def on_error(self, exc):
-                with source._lock:
-                    raw_state = source._state
-                    source._state = FlatMapObservable.WaitInnerOnCompleteOrOnError(exc)
-                    nco = len(source._conn_observers)
-
-                prev_state = raw_state.get_actual_state(nco=nco)
-
-                # only if state is WaitOnNextChild, complete observer
-                if isinstance(prev_state, FlatMapObservable.WaitOnOuter):
-                    # calls to root.on_next and root.on_error or root.on_completed happen in order,
-                    # therefore state is not changed concurrently in WaitOnNextChild
-                    observer.on_error(exc)
-
-                    source._state = FlatMapObservable.Completed()
-
-            def on_completed(self):
-                with source._lock:
-                    raw_state = source._state
-                    source._state = FlatMapObservable.WaitInnerOnCompleteOrOnError(None)
-                    nco = len(source._conn_observers)
-
-                prev_state = raw_state.get_actual_state(nco=nco)
-
-                if isinstance(prev_state, FlatMapObservable.WaitOnOuter):
-                    # calls to root.on_next and root.on_completed happen in order,
-                    # therefore state is not changed concurrently at the WaitOnNextChild
-                    observer.on_completed()
-                    # observer_completed[0] = True
-                    source._state = FlatMapObservable.Completed()
-
-        class InnerObserver(Observer):
-            def __init__(self, downstream_observer: Observer, scheduler, async_upstream_ack: AckSubject,
-                         concat_observer: Observer, idx: int):
-                self.downstream_observer = downstream_observer
-                self.scheduler = scheduler
-                self.async_upstream_ack = async_upstream_ack
-                self.concat_observer = concat_observer
-                self.ack = continue_ack
-                self.idx = idx
-
-                self.completed = False
-                self.exception = None
-
-            def on_next(self, elem: ElementType):
-
-                # on_next, on_completed, on_error are called ordered/non-concurrently
-                ack = self.downstream_observer.on_next(elem)
-
-                # if ack==Stop, then also update outer observer
-                if isinstance(ack, Stop):
-                    with source._lock:
-                        source._state = FlatMapObservable.Completed()
-                elif not isinstance(elem, Continue):
-                    class ResultSingle(Single):
-                        def on_error(self, exc: Exception):
-                            raise NotImplementedError
-
-                        def on_next(_, v):
-                            if isinstance(v, Stop):
-                                with source._lock:
-                                    source._state = FlatMapObservable.Completed()
-                    ack.subscribe(ResultSingle())
-
-                self.ack = ack
-                return ack
-
-            def on_error(self, err):
-                with source._lock:
-                    # previous_completed = observer_completed[0]
-                    # observer_completed[0] = True
-                    previous_state = source._state
-                    source._state = FlatMapObservable.Completed()
-
-                if not isinstance(previous_state, FlatMapObservable.Completed):
-                    observer.on_error(err)
-
-                    self.async_upstream_ack.on_next(stop_ack)
-
-            def on_completed(self):
-                """ on_next* (on_completed | on_error)?
-                """
-
-                last_ack = self.ack
-
-                with source._lock:
-                    raw_state = source._state
-                    ica = source._is_inner_active
-                    source._conn_observers.pop(0)
-                    nco = len(source._conn_observers)
-
-                prev_state = raw_state.get_actual_state(nco)
-
-                # possible previous states
-                # - Active -> outer on_next call completed before this
-                # - WaitOnActiveChild -> outer on_next call completes after this
-                # - WaitComplete -> outer.on_complete or outer.on_error was called
-
-                if isinstance(prev_state, FlatMapObservable.Completed):
-                    return
-
-                elif isinstance(prev_state, FlatMapObservable.WaitInnerOnCompleteOrOnError):
-                    if prev_state.ex is None:
-                        observer.on_completed()
-                    else:
-                        observer.on_error(prev_state.ex)
-
-                    self.async_upstream_ack.on_next(stop_ack)
-                    return
-
-                # count is at zero; request new outer
-                elif isinstance(prev_state, FlatMapObservable.WaitOnOuter):
-                    ack = prev_state.ack
-
-                    with source._lock:
-                        prev_state = source._state
-                        source._state = FlatMapObservable.WaitOnOuter(prev_state=prev_state, ack=ack)
-
-                    if ica:
-
-                        # non-concurrent situation
-                        source._is_inner_active = False
-
-                        last_ack.subscribe(self.async_upstream_ack)
-
-                    else:
-                        # if ica is False, last_ack is directly returned by `on_next` method call
-                        return
-
-                # connect next child observer
-                elif isinstance(prev_state, FlatMapObservable.Active):
-                    source._conn_observers[0].connect()
-
-                else:
-                    raise Exception('illegal state')
-
-        concat_map_subscription = observer_info.copy(OuterObserver())
-        d1 = self._source.observe(concat_map_subscription)
-        composite_disposable.add(d1)
-
-        return composite_disposable
-
+        return self.composite_disposable

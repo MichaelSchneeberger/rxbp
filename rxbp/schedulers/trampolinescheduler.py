@@ -71,7 +71,8 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
             (best effort).
         """
 
-        duetime = SchedulerBase.normalize(self.to_timedelta(duetime))
+        # duetime = SchedulerBase.normalize(self.to_timedelta(duetime))
+        duetime = self.to_timedelta(duetime)
         return self.schedule_absolute(self.now + duetime, action, state=state)
 
     def schedule_absolute(self, duetime: typing.AbsoluteTime,

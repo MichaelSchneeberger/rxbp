@@ -3,6 +3,7 @@ from typing import Callable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.refcountobservable import RefCountObservable
+from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import ObjectRefBase, Base
 from rxbp.observablesubjects.publishosubject import PublishOSubject
@@ -26,7 +27,7 @@ class RefCountFlowable(FlowableBase):
         super().__init__()
 
         def default_subject_gen(scheduler: Scheduler):
-            return PublishOSubject(scheduler=scheduler)
+            return CacheServeFirstOSubject(scheduler=scheduler)
 
         self.source = source
         self._subject_gen = subject_gen or default_subject_gen

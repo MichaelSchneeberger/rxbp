@@ -1,6 +1,6 @@
 from abc import ABC
 
-import rx
+from rx.scheduler.scheduler import Scheduler as RxScheduler
 
 
 class ExecutionModel:
@@ -22,7 +22,7 @@ class UncaughtExceptionReport:
         raise exc
 
 
-class Scheduler(rx.scheduler.scheduler.Scheduler, ABC):
+class Scheduler(RxScheduler, ABC):
     def report_failure(self, exc: Exception):
         raise NotImplementedError
 

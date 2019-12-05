@@ -1,8 +1,6 @@
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any, Callable
 
-import rxbp
 from rxbp.flowable import Flowable
-from rxbp.multicast.multicast import MultiCast
 from rxbp.scheduler import Scheduler
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
@@ -14,15 +12,37 @@ def buffer(buffer_size: int):
     return FlowableOperator(func)
 
 
-def concat(sources: Iterable[FlowableBase]):
-    """ Consecutively subscribe each Flowable after the previous Flowable completes
+def concat(*sources: FlowableBase):
+    """ Consecutively subscribe each Flowable in a batch after all Flowables of the previous batch complete
 
     :param sources:
     :return:
     """
 
     def func(left: Flowable) -> Flowable:
-        return left.concat(sources=sources)
+        return left.concat(*sources)
+    return FlowableOperator(func)
+
+
+def controlled_zip(
+        right: FlowableBase,
+        request_left: Callable[[Any, Any], bool] = None,
+        request_right: Callable[[Any, Any], bool] = None,
+        match_func: Callable[[Any, Any], bool] = None,
+):
+    """ Creates a new observable from two observables by combining their item in pairs in a controlled manner
+
+    :param right: other observable
+    :param request_left: a function that returns True, if a new element from the left observable is requested \
+    to build the the next pair
+    :param request_right: a function that returns True, if a new element from the left observable is requested \
+    to build the the next pair
+    :param match_func: a filter function that returns True, if the current pair is sent downstream
+    :return: zipped observable
+    """
+
+    def func(left: Flowable) -> Flowable:
+        return left.controlled_zip(right=right, request_left=request_left, request_right=request_right, match_func=match_func)
     return FlowableOperator(func)
 
 
@@ -45,23 +65,15 @@ def execute_on(scheduler: Scheduler):
     return FlowableOperator(func)
 
 
-def controlled_zip(right: FlowableBase,
-                   request_left: Callable[[Any, Any], bool] = None,
-                   request_right: Callable[[Any, Any], bool] = None,
-                   match_func: Callable[[Any, Any], bool] = None, ):
-    """ Creates a new observable from two observables by combining their item in pairs in a controlled manner
+def fast_filter(predicate: Callable[[Any], bool]):
+    """ Only emits those items for which the given predicate holds
 
-    :param right: other observable
-    :param request_left: a function that returns True, if a new element from the left observable is requested \
-    to build the the next pair
-    :param request_right: a function that returns True, if a new element from the left observable is requested \
-    to build the the next pair
-    :param match_func: a filter function that returns True, if the current pair is sent downstream
-    :return: zipped observable
+    :param predicate: a function that returns True, if the current element passes the filter
+    :return: filtered Flowable
     """
 
     def func(left: Flowable) -> Flowable:
-        return left.controlled_zip(right=right, request_left=request_left, request_right=request_right, match_func=match_func)
+        return left.fast_filter(predicate=predicate)
     return FlowableOperator(func)
 
 
@@ -69,7 +81,7 @@ def filter(predicate: Callable[[Any], bool]):
     """ Only emits those items for which the given predicate holds
 
     :param predicate: a function that returns True, if the current element passes the filter
-    :return: filtered observable
+    :return: filtered Flowable
     """
 
     def func(left: Flowable) -> Flowable:
@@ -81,11 +93,23 @@ def filter_with_index(predicate: Callable[[Any, int], bool]):
     """ Only emits those items for which the given predicate holds
 
     :param predicate: a function that returns True, if the current element passes the filter
-    :return: filtered observable
+    :return: filtered Flowable
     """
 
     def func(left: Flowable) -> Flowable:
         return left.filter_with_index(predicate=predicate)
+    return FlowableOperator(func)
+
+
+def first(raise_exception: Callable[[Callable[[], None]], None] = None):
+    """ Maps each item emitted by the source by applying the given function
+
+    :param selector: function that defines the mapping applied to each element
+    :return: mapped Flowable
+    """
+
+    def func(source: Flowable) -> Flowable:
+        return source.first(raise_exception=raise_exception)
     return FlowableOperator(func)
 
 
@@ -94,8 +118,8 @@ def flat_map(selector: Callable[[Any], Flowable]):
     as input and returns an inner observable. The resulting observable concatenates the items of each inner
     observable.
 
-    :param selector: A function that takes any type as input and returns an observable.
-    :return: a flattened observable
+    :param selector: A function that takes any type as input and returns an Flowable.
+    :return: a flattened Flowable
     """
 
     def func(left: Flowable) -> Flowable:
@@ -103,23 +127,11 @@ def flat_map(selector: Callable[[Any], Flowable]):
     return FlowableOperator(func)
 
 
-def first(raise_exception: Callable[[Callable[[], None]], None] = None):
-    """ Maps each item emitted by the source by applying the given function
-
-    :param selector: function that defines the mapping applied to each element
-    :return: mapped observable
-    """
-
-    def func(source: Flowable) -> Flowable:
-        return source.first(raise_exception=raise_exception)
-    return FlowableOperator(func)
-
-
 def map(selector: Callable[[Any], Any]):
     """ Maps each item emitted by the source by applying the given function
 
     :param selector: function that defines the mapping applied to each element
-    :return: mapped observable
+    :return: mapped Flowable
     """
 
     def func(source: Flowable) -> Flowable:
@@ -127,23 +139,11 @@ def map(selector: Callable[[Any], Any]):
     return FlowableOperator(func)
 
 
-# def match(right: Flowable, selector: Callable[[Any, Any], Any] = None):
-#     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
-#
-#     :param selector: a mapping function applied over the generated pairs
-#     :return: zipped observable
-#     """
-#
-#     def func(left: Flowable) -> Flowable:
-#         return left.match(right=right, selector=selector)
-#     return FlowableOperator(func)
-
-
 def match(*others: Flowable):
     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
-    :return: zipped observable
+    :return: zipped Flowable
     """
 
     def func(left: Flowable) -> Flowable:
@@ -151,23 +151,11 @@ def match(*others: Flowable):
     return FlowableOperator(func)
 
 
-# def merge(other: Flowable):
-#     """ Maps each item emitted by the source by applying the given function
-#
-#     :param selector: function that defines the mapping applied to each element
-#     :return: mapped observable
-#     """
-#
-#     def func(source: Flowable) -> Flowable:
-#         return source.merge(other=other)
-#     return FlowableOperator(func)
-
-
 def merge(*others: Flowable):
     """ Maps each item emitted by the source by applying the given function
 
     :param selector: function that defines the mapping applied to each element
-    :return: mapped observable
+    :return: mapped Flowable
     """
 
     def func(left: Flowable) -> Flowable:
@@ -179,7 +167,7 @@ def observe_on(scheduler: Scheduler):
     """ Operator that specifies a specific scheduler, on which observers will observe events
 
     :param scheduler: a rxbackpressure scheduler
-    :return: an observable running on specified scheduler
+    :return: an Flowable running on specified scheduler
     """
 
     def func(source: Flowable) -> Flowable:
@@ -188,10 +176,10 @@ def observe_on(scheduler: Scheduler):
 
 
 def pairwise():
-    """ Creates an observable that pairs each neighbouring two items from the source
+    """ Creates a Flowable that pairs each neighbouring two items from the source
 
     :param selector: (optional) selector function
-    :return: paired observable
+    :return: paired Flowable
     """
 
     def func(source: Flowable) -> Flowable:
@@ -210,23 +198,6 @@ def repeat_first():
     return FlowableOperator(func)
 
 
-# def replay():
-#     """ Converts this observable into a multicast observable that replays the item received by the source. Note
-#     that this observable is subscribed when the multicast observable is subscribed for the first time. Therefore,
-#     this observable is never subscribed more than once.
-#
-#     :return: multicast observable
-#     """
-#
-#     def func(obs: ObservableBase):
-#         observable = ConnectableObservable(
-#             source=obs,
-#             subject=ReplaySubject()
-#         ).ref_count()
-#         return observable
-#     return ObservableOperator(func)
-
-
 def scan(func: Callable[[Any, Any], Any], initial: Any):
     """ Applies an accumulator function over a flowable sequence and
     returns each intermediate result. The initial value is used
@@ -242,33 +213,10 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     return FlowableOperator(inner_func)
 
 
-# def cache():
-#     """ Converts this observable into a multicast observable that caches the items that the fastest observer has
-#     already received and the slowest observer has not yet requested. Note that this observable is subscribed when
-#     the multicast observable is subscribed for the first time. Therefore, this observable is never subscribed more
-#     than once.
-#
-#     :return: multicast observable
-#     """
-#
-#     def func(obs: ObservableBase):
-#         return ConnectableObservable(source=obs, subject=CachedServeFirstSubject()).ref_count()
-#     return ObservableOperator(func)
-
-
-def share(func: Callable[[Flowable], Flowable]) -> MultiCast:
-    """ Share takes a function and exposes a multi-cast flowable via the function's arguments. The multi-cast
-    flowable back-pressures, when the first subscriber back-pressures. In case of more than one subscribers,
-    the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures
-    the element.
-
-    :return: flowable returned by the share function
-    """
-
-    # def inner_func(source: Flowable) -> Flowable:
-    #     return source.share(func=func)
-    # return FlowableOperator(inner_func)
-    rxbp.multicast.source.from_flowables()
+def set_base(val: Any):
+    def func(source: Flowable) -> Flowable:
+        return source.set_base(val=val)
+    return FlowableOperator(func)
 
 
 def to_list():
@@ -277,28 +225,11 @@ def to_list():
     return FlowableOperator(func)
 
 
-def set_base(val: Any):
-    def func(source: Flowable) -> Flowable:
-        return source.set_base(val=val)
-    return FlowableOperator(func)
-
-
-# def zip(right: FlowableBase, selector: Callable[[Any, Any], Any] = None):
-#     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
-#
-#     :param selector: a mapping function applied over the generated pairs
-#     :return: zipped observable
-#     """
-#
-#     def func(left: Flowable) -> Flowable:
-#         return left.zip(right=right, selector=selector)
-#     return FlowableOperator(func)
-
 def zip(*others: Flowable):
     """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
 
     :param selector: a mapping function applied over the generated pairs
-    :return: zipped observable
+    :return: zipped Flowable
     """
 
     def func(left: Flowable) -> Flowable:
@@ -310,7 +241,7 @@ def zip_with_index(selector: Callable[[Any, int], Any] = None):
     """ Zips each item emmited by the source with their indices
 
     :param selector: a mapping function applied over the generated pairs
-    :return: zipped with index observable
+    :return: zipped with index Flowable
     """
 
     def func(left: Flowable) -> Flowable:

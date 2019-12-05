@@ -3,7 +3,6 @@ import threading
 from rx.disposable import Disposable
 
 from rxbp.observable import Observable
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 
