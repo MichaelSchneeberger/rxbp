@@ -146,12 +146,6 @@ def merge(
 def zip(
       *sources: MultiCast,
 ):
-    # """ Zips a set of `Flowables` together, which were selected by a `predicate`.
-    #
-    # :param predicates: a list of functions that return True, if the current element is used for the zip operation
-    # :param selector: a function that maps the selected `Flowables` to some `MultiCast` value
-    # """
-
     if len(sources) == 0:
         return empty()
 

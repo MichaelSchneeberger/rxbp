@@ -12,6 +12,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.typing import ElementType
 
 
 class MergeSelectorObservable(Observable):
@@ -135,7 +136,7 @@ class MergeSelectorObservable(Observable):
                 def gen():
                     yield from zipped_output_buffer
 
-                zip_out_ack = observer.on_next(gen)
+                zip_out_ack = observer.on_next(gen())
             else:
                 zip_out_ack = continue_ack
 
@@ -193,10 +194,10 @@ class MergeSelectorObservable(Observable):
             else:
                 raise Exception('illegal case')
 
-        def on_next_left(left_elem: Callable[[], Generator]):
+        def on_next_left(left_elem: ElementType): #Callable[[], Generator]):
             # print('controlled_zip on left')
 
-            left_iter = left_elem()
+            left_iter = iter(left_elem)
             left_val = [next(left_iter)]
 
             has_elem = [True]
@@ -280,7 +281,7 @@ class MergeSelectorObservable(Observable):
             # print('controlled_zip on right')
 
             # create the right iterable
-            right_iter = right_elem()
+            right_iter = iter(right_elem)
             right_val = next(right_iter)
 
             with self.lock:

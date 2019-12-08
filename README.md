@@ -262,21 +262,24 @@ MultiCast
 
 ### Create a MultiCast
 
+- `empty` - create an empty *Multicast*
 - `from_flowable` - creates a *Multicast* from a *Flowable* by making it
 a *SharedFlowable*
-- `return_value` - creates a *Multicast* from some object
-- `from_event` - creates a *Multicast* from the first element emitted
+- `from_event` - creates a *Multicast* from an event, e.g. the first element emitted
 by a *Flowable*
 
 ### Transforming operators
 
-- `filter` - Only emits those *Multicast* values for which the given predicate hold.
-- `flat_map` - Maps each *Multicast* value by applying a given function and flattens the result.
-- `lift` - Lift the current `MultiCast[T1]` to a `MultiCast[T2[MultiCast[T1]]]`.
-- `map` - Maps each *Multicast* value by applying a given function.
-- `merge` - Merges two or more *Multicast* streams together
-- `share` - Shares a new *Flowable*
-- `split` - Splits the *Multicast* stream in two, and applies the given operators to each side.
+- `defer` - used to create a *Flowable* loop
+- `extend` - create a new multicasted *Flowable* 
+- `filter` - only emits those *Multicast* values for which the given predicate hold.
+- `flat_map` - maps each *Multicast* value by applying a given function and flattens the result.
+- `lift` - lift the current `Observable[T1]` to a `Observable[T2[MultiCast[T1]]]`.
+- `map` - maps each *Multicast* value by applying a given function.
+- `merge` - merges two or more *Multicast* streams together.
+- `reduce` - creates a *Multicast* that emits a single value
+- `share` - define an expressions with the current *Multicast* that contains the *Multicast* several times
+- `zip` - zips *Multicast*s emitting a single *Flowable* to a *Multicast* emitting a single value
 
 ### Other operators 
 
