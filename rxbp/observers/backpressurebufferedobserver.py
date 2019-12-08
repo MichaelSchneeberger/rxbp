@@ -12,8 +12,13 @@ from rxbp.typing import ElementType
 
 
 class BackpressureBufferedObserver(Observer):
-    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler,
-                 buffer_size: int):
+    def __init__(
+            self,
+            underlying: Observer,
+            scheduler: Scheduler,
+            subscribe_scheduler: Scheduler,
+            buffer_size: int,
+    ):
         self.underlying = underlying
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
@@ -89,7 +94,7 @@ class BackpressureBufferedObserver(Observer):
                 ack = self.underlying.on_next(next)
                 return ack
             except:
-                print(f'next value = "{list(next)}"')
+                # print(f'next value = "{list(next)}"')
                 raise NotImplementedError
 
         def signal_complete():

@@ -16,12 +16,11 @@ class FilterObserver(Observer):
             self,
             observer: Observer,
             predicate: Callable[[Any], bool],
-            scheduler: Scheduler,
+            selector: PublishOSubject,
     ):
         self.observer = observer
         self.predicate = predicate
-
-        self.selector = PublishOSubject(scheduler=scheduler)
+        self.selector = selector
 
     def on_next(self, elem: ElementType):
         def gen_filtered_iterable():

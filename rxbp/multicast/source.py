@@ -1,16 +1,16 @@
 from typing import Any, List, Callable, Union, Iterable, Dict
 
 import rx
+
 import rxbp
+
 from rxbp.flowable import Flowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
-from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
-from rxbp.multicast.rxextensions.debug_ import debug
-from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
+from rxbp.multicast.op import merge as merge_op
 from rxbp.torx import to_rx
 
 
@@ -24,25 +24,14 @@ def empty(is_list: bool = None, is_dict: bool = None):
 
     class FromObjectMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+
+            # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
+            # this "subscribe scheduler" is not automatically provided in rx, that is
+            # why it must be provided as the `scheduler` argument of the `return_value`
+            # operator.
             return rx.return_value(init_val, scheduler=info.multicast_scheduler)
 
     return MultiCast(FromObjectMultiCast())
-
-
-# def return_value(val: Any):
-#     class FromObjectMultiCast(MultiCastBase):
-#         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-#             return rx.return_value(val, scheduler=info.multicast_scheduler)
-#
-#     return MultiCast(FromObjectMultiCast())
-
-
-# def from_iterable(vals: Iterable[Any]):
-#     class FromIterableMultiCast(MultiCastBase):
-#         def get_source(self, info: MultiCastInfo) -> Flowable:
-#             return rxbp.from_(vals)
-#
-#     return MultiCast(FromIterableMultiCast())
 
 
 def from_flowable(
@@ -59,15 +48,21 @@ def from_flowable(
 
         multicast = empty(is_list=True)
 
-        if len(source) == 1:
-            append = lambda _, v: v
-        else:
-            append = lambda l, v: l + [s]
-
         for s in source:
             def for_func(s=s):
                 return multicast.pipe(
-                    rxbp.multicast.op.share(lambda _: s, append),
+                    rxbp.multicast.op.extend(lambda _: s),
+                )
+
+            multicast = for_func()
+
+    elif isinstance(first, list):
+        multicast = empty(is_list=True)
+
+        for val in first:
+            def for_func(val=val):
+                return multicast.pipe(
+                    rxbp.multicast.op.extend(lambda _: [val]),
                 )
 
             multicast = for_func()
@@ -79,7 +74,7 @@ def from_flowable(
         for key, s in first.items():
             def for_func(key=key, s=s):
                 return multicast.pipe(
-                    rxbp.multicast.op.share(lambda _: s, lambda d, source: {**d, key: source}),
+                    rxbp.multicast.op.extend(lambda _: {key: s}),
                 )
 
             multicast = for_func()
@@ -93,7 +88,7 @@ def from_flowable(
         for key, s in state.items():
             def for_func(key=key, s=s):
                 return multicast.pipe(
-                    rxbp.multicast.op.share(lambda _: s, lambda d, source: first.set_flowable_state({**d, key: source})),
+                    rxbp.multicast.op.extend(lambda _: {key: s}),
                 )
 
             multicast = for_func()
@@ -111,7 +106,7 @@ def from_event(
     """ Emits `MultiCastBases` with `MultiCastBases` defined by a lift_func
     """
 
-    class ReactOnMultiCast(MultiCastBase):
+    class FromEventMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> Flowable:
             subscribe_on_flowable = Flowable(SubscribeOnFlowable(source, scheduler=info.source_scheduler))
             first_flowable = subscribe_on_flowable.pipe(
@@ -127,4 +122,58 @@ def from_event(
 
             return to_rx(result, subscribe_schduler=info.multicast_scheduler)
 
-    return MultiCast(ReactOnMultiCast())
+    return MultiCast(FromEventMultiCast())
+
+
+def merge(
+        *sources: MultiCast
+):
+    """ Merges zero or more `MultiCast` streams together
+    """
+
+    if len(sources) == 0:
+        return empty()
+
+    elif len(sources) == 1:
+        return sources[0]
+
+    else:
+        return sources[0].pipe(
+            merge_op(*sources[1:])
+        )
+
+
+def zip(
+      *sources: MultiCast,
+):
+    # """ Zips a set of `Flowables` together, which were selected by a `predicate`.
+    #
+    # :param predicates: a list of functions that return True, if the current element is used for the zip operation
+    # :param selector: a function that maps the selected `Flowables` to some `MultiCast` value
+    # """
+
+    if len(sources) == 0:
+        return empty()
+
+    elif len(sources) == 1:
+        return sources
+
+    else:
+        return sources[0].pipe(
+            rxbp.multicast.op.zip(*sources[1:])
+        )
+
+# def return_value(val: Any):
+#     class FromObjectMultiCast(MultiCastBase):
+#         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+#             return rx.return_value(val, scheduler=info.multicast_scheduler)
+#
+#     return MultiCast(FromObjectMultiCast())
+
+
+# def from_iterable(vals: Iterable[Any]):
+#     class FromIterableMultiCast(MultiCastBase):
+#         def get_source(self, info: MultiCastInfo) -> Flowable:
+#             return rxbp.from_(vals)
+#
+#     return MultiCast(FromIterableMultiCast())

@@ -35,8 +35,14 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                 def flat_map_func(v: MultiCastValue):
                     if isinstance(v, SingleFlowableMixin):
                         return v.get_single_flowable()
-                    else:
+                    elif isinstance(v, Flowable):
                         return v
+                    elif isinstance(v, list):
+                        return v[0]
+                    elif isinstance(v, dict):
+                        return next(v.values())
+                    else:
+                        raise Exception(f'illegal value "{v}"')
 
                 scheduler = TrampolineScheduler()
 
@@ -46,7 +52,11 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                 )
 
                 source_flowable = rxbp.from_rx(source.get_source(info=info).pipe(
-                    rxop.filter(lambda v: isinstance(v, SingleFlowableMixin) or isinstance(v, FlowableBase)),
+                    rxop.filter(lambda v: isinstance(v, SingleFlowableMixin)
+                                          or isinstance(v, FlowableBase)
+                                          or (isinstance(v, list) and len(v) == 1)
+                                          or (isinstance(v, dict) and len(v) == 1)
+                                ),
                     rxop.first(),
                 ))
                 return Flowable(SubscribeOnFlowable(source_flowable, scheduler=info.multicast_scheduler)).pipe(

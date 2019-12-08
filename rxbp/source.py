@@ -132,7 +132,7 @@ def from_list(buffer: List, batch_size: int = None):
 
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
-            base: Any = None):
+            base: Any = None) -> Flowable:
     """ Wraps a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
 
     :param source: a rx.observable

@@ -1,5 +1,6 @@
 import unittest
 
+from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.filterobserver import FilterObserver
 from rxbp.selectors.selectionmsg import select_next, select_completed, SelectNext, SelectCompleted
@@ -12,13 +13,14 @@ class TestFilterObserver(unittest.TestCase):
     def setUp(self):
         self.scheduler = TestScheduler()
         self.source = TestObservable()
+        self.selector = PublishOSubject(scheduler=self.scheduler)
 
     def test_initialize(self):
         sink = TestObserver()
         FilterObserver(
             observer=sink,
             predicate=lambda _: True,
-            scheduler=self.scheduler
+            selector=self.selector
         )
 
     def test_on_complete_predicate(self):
@@ -26,7 +28,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
 
@@ -39,7 +41,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
 
@@ -52,7 +54,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
 
@@ -65,7 +67,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
 
@@ -78,7 +80,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
 
@@ -92,7 +94,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
         exc = Exception()
@@ -106,7 +108,7 @@ class TestFilterObserver(unittest.TestCase):
         observer = FilterObserver(
             observer=sink1,
             predicate=lambda v: v > 0,
-            scheduler=self.scheduler
+            selector=self.selector
         )
         self.source.observe(ObserverInfo(observer))
 

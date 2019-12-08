@@ -2,6 +2,7 @@
 RxPy back-pressure extension
 ============================
 
+![Build Status](https://github.com/MichaelSchneeberger/rxbackpressure/workflows/build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/MichaelSchneeberger/rxbackpressure/badge.svg?branch=master)](https://coveralls.io/github/MichaelSchneeberger/rxbackpressure?branch=master)
 
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
@@ -133,7 +134,7 @@ Operators on *MultiCasts* are exposed through `rxbp.multicast.op`.
 import rxbp
 
 f = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
-    rxbp.multicast.op.share(lambda base: base[0].pipe(
+    rxbp.multicast.op.extend(lambda base: base[0].pipe(
         rxbp.op.zip(base[0].pipe(
             rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),

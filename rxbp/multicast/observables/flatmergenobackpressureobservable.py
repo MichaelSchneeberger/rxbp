@@ -5,6 +5,7 @@ from rxbp.ack.ackbase import AckBase
 from rxbp.ack.ackimpl import continue_ack
 from rxbp.ack.single import Single
 from rxbp.multicast.observer.flatmapnobackpressureobserver import FlatMapNoBackpressureObserver
+from rxbp.multicast.observer.flatmergenobackpressureobserver import FlatMergeNoBackpressureObserver
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -13,7 +14,7 @@ from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
-class FlatMapNoBackpressureObservable(Observable):
+class FlatMergeNoBackpressureObservable(Observable):
     def __init__(
             self,
             source: Observable,
@@ -33,7 +34,7 @@ class FlatMapNoBackpressureObservable(Observable):
         scheduler = self.scheduler
         subscribe_scheduler = self.subscribe_scheduler
 
-        concat_observer = FlatMapNoBackpressureObserver(
+        concat_observer = FlatMergeNoBackpressureObserver(
             observer=observer,
             selector=self.selector,
             scheduler=scheduler,

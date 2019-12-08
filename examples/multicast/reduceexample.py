@@ -18,21 +18,25 @@ import rxbp
 base1 = {'val1': rxbp.range(5), 'val2': rxbp.range(5)}
 base2 = {'val1': rxbp.range(3), 'val2': rxbp.range(3)}
 
-rxbp.multicast.from_flowable(base1).pipe(
+result = rxbp.multicast.from_flowable(base1).pipe(
     rxbp.multicast.op.merge(
         rxbp.multicast.from_flowable(base2)
     ),
     rxbp.multicast.op.reduce(),
     rxbp.multicast.op.map(lambda v: v['val1'].zip(v['val2'])),
-).to_flowable().subscribe(print)
+).to_flowable().run()
+
+print(result)
 
 # reduce single Flowable
 # ----------------------
 
 # the sample example, but with just one Flowable
-rxbp.multicast.from_flowable(rxbp.range(5)).pipe(
+result = rxbp.multicast.from_flowable(rxbp.range(5)).pipe(
     rxbp.multicast.op.merge(
         rxbp.multicast.from_flowable(rxbp.range(3))
     ),
     rxbp.multicast.op.reduce(),
-).to_flowable().subscribe(print)
+).to_flowable().run()
+
+print(result)

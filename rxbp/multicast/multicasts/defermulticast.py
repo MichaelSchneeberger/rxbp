@@ -3,10 +3,10 @@ from typing import Callable, Any, Dict, Union, List
 
 import rx
 from rx import operators as rxop
-
-import rxbp
 from rx.core.typing import Disposable
 from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
+
+import rxbp
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.bufferflowable import BufferFlowable

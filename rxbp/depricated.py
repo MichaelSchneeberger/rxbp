@@ -10,7 +10,7 @@ def share(func: Callable[[Flowable], Flowable]):
     the multi-cast flowable buffers the elements and releases an element when the slowest subscriber back-pressures
     the element.
 
-    :return: flowable returned by the share function
+    :return: flowable returned by the extend function
     """
 
     def inner_func(source: Flowable) -> Flowable:

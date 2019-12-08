@@ -35,10 +35,10 @@ class LiftObservable(Observable):
                         ) -> rx.typing.Disposable:
             self.observer = observer
 
-            def action(_, __):
-                self.observer.on_next(self.first)
-
-            return self.subscribe_scheduler.schedule(action)
+            # def action(_, __):
+            #     self.observer.on_next(self.first)
+            #
+            # return self.subscribe_scheduler.schedule(action)
 
     class LiftObserver(Observer):       # replace by TestObserver?
         def __init__(
@@ -62,21 +62,48 @@ class LiftObservable(Observable):
                 self.is_first = False
 
                 self.observable = LiftObservable.InnerObservable(val, self.subscribe_scheduler)
-                outer_val = self.func(val, self.observable)
-                _ = self.observer.on_next(outer_val)
+                observable = self.func(val, self.observable)
+                disposable = observable.subscribe(self.observer)
+                # _ = self.observer.on_next(outer_val)
+
+            # else:
+            def action(_, __):
+
+                if self.observable.observer is not None:
+                    self.observable.observer.on_next(val)
+                else:
+                    # observable didn't get subscribed
+                    pass
+
+            self.subscribe_scheduler.schedule(action)
+
+        def on_error(self, exc: Exception):
+            if self.is_first:
+                self.observer.on_error(exc)
             else:
                 def action(_, __):
-                    self.observable.observer.on_next(val)
+
+                    if self.observable.observer is not None:
+                        self.observable.observer.on_error(exc)
+                    else:
+                        # observable didn't get subscribed
+                        pass
 
                 self.subscribe_scheduler.schedule(action)
 
-        def on_error(self, exc: Exception):
-            if self.is_first is False:
-                self.observer.on_error(exc)
-
         def on_completed(self):
-            if self.is_first is False:
+            if self.is_first:
                 self.observer.on_completed()
+            else:
+                def action(_, __):
+
+                    if self.observable.observer is not None:
+                        self.observable.observer.on_completed()
+                    else:
+                        # observable didn't get subscribed
+                        pass
+
+                self.subscribe_scheduler.schedule(action)
 
     def _subscribe_core(self,
                         observer: rx.typing.Observer,
@@ -84,6 +111,5 @@ class LiftObservable(Observable):
                         ) -> rx.typing.Disposable:
 
         observer = self.LiftObserver(func=self.func, observer=observer, subscribe_scheduler=self.subscribe_scheduler)
-
         disposable = self.source.subscribe(observer=observer, scheduler=scheduler)
         return Disposable()

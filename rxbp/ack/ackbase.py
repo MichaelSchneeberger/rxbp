@@ -5,6 +5,7 @@ from rxbp.ack.single import Single
 
 
 class AckBase(ABC):
+    is_sync = False
 
     @abstractmethod
     def subscribe(self, single: Single) -> Disposable:
