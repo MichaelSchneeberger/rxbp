@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from rxbp.observable import Observable
 from rxbp.observer import Observer

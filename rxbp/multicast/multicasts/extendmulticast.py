@@ -2,7 +2,6 @@ from typing import Callable
 
 import rx
 from rx import operators as rxop
-
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.refcountflowable import RefCountFlowable

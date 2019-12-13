@@ -1,15 +1,12 @@
-import threading
 from typing import Callable, Any, List
 
 from rx.core.typing import Disposable
-from rxbp.ack.ackbase import AckBase
 from rxbp.ack.ackimpl import continue_ack
-from rxbp.ack.single import Single
 from rxbp.observable import Observable
+from rxbp.observables.debugobservable import DebugObservable
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
@@ -30,7 +27,6 @@ class FlatMergeNoBackpressureObserver(Observer):
         self.is_volatile = is_volatile
 
         self.place_holders = (self.PlaceHolder(), self.PlaceHolder())
-        self.first_place_holder = self.place_holders[0]
 
         disposable = MergeObservable(
             left=self.place_holders[0],
@@ -49,10 +45,13 @@ class FlatMergeNoBackpressureObserver(Observer):
 
         for observable in obs_list:
             place_holder = self.PlaceHolder()
-            disposable = MergeObservable(
+
+            merge_obs = MergeObservable(
                 left=observable,
                 right=place_holder,
-            ).observe(ObserverInfo(observer=self.place_holders[0].observer))
+            )
+
+            disposable = merge_obs.observe(ObserverInfo(observer=self.place_holders[0].observer))
 
             self.place_holders = (self.place_holders[1], place_holder)
 
@@ -64,6 +63,3 @@ class FlatMergeNoBackpressureObserver(Observer):
     def on_completed(self):
         for place_holder in self.place_holders:
             place_holder.observer.on_completed()
-
-        # if self.first_place_holder is self.place_holders[0]:
-        #     self.observer.on_completed()

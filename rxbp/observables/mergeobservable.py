@@ -1,13 +1,10 @@
 import threading
-from abc import ABC, abstractmethod
-from typing import Callable, Generator, Optional
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.ackimpl import Continue, continue_ack, stop_ack
 from rxbp.ack.ackbase import AckBase
+from rxbp.ack.ackimpl import Continue, continue_ack, stop_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.single import Single
-
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -65,7 +62,7 @@ class MergeObservable(Observable):
 
         def on_next(self, ack: AckBase):
             if isinstance(ack, Continue):
-                next_state = RawMergeStates.OnAckReceived(ack=AckSubject())
+                next_state = RawMergeStates.OnAckReceived()
 
                 with self.source.lock:
                     next_state.prev_raw_state = self.source.state
@@ -75,8 +72,6 @@ class MergeObservable(Observable):
                 raw_termination_state = next_state.prev_raw_termination_state
                 meas_prev_state = next_state.prev_raw_state.get_measured_state(raw_termination_state)
                 meas_state = next_state.get_measured_state(raw_termination_state)
-
-                # print(meas_state)
 
                 # acknowledgment already sent to left and right
                 if isinstance(meas_state, MergeStates.NoneReceived):
@@ -96,6 +91,7 @@ class MergeObservable(Observable):
                 # send first buffered element and request new one
                 elif isinstance(meas_state, MergeStates.SingleReceived):
 
+                    # previous state indicated that the next element sent is from left
                     if isinstance(meas_prev_state, MergeStates.BothReceivedContinueLeft):
                         ack = self.source.observer.on_next(meas_prev_state.left_elem)
                         ack.subscribe(self)
@@ -113,6 +109,7 @@ class MergeObservable(Observable):
                     if isinstance(meas_prev_state, MergeStates.SingleReceived):
                         self.source.observer.on_next(meas_prev_state.elem)
                         self.source.observer.on_completed()
+
                     else:
                         pass
 

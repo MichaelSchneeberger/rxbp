@@ -6,7 +6,6 @@ from rxbp.ack.ackimpl import stop_ack
 from rxbp.ack.merge import _merge
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
-from rxbp.scheduler import Scheduler
 from rxbp.selectors.selectionmsg import select_next, select_completed
 from rxbp.typing import ElementType
 

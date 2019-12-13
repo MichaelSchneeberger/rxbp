@@ -1,11 +1,9 @@
 from typing import Optional, Union
 
 import rx
-from rx import operators as rxop, Observable
-
 import rxbp
 import rxbp.observable
-
+from rx import operators as rxop, Observable
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
@@ -14,8 +12,6 @@ from rxbp.multicast.flowables.flatmergenobackpressureflowable import FlatMergeNo
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
-from rxbp.multicast.observer.flatmapnobackpressureobserver import FlatMapNoBackpressureObserver
-from rxbp.multicast.rxextensions.debug_ import debug
 from rxbp.multicast.rxextensions.liftobservable import LiftObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver
@@ -99,11 +95,11 @@ class ReduceMultiCast(MultiCastBase):
                                     flowable = to_state(v)[key]
                                     return flowable
 
-                                flattened_flowable = FlatMergeNoBackpressureFlowable(shared_flowable)
+                                flattened_flowable = FlatMergeNoBackpressureFlowable(shared_flowable, selector)
                                 # flattened_flowable = FlatMapNoBackpressureFlowable(shared_flowable, selector)
-                                shared_flowable = RefCountFlowable(flattened_flowable)
+                                result = RefCountFlowable(flattened_flowable)
 
-                                return key, Flowable(shared_flowable)
+                                return key, Flowable(result)
 
                             yield for_func()
 

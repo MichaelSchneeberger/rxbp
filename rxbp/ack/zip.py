@@ -11,7 +11,7 @@ def _zip(*args: AckBase) -> AckBase:
     class ZipAck(AckBase):
         def subscribe(self, single: Single):
             n = len(sources)
-            queues : List[List] = [[] for _ in range(n)]
+            queues: List[List] = [[] for _ in range(n)]
 
             def next():
                 if all([len(q) for q in queues]):

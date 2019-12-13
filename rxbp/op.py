@@ -1,14 +1,16 @@
 from typing import Any, Callable
 
 from rxbp.flowable import Flowable
-from rxbp.scheduler import Scheduler
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
+from rxbp.flowableopmixin import FlowableOpMixin
+from rxbp.scheduler import Scheduler
 
 
 def buffer(buffer_size: int):
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.buffer(buffer_size=buffer_size)
+
     return FlowableOperator(func)
 
 
@@ -19,8 +21,9 @@ def concat(*sources: FlowableBase):
     :return:
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.concat(*sources)
+
     return FlowableOperator(func)
 
 
@@ -41,28 +44,42 @@ def controlled_zip(
     :return: zipped observable
     """
 
-    def func(left: Flowable) -> Flowable:
-        return left.controlled_zip(right=right, request_left=request_left, request_right=request_right, match_func=match_func)
+    def func(left: FlowableOpMixin):
+        return left.controlled_zip(
+            right=right,
+            request_left=request_left,
+            request_right=request_right,
+            match_func=match_func,
+        )
+
     return FlowableOperator(func)
 
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         """ Prints debug messages to the console when providing the name argument
 
         :param source:
         :return:
         """
 
-        return source.debug(name=name, on_next=on_next, on_subscribe=on_subscribe, on_ack=on_ack, on_raw_ack=on_raw_ack,
-                            on_ack_msg=on_ack_msg)
+        return source.debug(
+            name=name,
+            on_next=on_next,
+            on_subscribe=on_subscribe,
+            on_ack=on_ack,
+            on_raw_ack=on_raw_ack,
+            on_ack_msg=on_ack_msg,
+        )
+
     return FlowableOperator(func)
 
 
-def execute_on(scheduler: Scheduler):
-    def func(source: Flowable) -> Flowable:
-        return source.execute_on(scheduler=scheduler)
-    return FlowableOperator(func)
+# def execute_on(scheduler: Scheduler):
+#     def func(source: FlowableOpMixin):
+#         return source.execute_on(scheduler=scheduler)
+#
+#     return FlowableOperator(func)
 
 
 def fast_filter(predicate: Callable[[Any], bool]):
@@ -72,8 +89,9 @@ def fast_filter(predicate: Callable[[Any], bool]):
     :return: filtered Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.fast_filter(predicate=predicate)
+
     return FlowableOperator(func)
 
 
@@ -84,8 +102,9 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.filter(predicate=predicate)
+
     return FlowableOperator(func)
 
 
@@ -96,8 +115,9 @@ def filter_with_index(predicate: Callable[[Any, int], bool]):
     :return: filtered Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.filter_with_index(predicate=predicate)
+
     return FlowableOperator(func)
 
 
@@ -108,8 +128,9 @@ def first(raise_exception: Callable[[Callable[[], None]], None] = None):
     :return: mapped Flowable
     """
 
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.first(raise_exception=raise_exception)
+
     return FlowableOperator(func)
 
 
@@ -122,8 +143,9 @@ def flat_map(selector: Callable[[Any], Flowable]):
     :return: a flattened Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.flat_map(selector=selector)
+
     return FlowableOperator(func)
 
 
@@ -134,8 +156,9 @@ def map(selector: Callable[[Any], Any]):
     :return: mapped Flowable
     """
 
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.map(selector=selector)
+
     return FlowableOperator(func)
 
 
@@ -146,8 +169,9 @@ def match(*others: Flowable):
     :return: zipped Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.match(*others)
+
     return FlowableOperator(func)
 
 
@@ -158,8 +182,9 @@ def merge(*others: Flowable):
     :return: mapped Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.merge(*others)
+
     return FlowableOperator(func)
 
 
@@ -170,8 +195,9 @@ def observe_on(scheduler: Scheduler):
     :return: an Flowable running on specified scheduler
     """
 
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.observe_on(scheduler=scheduler)
+
     return FlowableOperator(func)
 
 
@@ -182,8 +208,9 @@ def pairwise():
     :return: paired Flowable
     """
 
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.pairwise()
+
     return FlowableOperator(func)
 
 
@@ -193,8 +220,9 @@ def repeat_first():
     :return: a flowable
     """
 
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.repeat_first()
+
     return FlowableOperator(func)
 
 
@@ -208,20 +236,23 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     :return: a flowable that emits the accumulated values
     """
 
-    def inner_func(source: Flowable) -> Flowable:
+    def inner_func(source: FlowableOpMixin):
         return source.scan(func=func, initial=initial)
+
     return FlowableOperator(inner_func)
 
 
 def set_base(val: Any):
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.set_base(val=val)
+
     return FlowableOperator(func)
 
 
 def to_list():
-    def func(source: Flowable) -> Flowable:
+    def func(source: FlowableOpMixin):
         return source.to_list()
+
     return FlowableOperator(func)
 
 
@@ -232,19 +263,19 @@ def zip(*others: Flowable):
     :return: zipped Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
+    def func(left: FlowableOpMixin):
         return left.zip(*others)
+
     return FlowableOperator(func)
 
 
-def zip_with_index(selector: Callable[[Any, int], Any] = None):
+def zip_with_index():
     """ Zips each item emmited by the source with their indices
 
-    :param selector: a mapping function applied over the generated pairs
     :return: zipped with index Flowable
     """
 
-    def func(left: Flowable) -> Flowable:
-        return left.zip_with_index(selector=selector)
-    return FlowableOperator(func)
+    def func(left: FlowableOpMixin):
+        return left.zip_with_index()
 
+    return FlowableOperator(func)

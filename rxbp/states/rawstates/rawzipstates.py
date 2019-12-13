@@ -14,7 +14,11 @@ class RawZipStates:
         pass
 
     class WaitOnLeft(ZipState):
-        def __init__(self, right_ack: AckSubject, right_iter: Iterator):
+        def __init__(
+                self,
+                right_ack: AckSubject,
+                right_iter: Iterator,
+        ):
             self.right_ack = right_ack
             self.right_iter = right_iter
 
@@ -30,7 +34,11 @@ class RawZipStates:
                 return ZipStates.WaitOnLeft(right_ack=self.right_ack, right_iter=self.right_iter)
 
     class WaitOnRight(ZipState):
-        def __init__(self, left_ack: AckSubject, left_iter: Iterator):
+        def __init__(
+                self,
+                left_ack: AckSubject,
+                left_iter: Iterator,
+        ):
             self.left_iter = left_iter
             self.left_ack = left_ack
 

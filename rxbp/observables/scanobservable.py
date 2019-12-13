@@ -1,4 +1,3 @@
-import itertools
 from typing import Callable, Any
 
 from rxbp.observable import Observable

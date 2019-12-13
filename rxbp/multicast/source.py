@@ -1,9 +1,7 @@
-from typing import Any, List, Callable, Union, Iterable, Dict
+from typing import Any, Callable, Union, Dict
 
 import rx
-
 import rxbp
-
 from rxbp.flowable import Flowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
@@ -14,22 +12,11 @@ from rxbp.multicast.op import merge as merge_op
 from rxbp.torx import to_rx
 
 
-def empty(is_list: bool = None, is_dict: bool = None):
-    if is_list is True:
-        init_val = []
-    elif is_dict is True:
-        init_val = {}
-    else:
-        init_val = {}
+def empty():
 
     class FromObjectMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-
-            # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
-            # this "subscribe scheduler" is not automatically provided in rx, that is
-            # why it must be provided as the `scheduler` argument of the `return_value`
-            # operator.
-            return rx.return_value(init_val, scheduler=info.multicast_scheduler)
+            return rx.empty(scheduler=info.multicast_scheduler)
 
     return MultiCast(FromObjectMultiCast())
 
@@ -37,6 +24,23 @@ def empty(is_list: bool = None, is_dict: bool = None):
 def from_flowable(
         *source: Union[Flowable, Dict[Any, Flowable], FlowableStateMixin],
 ):
+    def return_value(is_list: bool = None, is_dict: bool = None):
+        if is_list is True:
+            init_val = []
+        elif is_dict is True:
+            init_val = {}
+        else:
+            init_val = {}
+
+        class FromObjectMultiCast(MultiCastBase):
+            def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+                # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
+                # this "subscribe scheduler" is not automatically provided in rx, that is
+                # why it must be provided as the `scheduler` argument of the `return_value`
+                # operator.
+                return rx.return_value(init_val, scheduler=info.multicast_scheduler)
+
+        return MultiCast(FromObjectMultiCast())
 
     if len(source) == 0:
         return empty()
@@ -46,7 +50,7 @@ def from_flowable(
     if isinstance(first, Flowable):
         assert all(isinstance(s, Flowable) for s in source)
 
-        multicast = empty(is_list=True)
+        multicast = return_value(is_list=True)
 
         for s in source:
             def for_func(s=s):
@@ -57,7 +61,7 @@ def from_flowable(
             multicast = for_func()
 
     elif isinstance(first, list):
-        multicast = empty(is_list=True)
+        multicast = return_value(is_list=True)
 
         for val in first:
             def for_func(val=val):
@@ -69,7 +73,7 @@ def from_flowable(
 
     elif isinstance(first, dict):
 
-        multicast = empty(is_dict=True)
+        multicast = return_value(is_dict=True)
 
         for key, s in first.items():
             def for_func(key=key, s=s):
@@ -81,7 +85,7 @@ def from_flowable(
 
     elif isinstance(first, FlowableStateMixin):
 
-        multicast = empty(is_dict=True)
+        multicast = return_value(is_dict=True)
 
         state = first.get_flowable_state()
 

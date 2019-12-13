@@ -1,4 +1,3 @@
-from rxbp.ack.ack import Ack
 from rxbp.ack.ackimpl import continue_ack, Continue
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.observerinfo import ObserverInfo
@@ -27,12 +26,21 @@ class TestZip2Observable(TestCaseBase):
     2. left.on_next in state=WaitForRight
     3. right.on_next in state=WaitForLeft
 
+    The drawings in the comments for each test follow the following convention:
+
+               action
+    state1 ---------------> state2
+
+    state1: the state of ZipObservable before the action is applied
+    action: on_next, on_completed, ack.on_next function calls
+    state2: the state immediately after the action is applied
+
     """
 
     def setUp(self):
         self.scheduler = TestScheduler()
-        self.s1 = TestObservable()
-        self.s2 = TestObservable()
+        self.left = TestObservable()
+        self.right = TestObservable()
         self.exception = Exception('test')
 
     def measure_state(self, obs: Zip2Observable):
@@ -43,7 +51,7 @@ class TestZip2Observable(TestCaseBase):
 
     def test_init_state(self):
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.InitState)
@@ -57,10 +65,10 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        self.s1.on_completed()
+        self.left.on_completed()
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.Stopped)
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.LeftCompletedState)
@@ -74,10 +82,10 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        self.s2.on_completed()
+        self.right.on_completed()
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.Stopped)
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.RightCompletedState)
@@ -91,10 +99,10 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_single(1)
+        ack1 = self.left.on_next_single(1)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnRight)
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.InitState)
@@ -108,11 +116,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
+        ack1 = self.left.on_next_single(1)
 
-        ack1 = self.s1.on_next_single(1)
-        ack2 = self.s2.on_next_single(1)
+        ack2 = self.right.on_next_single(1)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeftRight)
         self.assertIsInstance(ack1.value, Continue)
@@ -126,11 +134,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1, 2, 3])
-        ack2 = self.s2.on_next_list([1, 2, 3])
+        ack1 = self.left.on_next_list([1, 2, 3])
+        ack2 = self.right.on_next_list([1, 2, 3])
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeftRight)
         self.assertIsInstance(ack1.value, Continue)
@@ -144,11 +152,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1, 2])
-        ack2 = self.s2.on_next_list([1])
+        ack1 = self.left.on_next_list([1, 2])
+        ack2 = self.right.on_next_list([1])
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnRight)
         self.assertFalse(ack1.has_value)
@@ -162,11 +170,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver()
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1, 2])
-        ack2 = self.s2.on_next_list([1, 2, 3])
+        ack1 = self.left.on_next_list([1, 2])
+        ack2 = self.right.on_next_list([1, 2, 3])
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeft)
         self.assertIsInstance(ack1.value, Continue)
@@ -180,11 +188,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1])
-        ack2 = self.s2.on_next_list([1])
+        ack1 = self.left.on_next_list([1])
+        ack2 = self.right.on_next_list([1])
         sink.ack.on_next(continue_ack)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeftRight)
@@ -199,11 +207,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1])
-        ack2 = self.s2.on_next_list([1, 2])
+        ack1 = self.left.on_next_list([1])
+        ack2 = self.right.on_next_list([1, 2])
         sink.ack.on_next(continue_ack)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeft)
@@ -218,12 +226,12 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1])
-        ack2 = self.s2.on_next_list([1])
-        self.s1.on_completed()
+        ack1 = self.left.on_next_list([1])
+        ack2 = self.right.on_next_list([1])
+        self.left.on_completed()
         sink.ack.on_next(continue_ack)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.Stopped)
@@ -236,11 +244,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        ack1 = self.s1.on_next_list([1])
-        self.s2.on_error(self.exception)
+        ack1 = self.left.on_next_list([1])
+        self.right.on_error(self.exception)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.Stopped)
         self.assertEqual(sink.exception, self.exception)
@@ -253,11 +261,11 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        self.s1.on_next_list([1])
-        self.s1.on_completed()
+        self.left.on_next_list([1])
+        self.left.on_completed()
 
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.LeftCompletedState)
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnRight)
@@ -270,12 +278,12 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        self.s1.on_next_list([1])
-        self.s1.on_completed()
-        self.s2.on_next_list([1])
+        self.left.on_next_list([1])
+        self.left.on_completed()
+        self.right.on_next_list([1])
 
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.LeftCompletedState)
         self.assertIsInstance(self.measure_state(obs), ZipStates.Stopped)
@@ -289,12 +297,12 @@ class TestZip2Observable(TestCaseBase):
         """
 
         sink = TestObserver(immediate_coninue=0)
-        obs = Zip2Observable(self.s1, self.s2)
+        obs = Zip2Observable(self.left, self.right)
         obs.observe(ObserverInfo(sink))
 
-        self.s1.on_next_list([1, 1])
-        self.s1.on_completed()
-        self.s2.on_next_list([1])
+        self.left.on_next_list([1, 1])
+        self.left.on_completed()
+        self.right.on_next_list([1])
 
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.LeftCompletedState)
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnRight)

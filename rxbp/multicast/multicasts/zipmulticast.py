@@ -2,25 +2,23 @@ from typing import List
 
 import rx
 from rx import Observable
-
+from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
 from rxbp.multicast.flowables.flatmapnobackpressureflowable import FlatMapNoBackpressureFlowable
-from rxbp.multicast.multicast import MultiCast
-from rxbp.observerinfo import ObserverInfo
-from rxbp.observers.connectableobserver import ConnectableObserver
-from rxbp.source import from_rx
-from rxbp.flowable import Flowable
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.typing import MultiCastValue
+from rxbp.observerinfo import ObserverInfo
+from rxbp.observers.connectableobserver import ConnectableObserver
+from rxbp.source import from_rx
 from rxbp.subscriber import Subscriber
 
 
 class ZipMultiCast(MultiCastBase):
     def __init__(
             self,
-            sources: List[MultiCast],
+            sources: List[MultiCastBase],
     ):
         self._sources = sources
 

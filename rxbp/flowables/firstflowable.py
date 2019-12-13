@@ -2,7 +2,6 @@ from typing import Callable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.firstobservable import FirstObservable
-from rxbp.observables.tolistobservable import ToListObservable
 from rxbp.selectors.bases import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo

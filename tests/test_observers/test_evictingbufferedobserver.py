@@ -1,10 +1,10 @@
 from rxbp.ack.ackimpl import Continue, continue_ack
 from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import DropOld
+from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
-from rxbp.testing.testcasebase import TestCaseBase
 
 
 class TestEvictingBufferedObserver(TestCaseBase):

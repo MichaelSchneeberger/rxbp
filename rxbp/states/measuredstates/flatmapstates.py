@@ -1,7 +1,5 @@
 from abc import ABC
 
-from rxbp.states.rawstates.rawstatenoargs import RawStateNoArgs
-
 
 class FlatMapStates:
     class State(ABC):

@@ -1,18 +1,10 @@
-import threading
-from queue import Queue
-from typing import Iterable, Optional
-
-import rx
 from rxbp.ack.ackimpl import Continue, continue_ack, Stop
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.flat_map import _merge_all
 from rxbp.ack.map import _map
-from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
 
-from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observer import Observer
-from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 

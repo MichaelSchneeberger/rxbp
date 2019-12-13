@@ -1,7 +1,6 @@
 from abc import abstractmethod, ABC
 
 from rx.core.typing import Disposable
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 
 

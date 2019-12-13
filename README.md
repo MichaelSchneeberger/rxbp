@@ -91,7 +91,7 @@ able to back-pressure on an `on_next` method call.
 
 A `MultiCast` is used when a *Flowable* emits elements to more than
 one `Observer`, and can be though of a nested *Flowable* of type
- `Flowable[T[Flowable]]`.
+ `rx.Observable[T[Flowable]]`.
 
 In RxPY, there are operators called `publish` and `share`,
 which create a multicast observable that can then be subscribed
@@ -127,7 +127,7 @@ The previous code outputs:
 To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
 type.
 A `MultiCast` represents a collection of *Flowable* and can
- be though of as `Flowable[T[Flowable]]` where T is defined by the user.
+ be though of as `rx.Observable[T[Flowable]]` where T is defined by the user.
 Operators on *MultiCasts* are exposed through `rxbp.multicast.op`.
 
 ```python
@@ -278,7 +278,6 @@ by a *Flowable*
 - `map` - maps each *Multicast* value by applying a given function.
 - `merge` - merges two or more *Multicast* streams together.
 - `reduce` - creates a *Multicast* that emits a single value
-- `share` - define an expressions with the current *Multicast* that contains the *Multicast* several times
 - `zip` - zips *Multicast*s emitting a single *Flowable* to a *Multicast* emitting a single value
 
 ### Other operators 

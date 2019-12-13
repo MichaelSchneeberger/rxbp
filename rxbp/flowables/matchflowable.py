@@ -1,10 +1,10 @@
 from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.selectors.getselectormixin import SelectorFound, IdentitySelector, ObservableSelector
-from rxbp.selectors.selectionop import select_observable
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.selectors.bases import Base
+from rxbp.selectors.getselectormixin import SelectorFound, IdentitySelector, ObservableSelector
+from rxbp.selectors.selectionop import select_observable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
 

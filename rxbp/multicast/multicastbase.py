@@ -1,24 +1,19 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-
 from typing import Generic, Union
 
 import rx
-
 import rxbp
-
 from rx import operators as rxop
-
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
-from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.singleflowablemixin import SingleFlowableMixin
+from rxbp.multicast.typing import MultiCastValue
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
-from rxbp.multicast.typing import MultiCastValue
 
 
 class MultiCastBase(Generic[MultiCastValue], ABC):

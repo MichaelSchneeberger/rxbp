@@ -1,5 +1,6 @@
 import unittest
 
+from rxbp.ack.ackimpl import Continue
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.observables.mergeselectorobservable import MergeSelectorObservable
 from rxbp.selectors.selectionmsg import select_next, select_completed
@@ -21,7 +22,10 @@ class TestMergeSelectorObservable(unittest.TestCase):
             scheduler=self.scheduler,
         )
 
-    def test_simple(self):
+    def test_left_select_complete_should_not_wait_on_right(self):
+        """
+        """
+
         sink = TestObserver()
         obs = MergeSelectorObservable(
             left=self.left,
@@ -30,7 +34,58 @@ class TestMergeSelectorObservable(unittest.TestCase):
         )
         obs.observe(ObserverInfo(sink))
 
-        self.left.on_next_list([select_next, select_completed])
+        ack = self.left.on_next_list([select_completed])
+
+        self.assertIsInstance(ack, Continue)
+        self.assertEqual([select_completed], sink.received)
+
+    def test_wait_on_left_right_to_wait_on_right(self):
+        """
+        """
+
+        sink = TestObserver()
+        obs = MergeSelectorObservable(
+            left=self.left,
+            right=self.right,
+            scheduler=self.scheduler,
+        )
+        obs.observe(ObserverInfo(sink))
+
+        ack = self.left.on_next_list([select_next, select_completed])
+
+        self.assertFalse(ack.is_sync)
+        self.assertEqual([], sink.received)
+
+    def test_wait_on_right_to_wait_on_left_right(self):
+        """
+        """
+
+        sink = TestObserver()
+        obs = MergeSelectorObservable(
+            left=self.left,
+            right=self.right,
+            scheduler=self.scheduler,
+        )
+        obs.observe(ObserverInfo(sink))
+        ack = self.left.on_next_list([select_next, select_completed])
+
         self.right.on_next_list([select_completed])
 
-        print(sink.received)
+        self.assertEqual([select_completed], sink.received)
+
+    def test_drain_left_select_completed(self):
+        """
+        """
+
+        sink = TestObserver()
+        obs = MergeSelectorObservable(
+            left=self.left,
+            right=self.right,
+            scheduler=self.scheduler,
+        )
+        obs.observe(ObserverInfo(sink))
+        ack = self.left.on_next_list([select_next, select_completed, select_completed])
+
+        self.right.on_next_list([select_completed])
+
+        self.assertEqual([select_completed, select_completed], sink.received)

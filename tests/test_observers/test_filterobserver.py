@@ -3,7 +3,7 @@ import unittest
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.filterobserver import FilterObserver
-from rxbp.selectors.selectionmsg import select_next, select_completed, SelectNext, SelectCompleted
+from rxbp.selectors.selectionmsg import SelectNext, SelectCompleted
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler

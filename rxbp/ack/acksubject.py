@@ -1,7 +1,4 @@
 import threading
-
-from rx.core import typing
-
 from typing import Any, Optional, List
 
 from rx.disposable import Disposable

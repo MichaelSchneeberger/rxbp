@@ -5,7 +5,7 @@ from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
+from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 

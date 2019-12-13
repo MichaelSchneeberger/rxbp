@@ -1,6 +1,5 @@
 import threading
 
-import rx
 from rxbp.ack.acksubject import AckSubject
 
 

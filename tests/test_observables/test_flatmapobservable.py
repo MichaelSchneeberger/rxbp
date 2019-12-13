@@ -1,7 +1,5 @@
-from rxbp.ack.ack import Ack
-from rxbp.ack.ackimpl import continue_ack, Continue
+from rxbp.ack.ackimpl import Continue
 from rxbp.observables.flatmapobservable import FlatMapObservable
-from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.flatmapstates import FlatMapStates
 from rxbp.testing.testcasebase import TestCaseBase

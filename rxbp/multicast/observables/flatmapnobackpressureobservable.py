@@ -1,16 +1,9 @@
-import threading
 from typing import Callable, Any
 
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import continue_ack
-from rxbp.ack.single import Single
 from rxbp.multicast.observer.flatmapnobackpressureobserver import FlatMapNoBackpressureObserver
 from rxbp.observable import Observable
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
-from rxbp.typing import ElementType
 
 
 class FlatMapNoBackpressureObservable(Observable):

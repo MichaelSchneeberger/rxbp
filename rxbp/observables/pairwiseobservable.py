@@ -1,11 +1,6 @@
-import itertools
-
-from rxbp.ack.ackimpl import continue_ack, stop_ack
 from rxbp.observable import Observable
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.pairwiseobserver import PairwiseObserver
-from rxbp.typing import ElementType
 
 
 class PairwiseObservable(Observable):

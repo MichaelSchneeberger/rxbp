@@ -1,10 +1,10 @@
 from rxbp.ack.ackimpl import Continue, continue_ack
-from rxbp.observerinfo import ObserverInfo
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
+from rxbp.observerinfo import ObserverInfo
+from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
-from rxbp.testing.testcasebase import TestCaseBase
 
 
 class TestCachedServeFirstSubject(TestCaseBase):

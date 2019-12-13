@@ -4,7 +4,6 @@ from rxbp.ack.ackimpl import continue_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.testing.testobserver import TestObserver
 from rxbp.typing import ValueType
 
