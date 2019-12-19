@@ -7,7 +7,7 @@ from rx import operators as rxop, Observable
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
-from rxbp.multicast.flowables.flatmapnobackpressureflowable import FlatMapNoBackpressureFlowable
+from rxbp.multicast.flowables.flatconcatnobackpressureflowable import FlatConcatNoBackpressureFlowable
 from rxbp.multicast.flowables.flatmergenobackpressureflowable import FlatMergeNoBackpressureFlowable
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
@@ -19,8 +19,13 @@ from rxbp.subscriber import Subscriber
 
 
 class ReduceMultiCast(MultiCastBase):
-    def __init__(self, source: MultiCastBase):
+    def __init__(
+            self,
+            source: MultiCastBase,
+            maintain_order: bool = None,
+    ):
         self.source = source
+        self.maintain_order = maintain_order
 
     def get_source(self, info: MultiCastInfo):
         source = self.source.get_source(info=info).pipe(
@@ -30,7 +35,7 @@ class ReduceMultiCast(MultiCastBase):
                                   or isinstance(v, list)),
         )
 
-        def func(first: Union[FlowableStateMixin, dict], lifted_obs: Observable):
+        def func(lifted_obs: Observable, first: Union[FlowableStateMixin, dict]):
             if isinstance(first, dict):
                 to_state = lambda s: s
                 from_state = lambda s: s
@@ -48,70 +53,73 @@ class ReduceMultiCast(MultiCastBase):
 
             first_state = to_state(first)
 
-            class ReduceObservable(Observable):
-                def __init__(self, first: FlowableStateMixin):
-                    super().__init__()
+            # class ReduceObservable(Observable):
+            #     def __init__(
+            #             self,
+            #             first: FlowableStateMixin,
+            #             maintain_order: bool = None,
+            #     ):
+            #         super().__init__()
+            #
+            #         self.first = first
+            #         self.maintain_order = maintain_order
+            #
+            #     def _subscribe_core(
+            #             self,
+            #             observer: rx.typing.Observer,
+            #             scheduler: Optional[rx.typing.Scheduler] = None
+            #     ) -> rx.typing.Disposable:
 
-                    self.first = first
+            conn_observer = ConnectableObserver(
+                underlying=None,
+                scheduler=info.multicast_scheduler,
+                subscribe_scheduler=info.multicast_scheduler,
+            )
 
-                def _subscribe_core(
-                        self,
-                        observer: rx.typing.Observer,
-                        scheduler: Optional[rx.typing.Scheduler] = None
-                ) -> rx.typing.Disposable:
-                    # # share only if more than one elem in first state
-                    # shared_source = lifted_obs.pipe(
-                    #     rxop.share(),
-                    # )
+            # subscribe to source rx.Observables immediately
+            source_flowable = rxbp.from_rx(lifted_obs)
+            subscriber = Subscriber(
+                scheduler=info.multicast_scheduler,
+                subscribe_scheduler=info.multicast_scheduler,
+            )
+            subscription = source_flowable.unsafe_subscribe(subscriber=subscriber)
+            subscription.observable.observe(ObserverInfo(conn_observer))
 
-                    # lifted_flowable = rxbp.from_rx(lifted_obs)
+            conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 
-                    conn_observer = ConnectableObserver(
-                        underlying=None,
-                        scheduler=info.multicast_scheduler,
-                        subscribe_scheduler=info.multicast_scheduler,
-                    )
+            if 1 < len(first_state):
+                shared_flowable = RefCountFlowable(conn_flowable)
+            else:
+                shared_flowable = conn_flowable
 
-                    # subscribe to source rx.Observables immediately
-                    source_flowable = rxbp.from_rx(lifted_obs)
-                    subscriber = Subscriber(
-                        scheduler=info.multicast_scheduler,
-                        subscribe_scheduler=info.multicast_scheduler,
-                    )
-                    subscription = source_flowable.unsafe_subscribe(subscriber=subscriber)
-                    subscription.observable.observe(ObserverInfo(conn_observer))
+            def gen_flowables():
+                for key in first_state.keys():
+                    def for_func(key=key, shared_flowable=shared_flowable):
+                        def selector(v: FlowableStateMixin):
+                            flowable = to_state(v)[key]
+                            return flowable
 
-                    conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
+                        if self.maintain_order:
+                            flattened_flowable = FlatConcatNoBackpressureFlowable(shared_flowable, selector)
+                        else:
+                            flattened_flowable = FlatMergeNoBackpressureFlowable(shared_flowable, selector)
 
-                    if 1 < len(first_state):
-                        shared_flowable = RefCountFlowable(conn_flowable)
-                    else:
-                        shared_flowable = conn_flowable
+                        result = RefCountFlowable(flattened_flowable)
+                        flowable = Flowable(result)
+                        return key, flowable
 
-                    def gen_flowables():
-                        for key in first_state.keys():
-                            def for_func(key=key, shared_flowable=shared_flowable):
-                                def selector(v: FlowableStateMixin):
-                                    flowable = to_state(v)[key]
-                                    return flowable
+                    yield for_func()
 
-                                flattened_flowable = FlatMergeNoBackpressureFlowable(shared_flowable, selector)
-                                # flattened_flowable = FlatMapNoBackpressureFlowable(shared_flowable, selector)
-                                result = RefCountFlowable(flattened_flowable)
+            result_flowables = dict(gen_flowables())
+            result = from_state(result_flowables)
+            return result
 
-                                return key, Flowable(result)
+            # observer.on_next(result)
+            # observer.on_completed()
 
-                            yield for_func()
+            # return ReduceObservable(
+            #     first=first,
+            #     maintain_order=self.maintain_order,
+            # )
 
-                    result_flowables = dict(gen_flowables())
-                    result = from_state(result_flowables)
-
-                    # def action(_, __):
-                    observer.on_next(result)
-                    observer.on_completed()
-
-                    # info.multicast_scheduler.schedule(action)
-
-            return ReduceObservable(first=first)
-
-        return LiftObservable(source=source, func=func, subscribe_scheduler=info.multicast_scheduler)
+        return LiftObservable(source=source, func=func, scheduler=info.multicast_scheduler)

@@ -1,12 +1,12 @@
 from typing import Callable, Any
 
-from rxbp.multicast.observer.flatmapnobackpressureobserver import FlatMapNoBackpressureObserver
+from rxbp.multicast.observer.flatconcatnobackpressureobserver import FlatConcatNoBackpressureObserver
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
-class FlatMapNoBackpressureObservable(Observable):
+class FlatConcatNoBackpressureObservable(Observable):
     def __init__(
             self,
             source: Observable,
@@ -26,7 +26,7 @@ class FlatMapNoBackpressureObservable(Observable):
         scheduler = self.scheduler
         subscribe_scheduler = self.subscribe_scheduler
 
-        concat_observer = FlatMapNoBackpressureObserver(
+        concat_observer = FlatConcatNoBackpressureObserver(
             observer=observer,
             selector=self.selector,
             scheduler=scheduler,

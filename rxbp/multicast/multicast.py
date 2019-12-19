@@ -107,8 +107,11 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     def map(self, func: Callable[[MultiCastValue], MultiCastValue]):
         return MultiCast(MapMultiCast(source=self, func=func))
 
-    def reduce(self):
-        return MultiCast(ReduceMultiCast(source=self))
+    def reduce(
+            self,
+            maintain_order: bool = None,
+    ):
+        return MultiCast(ReduceMultiCast(source=self, maintain_order=maintain_order))
 
     def share(self):
         subject = Subject()

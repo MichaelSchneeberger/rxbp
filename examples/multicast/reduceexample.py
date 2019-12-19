@@ -22,7 +22,6 @@ result = rxbp.multicast.from_flowable(base1).pipe(
     rxbp.multicast.op.merge(
         rxbp.multicast.from_flowable(base2)
     ),
-    # rxbp.multicast.op.debug('d1'),
     rxbp.multicast.op.reduce(),
     rxbp.multicast.op.map(lambda v: v['val1'].zip(v['val2'])),
 ).to_flowable().run()

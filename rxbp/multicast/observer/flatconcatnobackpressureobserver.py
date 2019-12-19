@@ -12,7 +12,7 @@ from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
-class FlatMapNoBackpressureObserver(Observer):
+class FlatConcatNoBackpressureObserver(Observer):
     def __init__(
             self,
             observer: Observer,

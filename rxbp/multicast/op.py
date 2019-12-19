@@ -178,12 +178,14 @@ def map(func: Callable[[MultiCastValue], MultiCastValue]):
     return MultiCastOperator(op_func)
 
 
-def reduce():
+def reduce(
+    maintain_order: bool = None,
+):
     """ Lift the current `MultiCast[ReducableMixin[T]]` to a `MultiCast[ReducableMixin[T]]`.
     """
 
     def op_func(source: MultiCastOpMixin):
-        return source.reduce()
+        return source.reduce(maintain_order=maintain_order)
         # return MultiCast(ReduceMultiCast(source=source))
 
     return MultiCastOperator(op_func)

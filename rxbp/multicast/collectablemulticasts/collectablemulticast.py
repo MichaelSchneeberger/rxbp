@@ -74,8 +74,11 @@ class CollectableMultiCast(MultiCastOpMixin):
     def pipe(self, *operators: MultiCastOperator) -> 'CollectableMultiCast':
         return reduce(lambda acc, op: op(acc), operators, self)
 
-    def reduce(self):
-        main = self._main.reduce()
+    def reduce(
+            self,
+            maintain_order: bool = None,
+    ):
+        main = self._main.reduce(maintain_order=maintain_order)
         return CollectableMultiCast(main=main, collected=self._collected)
 
     def share(self):

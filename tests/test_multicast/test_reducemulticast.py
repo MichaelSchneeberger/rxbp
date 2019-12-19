@@ -1,6 +1,5 @@
 import unittest
 
-from rx.testing import ReactiveTest
 from rxbp.flowable import Flowable
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
@@ -21,44 +20,80 @@ class TestReduceMultiCast(unittest.TestCase):
             multicast_scheduler=self.multicast_scheduler,
             source_scheduler=self.source_scheduler,
         )
-        # self.rx_sink = TestRxObserver()
-        # self.sink = TestObserver()
+        self.source_multicast = TestMultiCast()
+        self.rx_sink = TestRxObserver()
+        self.source1 = TestFlowable()
+        self.source2 = TestFlowable()
 
-    def test_1(self):
-        rx_sink = TestRxObserver()
-        source_multicast = TestMultiCast()
-        reduce_multicast = ReduceMultiCast(ReduceMultiCast(source=source_multicast))
-        reduce_multicast.get_source(self.info).subscribe(rx_sink)
-        source_flowable = TestFlowable()
+    def test_send_single_flowable(self):
+        reduce_multicast = ReduceMultiCast(source=self.source_multicast)
+        reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
 
-        source_multicast.on_next(Flowable(source_flowable))
+        self.source_multicast.on_next(Flowable(self.source1))
 
-        self.assertEqual(1, len(rx_sink.received))
+        self.assertEqual(1, len(self.rx_sink.received))
 
-    def test_2(self):
+    def test_send_dictionary(self):
+        reduce_multicast = ReduceMultiCast(source=self.source_multicast)
+        reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
+
+        self.source_multicast.on_next({'f1': Flowable(self.source1)})
+
+        self.assertEqual(1, len(self.rx_sink.received))
+
+    def test_reduce_single_flowables_without_maintaining_order(self):
+        reduce_multicast = ReduceMultiCast(source=self.source_multicast)
+        reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
+        self.source_multicast.on_next(Flowable(self.source1))
+        self.source_multicast.on_next(Flowable(self.source2))
+        self.source_multicast.on_completed()
+
         sink = TestObserver()
-        rx_sink = TestRxObserver()
-        source_multicast = TestMultiCast()
-        reduce_multicast = ReduceMultiCast(ReduceMultiCast(source=source_multicast))
-        reduce_multicast.get_source(self.info).subscribe(rx_sink)
-        source_flowable1 = TestFlowable()
-        source_flowable2 = TestFlowable()
-        source_multicast.on_next(Flowable(source_flowable1))
-        source_multicast.on_next(Flowable(source_flowable2))
-        source_multicast.on_completed()
-
-        subscription = rx_sink.received[0].unsafe_subscribe(Subscriber(
+        subscription = self.rx_sink.received[0].unsafe_subscribe(Subscriber(
             scheduler=self.source_scheduler,
             subscribe_scheduler=self.source_scheduler
         ))
         subscription.observable.observe(ObserverInfo(observer=sink))
+
+        # sending the lifted flowable is scheduled on the multicast_scheduler
         self.multicast_scheduler.advance_by(1)
-        source_flowable1.on_next_single(1)
-        source_flowable2.on_next_single('a')
-        source_flowable1.on_next_single(2)
-        source_flowable1.on_completed()
-        source_flowable2.on_next_single('b')
-        source_flowable2.on_completed()
+
+        self.source1.on_next_single(1)
+        self.source2.on_next_single('a')
+        self.source1.on_next_single(2)
+        self.source1.on_completed()
+        self.source2.on_next_single('b')
+        self.source2.on_completed()
 
         self.assertEqual([1, 'a', 2, 'b'], sink.received)
+        self.assertTrue(sink.is_completed)
+
+    def test_reduce_single_flowables_with_maintaining_order(self):
+        reduce_multicast = ReduceMultiCast(
+            source=self.source_multicast,
+            maintain_order=True,
+        )
+        reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
+        self.source_multicast.on_next(Flowable(self.source1))
+        self.source_multicast.on_next(Flowable(self.source2))
+        self.source_multicast.on_completed()
+
+        sink = TestObserver()
+        subscription = self.rx_sink.received[0].unsafe_subscribe(Subscriber(
+            scheduler=self.source_scheduler,
+            subscribe_scheduler=self.source_scheduler
+        ))
+        subscription.observable.observe(ObserverInfo(observer=sink))
+
+        # sending the lifted flowable is scheduled on the multicast_scheduler
+        self.multicast_scheduler.advance_by(1)
+
+        self.source1.on_next_single(1)
+        self.source2.on_next_single('a')
+        self.source1.on_next_single(2)
+        self.source1.on_completed()
+        self.source2.on_next_single('b')
+        self.source2.on_completed()
+
+        self.assertEqual([1, 2, 'a', 'b'], sink.received)
         self.assertTrue(sink.is_completed)

@@ -5,7 +5,7 @@ from rx import Observable
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
-from rxbp.multicast.flowables.flatmapnobackpressureflowable import FlatMapNoBackpressureFlowable
+from rxbp.multicast.flowables.flatconcatnobackpressureflowable import FlatConcatNoBackpressureFlowable
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.typing import MultiCastValue
@@ -57,7 +57,7 @@ class ZipMultiCast(MultiCastBase):
 
                         conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 
-                        flattened_flowable = FlatMapNoBackpressureFlowable(conn_flowable, to_flowable)
+                        flattened_flowable = FlatConcatNoBackpressureFlowable(conn_flowable, to_flowable)
 
                         ref_count_flowable = RefCountFlowable(flattened_flowable)
 

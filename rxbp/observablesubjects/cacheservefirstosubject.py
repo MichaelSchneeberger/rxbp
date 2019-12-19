@@ -106,6 +106,20 @@ class CacheServeFirstOSubject(OSubjectBase):
             return inactive_subscriptions
 
         def should_dequeue(self, index: int):
+
+            """
+            Traceback (most recent call last):
+              File "/home/mike/workspace/python/rxbackpressure/rxbp/observers/backpressurebufferedobserver.py", line 93, in signal_next
+                ack = self.underlying.on_next(next)
+              File "/home/mike/workspace/python/rxbackpressure/rxbp/observablesubjects/cacheservefirstosubject.py", line 353, in on_next
+                dequeue_buffer = self.shared_state.should_dequeue(current_index)
+              File "/home/mike/workspace/python/rxbackpressure/rxbp/observablesubjects/cacheservefirstosubject.py", line 109, in should_dequeue
+                result = index <= min(self.current_index.values())
+            ValueError: min() arg is an empty sequence
+            """
+            if not self.current_index:
+                return False
+
             result = index <= min(self.current_index.values())
             return result
 

@@ -61,7 +61,10 @@ class MultiCastOpMixin(ABC):
         ...
 
     @abstractmethod
-    def reduce(self):
+    def reduce(
+            self,
+            maintain_order: bool = None,
+    ):
         ...
 
     @abstractmethod

@@ -11,11 +11,26 @@ class TestRxObservable(Observable):
 
         self.observer = None
 
+        self.is_disposed = False
+
     def _subscribe_core(self,
                         observer: typing.Observer,
                         scheduler: Optional[typing.Scheduler] = None
                         ) -> typing.Disposable:
         self.observer = observer
-        return Disposable()
+
+        def dispose_func():
+            self.is_disposed = True
+
+        return Disposable(dispose_func)
+
+    def on_next(self, val):
+        self.observer.on_next(val)
+
+    def on_completed(self):
+        self.observer.on_completed()
+
+    def on_error(self, exc):
+        self.observer.on_error(exc)
 
 
