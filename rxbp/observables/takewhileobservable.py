@@ -29,32 +29,34 @@ class TakeWhileObservable(Observable):
 
         self.source = source
         self.predicate = predicate
-        self.ack = continue_ack
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
         predicate = self.predicate
 
         class TakeWhileObserver(Observer):
+            def __init__(self):
+                self.ack = continue_ack
+
             def on_next(self, elem: ElementType):
-                if observer.ack == stop_ack:
+                if self.ack == stop_ack:
                     return stop_ack
 
                 try:
                     for v in elem:
                         if not predicate(v):
-                            observer.ack = stop_ack
+                            self.ack = stop_ack
                             break
                         else:
-                            observer.ack = continue_ack
+                            self.ack = continue_ack
                             observer.on_next([v])
                 except Exception as e:
                     observer.on_error(e)
-                    return observer.ack
+                    return self.ack
 
-                if observer.ack == stop_ack:
+                if self.ack == stop_ack:
                     observer.on_completed()
-                return observer.ack
+                return self.ack
 
             def on_error(self, exc):
                 return observer.on_error(exc)
