@@ -48,8 +48,7 @@ class TakeWhileObservable(Observable):
                             self.ack = stop_ack
                             break
                         else:
-                            self.ack = continue_ack
-                            observer.on_next([v])
+                            self.ack = observer.on_next([v])
                 except Exception as e:
                     observer.on_error(e)
                     return self.ack
