@@ -2,15 +2,13 @@ import threading
 from typing import Callable, Any, Dict, Union, List
 
 import rx
-from rx import operators as rxop
-
 import rxbp
+from rx import operators as rxop
 from rx.core.typing import Disposable
 from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.bufferflowable import BufferFlowable
-from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowabledict import FlowableDict
@@ -56,7 +54,14 @@ class DeferMultiCast(MultiCastBase):
         start = StartWithInitialValueFlowable()
         shared = RefCountFlowable(source=start)
 
+        # mutual curr_index variable is used to index the input Flowables
+        # as the sequal to the deferred Flowables
+        # {0: deferred_flowable_1,
+        #  1: input_flowable_1,
+        #  2: input_flowable_2,}
         curr_index = 0
+
+        # map initial value(s) to a dictionary
         if isinstance(initial, list):
             curr_index = len(initial)
             initial_dict = {idx: val for idx, val in enumerate(initial)}
@@ -104,51 +109,57 @@ class DeferMultiCast(MultiCastBase):
         output = self.func(init)
 
         def map_func(base: MultiCastValue):
-
-            def select_first_index(state):
-                class SingleFlowableDict(SingleFlowableMixin, FlowableDict):
-                    def get_single_flowable(self) -> Flowable:
-                        return state[0]
-
-                return SingleFlowableDict(state)
-
-            def select_none(state):
-                return FlowableDict(state)
-
             match_error_message = f'defer function returned "{base}" which does not match initial "{initial}"'
 
             if isinstance(base, Flowable) and len(initial_dict) == 1:
+
+                # if initial would be a dicitonary, then the input to the defer operator
+                # must be a dicitonary and not a Flowable.
                 assert not isinstance(initial, dict), match_error_message
 
-                if isinstance(initial, list):
-                    assert len(base) == 1, match_error_message
+                # create standard form
+                flowable_state = {0: base}
 
-                deferred_values = {list(initial_dict.keys())[0]: base}      # deferred values refer to the values returned by the defer function
-                select_flowable_dict = select_none
+                # function that will map the resulting state back to a Flowable
+                from_state = lambda state: state[0]
 
             elif isinstance(base, list):
                 assert isinstance(initial, list) and len(initial) == len(base)
 
-                deferred_values = {idx: val for idx, val in enumerate(base)}
-                select_flowable_dict = select_first_index
+                # create standard form
+                flowable_state = {idx: val for idx, val in enumerate(base)}
+
+                # def select_first_index(state):
+                #     class SingleFlowableDict(SingleFlowableMixin, FlowableDict):
+                #         def get_single_flowable(self) -> Flowable:
+                #             return state[0]
+                #
+                #     return SingleFlowableDict(state)
+
+                # function that will map the resulting state to a list
+                from_state = lambda state: list(state.values())
 
             elif isinstance(base, dict) or isinstance(base, FlowableStateMixin):
                 if isinstance(base, FlowableStateMixin):
-                    deferred_values = base.get_flowable_state()
+                    flowable_state = base.get_flowable_state()
                 else:
-                    deferred_values = base
+                    flowable_state = base
 
-                match_error_message = f'defer function returned "{deferred_values.keys()}", ' \
+                match_error_message = f'defer function returned "{flowable_state.keys()}", ' \
                                       f'which does not match initial "{initial.keys()}"'
 
-                assert isinstance(initial, dict) and set(initial.keys()) <= set(deferred_values.keys()), match_error_message
+                assert isinstance(initial, dict) and set(initial.keys()) <= set(flowable_state.keys()), match_error_message
 
-                select_flowable_dict = select_none
+                # function that will map the resulting state to a FlowableDict
+                def select_none(state):
+                    return FlowableDict(state)
+                from_state = select_none
 
             else:
                 raise Exception(f'illegal case "{base}"')
 
-            shared_deferred_values = {key: RefCountFlowable(value) for key, value in deferred_values.items()}
+            # share flowables
+            shared_flowable_state = {key: RefCountFlowable(value) for key, value in flowable_state.items()}
 
             lock = threading.RLock()
             is_first = [True]
@@ -166,14 +177,14 @@ class DeferMultiCast(MultiCastBase):
                             is_first[0] = False
                             close_loop = True
 
-                    # close defer loop only if first element has received
+                    # close defer loop only if first subscribed
                     if close_loop:
 
                         def gen_index_for_each_deferred_state():
                             """ for each value returned by the defer function """
                             for key in initial_dict.keys():
                                 def for_func(key=key):
-                                    return Flowable(MapFlowable(shared_deferred_values[key], selector=lambda v: (key, v)))
+                                    return Flowable(MapFlowable(shared_flowable_state[key], selector=lambda v: (key, v)))
                                 yield for_func()
                         indexed_deferred_values = gen_index_for_each_deferred_state()
 
@@ -233,9 +244,9 @@ class DeferMultiCast(MultiCastBase):
                     return Subscription(info=SubscriptionInfo(None), observable=defer_observable)
 
             # create a flowable for all deferred values
-            new_states = {k: Flowable(DeferFlowable(v, k)) for k, v in shared_deferred_values.items()}
+            new_states = {k: Flowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()}
 
-            return select_flowable_dict(new_states)
+            return from_state(new_states)
 
         return output.get_source(info=info).pipe(
             rxop.map(map_func),

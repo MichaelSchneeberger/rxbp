@@ -1,19 +1,19 @@
 import traceback
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Tuple, Generic
+from typing import Callable, Any
 
 from rx.disposable import Disposable
 from rxbp.ack.ackimpl import continue_ack, stop_ack
+from rxbp.flowableopmixin import FlowableOpMixin
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.subscription import Subscription
 from rxbp.subscriber import Subscriber
-from rxbp.typing import ValueType
+from rxbp.subscription import Subscription
 
 
-class FlowableBase(Generic[ValueType], ABC):
+class FlowableBase(ABC):
     """ See `Flowable` for more information.
 
     Two class are used to implement `Flowable`. `FlowableBase` implements the basic interface including the `subscribe`
@@ -30,10 +30,10 @@ class FlowableBase(Generic[ValueType], ABC):
     ) -> Disposable:
         """ Calling `subscribe` method starts some kind of process that
 
-         start a chain reaction where downsream `Flowables`
-    call the `subscribe` method of their linked upstream `Flowable` until
-    the sources start emitting data. Once a `Flowable` is subscribed, we
-    allow it to have mutable states where it make sense.
+        start a chain reaction where downsream `Flowables`
+        call the `subscribe` method of their linked upstream `Flowable` until
+        the sources start emitting data. Once a `Flowable` is subscribed, we
+        allow it to have mutable states where it make sense.
         """
 
         subscribe_scheduler_ = subscribe_scheduler or TrampolineScheduler()

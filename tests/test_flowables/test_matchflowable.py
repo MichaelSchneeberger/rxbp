@@ -1,13 +1,8 @@
-from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.matchflowable import MatchFlowable
-from rxbp.flowables.zip2flowable import Zip2Flowable
-from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 

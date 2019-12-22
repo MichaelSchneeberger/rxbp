@@ -1,24 +1,21 @@
 import sys
 import threading
 import types
-
 from dataclasses import dataclass
-
 from typing import List, Dict, Optional, Any, Tuple
 
 import rx
-from rx.disposable import Disposable, BooleanDisposable
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
-
-from rxbp.ack.ackimpl import Continue, Stop, stop_ack, continue_ack
+from rx.disposable import Disposable, BooleanDisposable
 from rxbp.ack.ackbase import AckBase
+from rxbp.ack.ackimpl import Continue, Stop, stop_ack, continue_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
+from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import ExecutionModel, Scheduler
-from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.typing import ElementType
 
@@ -109,6 +106,20 @@ class CacheServeFirstOSubject(OSubjectBase):
             return inactive_subscriptions
 
         def should_dequeue(self, index: int):
+
+            """
+            Traceback (most recent call last):
+              File "/home/mike/workspace/python/rxbackpressure/rxbp/observers/backpressurebufferedobserver.py", line 93, in signal_next
+                ack = self.underlying.on_next(next)
+              File "/home/mike/workspace/python/rxbackpressure/rxbp/observablesubjects/cacheservefirstosubject.py", line 353, in on_next
+                dequeue_buffer = self.shared_state.should_dequeue(current_index)
+              File "/home/mike/workspace/python/rxbackpressure/rxbp/observablesubjects/cacheservefirstosubject.py", line 109, in should_dequeue
+                result = index <= min(self.current_index.values())
+            ValueError: min() arg is an empty sequence
+            """
+            if not self.current_index:
+                return False
+
             result = index <= min(self.current_index.values())
             return result
 

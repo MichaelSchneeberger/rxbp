@@ -4,13 +4,11 @@ from typing import Set, List, Union
 from rx.disposable import Disposable
 from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
 from rxbp.ack.single import Single
-
-from rxbp.observer import Observer
 from rxbp.internal.promisecounter import PromiseCounter
+from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.typing import ElementType
 
 

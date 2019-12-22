@@ -1,10 +1,7 @@
 from rxbp.flowablebase import FlowableBase
-from rxbp.observable import Observable
-from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription
 
 
 class UseSubscribeSchedulerFlowable(FlowableBase):

@@ -1,8 +1,8 @@
 from typing import Callable, Any
 
-from rxbp.observerinfo import ObserverInfo
 from rxbp.observable import Observable
 from rxbp.observer import Observer
+from rxbp.observerinfo import ObserverInfo
 from rxbp.typing import ElementType
 
 

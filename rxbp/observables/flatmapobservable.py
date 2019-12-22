@@ -1,23 +1,20 @@
 import sys
 import threading
-from abc import ABC, abstractmethod
-from typing import Callable, Any, List, Optional
+from typing import Callable, Any, Optional
 
-from rx.disposable import Disposable, CompositeDisposable
-from rxbp.ack.ack import Ack
+from rx.disposable import CompositeDisposable
 from rxbp.ack.ackbase import AckBase
 from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.single import Single
-
 from rxbp.observable import Observable
 from rxbp.observer import Observer
-from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.observerinfo import ObserverInfo
+from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
 from rxbp.states.measuredstates.flatmapstates import FlatMapStates
 from rxbp.states.rawstates.rawflatmapstates import RawFlatMapStates
-from rxbp.typing import ValueType, ElementType
+from rxbp.typing import ElementType
 
 
 class FlatMapObservable(Observable):

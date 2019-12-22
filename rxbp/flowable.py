@@ -3,41 +3,41 @@ import itertools
 from typing import Callable, Any, Generic, Tuple
 
 import rx
+import rxbp
+from rxbp.flowablebase import FlowableBase
+from rxbp.flowableopmixin import FlowableOpMixin
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
 from rxbp.flowables.bufferflowable import BufferFlowable
-
 from rxbp.flowables.concatflowable import ConcatFlowable
+from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.executeonflowable import ExecuteOnFlowable
+from rxbp.flowables.fastfilterflowable import FastFilterFlowable
+from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
+from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.matchflowable import MatchFlowable
 from rxbp.flowables.mergeflowable import MergeFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
-from rxbp.flowables.fastfilterflowable import FastFilterFlowable
 from rxbp.flowables.pairwiseflowable import PairwiseFlowable
+from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
 from rxbp.flowables.scanflowable import ScanFlowable
-from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.flowables.tolistflowable import ToListFlowable
+from rxbp.flowables.zip2flowable import Zip2Flowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.pipe import pipe
+from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import Base
+from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
-from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
-from rxbp.flowables.filterflowable import FilterFlowable
-from rxbp.flowables.flatmapflowable import FlatMapFlowable
-from rxbp.flowables.refcountflowable import RefCountFlowable
-from rxbp.flowables.zip2flowable import Zip2Flowable
-from rxbp.scheduler import Scheduler
-from rxbp.subscriber import Subscriber
-from rxbp.flowablebase import FlowableBase
 from rxbp.typing import ValueType
 
 
-class Flowable(Generic[ValueType], FlowableBase[ValueType]):
+class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
     """ A `Flowable` implements a `subscribe` method allowing to describe a
     data flow from source to sink. The "description" is
     done with *rxbackpressure* operators exposed to `rxbp.op`.
@@ -55,7 +55,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
     able to back-pressure an `on_next` method call.
     """
 
-    def __init__(self, flowable: FlowableBase[ValueType]):
+    def __init__(self, flowable: FlowableBase):
         super().__init__()
 
         self.subscriptable = flowable
@@ -63,28 +63,35 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         return self.subscriptable.unsafe_subscribe(subscriber=subscriber)
 
-    def buffer(self, buffer_size: int):
+    def buffer(self, buffer_size: int) -> 'Flowable':
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return Flowable(flowable)
 
-    def concat(self, *sources: FlowableBase):
+    def concat(self, *sources: FlowableBase) -> 'Flowable':
         all_sources = itertools.chain([self], sources)
         flowable = ConcatFlowable(sources=all_sources)
         return Flowable(flowable)
 
-    def controlled_zip(self, right: FlowableBase,
-                       request_left: Callable[[Any, Any], bool] = None,
-                       request_right: Callable[[Any, Any], bool] = None,
-                       match_func: Callable[[Any, Any], bool] = None) -> 'Flowable[ValueType]':
+    def controlled_zip(
+            self,
+            right: FlowableBase,
+            request_left: Callable[[Any, Any], bool] = None,
+            request_right: Callable[[Any, Any], bool] = None,
+            match_func: Callable[[Any, Any], bool] = None,
+    ) -> 'Flowable[ValueType]':
         """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
 
         :param selector: a mapping function applied over the generated pairs
         :return: zipped Flowable
         """
 
-        flowable = ControlledZipFlowable(left=self, right=right, request_left=request_left,
-                                            request_right=request_right,
-                                            match_func=match_func)
+        flowable = ControlledZipFlowable(
+            left=self,
+            right=right,
+            request_left=request_left,
+            request_right=request_right,
+            match_func=match_func,
+        )
         return Flowable(flowable)
 
     def debug(self, name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
@@ -125,9 +132,11 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
         :return: filtered Flowable
         """
 
-        flowable = self.zip_with_index() \
-            .filter(lambda t2: predicate(t2[0], t2[1])) \
-            .map(lambda t2: t2[0])
+        flowable = self.pipe(
+            rxbp.op.zip_with_index(),
+            rxbp.op.filter(lambda t2: predicate(t2[0], t2[1])),
+            rxbp.op.map(lambda t2: t2[0]),
+        )
 
         return flowable
 
@@ -175,7 +184,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
                             def inner_result_selector(v1: Any, v2: Tuple[Any]):
                                 return (v1,) + v2
 
-                            flowable =  MatchFlowable(left=left, right=right, func=inner_result_selector)
+                            flowable = MatchFlowable(left=left, right=right, func=inner_result_selector)
                             return flowable
 
                     yield _
@@ -227,7 +236,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
 
         return Flowable(PairwiseFlowable(source=self))
 
-    def pipe(self, *operators: Callable[[FlowableBase], FlowableBase]) -> 'Flowable':
+    def pipe(self, *operators: Callable[[FlowableOpMixin], FlowableOpMixin]) -> 'Flowable':
         return Flowable(pipe(*operators)(self))
 
     def run(self, scheduler: Scheduler = None):
@@ -299,7 +308,7 @@ class Flowable(Generic[ValueType], FlowableBase[ValueType]):
                             def inner_result_selector(v1: Any, v2: Tuple[Any]):
                                 return (v1,) + v2
 
-                            flowable =  Zip2Flowable(left=left, right=right, func=inner_result_selector)
+                            flowable = Zip2Flowable(left=left, right=right, func=inner_result_selector)
                             return flowable
 
                     yield _

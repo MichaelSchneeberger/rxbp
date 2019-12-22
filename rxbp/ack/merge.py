@@ -1,5 +1,5 @@
-from rxbp.ack.ackimpl import Continue, Stop
 from rxbp.ack.ackbase import AckBase
+from rxbp.ack.ackimpl import Continue, Stop
 from rxbp.ack.map import _map
 from rxbp.ack.zip import _zip
 

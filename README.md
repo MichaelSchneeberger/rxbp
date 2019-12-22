@@ -2,7 +2,9 @@
 RxPy back-pressure extension
 ============================
 
+![Build Status](https://github.com/MichaelSchneeberger/rxbackpressure/workflows/build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/MichaelSchneeberger/rxbackpressure/badge.svg?branch=master)](https://coveralls.io/github/MichaelSchneeberger/rxbackpressure?branch=master)
+![Package Publish Status](https://github.com/MichaelSchneeberger/rxbackpressure/workflows/pypi/badge.svg)
 
 An extension to the [RxPY](https://github.com/ReactiveX/RxPY) python 
 library, that integrates back-pressure into the *Observable* pattern
@@ -90,7 +92,7 @@ able to back-pressure on an `on_next` method call.
 
 A `MultiCast` is used when a *Flowable* emits elements to more than
 one `Observer`, and can be though of a nested *Flowable* of type
- `Flowable[T[Flowable]]`.
+ `rx.Observable[T[Flowable]]`.
 
 In RxPY, there are operators called `publish` and `share`,
 which create a multicast observable that can then be subscribed
@@ -126,14 +128,14 @@ The previous code outputs:
 To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
 type.
 A `MultiCast` represents a collection of *Flowable* and can
- be though of as `Flowable[T[Flowable]]` where T is defined by the user.
+ be though of as `rx.Observable[T[Flowable]]` where T is defined by the user.
 Operators on *MultiCasts* are exposed through `rxbp.multicast.op`.
 
 ```python
 import rxbp
 
 f = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
-    rxbp.multicast.op.share(lambda base: base[0].pipe(
+    rxbp.multicast.op.extend(lambda base: base[0].pipe(
         rxbp.op.zip(base[0].pipe(
             rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),
@@ -261,21 +263,23 @@ MultiCast
 
 ### Create a MultiCast
 
+- `empty` - create an empty *Multicast*
 - `from_flowable` - creates a *Multicast* from a *Flowable* by making it
 a *SharedFlowable*
-- `return_value` - creates a *Multicast* from some object
-- `from_event` - creates a *Multicast* from the first element emitted
+- `from_event` - creates a *Multicast* from an event, e.g. the first element emitted
 by a *Flowable*
 
 ### Transforming operators
 
-- `filter` - Only emits those *Multicast* values for which the given predicate hold.
-- `flat_map` - Maps each *Multicast* value by applying a given function and flattens the result.
-- `lift` - Lift the current `MultiCast[T1]` to a `MultiCast[T2[MultiCast[T1]]]`.
-- `map` - Maps each *Multicast* value by applying a given function.
-- `merge` - Merges two or more *Multicast* streams together
-- `share` - Shares a new *Flowable*
-- `split` - Splits the *Multicast* stream in two, and applies the given operators to each side.
+- `defer` - used to create a *Flowable* loop
+- `extend` - create a new multicasted *Flowable* 
+- `filter` - only emits those *Multicast* values for which the given predicate hold.
+- `flat_map` - maps each *Multicast* value by applying a given function and flattens the result.
+- `lift` - lift the current `Observable[T1]` to a `Observable[T2[MultiCast[T1]]]`.
+- `map` - maps each *Multicast* value by applying a given function.
+- `merge` - merges two or more *Multicast* streams together.
+- `reduce` - creates a *Multicast* that emits a single value
+- `zip` - zips *Multicast*s emitting a single *Flowable* to a *Multicast* emitting a single value
 
 ### Other operators 
 

@@ -1,10 +1,10 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from rxbp.observable import Observable
 from rxbp.selectors.bases import Base
 from rxbp.selectors.getselectormixin import GetSelectorMixin, NoSelectorFound, SelectorResult, SelectorFound, \
-    IdentitySelector, ObservableSelector
-from rxbp.selectors.selectionop import merge_selectors, select_observable
+    ObservableSelector
+from rxbp.selectors.selectionop import merge_selectors
 from rxbp.subscriber import Subscriber
 
 

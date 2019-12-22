@@ -1,12 +1,12 @@
 from typing import Any, Callable
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.multicast.observables.flatmapnobackpressureobservable import FlatMapNoBackpressureObservable
+from rxbp.multicast.observables.flatconcatnobackpressureobservable import FlatConcatNoBackpressureObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
 
 
-class FlatMapNoBackpressureFlowable(FlowableBase):
+class FlatConcatNoBackpressureFlowable(FlowableBase):
     def __init__(self, source: FlowableBase, selector: Callable[[Any], FlowableBase]):
         super().__init__()
 
@@ -21,8 +21,8 @@ class FlatMapNoBackpressureFlowable(FlowableBase):
             subscription = flowable.unsafe_subscribe(subscriber=subscriber)
             return subscription.observable
 
-        observable = FlatMapNoBackpressureObservable(source=subscription.observable, selector=observable_selector,
-                                                     scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
+        observable = FlatConcatNoBackpressureObservable(source=subscription.observable, selector=observable_selector,
+                                                        scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
 
         # base becomes undefined after flat mapping
         base = None

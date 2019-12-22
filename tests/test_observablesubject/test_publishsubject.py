@@ -1,8 +1,8 @@
 import unittest
 
 from rxbp.ack.ackimpl import Continue
-from rxbp.observerinfo import ObserverInfo
 from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler

@@ -4,10 +4,9 @@ from typing import Callable
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
-from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import ObjectRefBase, Base
-from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.scheduler import Scheduler
+from rxbp.selectors.bases import ObjectRefBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import SubscriptionInfo, Subscription
 

@@ -3,8 +3,6 @@ from typing import Any, Iterable, List
 
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.observables.mergeobservable import MergeObservable
-from rxbp.scheduler import Scheduler
 from rxbp.selectors.getselectormixin import IdentitySelector, SelectorResult, SelectorFound, NoSelectorFound, \
     GetSelectorMixin, ObservableSelector, Selector
 from rxbp.selectors.observables.identityselectorobservable import IdentitySelectorObservable

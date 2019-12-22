@@ -5,7 +5,6 @@ from rx import Observable
 from rx.core import typing
 from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime, ScheduledAction, ScheduledPeriodicAction
 from rxbp.ack.ackimpl import continue_ack
-
 from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo

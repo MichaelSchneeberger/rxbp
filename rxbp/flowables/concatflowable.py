@@ -6,14 +6,14 @@ from rxbp.ack.merge import _merge
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases import ConcatBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription, SubscriptionInfo
-from rxbp.typing import ValueType, ElementType
+from rxbp.typing import ElementType
 
 
 class ConcatFlowable(FlowableBase):

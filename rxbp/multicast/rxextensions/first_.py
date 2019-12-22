@@ -1,7 +1,7 @@
 # from typing import Callable, Optional
 # from rx import operators as ops
-# from rx.core import Observable, pipe
-# from rx.core.typing import Predicate
+# from rx.internal import Observable, pipe
+# from rx.internal.typing import Predicate
 #
 # from .firstordefault import _first_or_default_async
 #

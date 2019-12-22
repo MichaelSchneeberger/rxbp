@@ -171,8 +171,7 @@ class RawMergeStates:
             return raw_state.get_measured_state(raw_termination_state)
 
     class OnAckReceived(MergeState):
-        def __init__(self, ack: AckSubject):
-            self.ack = ack
+        def __init__(self):
 
             self.prev_raw_termination_state: RawTerminationStates.TerminationState = None
             self.prev_raw_state: 'RawMergeStates.MergeState' = None
@@ -190,15 +189,15 @@ class RawMergeStates:
                     raw_state = RawMergeStates.NoneReceivedWaitAck()
 
                 elif isinstance(meas_prev_state, MergeStates.BothReceivedContinueLeft):
-                    raw_state = RawMergeStates.LeftReceived(
+                    raw_state = RawMergeStates.RightReceived(
                         elem=meas_prev_state.right_elem,
-                        ack=self.ack,
+                        ack=meas_prev_state.right_ack,
                     )
 
                 elif isinstance(meas_prev_state, MergeStates.BothReceivedContinueRight):
-                    raw_state = RawMergeStates.RightReceived(
+                    raw_state = RawMergeStates.LeftReceived(
                         elem=meas_prev_state.left_elem,
-                        ack=self.ack,
+                        ack=meas_prev_state.left_ack,
                     )
 
                 elif isinstance(meas_prev_state, MergeStates.Stopped):

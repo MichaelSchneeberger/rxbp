@@ -1,18 +1,12 @@
-import traceback
-from typing import Iterator, Any, List, Generator, Callable
+from typing import Iterator, Any
 
-import rx
 from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
 from rxbp.ack.ackimpl import Continue, Stop
 from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
-
 from rxbp.observable import Observable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
-from rxbp.selectors.selectionmsg import select_next, select_completed
 
 
 class IteratorAsObservable(Observable):

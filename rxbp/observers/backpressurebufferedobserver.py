@@ -5,15 +5,19 @@ from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.observeon import _observe_on
 from rxbp.ack.single import Single
-
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
 class BackpressureBufferedObserver(Observer):
-    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler,
-                 buffer_size: int):
+    def __init__(
+            self,
+            underlying: Observer,
+            scheduler: Scheduler,
+            subscribe_scheduler: Scheduler,
+            buffer_size: int,
+    ):
         self.underlying = underlying
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
@@ -89,7 +93,7 @@ class BackpressureBufferedObserver(Observer):
                 ack = self.underlying.on_next(next)
                 return ack
             except:
-                print(f'next value = "{list(next)}"')
+                # print(f'next value = "{list(next)}"')
                 raise NotImplementedError
 
         def signal_complete():
