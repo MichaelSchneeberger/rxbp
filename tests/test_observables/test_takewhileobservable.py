@@ -31,7 +31,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(sink.is_completed)
 
     def test_single_non_matching_element_synchronously(self):
-        # `immediate_coninue=None` means to return a `Continue` acknowledgment always
+        # `immediate_continue=None` means to return a `Continue` acknowledgment always
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
@@ -105,7 +105,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(sink.is_completed)
 
     def test_failure_synchronously(self):
-        # `immediate_coninue=None` means to return a `Continue` acknowledgment always
+        # `immediate_continue=None` means to return a `Continue` acknowledgment always
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
@@ -123,7 +123,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertEqual(sink.exception, self.exception)
 
     def test_failure_after_non_matching_element_synchronously(self):
-        # `immediate_coninue=None` means to return a `Continue` acknowledgment always
+        # `immediate_continue=None` means to return a `Continue` acknowledgment always
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)

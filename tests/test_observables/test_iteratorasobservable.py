@@ -38,7 +38,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs.observe(ObserverInfo(sink))
         self.scheduler.advance_by(1)
 
@@ -51,7 +51,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs.observe(ObserverInfo(sink))
         self.scheduler.advance_by(1)
 
@@ -77,7 +77,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs.observe(ObserverInfo(sink))
         self.scheduler.advance_by(1)
 
@@ -90,7 +90,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs.observe(ObserverInfo(sink))
         self.scheduler.advance_by(1)
 

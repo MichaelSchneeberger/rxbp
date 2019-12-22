@@ -81,7 +81,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
 
         # state change
@@ -98,7 +98,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         ack = self.source.on_next_single(1)
 
@@ -119,7 +119,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.source.on_next_single(1)
 
@@ -139,7 +139,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         #preparation
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.source.on_next_single(1)
         self.source.on_next_single(2)
@@ -158,7 +158,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.source.on_next_single(1)
         self.source.on_next_single(2)
@@ -180,7 +180,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparations
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.source.on_next_single(1)
         self.source.on_next_single(2)
@@ -225,8 +225,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_coninue=0)
-        o2 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
+        o2 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
         self.source.on_next_single(1)
@@ -240,8 +240,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(1, len(self.subject.shared_state.queue))
 
     def test_on_next_enter_fast_loop_two_subscribers_asynchronously(self):
-        o1 = TestObserver(immediate_coninue=0)
-        o2 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
+        o2 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
         self.source.on_next_single(1)
@@ -255,7 +255,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
 
     def test_on_next_enter_fast_loop_two_subscribers_asynchronously2(self):
         o1 = TestObserver()
-        o2 = TestObserver(immediate_coninue=0)
+        o2 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
 
@@ -275,7 +275,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
 
     def test_on_error_two_subscribers_asynchronously(self):
         o1 = TestObserver()
-        o2 = TestObserver(immediate_coninue=0)
+        o2 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
         self.source.on_next_single(1)
@@ -286,7 +286,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(None, o2.exception)
 
     def test_on_error_asynchronously(self):
-        o1 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.source.on_next_single(1)
         self.source.on_error(self.exc)

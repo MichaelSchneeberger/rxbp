@@ -179,7 +179,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRightLeft ------------> WaitOnRightLeft
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -198,7 +198,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnLeft ------------> WaitOnLeft
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -217,7 +217,7 @@ class TestZip2Observable(TestCaseBase):
         Stopped ------------> Stopped
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -235,7 +235,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRight ------------> Stopped
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -252,7 +252,7 @@ class TestZip2Observable(TestCaseBase):
           InitState                LeftCompletedState
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -269,7 +269,7 @@ class TestZip2Observable(TestCaseBase):
         LeftComplete              BothCompletedState
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -288,7 +288,7 @@ class TestZip2Observable(TestCaseBase):
         LeftComplete              LeftComplete
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = Zip2Observable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 

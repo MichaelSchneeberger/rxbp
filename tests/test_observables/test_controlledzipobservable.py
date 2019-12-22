@@ -44,7 +44,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertListEqual(sink.received, [(go, 1), (stop, 2), (stop, 2), (go, 2)])
 
     def test_use_case_1_async_ack(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = ControlledZipObservable(left=self.s1, right=self.s2, scheduler=self.scheduler,
                                       request_left=lambda l, r: True,
                                       request_right=lambda l, r: isinstance(l, self.Go),
