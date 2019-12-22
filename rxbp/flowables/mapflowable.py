@@ -17,4 +17,4 @@ class MapFlowable(FlowableBase):
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
         observable = MapObservable(source=subscription.observable, selector=self._selector)
-        return Subscription(info=subscription.info, observable=observable)
+        return subscription.copy(observable=observable)

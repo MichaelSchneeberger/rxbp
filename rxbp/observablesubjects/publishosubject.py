@@ -2,7 +2,8 @@ import threading
 from typing import Set, List, Union
 
 from rx.disposable import Disposable
-from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
+from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.single import Single
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
@@ -135,9 +136,9 @@ class PublishOSubject(OSubjectBase):
             #     raise NotImplementedError
 
             # todo: redo this
-            if isinstance(ack, Continue):
+            if isinstance(ack, ContinueAck):
                pass
-            elif isinstance(ack, Stop): #and ack.exception is not None:
+            elif isinstance(ack, StopAck): #and ack.exception is not None:
                     self.unsubscribe(observer)
             else:
                 # has_value = ack.has_value
@@ -145,12 +146,12 @@ class PublishOSubject(OSubjectBase):
 
                 if not has_value:
                     if result is None:
-                        result = PromiseCounter(Continue(), 1)
+                        result = PromiseCounter(ContinueAck(), 1)
 
                     result.acquire()
 
                     def on_next(v):
-                        if isinstance(v, Continue):
+                        if isinstance(v, ContinueAck):
                             result.countdown()
                         else:
                             self.unsubscribe(observer)
@@ -170,7 +171,7 @@ class PublishOSubject(OSubjectBase):
                     ack.subscribe(ResultSingle())
 
         if result is None:
-            return Continue()
+            return ContinueAck()
         else:
             result.countdown()
             return result.promise

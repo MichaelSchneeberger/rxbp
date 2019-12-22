@@ -2,7 +2,7 @@ from abc import ABC
 from collections import Iterator
 from typing import Optional, Any
 
-from rxbp.ack.ackbase import AckBase
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.acksubject import AckSubject
 
 
@@ -22,7 +22,7 @@ class ControlledZipStates:
                 right_val: Any,
                 right_ack: AckSubject,
                 right_iter: Iterator,
-                right_sel_ack: Optional[AckBase],
+                right_sel_ack: Optional[AckMixin],
         ):
             self.right_val = right_val
             self.right_ack = right_ack
@@ -37,7 +37,7 @@ class ControlledZipStates:
                 left_val: Any,
                 left_ack: AckSubject,
                 left_iter: Iterator,
-                left_sel_ack: Optional[AckBase],
+                left_sel_ack: Optional[AckMixin],
         ):
             self.left_val = left_val
             self.left_iter = left_iter

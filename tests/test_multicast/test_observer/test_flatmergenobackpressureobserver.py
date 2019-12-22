@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.ackimpl import Continue
+from rxbp.ack.continueack import ContinueAck
 from rxbp.multicast.observer.flatconcatnobackpressureobserver import FlatConcatNoBackpressureObserver
 from rxbp.multicast.observer.flatmergenobackpressureobserver import FlatMergeNoBackpressureObserver
 from rxbp.observerinfo import ObserverInfo
@@ -43,8 +43,8 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         ack1 = self.source.on_next_single(self.source1)
         ack2 = self.source.on_next_single(self.source2)
 
-        self.assertIsInstance(ack1, Continue)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack1, ContinueAck)
+        self.assertIsInstance(ack2, ContinueAck)
 
     def test_inner_on_next(self):
         sink = TestObserver()

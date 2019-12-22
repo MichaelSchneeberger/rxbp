@@ -1,8 +1,8 @@
 import threading
 from typing import Callable, Any, List
 
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.continueack import continue_ack
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -36,7 +36,7 @@ class FlatConcatNoBackpressureObserver(Observer):
             def __init__(self):
                 self.last_ack = None
 
-            def on_next(_, elem: ElementType) -> AckBase:
+            def on_next(_, elem: ElementType) -> AckMixin:
                 ack = observer.on_next(elem)
                 self.last_ack = ack
                 return ack

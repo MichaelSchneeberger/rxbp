@@ -59,4 +59,7 @@ class Zip2Flowable(FlowableBase):
             selector=self._func,
         )
 
-        return Subscription(info=SubscriptionInfo(base=base, selectors=selectors), observable=observable)
+        return Subscription(
+            info=SubscriptionInfo(base=base, selectors=selectors),
+            observable=observable,
+        )

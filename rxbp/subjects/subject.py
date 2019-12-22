@@ -1,6 +1,6 @@
 from typing import Any
 
-from rxbp.ack.ackimpl import continue_ack
+from rxbp.ack.continueack import continue_ack
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.subjects.subjectbase import SubjectBase
 from rxbp.subscriber import Subscriber

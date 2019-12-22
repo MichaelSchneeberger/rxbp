@@ -2,10 +2,11 @@ import threading
 from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import continue_ack, stop_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import stop_ack
+from rxbp.ack.continueack import continue_ack
 from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.merge import _merge
+from rxbp.ack.operators.merge import _merge
 from rxbp.observable import Observable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
@@ -55,7 +56,7 @@ class ControlledZipObservable(Observable):
             self,
             elem: ElementType,
             is_left: bool,
-    ) -> AckBase:
+    ) -> AckMixin:
         """ This function is called once elements are received from left and right observable
 
         Loop over received elements. Send elements downstream if the match function applies. Request new elements
@@ -391,7 +392,7 @@ class ControlledZipObservable(Observable):
         source = self
 
         class LeftControlledZipObserver(Observer):
-            def on_next(self, elem: ElementType) -> AckBase:
+            def on_next(self, elem: ElementType) -> AckMixin:
                 return source._on_next_left(elem)
 
             def on_error(self, exc: Exception):
@@ -401,7 +402,7 @@ class ControlledZipObservable(Observable):
                 source._on_completed_left()
 
         class RightControlledZipObserver(Observer):
-            def on_next(self, elem: ElementType) -> AckBase:
+            def on_next(self, elem: ElementType) -> AckMixin:
                 return source._on_next_right(elem)
 
             def on_error(self, exc: Exception):

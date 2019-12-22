@@ -6,7 +6,7 @@ from rx.disposable import SerialDisposable
 from rxbp.ack.single import Single
 
 
-class ScheduledObserver(Single):
+class ScheduledSingle(Single):
     def __init__(self, scheduler: typing.Scheduler, single: Single) -> None:
         super().__init__()
 

@@ -11,7 +11,7 @@ from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.typing import MultiCastValue
 
 
-class ExtendMultiCast(MultiCastBase):
+class ShareFlowableMultiCast(MultiCastBase):
     def __init__(
             self,
             source: MultiCastBase,

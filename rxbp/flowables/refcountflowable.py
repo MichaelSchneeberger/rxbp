@@ -32,13 +32,13 @@ class RefCountFlowable(FlowableBase):
         self._subject_gen = subject_gen or default_subject_gen
 
         self.has_subscription = False
-        self.subscription_info = None
-        self.shared_observable = None
-        self.disposable = None
         self.lock = threading.RLock()
 
+        self.subscription = None
+
     def unsafe_subscribe(self, subscriber: Subscriber):
-        """Connects the observable."""
+        """ Connects the observable. """
+
         with self.lock:
             if not self.has_subscription:
                 self.has_subscription = True
@@ -47,9 +47,15 @@ class RefCountFlowable(FlowableBase):
                 subject = self._subject_gen(subscriber.scheduler)
 
                 if subscription.info.base is None:
-                    self.subscription_info = SubscriptionInfo(base=ObjectRefBase(), selectors=subscription.info.selectors)
+                    subscription_info = SubscriptionInfo(base=ObjectRefBase(), selectors=subscription.info.selectors)
                 else:
-                    self.subscription_info = subscription.info
-                self.shared_observable = RefCountObservable(source=subscription.observable, subject=subject)
+                    subscription_info = subscription.info
 
-        return Subscription(info=self.subscription_info, observable=self.shared_observable)
+                shared_observable = RefCountObservable(source=subscription.observable, subject=subject)
+
+                self.subscription = subscription.copy(
+                    info=subscription_info,
+                    observable=shared_observable,
+                )
+
+        return self.subscription

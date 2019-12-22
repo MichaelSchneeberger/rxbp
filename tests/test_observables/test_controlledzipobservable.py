@@ -1,4 +1,4 @@
-from rxbp.ack.ackimpl import continue_ack, Continue
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
@@ -38,9 +38,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
 
@@ -57,9 +57,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
 
@@ -79,9 +79,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
 
@@ -101,9 +101,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
         ack1 = self.left.on_next_single(1)
@@ -111,8 +111,8 @@ class TestControlledZipObservable(TestCaseBase):
         ack2 = self.right.on_next_single(1)
 
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeftRight)
-        self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1)])
 
     def test_wait_on_right_to_wait_on_right_with_synchronous_ack(self):
@@ -124,9 +124,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
         ack1 = self.left.on_next_single(2)
@@ -135,7 +135,7 @@ class TestControlledZipObservable(TestCaseBase):
 
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnRight)
         self.assertFalse(ack1.has_value)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [])
 
     def test_wait_on_right_to_wait_on_left_with_synchronous_ack(self):
@@ -147,9 +147,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
         ack1 = self.left.on_next_single(1)
@@ -157,7 +157,7 @@ class TestControlledZipObservable(TestCaseBase):
         ack2 = self.right.on_next_single(2)
 
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeft)
-        self.assertIsInstance(ack1.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
         self.assertFalse(ack2.has_value)
         self.assertListEqual(sink.received, [])
 
@@ -170,9 +170,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
         ack1 = self.left.on_next_list([1, 1, 2])
@@ -180,8 +180,8 @@ class TestControlledZipObservable(TestCaseBase):
         ack2 = self.right.on_next_list([1, 2])
 
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeftRight)
-        self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1), (2, 2)])
 
     def test_acknowledge_both(self):
@@ -193,9 +193,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_coninue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
 
@@ -204,8 +204,8 @@ class TestControlledZipObservable(TestCaseBase):
         sink.ack.on_next(continue_ack)
 
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeftRight)
-        self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(ack2.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
+        self.assertIsInstance(ack2.value, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1)])
 
     def test_left_complete_to_stopped(self):
@@ -218,9 +218,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_coninue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
         self.left.on_next_list([1])
@@ -241,9 +241,9 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_coninue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
-            request_left=lambda l, r: l <= r,
-            request_right=lambda l, r: r <= l,
-            match_func=lambda l, r: l == r,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
         )
         obs.observe(ObserverInfo(sink))
 

@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.ackimpl import continue_ack, Continue
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.mergestates import MergeStates
@@ -97,7 +97,7 @@ class TestMergeObservable(unittest.TestCase):
 
         self.assertIsInstance(self.measure_state(obs), MergeStates.NoneReceivedWaitAck)
         self.assertEqual(sink.received, [1])
-        self.assertIsInstance(left_ack, Continue)
+        self.assertIsInstance(left_ack, ContinueAck)
 
     def test_emit_right_with_asynchronous_ack(self):
         """
@@ -113,7 +113,7 @@ class TestMergeObservable(unittest.TestCase):
 
         self.assertIsInstance(self.measure_state(obs), MergeStates.NoneReceivedWaitAck)
         self.assertEqual(sink.received, [2])
-        self.assertIsInstance(right_ack, Continue)
+        self.assertIsInstance(right_ack, ContinueAck)
 
     def test_none_received_to_left_received_with_asynchronous_ack(self):
         """
@@ -217,7 +217,7 @@ class TestMergeObservable(unittest.TestCase):
 
         self.assertIsInstance(self.measure_state(obs), MergeStates.NoneReceivedWaitAck)
         self.assertEqual(sink.received, [1, 1])
-        self.assertIsInstance(left_ack.value, Continue)
+        self.assertIsInstance(left_ack.value, ContinueAck)
 
     def test_acknowledge_both_received(self):
         """
@@ -236,7 +236,7 @@ class TestMergeObservable(unittest.TestCase):
 
         self.assertIsInstance(self.measure_state(obs), MergeStates.RightReceived)
         self.assertEqual(sink.received, [1, 1])
-        self.assertIsInstance(left_ack.value, Continue)
+        self.assertIsInstance(left_ack.value, ContinueAck)
         self.assertFalse(right_ack.has_value)
 
     def test_wait_ack_and_continue_with_asynchronous_ack(self):
@@ -373,4 +373,4 @@ class TestMergeObservable(unittest.TestCase):
         sink.ack.on_next(continue_ack)
 
         self.assertEqual([1, 2, 11], sink.received)
-        self.assertIsInstance(ack.value, Continue)
+        self.assertIsInstance(ack.value, ContinueAck)

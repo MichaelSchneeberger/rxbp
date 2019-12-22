@@ -1,4 +1,4 @@
-from rxbp.ack.ackimpl import Continue, continue_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
@@ -33,7 +33,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         ack = self.source.on_next_single(1)
 
         # verification
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
         self.assertEqual([1], o1.received)
         self.assertEqual(0, len(self.subject.shared_state.queue))
 
@@ -212,7 +212,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         ack = self.source.on_next_single(1)
 
         # verification
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
         self.assertEqual([1], o1.received)
         self.assertEqual([1], o2.received)
         self.assertEqual(0, len(self.subject.shared_state.queue))

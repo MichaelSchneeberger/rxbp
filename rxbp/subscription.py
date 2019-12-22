@@ -1,3 +1,5 @@
+import dataclasses
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 from rxbp.observable import Observable
@@ -64,11 +66,11 @@ class SubscriptionInfo(GetSelectorMixin):
         return NoSelectorFound()
 
 
+@dataclass
 class Subscription:
-    def __init__(
-            self,
-            info: SubscriptionInfo,
-            observable: Observable,
-    ):
-        self.info = info
-        self.observable = observable
+    info: SubscriptionInfo
+
+    observable: Observable
+
+    def copy(self, **kwargs):
+        return dataclasses.replace(self, **kwargs)

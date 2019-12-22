@@ -5,6 +5,7 @@ from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicastcontext import MultiCastContext
 from rxbp.typing import ValueType
 
 
@@ -39,19 +40,18 @@ def defer(
     return MultiCastOperator(func=op_func)
 
 
-def extend(
+def share_flowable(
     func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]],
-    # selector: Callable[[MultiCastValue, Flowable], MultiCastValue] = None,
 ):
-    """ Shares a `Flowable` defined by a function `extend` that maps `MultiCast` value to a `Flowable`.
-    A `selector` function is then used used extend the `MultiCast` value with the shared `Flowable`.
+    """ Shares a `Flowable` defined by a function `share_flowable` that maps `MultiCast` value to a `Flowable`.
+    A `selector` function is then used used share_flowable the `MultiCast` value with the shared `Flowable`.
 
     :param func: a function that maps `MultiCast` value to a `Flowable`
     :param selector: a function that maps `MultiCast` value and the shared `Flowable` to some new `MultiCast` value
     """
 
     def op_func(source: MultiCastOpMixin):
-        return source.extend(func=func)
+        return source.share_flowable(func=func)
         # return MultiCast(ExtendMultiCast(source=multicast, func=func))
     return MultiCastOperator(func=op_func)
 
@@ -173,7 +173,13 @@ def map(func: Callable[[MultiCastValue], MultiCastValue]):
 
     def op_func(source: MultiCastOpMixin):
         return source.map(func=func)
-        # return MultiCast(MapMultiCast(source=multi_cast, func=func))
+
+    return MultiCastOperator(op_func)
+
+
+def map_with_context(func: Callable[[MultiCastValue, MultiCastContext], MultiCastValue]):
+    def op_func(source: MultiCastOpMixin):
+        return source.map_with_context(func=func)
 
     return MultiCastOperator(op_func)
 
@@ -264,7 +270,7 @@ def zip(
 #             +----> op1 --> op2 -------------+
 #            /                                 \
 #     ------+------> op1 --> op2 --> op3 ------>+------>
-#        extend  right                         merge
+#        share_flowable  right                         merge
 #
 #     :param left_ops: `MultiCast` operators applied to the left
 #     :param filter_left: (optional) a function that returns True, if the current element is passed left,

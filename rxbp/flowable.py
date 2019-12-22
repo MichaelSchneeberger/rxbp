@@ -27,11 +27,12 @@ from rxbp.flowables.scanflowable import ScanFlowable
 from rxbp.flowables.tolistflowable import ToListFlowable
 from rxbp.flowables.zip2flowable import Zip2Flowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
+from rxbp.multicastcontext import MultiCastContext
 from rxbp.pipe import pipe
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import Base
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
 from rxbp.toiterator import to_iterator
 from rxbp.torx import to_rx
 from rxbp.typing import ValueType
@@ -255,19 +256,20 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return Flowable(flowable)
 
-    def share(self, func: Callable[['Flowable'], 'Flowable']):
-        # def lifted_func(f: RefCountFlowable):
-        #     result = func(Flowable(f))
-        #     return result
+    def share(self, bind_to: MultiCastContext):
+        assert isinstance(bind_to, MultiCastContext), \
+            f'"{bind_to}" does not give the Flowable the ability to share its elements'
 
-        flowable = func(Flowable(RefCountFlowable(source=self)))
-        return Flowable(flowable)
+        return Flowable(RefCountFlowable(source=self))
 
     def set_base(self, val: Base):
         def unsafe_unsafe_subscribe(subscriber: Subscriber) -> Subscription:
             subscription = self.unsafe_subscribe(subscriber=subscriber)
 
-            return Subscription(SubscriptionInfo(base=val), observable=subscription.observable)
+            return subscription.copy(
+                base=val,
+                observable=subscription.observable,
+            )
 
         flowable = AnonymousFlowableBase(
             unsafe_subscribe_func=unsafe_unsafe_subscribe,

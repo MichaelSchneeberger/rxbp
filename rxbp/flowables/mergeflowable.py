@@ -19,4 +19,11 @@ class MergeFlowable(FlowableBase):
         # the base becomes anonymous after merging
         base = None
 
-        return Subscription(info=SubscriptionInfo(base=base), observable=observable)
+        info = SubscriptionInfo(
+            base=base,
+        )
+
+        return Subscription(
+            info=info,
+            observable=observable,
+        )

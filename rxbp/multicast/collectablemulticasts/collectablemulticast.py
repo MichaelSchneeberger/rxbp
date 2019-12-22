@@ -44,8 +44,8 @@ class CollectableMultiCast(MultiCastOpMixin):
     def empty(self):
         return CollectableMultiCast(main=self._main.empty(), collected=self._collected.empty())
 
-    def extend(self, func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]]):
-        main = self._main.extend(func=func)
+    def share_flowable(self, func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]]):
+        main = self._main.share_flowable(func=func)
         return CollectableMultiCast(main=main, collected=self._collected)
 
     def filter(self, func: Callable[[MultiCastValue], bool]):

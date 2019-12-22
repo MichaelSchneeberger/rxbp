@@ -7,10 +7,11 @@ from typing import List, Dict, Optional, Any, Tuple
 import rx
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
 from rx.disposable import Disposable, BooleanDisposable
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import Continue, Stop, stop_ack, continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.observeon import _observe_on
+from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observer import Observer
@@ -64,7 +65,7 @@ class CacheServeFirstOSubject(OSubjectBase):
             self.should_dequeue = types.MethodType(lambda _: False, self)
             self.dequeue = types.MethodType(lambda: None, self)
 
-        def get_element_for(self, subscription, index: int, ack: AckBase = None) -> Tuple[bool, Any]:
+        def get_element_for(self, subscription, index: int, ack: AckMixin = None) -> Tuple[bool, Any]:
             last_index = self.first_idx + len(self.queue)
 
             if index < last_index:
@@ -174,11 +175,11 @@ class CacheServeFirstOSubject(OSubjectBase):
         class AsyncAckSingle(Single):
             current_index: int
             inner_subscription: 'CacheServeFirstOSubject.InnerSubscription'
-            ack_update: AckBase = None
+            ack_update: AckMixin = None
 
-            def on_next(self, ack: AckBase):
+            def on_next(self, ack: AckMixin):
                 # start fast_loop
-                if isinstance(ack, Continue):
+                if isinstance(ack, ContinueAck):
                     with self.inner_subscription.lock:
                         has_elem, notification = self.inner_subscription.shared_state.get_element_for(
                             self.inner_subscription,
@@ -192,7 +193,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                     else:
                         pass
 
-                elif isinstance(ack, Stop):
+                elif isinstance(ack, StopAck):
                     self.inner_subscription.signal_stop()
 
                 else:
@@ -201,7 +202,7 @@ class CacheServeFirstOSubject(OSubjectBase):
             def on_error(self, exc: Exception):
                 raise NotImplementedError
 
-        def notify_on_next(self, notification: Notification, current_index: int) -> Optional[AckBase]:
+        def notify_on_next(self, notification: Notification, current_index: int) -> Optional[AckMixin]:
             """ inner subscription gets only notified if all items from buffer are sent, and
             last ack received """
 
@@ -210,12 +211,12 @@ class CacheServeFirstOSubject(OSubjectBase):
 
             ack = self.observer.on_next(notification)
 
-            if isinstance(ack, Continue):
+            if isinstance(ack, ContinueAck):
                 # append right away again to inactive subscription list
                 self.shared_state.inactive_subscriptions.append(self)
                 return ack
 
-            elif isinstance(ack, Stop):
+            elif isinstance(ack, StopAck):
                 self.signal_stop()
                 return ack
 
@@ -265,7 +266,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                         ack = self.observer.on_next(notification.value)
 
                     # synchronous or asynchronous acknowledgment
-                    if isinstance(ack, Continue):
+                    if isinstance(ack, ContinueAck):
                         with self.lock:
                             has_elem, notification = self.shared_state.get_element_for(
                                 self, current_index, ack)
@@ -286,7 +287,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                         else:
                             break
 
-                    elif isinstance(ack, Stop):
+                    elif isinstance(ack, StopAck):
                         self.signal_stop()
                         break
 
@@ -369,7 +370,7 @@ class CacheServeFirstOSubject(OSubjectBase):
             with self.lock:
                 self.shared_state.dequeue()
 
-        continue_ack = [ack for ack in inner_ack_list if isinstance(ack, Continue)]
+        continue_ack = [ack for ack in inner_ack_list if isinstance(ack, ContinueAck)]
 
         # return any Continue or Stop ack
         if 0 < len(continue_ack):

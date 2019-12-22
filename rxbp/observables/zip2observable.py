@@ -3,8 +3,8 @@ import threading
 from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import stop_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import stop_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -302,7 +302,7 @@ class Zip2Observable(Observable):
 
         class ZipLeftObserver(Observer):
 
-            def on_next(_, elem: ElementType) -> AckBase:
+            def on_next(_, elem: ElementType) -> AckMixin:
                 return self._on_next_left(elem)
 
             def on_error(_, exc: Exception):
@@ -313,7 +313,7 @@ class Zip2Observable(Observable):
 
         class ZipRightObserver(Observer):
 
-            def on_next(_, elem: ElementType) -> AckBase:
+            def on_next(_, elem: ElementType) -> AckMixin:
                 return self._on_next_right(elem)
 
             def on_error(_, exc: Exception):

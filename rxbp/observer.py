@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from rxbp.ack.ackbase import AckBase
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.typing import ElementType
 
 
@@ -15,7 +15,7 @@ class Observer(ABC):
     """
 
     @abstractmethod
-    def on_next(self, elem: ElementType) -> AckBase:
+    def on_next(self, elem: ElementType) -> AckMixin:
         """
         This function is called to send some information downstream. The function must return an acknowledgment,
         which either continues streaming object, stops streaming objects or back-pressure source from sending

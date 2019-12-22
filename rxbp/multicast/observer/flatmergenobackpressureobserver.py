@@ -1,7 +1,7 @@
 from typing import Callable, Any, List
 
 from rx.core.typing import Disposable
-from rxbp.ack.ackimpl import continue_ack
+from rxbp.ack.continueack import continue_ack
 from rxbp.observable import Observable
 from rxbp.observables.debugobservable import DebugObservable
 from rxbp.observables.mergeobservable import MergeObservable

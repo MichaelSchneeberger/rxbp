@@ -4,6 +4,7 @@ from typing import List, Callable, Union, Dict
 from rxbp.flowable import Flowable
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicastcontext import MultiCastContext
 from rxbp.typing import ValueType
 
 
@@ -25,7 +26,7 @@ class MultiCastOpMixin(ABC):
         ...
 
     @abstractmethod
-    def extend(
+    def share_flowable(
             self,
             func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]],
     ):
@@ -58,6 +59,10 @@ class MultiCastOpMixin(ABC):
 
     @abstractmethod
     def map(self, func: Callable[[MultiCastValue], MultiCastValue]):
+        ...
+
+    @abstractmethod
+    def map_with_context(self, func: Callable[[MultiCastValue, MultiCastContext], MultiCastValue]):
         ...
 
     @abstractmethod

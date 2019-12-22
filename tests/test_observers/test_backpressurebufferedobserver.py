@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.ackimpl import continue_ack, Continue
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
 from rxbp.testing.testobservable import TestObservable
@@ -62,7 +62,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
 
         ack.on_next(continue_ack)
 
-        self.assertIsInstance(ack.value, Continue)
+        self.assertIsInstance(ack.value, ContinueAck)
 
     def test_on_next(self):
         sink = TestObserver()
@@ -77,7 +77,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         ack = self.source.on_next_single(0)
         self.scheduler.advance_by(1)
 
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
         self.assertEqual([0], sink.received)
 
     def test_fill_up_buffer(self):

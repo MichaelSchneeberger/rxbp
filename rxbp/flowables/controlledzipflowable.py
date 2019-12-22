@@ -30,7 +30,7 @@ class ControlledZipFlowable(FlowableBase):
         """
         1) subscribe to upstream flowables
         2) create ControlledZipObservable which provides a left_selector and right_selector observable
-        3) extend all upstream selectors with left_selector and right_selector
+        3) share_flowable all upstream selectors with left_selector and right_selector
         """
 
         # 1) subscribe to upstream flowables
@@ -49,7 +49,7 @@ class ControlledZipFlowable(FlowableBase):
             scheduler=subscriber.scheduler,
         )
 
-        # 3.a) extend all upstream (left) selectors with left_selector
+        # 3.a) share_flowable all upstream (left) selectors with left_selector
         def gen_merged_selector(info: SubscriptionInfo, current_selector: Observable):
             if info.selectors is not None:
                 for base, selector in info.selectors.items():

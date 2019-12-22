@@ -3,20 +3,46 @@ Multicasting
 (02.10.2019)
 
 
-
-An problem with RxPY is that an *Observer* might miss events,
-because it got subscribed too late to an *Observable*. Especially,
-when working with *multicasting*, it happens quite unexpected as
-described [here](https://github.com/ReactiveX/RxPY/issues/309).
-In fact, a *multicast Observable* (created by `publish` or `share` 
-operator) turns a *cold Observable* into a 
+An especially annoying problem with RxPY is that an *Observer* might 
+miss elements, because it got subscribed too late to a hot 
+*Observable*. A *multi-cast Observable* for example (created by 
+`publish` or `share` operator) turns a *cold Observable* into a 
 *hot Observable* the first time it gets subscribed. Thereafter, 
 there is no guarantee that another *Observable* can be subscribed
-before the first elements get emitted. 
+before the first elements get emitted.
+
+The following code defines a hot *multi-cast Observable* with the 
+`share` operator and subscribes to it twice. The second time it gets
+subscribed, however, no elements are sent, because the *Observable*
+is already completed.
+
+``` python
+import rx
+from rx import operators as op
+
+o = rx.range(4).pipe(
+    op.share(),
+)
+
+o.subscribe(print)
+o.subscribe(print)
+```
+
+The previous code outputs:
+
+```
+0
+1
+2
+3
+```
+
+A detailed description of the problem can be found 
+[here](https://github.com/ReactiveX/RxPY/issues/309).
 
 Of course, if you know what you are doing you can implement an
 *Observable* stream, where the subscription of *Observable*s happens
-always before the first elements are emitted. But the point is, that
+always before the first element is emitted. But the point is, that
 there is no mechanism provided by RxPY that would prevent it and safe
 us from these situations.
 
@@ -30,15 +56,14 @@ the `share` operator as follows:
 def share(func: Callable[[MultiCastFlowable], Flowable])
 ```
 
-The `share` operator takes a function `func` as argument. But instead
-of creating a multicast Flowable, it creates a unicast Flowable and
-exposes a multicast Flowable as argument to the function `func`. Inside
-the function `func`, the multicast Flowable can used multible
-times as it the case for the shared Observable in RxPY. The following
+The `share` operator does not directly create a *multi-cast Flowable*, 
+but instead it returns a *unicast Flowable* and
+exposes a *multi-cast Flowable* as an argument to the function `func`. Inside
+the function `func`, the *multi-cast Flowable* can used multiple
+times as it the case for the *shared Observable* in *RxPY*. The following
 example zips the elements from the same source but skips every second
 element on the second zip input.
  
-``` python
 ``` python
 import rxbp.depricated
 import rxbp
@@ -63,16 +88,13 @@ The previous code outputs:
 
 ### Tunneling a shared Flowable
 
-This is nice, but often we want to create a multicast Flowable in one
+This is nice, but what if we want to create a *multi-cast Flowable* in one
 place and consume its elements in another place. With the `share` 
-operator, this was possible by "tunneling" a Flowable. 
-By "tunneling", we mean to convert a Flowable to a Flowable of
-multicast Flowable(s) with type `Flowable[Flowable]`. This is 
+operator, this is possible by "tunneling" a Flowable. 
+By "tunneling", we mean to convert a Flowable into a Flowable of
+*multi-cast Flowable(s)* of type `Flowable[Flowable]`. This is 
 achieved by using `rxbp.return_value` inside the shared function.
-The multicast Flowable can then be consumed by using `rxbp.op.flat_map`
-on the tunneled Flowable.
  
-``` python
 ``` python
 import rxbp.depricated
 import rxbp
@@ -92,15 +114,15 @@ tunneled_shared.pipe(
 ).subscribe(print)
 ```
 
-The next step is to "tunnel" (or lift) a shared Flowable and use it
-in different places and not just the one where the elements get zipped
-with itself. To accomblish this, we create a Flowable of shared 
-Flowables, where new Flowable definitions are added to that stream.
-If we like to consume one of these shared Flowables, we would filter
-out the one we want. To do this, however, we better box it into some
-type. In the following example, we pack it into a type called `Source`.
+The next step is to "tunnel" a multi-cast Flowable and use it
+in different places and not just the one. Because only if we are
+able to generate a stream of multi-cast Flowables, we truly get a
+single publisher (possible) multiple subscribers relationship.
 
-``` python
+To accomblish this, new *multi-cast Flowables* are added to a
+dictionary of Flowables. If we like to consume one of the multi-cast 
+Flowables, we select the one we want from the dictionary
+
 ``` python
 import rxbp.depricated
 from dataclasses import dataclass
@@ -108,37 +130,31 @@ from dataclasses import dataclass
 import rxbp
 from rxbp.flowable import Flowable
 
-
-@dataclass
-class Source:
-    flowable: Flowable
-
 source1 = rxbp.range(10).pipe(
-    rxbp.depricated.share(lambda f1: rxbp.return_value(Source(flowable=f1))),
+    rxbp.depricated.share(
+        lambda input: {'input': input}),
+    ),
 )
 ```
 
-Now we can consume the flowable boxed into `Source` by applying the
+Now we can consume the flowable called "source" by applying the
 appropriate filter, perform some operation, and merge the result
 back to the stream.
 
 ``` python
-@dataclass
-class Zipped:
-    flowable: Flowable
-
 source2 = source1.pipe(
     rxbp.op.share(lambda source: source.pipe(
-        rxbp.op.filter(lambda v: isinstance(v, Source)),
         rxbp.op.flat_map(
-            lambda v: v.flowable.pipe(
-                rxbp.op.zip(v.flowable.pipe(
+            lambda fdict: fdict["input"].pipe(
+                rxbp.op.zip(fdict["input"].pipe(
                     rxbp.op.filter(lambda v: v % 2 == 0)),
                 ),
             )
         ),
         rxbp.op.share(
-            lambda f2: rxbp.return_value(Zipped(flowable=f2))
+            lambda zipped: rxbp.return_value(
+                {'zipped': zipped}
+            )
         ),
         rxbp.op.merge(source),
     )),

@@ -2,7 +2,7 @@ import sys
 from typing import Callable
 
 from rx.internal import SequenceContainsNoElementsError
-from rxbp.ack.ackimpl import stop_ack
+from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo

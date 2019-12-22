@@ -121,7 +121,8 @@ class DeferMultiCast(MultiCastBase):
                 flowable_state = {0: base}
 
                 # function that will map the resulting state back to a Flowable
-                from_state = lambda state: state[0]
+                def from_state(state):
+                    return state[0]
 
             elif isinstance(base, list):
                 assert isinstance(initial, list) and len(initial) == len(base)
@@ -129,15 +130,9 @@ class DeferMultiCast(MultiCastBase):
                 # create standard form
                 flowable_state = {idx: val for idx, val in enumerate(base)}
 
-                # def select_first_index(state):
-                #     class SingleFlowableDict(SingleFlowableMixin, FlowableDict):
-                #         def get_single_flowable(self) -> Flowable:
-                #             return state[0]
-                #
-                #     return SingleFlowableDict(state)
-
-                # function that will map the resulting state to a list
-                from_state = lambda state: list(state.values())
+                # # function that will map the resulting state to a list
+                def from_state(state):
+                    return list(state.values())
 
             elif isinstance(base, dict) or isinstance(base, FlowableStateMixin):
                 if isinstance(base, FlowableStateMixin):
@@ -151,9 +146,8 @@ class DeferMultiCast(MultiCastBase):
                 assert isinstance(initial, dict) and set(initial.keys()) <= set(flowable_state.keys()), match_error_message
 
                 # function that will map the resulting state to a FlowableDict
-                def select_none(state):
+                def from_state(state):
                     return FlowableDict(state)
-                from_state = select_none
 
             else:
                 raise Exception(f'illegal case "{base}"')

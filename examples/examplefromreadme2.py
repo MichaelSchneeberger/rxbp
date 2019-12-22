@@ -13,4 +13,4 @@ composed = source.pipe(
 )
 
 # convert Flowable to Observable
-composed.to_rx().subscribe(lambda value: print("Received {0}".format(value)))
+composed.to_rx().subscribe(lambda value: print(f"Received {value}"))

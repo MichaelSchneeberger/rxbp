@@ -38,6 +38,7 @@ rxbp.multicast.from_flowable({'input': rxbp.range(10)}).pipe(
             ]),                                                     # ... to where the loops ends
         ),
     ),
+    rxbp.multicast.op.map(lambda t: t[0]),
 ).to_flowable().pipe(
 ).subscribe(print)
 

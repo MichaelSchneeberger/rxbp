@@ -1,10 +1,10 @@
 from rx.disposable import Disposable
-from rxbp.ack.ackbase import AckBase
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.single import Single
 
 
-def _map(source: AckBase, func) -> AckBase:
-    class MapAck(AckBase):
+def _map(source: AckMixin, func) -> AckMixin:
+    class MapAck(AckMixin):
         def subscribe(self, single: Single) -> Disposable:
             class MapSingle(Single):
                 def on_next(self, value):

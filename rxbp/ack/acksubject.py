@@ -3,13 +3,13 @@ from typing import Any, Optional, List
 
 from rx.disposable import Disposable
 from rx.internal import DisposedException
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackmixin import AckMixin
-from rxbp.ack.merge import _merge
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.mixins.ackmergemixin import AckMergeMixin
+from rxbp.ack.operators.merge import _merge
 from rxbp.ack.single import Single
 
 
-class AckSubject(AckMixin, AckBase, Single):
+class AckSubject(AckMergeMixin, AckMixin, Single):
     def __init__(self) -> None:
         super().__init__()
 
@@ -71,7 +71,7 @@ class AckSubject(AckMixin, AckBase, Single):
         for single in singles:
             single.on_error(error)
 
-    def merge(self, other: AckBase):
+    def merge(self, other: AckMixin):
         return _merge(self, other)
 
     def dispose(self) -> None:

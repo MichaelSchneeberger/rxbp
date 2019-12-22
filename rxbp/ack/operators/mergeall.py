@@ -1,13 +1,13 @@
 import threading
 
 from rx.disposable import CompositeDisposable, SingleAssignmentDisposable
-from rxbp.ack.ackbase import AckBase
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.single import Single
 
 
-def _merge_all(source: AckBase):
+def _merge_all(source: AckMixin):
 
-    class MergeAllAck(AckBase):
+    class MergeAllAck(AckMixin):
         def subscribe(self, single: Single):
             group = CompositeDisposable()
             is_stopped = [False]
