@@ -16,7 +16,11 @@ class TestObserver(Observer):
         self.immediate_continue = immediate_continue
         self.ack = None
 
+        # counts the number of times `on_next` is called
+        self.on_next_counter = 0
+
     def on_next(self, elem: ElementType):
+        self.on_next_counter += 1
         values = list(elem)
         self.received += values
         if self.immediate_continue is None:

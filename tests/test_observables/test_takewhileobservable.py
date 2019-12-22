@@ -1,7 +1,7 @@
 from typing import Callable, Any
 
 from rx.core.typing import Disposable
-from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.ackimpl import Continue, Stop, continue_ack
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
@@ -11,6 +11,7 @@ from rxbp.testing.testobserversubscribeinner import TestObserverSubscribeInner
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.typing import ValueType
 from rxbp.observables.takewhileobservable import TakeWhileObservable
+
 
 class TestControlledZipObservable(TestCaseBase):
     """
@@ -68,6 +69,7 @@ class TestControlledZipObservable(TestCaseBase):
 
         ack = self.source.on_next_list([1, 1, 1])
         self.assertIsInstance(ack, Continue)
+        self.assertEqual(1, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1, 1])
 
         self.source.on_completed()
@@ -82,10 +84,12 @@ class TestControlledZipObservable(TestCaseBase):
 
         ack = self.source.on_next_list([1, 1, 1])
         self.assertIsInstance(ack, Continue)
+        self.assertEqual(1, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1, 1])
 
         ack = self.source.on_next_list([1, 0, 1])
         self.assertIsInstance(ack, Stop)
+        self.assertEqual(2, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1, 1, 1])
         self.assertTrue(sink.is_completed)
 
@@ -97,10 +101,12 @@ class TestControlledZipObservable(TestCaseBase):
 
         ack = self.source.on_next_iter([1, 1, 1])
         self.assertIsInstance(ack, Continue)
+        self.assertEqual(1, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1, 1])
 
         ack = self.source.on_next_iter([1, 0, 1])
         self.assertIsInstance(ack, Stop)
+        self.assertEqual(2, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1, 1, 1])
         self.assertTrue(sink.is_completed)
 
@@ -118,7 +124,8 @@ class TestControlledZipObservable(TestCaseBase):
                 yield 1
 
         ack = self.source.on_next_iter(gen_iterable())
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, Stop)
+        self.assertEqual(1, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1, 1])
         self.assertEqual(sink.exception, self.exception)
 
@@ -140,5 +147,27 @@ class TestControlledZipObservable(TestCaseBase):
 
         ack = self.source.on_next_iter(gen_iterable())
         self.assertIsInstance(ack, Stop)
+        self.assertEqual(1, sink.on_next_counter)
         self.assertListEqual(sink.received, [1, 1])
-        self.assertEqual(sink.exception, None)
+        self.assertTrue(sink.is_completed)
+        self.assertIsNone(sink.exception)
+
+    def test_list_asynchronously(self):
+        sink = TestObserver(immediate_continue=0)
+
+        obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
+        obs.observe(ObserverInfo(sink))
+
+        ack = self.source.on_next_list([1, 1, 1])
+
+        self.assertFalse(ack.is_sync)
+        self.assertEqual(1, sink.on_next_counter)
+        self.assertListEqual(sink.received, [1, 1, 1])
+
+        ack.on_next(continue_ack)
+
+        ack = self.source.on_next_list([1, 0, 1])
+
+        self.assertIsInstance(ack, Stop)
+        self.assertEqual(1, sink.on_next_counter)
+        self.assertListEqual(sink.received, [1, 1, 1])
