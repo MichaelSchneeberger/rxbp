@@ -1,3 +1,10 @@
+"""
+This example demonstrates the use-case of the lift operator defined
+on MultiCast objects. The lift operator lifts a `MultiCast[T1]` to
+a `MultiCast[T2[MultiCast[T1]]]`, which enables to group `MultiCast`
+objects within a MultiCast stream.
+"""
+
 import rxbp
 from rxbp.multicast.multicast import MultiCast
 

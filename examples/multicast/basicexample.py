@@ -2,7 +2,18 @@
 This example demonstrates a use-case of sharing a Flowable, inside
 the MultiCast object.
 
-The MultiCast object can be thought of a container of Flowables
+The MultiCast object can be thought of a container of Flowables. A Flowable
+is sharable if it becomes hot once it is subscribed for the first time.
+Sharable Flowables only life in the MultiCast object.
+
+Examples:
+- `from_flowable` creates a MultiCast containing one of more sharable Flowables
+  inside.
+- `empty` creates an empty MultiCast. Non-sharable Flowables can be added to a
+  MultiCast by using the `map` operator.
+- Sharable Flowables can also be defined by using the MultiCastContext. A
+  MultiCastContext is obtained by using the `map_with_context` operator.
+
 """
 
 from typing import Dict

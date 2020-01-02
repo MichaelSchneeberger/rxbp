@@ -1,3 +1,9 @@
+"""
+This example demonstrates the use-case of the share operator defined
+on MultiCast objects. The share operator enables to create expressions
+containing the MultiCast objects in multiple times.
+"""
+
 import rxbp
 from rxbp.multicast.multicast import MultiCast
 

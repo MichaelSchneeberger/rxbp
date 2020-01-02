@@ -3,7 +3,8 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.multicast.observables.connectableobservable import ConnectableObservable
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class ConnectableFlowable(FlowableBase):
@@ -20,4 +21,4 @@ class ConnectableFlowable(FlowableBase):
             conn_observer=self._conn_observer,
             disposable=self._disposable,
         )
-        return Subscription(info=SubscriptionInfo(base=None), observable=observable)
+        return Subscription(info=BaseSelectorsTuple(base=None), observable=observable)

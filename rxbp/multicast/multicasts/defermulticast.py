@@ -21,7 +21,8 @@ from rxbp.multicast.typing import MultiCastValue
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class DeferMultiCast(MultiCastBase):
@@ -218,7 +219,7 @@ class DeferMultiCast(MultiCastBase):
                                         return CompositeDisposable(self.disposable, d2)
 
                                 return Subscription(
-                                    info=SubscriptionInfo(None),
+                                    info=BaseSelectorsTuple(None),
                                     observable=BreakingTheLoopObservable(),
                                 )
 
@@ -235,7 +236,7 @@ class DeferMultiCast(MultiCastBase):
 
                     defer_observable = DeferObservable()
 
-                    return Subscription(info=SubscriptionInfo(None), observable=defer_observable)
+                    return Subscription(info=BaseSelectorsTuple(None), observable=defer_observable)
 
             # create a flowable for all deferred values
             new_states = {k: Flowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()}

@@ -1,3 +1,10 @@
+"""
+This example is used in the README.md
+
+It converts a RxPY Observable to a Flowable by using the `rxbp.from_rx`
+operator, and back to a RxPY Observable by using the `rxbp.to_rx`.
+"""
+
 import rx
 import rxbp
 from rxbp import op

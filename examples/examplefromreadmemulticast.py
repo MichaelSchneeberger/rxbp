@@ -1,3 +1,16 @@
+"""
+This example is used in the README.md
+
+It creates a MultiCast object from a Flowable by using the `from_flowable`
+function. The Flowable boxed into a MultiCast object can now be
+subscribed to more than one observer. In this example, we use it to zip
+it with itself. The result is that a new Flowable is created that emits
+paired elements from the same source.
+
+Note: that the new Flowable does not have the "sharing" behavior, see
+`rxbp.op.share` operator for more information.
+"""
+
 import rxbp
 
 f = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(

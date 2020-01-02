@@ -1,8 +1,10 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.pairwiseobservable import PairwiseObservable
-from rxbp.selectors.bases import PairwiseBase, Base
+from rxbp.selectors.bases import PairwiseBase
+from rxbp.selectors.base import Base
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class PairwiseFlowable(FlowableBase):
@@ -22,6 +24,6 @@ class PairwiseFlowable(FlowableBase):
         observable = PairwiseObservable(source=subscription.observable)
 
         return Subscription(
-            SubscriptionInfo(base=base, selectors=subscription.info.selectors),
+            BaseSelectorsTuple(base=base, selectors=subscription.info.selectors),
             observable=observable,
         )

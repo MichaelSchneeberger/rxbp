@@ -1,7 +1,8 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class MergeFlowable(FlowableBase):
@@ -19,7 +20,7 @@ class MergeFlowable(FlowableBase):
         # the base becomes anonymous after merging
         base = None
 
-        info = SubscriptionInfo(
+        info = BaseSelectorsTuple(
             base=base,
         )
 

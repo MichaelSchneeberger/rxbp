@@ -3,7 +3,8 @@ from typing import Any, Callable
 from rxbp.flowablebase import FlowableBase
 from rxbp.multicast.observables.flatconcatnobackpressureobservable import FlatConcatNoBackpressureObservable
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FlatConcatNoBackpressureFlowable(FlowableBase):
@@ -27,4 +28,4 @@ class FlatConcatNoBackpressureFlowable(FlowableBase):
         # base becomes undefined after flat mapping
         base = None
 
-        return Subscription(SubscriptionInfo(base=base), observable=observable)
+        return Subscription(BaseSelectorsTuple(base=base), observable=observable)

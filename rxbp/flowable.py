@@ -30,7 +30,7 @@ from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.multicastcontext import MultiCastContext
 from rxbp.pipe import pipe
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import Base
+from rxbp.selectors.base import Base
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.toiterator import to_iterator
@@ -228,7 +228,7 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
 
         return Flowable(ObserveOnFlowable(source=self, scheduler=scheduler))
 
-    def pairwise(self):
+    def pairwise(self) -> 'Flowable':
         """ Creates an Flowable that pairs each neighbouring two items from the source
 
         :param selector: (optional) selector function

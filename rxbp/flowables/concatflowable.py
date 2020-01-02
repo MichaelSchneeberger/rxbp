@@ -12,7 +12,8 @@ from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases import ConcatBase
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.typing import ElementType
 
 
@@ -72,6 +73,6 @@ class ConcatFlowable(FlowableBase):
         base = ConcatBase([s.info for s in subscriptions], selectors)
 
         return Subscription(
-            info=SubscriptionInfo(base=base),
+            info=BaseSelectorsTuple(base=base),
             observable=observable,
         )

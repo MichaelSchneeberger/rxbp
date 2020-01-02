@@ -3,7 +3,7 @@ from typing import Callable, Any
 
 from rxbp.multicastcontext import MultiCastContext
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import Base
+from rxbp.selectors.base import Base
 
 
 class FlowableOpMixin(ABC):

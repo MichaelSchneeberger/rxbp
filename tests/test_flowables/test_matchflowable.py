@@ -55,5 +55,5 @@ class TestMatchFlowable(TestCaseBase):
         ))
 
         self.assertIn(b1, subscription.info.selectors)
-        self.assertNotIn(b3, subscription.info.selectors)
+        self.assertIn(b3, subscription.info.selectors)
         self.assertIn(b4, subscription.info.selectors)

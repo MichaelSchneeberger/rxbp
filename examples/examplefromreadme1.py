@@ -1,4 +1,10 @@
-# example taken from RxPY
+"""
+This example is used in the README.md
+
+It is taken from RxPY documentation and translated to rxbackpressure
+syntax.
+"""
+
 import rxbp
 from rxbp import op
 

@@ -4,7 +4,8 @@ from rxbp.flowablebase import FlowableBase
 from rxbp.observables.firstobservable import FirstObservable
 from rxbp.selectors.bases import NumericalBase
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FirstFlowable(FlowableBase):
@@ -21,4 +22,4 @@ class FirstFlowable(FlowableBase):
         # first emits exactly one element
         base = NumericalBase(1)
 
-        return Subscription(SubscriptionInfo(base=base), observable=observable)
+        return Subscription(BaseSelectorsTuple(base=base), observable=observable)
