@@ -25,5 +25,5 @@ class Base(ABC):
             self,
             other: 'Base',
             subscriber: Subscriber,
-    ) -> Optional[MatchedBaseMapping]:
+    ) -> Optional['Base.MatchedBaseMapping']:
         ...

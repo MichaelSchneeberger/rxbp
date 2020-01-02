@@ -95,8 +95,8 @@ class ConcatBase(Base):
                     yield left.get_selectors(right, subscriber)
             selector_results = list(gen_selectors())
 
-            if all(isinstance(result, MatchedBaseMap) for result in selector_results):
-                typed_results: List[MatchedBaseMap] = selector_results
+            if all(isinstance(result, BaseSelectorsTuple.MatchedBaseMapping) for result in selector_results):
+                typed_results: List[BaseSelectorsTuple.MatchedBaseMapping] = selector_results
 
                 left_selectors, right_selectors = zip(*[(result.left, result.right) for result in typed_results])
 
@@ -110,7 +110,6 @@ class ConcatBase(Base):
                             yield selector.observable
 
                 base = None,
-                selectors = {}
 
                 if all(isinstance(selector, IdentitySelector) for selector in left_selectors):
                     base = self
@@ -134,13 +133,12 @@ class ConcatBase(Base):
                         subscribe_scheduler=subscriber.subscribe_scheduler,
                     ))
 
-                return MatchedBaseMap(
+                return Base.MatchedBaseMapping(
                     left=left_selector,
                     right=right_selector,
                     base=base,
-                    selectors=selectors
                 )
             else:
-                return CouldNotMatch()
+                return None
         else:
-            return CouldNotMatch()
+            return None

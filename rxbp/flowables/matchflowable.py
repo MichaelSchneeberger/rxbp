@@ -21,9 +21,6 @@ class MatchFlowable(FlowableBase):
         :param left:
         :param right:
         :param func:
-        :param auto_match: if set to False then this Flowable works like a normal zip operation, if set to False then \
-        it checks if the left and right Flowable either match (by their corresponding bases) or there is a \
-        transformation (called selector) to make them match
         """
 
         super().__init__()
@@ -36,7 +33,10 @@ class MatchFlowable(FlowableBase):
         left_subscription = self._left.unsafe_subscribe(subscriber=subscriber)
         right_subscription = self._right.unsafe_subscribe(subscriber=subscriber)
 
-        result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
+        result = left_subscription.info.get_selectors(
+            right_subscription.info,
+            subscriber=subscriber,
+        )
 
         # The resulting matched Flowable propagates selectors of left or right downstream if
         # * both bases match, or
