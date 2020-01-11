@@ -13,7 +13,7 @@ class TestZip2Observable(TestCaseBase):
     """
     Zip2Observable is a stateful object, therefore we test methods of Zip2Observable as a function of its states
     called "zip_state" of type Zip2Observable.ZipState and "termination_state" of type Zip2Observable.TerminationState.
-    The termination state has four data types, which possibly have their own states. The zip state has five data
+    The termination state has four data types, which possibly have their own states. The connect_flowable state has five data
     types, which possibly have their own states as well.
 
     Zip2Observable is symmetric to left and right source Observable. Therefore, the test specific to the left source

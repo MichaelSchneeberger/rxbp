@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Callable, Union, Dict
+from typing import Callable
 
-from rxbp.flowable import Flowable
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.typing import MultiCastValue
-from rxbp.multicastcontext import MultiCastContext
 from rxbp.typing import ValueType
 
 
@@ -14,7 +11,7 @@ class MultiCastOpMixin(ABC):
         ...
 
     @abstractmethod
-    def defer(
+    def loop_flowable(
             self,
             func: Callable[[MultiCastValue], MultiCastValue],
             initial: ValueType,
@@ -25,12 +22,12 @@ class MultiCastOpMixin(ABC):
     def empty(self):
         ...
 
-    @abstractmethod
-    def share_flowable(
-            self,
-            func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]],
-    ):
-        ...
+    # @abstractmethod
+    # def share_flowable(
+    #         self,
+    #         func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]],
+    # ):
+    #     ...
 
     @abstractmethod
     def filter(
@@ -61,23 +58,26 @@ class MultiCastOpMixin(ABC):
     def map(self, func: Callable[[MultiCastValue], MultiCastValue]):
         ...
 
-    @abstractmethod
-    def map_with_context(self, func: Callable[[MultiCastValue, MultiCastContext], MultiCastValue]):
-        ...
+    # @abstractmethod
+    # def map_with_context(self, func: Callable[[MultiCastValue, MultiCastContext], MultiCastValue]):
+    #     ...
 
     @abstractmethod
-    def reduce(
+    def reduce_flowable(
             self,
             maintain_order: bool = None,
     ):
         ...
 
     @abstractmethod
-    def share(self):
+    def _share(self):
         ...
 
+    def share(self) -> 'MultiCastOpMixin':
+        raise Exception('this MultiCast cannot be shared. Use "lift" operator to share this MultiCast.')
+
     @abstractmethod
-    def zip(
+    def connect_flowable(
             self,
             *others: 'MultiCastOpMixin',
     ):

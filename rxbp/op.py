@@ -4,7 +4,6 @@ from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
 from rxbp.flowableopmixin import FlowableOpMixin
-from rxbp.multicastcontext import MultiCastContext
 from rxbp.scheduler import Scheduler
 
 
@@ -243,12 +242,12 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     return FlowableOperator(inner_func)
 
 
-def share(ability: MultiCastContext):
+def share(): #ability: MultiCastContext):
     """
     """
 
     def inner_func(source: FlowableOpMixin):
-        return source.share(bind_to=ability)
+        return source.share()#bind_to=ability)
 
     return FlowableOperator(inner_func)
 

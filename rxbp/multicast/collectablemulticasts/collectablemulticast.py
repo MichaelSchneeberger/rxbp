@@ -38,7 +38,7 @@ class CollectableMultiCast(MultiCastOpMixin):
         main = self._main.debug(name=name)
         return CollectableMultiCast(main=main, collected=self._collected)
 
-    def defer(self, func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType):
+    def loop_flowable(self, func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType):
         raise NotImplementedError
 
     def empty(self):
@@ -74,11 +74,11 @@ class CollectableMultiCast(MultiCastOpMixin):
     def pipe(self, *operators: MultiCastOperator) -> 'CollectableMultiCast':
         return reduce(lambda acc, op: op(acc), operators, self)
 
-    def reduce(
+    def reduce_flowable(
             self,
             maintain_order: bool = None,
     ):
-        main = self._main.reduce(maintain_order=maintain_order)
+        main = self._main.reduce_flowable(maintain_order=maintain_order)
         return CollectableMultiCast(main=main, collected=self._collected)
 
     def share(self):
@@ -86,8 +86,8 @@ class CollectableMultiCast(MultiCastOpMixin):
         collected = self._collected.share()
         return CollectableMultiCast(main=main, collected=collected)
 
-    def zip(self, *others: 'CollectableMultiCast'):
-        main = self._main.zip(*(source.main_source for source in others))
+    def connect_flowable(self, *others: 'CollectableMultiCast'):
+        main = self._main.connect_flowable(*(source.main_source for source in others))
         collected = self._collected.merge(*(source.collected_source for source in others))
         return CollectableMultiCast(main=main, collected=collected)
 
@@ -182,8 +182,8 @@ class CollectableMultiCast(MultiCastOpMixin):
     #     first = self._first.to_list()
     #     return PairedFlowable(first=first, second=self._second)
     #
-    # def zip(self, *others: 'PairedFlowable') -> 'PairedFlowable':
-    #     first = self._first.zip(*(source.main_source for source in others))
+    # def connect_flowable(self, *others: 'PairedFlowable') -> 'PairedFlowable':
+    #     first = self._first.connect_flowable(*(source.main_source for source in others))
     #     second = self._first.merge(*(source.collected_source for source in others))
     #     return PairedFlowable(first=first, second=second)
     #

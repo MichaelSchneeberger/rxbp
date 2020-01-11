@@ -2,12 +2,15 @@ from typing import List
 
 import rx
 from rx import Observable
+
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
-from rxbp.multicast.flowables.flatconcatnobackpressureflowable import FlatConcatNoBackpressureFlowable
+from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
+    FlatConcatNoBackpressureFlowable
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver
@@ -61,7 +64,7 @@ class ZipMultiCast(MultiCastBase):
 
                         ref_count_flowable = RefCountFlowable(flattened_flowable)
 
-                        return Flowable(ref_count_flowable)
+                        return MultiCastFlowable(ref_count_flowable)
 
                     yield for_func()
 
@@ -69,8 +72,8 @@ class ZipMultiCast(MultiCastBase):
                 observer.on_next(flowables)
                 observer.on_completed()
 
-            info.multicast_scheduler.schedule(action)
-
             flowables = list(gen_conn_flowables())
+
+            info.multicast_scheduler.schedule(action)
 
         return Observable(subscribe=subscribe)

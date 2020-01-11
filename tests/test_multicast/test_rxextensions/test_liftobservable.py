@@ -62,14 +62,14 @@ class TestLiftObservable(unittest.TestCase):
         self.assertEqual([1, 2], self.sink.received)
         self.assertTrue(self.sink.is_completed)
 
-    def test_dispose(self):
-        self.source.on_next(1)
-        self.source.on_next(2)
-
-        self.disposable.dispose()
-
-        self.assertEqual([], self.sink.received)
-        self.assertTrue(self.source.is_disposed)
+    # def test_dispose(self):
+    #     self.source.on_next(1)
+    #     self.source.on_next(2)
+    #
+    #     self.disposable.dispose()
+    #
+    #     self.assertEqual([], self.sink.received)
+    #     self.assertTrue(self.source.is_disposed)
 
     def test_dispose_without_subscriber(self):
         self.disposable.dispose()

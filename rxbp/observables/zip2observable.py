@@ -21,20 +21,20 @@ class Zip2Observable(Observable):
 
     Common scenario with synchronous acknowledgment (if possible):
 
-        s1.zip(s2).subscribe(o, scheduler=s)
+        s1.connect_flowable(s2).subscribe(o, scheduler=s)
 
-    ^ callstack         zip          zip
+    ^ callstack         connect_flowable          connect_flowable
     |                   /            /
     |             o   s1       o   s1
     |            /   / ack1   /   / ack1
-    |    zip   zip --       zip --
+    |    connect_flowable   connect_flowable --       connect_flowable --
     |    /     /            /
     |   s1    s2----------- -----------     ...
     |  /     /
     | s     s                                 time
     --------------------------------------------->
 
-    ack1: asynchronous acknowledgment returned by zip.on_next called by s1
+    ack1: asynchronous acknowledgment returned by connect_flowable.on_next called by s1
     """
 
     def __init__(self, left: Observable, right: Observable, selector: Callable[[Any, Any], Any] = None):
@@ -166,7 +166,7 @@ class Zip2Observable(Observable):
             )
 
         else:
-            raise Exception('after the zip operation, a new element needs '
+            raise Exception('after the connect_flowable operation, a new element needs '
                             'to be requested from at least one source')
 
         with self.lock:

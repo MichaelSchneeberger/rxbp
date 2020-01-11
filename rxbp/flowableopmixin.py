@@ -1,7 +1,6 @@
 from abc import abstractmethod, ABC
 from typing import Callable, Any
 
-from rxbp.multicastcontext import MultiCastContext
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.base import Base
 
@@ -85,8 +84,11 @@ class FlowableOpMixin(ABC):
     def scan(self, func: Callable[[Any, Any], Any], initial: Any) -> 'FlowableOpMixin':
         ...
 
+    def share(self) -> 'FlowableOpMixin':
+        raise Exception('this Flowable cannot be shared. Use multicasting to share Flowables.')
+
     @abstractmethod
-    def share(self, bind_to: MultiCastContext) -> 'FlowableOpMixin':
+    def _share(self) -> 'FlowableOpMixin':
         ...
 
     @abstractmethod
