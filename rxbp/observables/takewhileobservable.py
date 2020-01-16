@@ -6,12 +6,13 @@ from rxbp.observerinfo import ObserverInfo
 
 from rxbp.typing import ElementType
 
-from rxbp.ack.ackimpl import stop_ack, continue_ack
+from rxbp.ack.ackimpl import stop_ack
+
 
 class TakeWhileObservable(Observable):
     """
-    Forwards elements downstream as long as a specified condition for the current element
-    is true.
+    Forwards elements downstream as long as a specified condition for the
+    current element is true.
 
     ``` python
     # take first 5 elements
@@ -20,8 +21,8 @@ class TakeWhileObservable(Observable):
     )
     ```
 
-    The above example creates 10 values `[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]` and takes the
-    first five values `[0, 1, 2, 3, 4]`.
+    The above example creates 10 values `[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]`
+    and takes the first five values `[0, 1, 2, 3, 4]`.
     """
 
     def __init__(self, source: Observable, predicate: Callable[[Any], bool]):
@@ -35,27 +36,28 @@ class TakeWhileObservable(Observable):
         predicate = self.predicate
 
         class TakeWhileObserver(Observer):
-            def __init__(self):
-                self.ack = continue_ack
-
             def on_next(self, elem: ElementType):
-                if self.ack == stop_ack:
-                    return stop_ack
-
+                process = []
                 try:
+                    ack = stop_ack
+                    will_stop = False
                     for v in elem:
                         if not predicate(v):
-                            self.ack = stop_ack
+                            will_stop = True
                             break
                         else:
-                            self.ack = observer.on_next([v])
+                            process.append(v)
+                    if len(process) > 0:
+                        ack = observer.on_next(process)
+                    if will_stop:
+                        observer.on_completed()
+                        return stop_ack
+                    else:
+                        return ack
                 except Exception as e:
+                    observer.on_next(process)
                     observer.on_error(e)
-                    return self.ack
-
-                if self.ack == stop_ack:
-                    observer.on_completed()
-                return self.ack
+                    return stop_ack
 
             def on_error(self, exc):
                 return observer.on_error(exc)

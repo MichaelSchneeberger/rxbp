@@ -1,15 +1,9 @@
-from typing import Callable, Any
-
-from rx.core.typing import Disposable
 from rxbp.ack.ackimpl import Continue, Stop, continue_ack
-from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testobserversubscribeinner import TestObserverSubscribeInner
 from rxbp.testing.testscheduler import TestScheduler
-from rxbp.typing import ValueType
 from rxbp.observables.takewhileobservable import TakeWhileObservable
 
 
@@ -32,7 +26,8 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(sink.is_completed)
 
     def test_single_non_matching_element_synchronously(self):
-        # `immediate_continue=None` means to return a `Continue` acknowledgment always
+        # `immediate_continue=None` means to return a `Continue` acknowledgment
+        # always
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
@@ -111,7 +106,8 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(sink.is_completed)
 
     def test_failure_synchronously(self):
-        # `immediate_continue=None` means to return a `Continue` acknowledgment always
+        # `immediate_continue=None` means to return a `Continue`
+        # acknowledgment always
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
@@ -119,7 +115,7 @@ class TestControlledZipObservable(TestCaseBase):
 
         def gen_iterable():
             for i in range(10):
-                if i==3:
+                if i == 3:
                     raise self.exception
                 yield 1
 
@@ -130,7 +126,8 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertEqual(sink.exception, self.exception)
 
     def test_failure_after_non_matching_element_synchronously(self):
-        # `immediate_continue=None` means to return a `Continue` acknowledgment always
+        # `immediate_continue=None` means to return a `Continue`
+        # acknowledgment always
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
@@ -169,5 +166,5 @@ class TestControlledZipObservable(TestCaseBase):
         ack = self.source.on_next_list([1, 0, 1])
 
         self.assertIsInstance(ack, Stop)
-        self.assertEqual(1, sink.on_next_counter)
-        self.assertListEqual(sink.received, [1, 1, 1])
+        self.assertEqual(2, sink.on_next_counter)
+        self.assertListEqual(sink.received, [1, 1, 1, 1])
