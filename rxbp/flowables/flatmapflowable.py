@@ -8,22 +8,22 @@ from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FlatMapFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, selector: Callable[[Any], FlowableBase]):
+    def __init__(self, source: FlowableBase, func: Callable[[Any], FlowableBase]):
         super().__init__()
 
         self._source = source
-        self._selector = selector
+        self._func = func
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
 
         def observable_selector(elem: Any):
-            flowable = self._selector(elem)
+            flowable = self._func(elem)
             subscription = flowable.unsafe_subscribe(subscriber=subscriber)
             return subscription.observable
 
-        observable = FlatMapObservable(source=subscription.observable, selector=observable_selector,
-                                scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
+        observable = FlatMapObservable(source=subscription.observable, func=observable_selector,
+                                       scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
 
         # base becomes undefined after flat mapping
         base = None

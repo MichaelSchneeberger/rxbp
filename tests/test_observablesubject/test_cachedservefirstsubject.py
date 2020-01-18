@@ -55,25 +55,6 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertIsInstance(self.subject.state,
                               CacheServeFirstOSubject.CompletedState)
 
-    def test_on_error(self):
-        """
-               on_completed
-        NormalState -> ErrorState
-        """
-
-        # preparation
-        o1 = TestObserver()
-        self.subject.observe(ObserverInfo(o1))
-        exc = Exception('dummy')
-
-        # state change
-        self.source.on_error(exc)
-
-        # verification
-        self.assertEqual(exc, o1.exception)
-        self.assertIsInstance(self.subject.state,
-                              CacheServeFirstOSubject.ExceptionState)
-
     def test_on_next_assynchronously(self):
         """
                                      on_next
@@ -273,6 +254,40 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual([1, 2, 3], o1.received)
         self.assertEqual([1, 2, 3], o2.received)
 
+    def test_on_error(self):
+        """
+               on_completed
+        NormalState -> ErrorState
+        """
+
+        # preparation
+        o1 = TestObserver()
+        self.subject.observe(ObserverInfo(o1))
+
+        # state change
+        self.source.on_error(self.exc)
+
+        # verification
+        self.assertEqual(self.exc, o1.exception)
+        self.assertIsInstance(self.subject.state,
+                              CacheServeFirstOSubject.ExceptionState)
+
+    def test_on_next_on_error_asynchronously(self):
+        o1 = TestObserver(immediate_coninue=0)
+        o2 = TestObserver(immediate_coninue=0)
+        self.subject.observe(ObserverInfo(o1))
+        self.subject.observe(ObserverInfo(o2))
+
+        ack = self.source.on_next_single(1)
+        self.source.on_error(self.exc)
+
+        # o2.ack.on_next(continue_ack)
+        # self.scheduler.advance_by(1)
+
+        # verification
+        self.assertEqual(self.exc, o1.exception)
+        self.assertEqual(self.exc, o2.exception)
+
     def test_on_error_two_subscribers_asynchronously(self):
         o1 = TestObserver()
         o2 = TestObserver(immediate_coninue=0)
@@ -283,7 +298,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.source.on_error(self.exc)
 
         self.assertEqual(self.exc, o1.exception)
-        self.assertEqual(None, o2.exception)
+        self.assertEqual(self.exc, o2.exception)
 
     def test_on_error_asynchronously(self):
         o1 = TestObserver(immediate_coninue=0)

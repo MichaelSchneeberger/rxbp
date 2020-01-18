@@ -77,7 +77,7 @@ class DeferMultiCast(MultiCastBase):
         def gen_deferred():
             for key in initial_dict.keys():
                 def for_func(key=key):
-                    return key, MultiCastFlowable(MapFlowable(source=shared, selector=lambda d: d[key]))
+                    return key, MultiCastFlowable(MapFlowable(source=shared, func=lambda d: d[key]))
 
                 yield for_func()
 
@@ -155,7 +155,9 @@ class DeferMultiCast(MultiCastBase):
                 raise Exception(f'illegal case "{base}"')
 
             # share flowables
-            shared_flowable_state = {key: RefCountFlowable(value) for key, value in flowable_state.items()}
+            shared_flowable_state = {key: RefCountFlowable(value) for key, value in flowable_state.items() if key in initial_dict}
+            not_deferred_flowables = {key: value for key, value in flowable_state.items() if
+                                     key not in initial_dict}
 
             lock = threading.RLock()
             is_first = [True]
@@ -180,7 +182,7 @@ class DeferMultiCast(MultiCastBase):
                             """ for each value returned by the loop_flowable function """
                             for key in initial_dict.keys():
                                 def for_func(key=key):
-                                    return Flowable(MapFlowable(shared_flowable_state[key], selector=lambda v: (key, v)))
+                                    return Flowable(MapFlowable(shared_flowable_state[key], func=lambda v: (key, v)))
                                 yield for_func()
                         indexed_deferred_values = gen_index_for_each_deferred_state()
 
@@ -240,9 +242,11 @@ class DeferMultiCast(MultiCastBase):
                     return Subscription(info=BaseSelectorsTuple(None), observable=defer_observable)
 
             # create a flowable for all deferred values
-            new_states = {k: MultiCastFlowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()}
+            new_states = {
+                k: MultiCastFlowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()
+            }
 
-            return from_state(new_states)
+            return from_state({**new_states, **not_deferred_flowables})
 
         return output.get_source(info=info).pipe(
             rxop.map(map_func),

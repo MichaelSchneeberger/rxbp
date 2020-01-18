@@ -80,25 +80,25 @@ class IteratorAsObservable(Observable):
                   disposable: BooleanDisposable, em: ExecutionModel, sync_index: int):
         while True:
             try:
-                next_item = next(self.iterator)
-                has_next = True
-            except StopIteration:
-                has_next = False
-                next_item = None
-            except Exception as e:
-                # stream errors == True
-                self.trigger_cancel(scheduler)
-
-                if not disposable.is_disposed:
-                    observer.on_error(e)
-                else:
-                    scheduler.report_failure(e)
-
-                has_next = False
-                next_item = None
-
-            try:
                 ack = observer.on_next(current_item)
+
+                try:
+                    next_item = next(self.iterator)
+                    has_next = True
+                except StopIteration:
+                    has_next = False
+                    next_item = None
+                except Exception as e:
+                    # stream errors == True
+                    self.trigger_cancel(scheduler)
+
+                    if not disposable.is_disposed:
+                        observer.on_error(e)
+                    else:
+                        scheduler.report_failure(e)
+
+                    has_next = False
+                    next_item = None
 
                 if not has_next:
                     try:

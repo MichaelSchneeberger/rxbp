@@ -49,6 +49,7 @@ result = rxbp.multicast.from_flowable({'input': rxbp.range(10)}).pipe(
     rxbp.multicast.op.loop_flowable(
         func=lambda mc: mc.pipe(
             rxbp.multicast.op.map(lambda t: {
+                **t,
                 'a': t['input'].pipe(
                     rxbp.op.zip(t['a'], t['b']),
                     rxbp.op.map(lambda v: sum(v)),
@@ -62,7 +63,7 @@ result = rxbp.multicast.from_flowable({'input': rxbp.range(10)}).pipe(
         ),
         initial={'a': 1, 'b': 2},
     ),
-    rxbp.multicast.op.map(lambda t: t['a']),
+    # rxbp.multicast.op.map(lambda t: t['a']),
 ).to_flowable().run()
 
 print(result)

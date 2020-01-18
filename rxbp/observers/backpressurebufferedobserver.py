@@ -93,20 +93,21 @@ class BackpressureBufferedObserver(Observer):
             try:
                 ack = self.underlying.on_next(next)
                 return ack
-            except:
-                raise NotImplementedError
+            except Exception as exc:
+                signal_error(exc)
+                return stop_ack
 
         def signal_complete():
-            try:
-                self.underlying.on_completed()
-            except:
-                raise NotImplementedError
+            # try:
+            self.underlying.on_completed()
+            # except:
+            #     raise NotImplementedError
 
         def signal_error(ex):
-            try:
-                self.underlying.on_error(ex)
-            except:
-                raise NotImplementedError
+            # try:
+            self.underlying.on_error(ex)
+            # except:
+            #     raise NotImplementedError
 
         def go_async(next, next_size: int, ack: AckSubject, processed: int):
             def on_next(v):
@@ -194,9 +195,9 @@ class BackpressureBufferedObserver(Observer):
                             bp.on_next(continue_ack)
                         return
 
-        try:
-            fast_loop(prev_ack=self.last_iteration_ack, last_processed=0, start_index=0)
-        except:
-            raise NotImplementedError
+        # try:
+        fast_loop(prev_ack=self.last_iteration_ack, last_processed=0, start_index=0)
+        # except:
+        #     raise NotImplementedError
 
 

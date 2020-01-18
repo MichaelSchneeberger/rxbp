@@ -1,11 +1,12 @@
 from functools import reduce
-from typing import Generic, Callable
+from typing import Generic, Callable, Iterator
 
 import rx
 from rx import operators as rxop
 from rx.subject import Subject
 
 import rxbp
+from rxbp.multicast.flowableop import FlowableOp
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
@@ -16,6 +17,7 @@ from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
 from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
 from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
+from rxbp.multicast.multicasts.maptoiteratormulticast import MapToIteratorMultiCast
 from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
@@ -40,7 +42,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
         return self.underlying.get_source(info=info)
 
-    def connect_flowable(self, *others: 'MultiCast'):
+    def collect_flowables(self, *others: 'MultiCast'):
         return self._copy(ZipMultiCast(sources=[self] + list(others)))
 
     def debug(
@@ -49,15 +51,6 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     ):
 
         return self._copy(DebugMultiCast(source=self, name=name))
-
-    def loop_flowable(
-            self,
-            func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType,
-    ):
-        def lifted_func(multicast: MultiCastBase):
-            return func(MultiCast(multicast))
-
-        return self._copy(DeferMultiCast(source=self, func=lifted_func, initial=initial))
 
     def empty(self):
         return rxbp.multicast.empty()
@@ -113,11 +106,32 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
 
         return LoopMultiCast()
 
+    def loop_flowable(
+            self,
+            func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType,
+    ):
+        def lifted_func(multicast: MultiCastBase):
+            return func(MultiCast(multicast))
+
+        return self._copy(DeferMultiCast(source=self, func=lifted_func, initial=initial))
+
     def map(
             self,
             func: Callable[[MultiCastValue], MultiCastValue],
     ):
         return self._copy(MapMultiCast(source=self, func=func))
+
+    def map_with_op(
+            self,
+            func: Callable[[MultiCastValue, FlowableOp], MultiCastValue],
+    ):
+        def inner_func(value: MultiCastValue):
+            return func(value, FlowableOp())
+
+        return self.map(inner_func)
+
+    # def map_to_iterator(self, func: Callable[[MultiCastValue], Iterator[MultiCastValue]]):
+    #     return self._copy(MapToIteratorMultiCast(source=self, func=func))
 
     def merge(
             self,

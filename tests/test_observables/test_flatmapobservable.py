@@ -15,6 +15,7 @@ class TestFlatMapObservable(TestCaseBase):
         self.s1 = TestObservable()
         self.s2 = TestObservable()
         self.s3 = TestObservable()
+        self.exception = Exception('dummy exception')
 
     def test_happy_path_sync_ack(self):
         def selector(v):
@@ -23,7 +24,7 @@ class TestFlatMapObservable(TestCaseBase):
         sink = TestObserver()
         obs = FlatMapObservable(
             source=self.s1,
-            selector=selector,
+            func=selector,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
@@ -60,7 +61,7 @@ class TestFlatMapObservable(TestCaseBase):
         sink = TestObserver()
         obs = FlatMapObservable(
             source=self.s1,
-            selector=selector,
+            func=selector,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
@@ -72,6 +73,23 @@ class TestFlatMapObservable(TestCaseBase):
         self.s2.on_completed()
         self.assertTrue(sink.is_completed)
 
+    def test_exception_case(self):
+        def selector(v):
+            raise self.exception
+
+        sink = TestObserver()
+        obs = FlatMapObservable(
+            source=self.s1,
+            func=selector,
+            scheduler=self.scheduler,
+            subscribe_scheduler=self.scheduler
+        )
+        obs.observe(ObserverInfo(sink))
+
+        self.s1.on_next_single(self.s2)
+
+        self.assertEqual(self.exception, sink.exception)
+
     def test_multible_inner_sync_ack(self):
         def selector(v):
             return v
@@ -79,7 +97,7 @@ class TestFlatMapObservable(TestCaseBase):
         sink = TestObserver()
         obs = FlatMapObservable(
             source=self.s1,
-            selector=selector,
+            func=selector,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )

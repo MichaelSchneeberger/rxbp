@@ -42,7 +42,7 @@ class FlatConcatNoBackpressureObserver(Observer):
                 return ack
 
             def on_error(_, exc: Exception):
-                pass
+                observer.on_error(exc)      # todo: check this
 
             def on_completed(_):
                 with self.lock:

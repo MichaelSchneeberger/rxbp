@@ -1,6 +1,6 @@
 import functools
 import itertools
-from typing import Callable, Any, Generic, Tuple
+from typing import Callable, Any, Generic, Tuple, List, Iterator
 
 import rx
 import rxbp
@@ -17,10 +17,12 @@ from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.mapflowable import MapFlowable
+from rxbp.flowables.maptoiteratorflowable import MapToIteratorFlowable
 from rxbp.flowables.matchflowable import MatchFlowable
 from rxbp.flowables.mergeflowable import MergeFlowable
 from rxbp.flowables.observeonflowable import ObserveOnFlowable
 from rxbp.flowables.pairwiseflowable import PairwiseFlowable
+from rxbp.flowables.reduceflowable import ReduceFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
 from rxbp.flowables.scanflowable import ScanFlowable
@@ -152,18 +154,25 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         flowable = FirstFlowable(source=self, raise_exception=raise_exception)
         return self._copy(flowable)
 
-    def flat_map(self, selector: Callable[[Any], FlowableBase]):
-        flowable = FlatMapFlowable(source=self, selector=selector)
+    def flat_map(self, func: Callable[[Any], FlowableBase]):
+        flowable = FlatMapFlowable(source=self, func=func)
         return self._copy(flowable)
 
-    def map(self, selector: Callable[[ValueType], Any]):
+    def map(self, func: Callable[[ValueType], Any]):
         """ Maps each item emitted by the source by applying the given function
 
-        :param selector: function that defines the mapping
+        :param func: function that defines the mapping
         :return: mapped Flowable
         """
 
-        flowable = MapFlowable(source=self, selector=selector)
+        flowable = MapFlowable(source=self, func=func)
+        return self._copy(flowable)
+
+    def map_to_iterator(
+            self,
+            func: Callable[[ValueType], Iterator[ValueType]],
+    ):
+        flowable = MapToIteratorFlowable(source=self, func=func)
         return self._copy(flowable)
 
     def match(self, *others: 'Flowable'):
@@ -243,8 +252,17 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         raw = functools.reduce(lambda obs, op: op(obs), operators, self)
         return self._copy(raw)
 
-    def run(self, scheduler: Scheduler = None):
-        return list(to_iterator(source=self, scheduler=scheduler))
+    def reduce(
+            self,
+            func: Callable[[Any, Any], Any],
+            initial: Any,
+    ):
+        flowable = ReduceFlowable(
+            source=self,
+            func=func,
+            initial=initial,
+        )
+        return self._copy(flowable)
 
     def repeat_first(self):
         """ Repeat the first item forever
@@ -254,6 +272,9 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
 
         flowable = RepeatFirstFlowable(source=self)
         return self._copy(flowable)
+
+    def run(self, scheduler: Scheduler = None):
+        return list(to_iterator(source=self, scheduler=scheduler))
 
     def scan(self, func: Callable[[Any, Any], Any], initial: Any):
         flowable = ScanFlowable(source=self, func=func, initial=initial)

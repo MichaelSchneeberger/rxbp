@@ -24,8 +24,6 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
     def on_completed():
         send_notification(('C', None))
 
-    # observer = AnonymousObserver(on_next_func=on_next, on_error_func=on_error, on_completed_func=on_completed)
-
     source.subscribe(on_next=on_next, on_error=on_error, on_completed=on_completed, scheduler=scheduler,
                      subscribe_scheduler=TrampolineScheduler())
 

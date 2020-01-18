@@ -5,7 +5,7 @@ from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observables.mapobservable import MapObservable
-from rxbp.observables.maptolistobservable import MapToListObservable
+from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.selectors.base import Base
@@ -209,22 +209,22 @@ class BaseSelectorsTuple:
                                 else:
                                     return [select_completed]
 
-                            left_sel = RefCountObservable(MapToListObservable(
+                            left_sel = RefCountObservable(MapToIteratorObservable(
                                 source=FilterObservable(
                                     source=merge_sel,
                                     predicate=lambda t: isinstance(t[0], SelectNext),
                                     scheduler=subscriber.scheduler,
                                 ),
-                                selector=left_selector,
+                                func=left_selector,
                             ), subject=PublishOSubject(scheduler=subscriber.scheduler))
 
-                            right_sel = RefCountObservable(MapToListObservable(
+                            right_sel = RefCountObservable(MapToIteratorObservable(
                                 source=FilterObservable(
                                     source=merge_sel,
                                     predicate=lambda t: isinstance(t[1], SelectNext),
                                     scheduler=subscriber.scheduler,
                                 ),
-                                selector=right_selector,
+                                func=right_selector,
                             ), subject=PublishOSubject(scheduler=subscriber.scheduler))
 
                             selector = MapObservable(

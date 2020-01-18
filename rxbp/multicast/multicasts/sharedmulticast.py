@@ -16,7 +16,7 @@ class SharedMultiCast(MultiCastBase):
         self.subject = subject
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-        shared_source = self.get_source(info=info).pipe(
+        shared_source = self.source.get_source(info=info).pipe(
             rxop.multicast(subject=self.subject),
             rxop.ref_count(),
         )

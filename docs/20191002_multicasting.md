@@ -62,7 +62,7 @@ exposes a *multi-cast Flowable* as an argument to the function `func`. Inside
 the function `func`, the *multi-cast Flowable* can used multiple
 times as it the case for the *shared Observable* in *RxPY*. The following
 example zips the elements from the same source but skips every second
-element on the second connect_flowable input.
+element on the second collect_flowables input.
  
 ``` python
 import rxbp.depricated
@@ -70,7 +70,7 @@ import rxbp
 
 rxbp.range(10).pipe(
     rxbp.depricated.share(lambda f1: f1.pipe(
-        rxbp.op.connect_flowable(f1.pipe(
+        rxbp.op.collect_flowables(f1.pipe(
             rxbp.op.filter(lambda v: v % 2 == 0)),
         )
     )),
@@ -107,7 +107,7 @@ tunneled_shared = rxbp.range(10).pipe(
 # consume the shared Flowable in another place
 tunneled_shared.pipe(
     rxbp.op.flat_map(lambda f1: f1.pipe(
-        rxbp.op.connect_flowable(f1.pipe(
+        rxbp.op.collect_flowables(f1.pipe(
             rxbp.op.filter(lambda v: v % 2 == 0)),
         ),
     )),
@@ -151,7 +151,7 @@ source2 = source1.pipe(
     rxbp.op.share(lambda source: source.pipe(
         rxbp.op.flat_map(
             lambda fdict: fdict["input"].pipe(
-                rxbp.op.connect_flowable(fdict["input"].pipe(
+                rxbp.op.collect_flowables(fdict["input"].pipe(
                     rxbp.op.filter(lambda v: v % 2 == 0)),
                 ),
             )

@@ -48,8 +48,8 @@ class CollectableMultiCast(MultiCastOpMixin):
         main = self._main.share_flowable(func=func)
         return CollectableMultiCast(main=main, collected=self._collected)
 
-    def filter(self, func: Callable[[MultiCastValue], bool]):
-        main = self._main.filter(func=func)
+    def filter(self, predicate: Callable[[MultiCastValue], bool]):
+        main = self._main.filter(predicate=predicate)
         return CollectableMultiCast(main=main, collected=self._collected)
 
     def flat_map(self, func: Callable[[MultiCastValue], 'MultiCastOpMixin']):
@@ -86,8 +86,8 @@ class CollectableMultiCast(MultiCastOpMixin):
         collected = self._collected.share()
         return CollectableMultiCast(main=main, collected=collected)
 
-    def connect_flowable(self, *others: 'CollectableMultiCast'):
-        main = self._main.connect_flowable(*(source.main_source for source in others))
+    def collect_flowables(self, *others: 'CollectableMultiCast'):
+        main = self._main.collect_flowables(*(source.main_source for source in others))
         collected = self._collected.merge(*(source.collected_source for source in others))
         return CollectableMultiCast(main=main, collected=collected)
 
@@ -182,8 +182,8 @@ class CollectableMultiCast(MultiCastOpMixin):
     #     first = self._first.to_list()
     #     return PairedFlowable(first=first, second=self._second)
     #
-    # def connect_flowable(self, *others: 'PairedFlowable') -> 'PairedFlowable':
-    #     first = self._first.connect_flowable(*(source.main_source for source in others))
+    # def collect_flowables(self, *others: 'PairedFlowable') -> 'PairedFlowable':
+    #     first = self._first.collect_flowables(*(source.main_source for source in others))
     #     second = self._first.merge(*(source.collected_source for source in others))
     #     return PairedFlowable(first=first, second=second)
     #

@@ -1,8 +1,10 @@
-import itertools
-from typing import Iterator, Iterable, Any, List
+import math
+from typing import Iterable, Any, List
 
 import rx
 from rx import operators
+from rx.core.typing import Disposable
+
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
@@ -14,78 +16,11 @@ from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObse
 from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import NumericalBase, ObjectRefBase
 from rxbp.selectors.base import Base
+from rxbp.selectors.bases import NumericalBase, ObjectRefBase
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
-
-
-def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None):
-    """ Converts an iterator into an observable
-
-    :param iterator:
-    :param batch_size:
-    :return:
-    """
-
-    batch_size_ = batch_size or 1
-
-    class FromIteratorFlowable(FlowableBase):
-        def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-            def gen():
-                for peak_first in iterator:
-                    def generate_batch(peak_first=peak_first):
-                        yield peak_first
-                        for more in itertools.islice(iterator, batch_size_ - 1):
-                            yield more
-
-                    yield generate_batch()
-
-            observable = IteratorAsObservable(iterator=gen(), scheduler=subscriber.scheduler,
-                                              subscribe_scheduler=subscriber.subscribe_scheduler)
-
-            return Subscription(
-                info=BaseSelectorsTuple(
-                    base=base,
-                ),
-                observable=observable,
-            )
-
-    return Flowable(FromIteratorFlowable())
-
-
-def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None, base: Any = None):
-    """ Converts an iterable into an observable
-
-    :param iterable:
-    :param batch_size:
-    :return:
-    """
-
-    if base is not None:
-        if isinstance(base, str):
-            base = ObjectRefBase(base)
-        elif isinstance(base, int):
-            base = NumericalBase(base)
-        elif isinstance(base, Base):
-            base = base
-        else:
-            raise Exception(f'illegal base "{base}"')
-
-    elif n_elements is not None:
-        base = NumericalBase(n_elements)
-    else:
-        base = None
-
-    class FromIterableFlowable(FlowableBase):
-        def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-            iterator = iter(iterable)
-            subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=base)
-            subscription = subscriptable.unsafe_subscribe(subscriber)
-            return subscription
-
-    return Flowable(FromIterableFlowable())
 
 
 def concat(sources: Iterable[FlowableBase]):
@@ -99,22 +34,135 @@ def empty():
     :return: single item observable
     """
 
-    return _from_iterable([], n_elements=0)
+    base = NumericalBase(0)
+
+    class EmptyFlowable(FlowableBase):
+        def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+
+            class EmptyObservable(Observable):
+                def observe(self, observer_info: ObserverInfo) -> Disposable:
+                    def action(_, __):
+                        observer_info.observer.on_completed()
+
+                    return subscriber.subscribe_scheduler.schedule(action)
+
+            return Subscription(
+                info=BaseSelectorsTuple(
+                    base=base,
+                ),
+                observable=EmptyObservable(),
+            )
+
+    return Flowable(EmptyFlowable())
 
 
-def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None):
-    return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
+def from_iterable(iterable: Iterable, base: Base = None):
+    # return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
+
+    if base is not None:
+        if isinstance(base, str):
+            base = ObjectRefBase(base)
+        elif isinstance(base, int):
+            base = NumericalBase(base)
+        elif isinstance(base, Base):
+            base = base
+        else:
+            raise Exception(f'illegal base "{base}"')
+
+    else:
+        base = None
+
+    class FromIterableFlowable(FlowableBase):
+        def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+            iterator = iter(iterable)
+
+            class FromIterableObservable(Observable):
+                def observe(self, observer_info: ObserverInfo) -> Disposable:
+
+                    def action(_, __):
+                        observer_info.observer.on_next(iterator)
+                        observer_info.observer.on_completed()
+
+                    return subscriber.subscribe_scheduler.schedule(action)
+
+            return Subscription(
+                info=BaseSelectorsTuple(
+                    base=base,
+                ),
+                observable=FromIterableObservable(),
+            )
+
+    return Flowable(FromIterableFlowable())
 
 
 def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = None):
     if arg2 is None:
-        start = 0
-        stop = arg1
+        start_idx = 0
+        stop_idx = arg1
     else:
-        start = arg1
-        stop = arg2
+        start_idx = arg1
+        stop_idx = arg2
 
-    return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start, base=base)
+    n_elements = stop_idx - start_idx
+
+    if base is not None:
+        if isinstance(base, str):
+            base = ObjectRefBase(base)
+        elif isinstance(base, int):
+            base = NumericalBase(base)
+        elif isinstance(base, Base):
+            base = base
+        else:
+            raise Exception(f'illegal base "{base}"')
+    elif n_elements is not None:
+        base = NumericalBase(n_elements)
+    else:
+        base = None
+
+    if batch_size is None:
+        class FromRangeIterable:
+            def __iter__(self):
+                return iter(range(start_idx, stop_idx))
+
+        return from_iterable(
+            iterable=FromRangeIterable(),
+            base=base,
+        )
+
+    else:
+        n_batches = max(math.ceil(n_elements / batch_size) - 1, 0)
+
+        def gen_iterator():
+            current_start_idx = start_idx
+            current_stop_idx = start_idx
+
+            for idx in range(n_batches):
+                current_stop_idx = current_stop_idx + batch_size
+
+                yield range(current_start_idx, current_stop_idx)
+
+                current_start_idx = current_stop_idx
+
+            yield range(current_start_idx, stop_idx)
+
+        class FromIterableFlowable(FlowableBase):
+            def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+                iterator = gen_iterator()
+
+                observable = IteratorAsObservable(
+                    iterator=iterator,
+                    scheduler=subscriber.scheduler,
+                    subscribe_scheduler=subscriber.subscribe_scheduler,
+                )
+
+                return Subscription(
+                    info=BaseSelectorsTuple(
+                        base=base,
+                    ),
+                    observable=observable,
+                )
+
+        return Flowable(FromIterableFlowable())
 
 
 def from_list(buffer: List, batch_size: int = None):
@@ -191,9 +239,12 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                     else:
                         raise AssertionError('only BackPressure is currently supported as overflow strategy')
 
-                    rx_observer = BackpressureBufferedObserver(underlying=observer, scheduler=self.scheduler,
-                                                              subscribe_scheduler=self.subscribe_scheduler,
-                                                              buffer_size=buffer_size)
+                    rx_observer = BackpressureBufferedObserver(
+                        underlying=observer,
+                        scheduler=self.scheduler,
+                        subscribe_scheduler=self.subscribe_scheduler,
+                        buffer_size=buffer_size,
+                    )
 
                 disposable = source.pipe(
                     operators.buffer_with_count(batch_size_),
@@ -218,7 +269,27 @@ def return_value(elem: Any):
     :return: single item observable
     """
 
-    return _from_iterable([elem], n_elements=1)
+    base = NumericalBase(1)
+
+    class EmptyFlowable(FlowableBase):
+        def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+
+            class EmptyObservable(Observable):
+                def observe(self, observer_info: ObserverInfo) -> Disposable:
+                    def action(_, __):
+                        observer_info.observer.on_next(elem)
+                        observer_info.observer.on_completed()
+
+                    return subscriber.subscribe_scheduler.schedule(action)
+
+            return Subscription(
+                info=BaseSelectorsTuple(
+                    base=base,
+                ),
+                observable=EmptyObservable(),
+            )
+
+    return Flowable(EmptyFlowable())
 
 
 def merge(*sources: Flowable) -> Flowable:

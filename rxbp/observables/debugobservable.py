@@ -1,3 +1,5 @@
+import traceback
+
 from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.ack.continueack import ContinueAck
 from rxbp.ack.single import Single
@@ -14,9 +16,13 @@ class DebugObservable(Observable):
         self.source = source
         self.name = name
 
+        def on_error_func(exc):
+            # traceback.print_exception(type(exc), exc, exc.__traceback__)
+            print('{}.on_next {}'.format(name, exc))
+
         if name is not None:
             self.on_next_func = on_next or (lambda v: print('{}.on_next {}'.format(name, v)))
-            self.on_error_func = on_error or (lambda exc: print('{}.on_error {}'.format(name, exc)))
+            self.on_error_func = on_error or on_error_func #(lambda exc: print('{}.on_error {}'.format(name, exc)))
             self.on_completed_func = on_completed or (lambda: print('{}.on_completed'.format(name)))
             self.on_subscribe_func = on_subscribe or (lambda v: print('{}.on_observe {}'.format(name, v.observer)))
             self.on_sync_ack = on_ack or (lambda v: print('{}.on_sync_ack {}'.format(name, v)))

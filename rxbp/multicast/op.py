@@ -1,6 +1,7 @@
-from typing import List, Callable, Union, Dict, Any
+from typing import List, Callable, Union, Dict, Any, Iterator
 
 from rxbp.flowable import Flowable
+from rxbp.multicast.flowableop import FlowableOp
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
 from rxbp.multicast.multicast import MultiCast
@@ -17,11 +18,11 @@ def debug(name: str):
     return MultiCastOperator(op_func)
 
 
-def connect_flowable(
+def collect_flowables(
       *others: MultiCastOpMixin,
 ):
     def op_func(source: MultiCastOpMixin):
-        return source.connect_flowable(*others)
+        return source.collect_flowables(*others)
 
     return MultiCastOperator(op_func)
 
@@ -43,13 +44,13 @@ def loop_flowable(
 
 
 def filter(
-        func: Callable[[MultiCastValue], bool],
+        predicate: Callable[[MultiCastValue], bool],
 ):
     """ Only emits those `MultiCast` values for which the given predicate hold.
     """
 
     def op_func(source: MultiCastOpMixin):
-        return source.filter(func=func)
+        return source.filter(predicate=predicate)
 
     return MultiCastOperator(op_func)
 
@@ -96,6 +97,26 @@ def map(func: Callable[[MultiCastValue], MultiCastValue]):
     return MultiCastOperator(op_func)
 
 
+def map_with_op(func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
+    """ Maps each `MultiCast` value by applying the given function `func`
+    """
+
+    def op_func(source: MultiCastOpMixin):
+        return source.map_with_op(func=func)
+
+    return MultiCastOperator(op_func)
+
+
+# def map_to_iterator(func: Callable[[MultiCastValue], Iterator[MultiCastValue]]):
+#     """ Maps each `MultiCast` value by applying the given function `func`
+#     """
+#
+#     def op_func(source: MultiCastOpMixin):
+#         return source.map_to_iterator(func=func)
+#
+#     return MultiCastOperator(op_func)
+
+
 def reduce_flowable(
     maintain_order: bool = None,
 ):
@@ -108,12 +129,25 @@ def reduce_flowable(
     return MultiCastOperator(op_func)
 
 
-def share():
+# def share():
+#     """ Splits the `MultiCast` stream in two, applies the given `MultiCast` operators on each of them, and merges the
+#     two streams together again.
+#     """
+#
+#     def op_func(source: MultiCastOpMixin):
+#         return source.share()
+#
+#     return MultiCastOperator(op_func)
+
+
+def share(
+        func: Callable[[MultiCast], MultiCast],
+):
     """ Splits the `MultiCast` stream in two, applies the given `MultiCast` operators on each of them, and merges the
     two streams together again.
     """
 
     def op_func(source: MultiCastOpMixin):
-        return source.share()
+        return func(source._share())
 
     return MultiCastOperator(op_func)

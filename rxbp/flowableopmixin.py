@@ -1,8 +1,9 @@
 from abc import abstractmethod, ABC
-from typing import Callable, Any
+from typing import Callable, Any, Iterator
 
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.base import Base
+from rxbp.typing import ValueType
 
 
 class FlowableOpMixin(ABC):
@@ -53,11 +54,18 @@ class FlowableOpMixin(ABC):
         ...
 
     @abstractmethod
-    def flat_map(self, selector: Callable[[Any], 'FlowableOpMixin']) -> 'FlowableOpMixin':
+    def flat_map(self, func: Callable[[Any], 'FlowableOpMixin']) -> 'FlowableOpMixin':
         ...
 
     @abstractmethod
-    def map(self, selector: Callable[[Any], Any]) -> 'FlowableOpMixin':
+    def map(self, func: Callable[[Any], Any]) -> 'FlowableOpMixin':
+        ...
+
+    @abstractmethod
+    def map_to_iterator(
+            self,
+            func: Callable[[ValueType], Iterator[ValueType]],
+    ):
         ...
 
     @abstractmethod
@@ -74,6 +82,14 @@ class FlowableOpMixin(ABC):
 
     @abstractmethod
     def pairwise(self) -> 'FlowableOpMixin':
+        ...
+
+    @abstractmethod
+    def reduce(
+            self,
+            func: Callable[[Any, Any], Any],
+            initial: Any,
+    ) -> 'FlowableOpMixin':
         ...
 
     @abstractmethod

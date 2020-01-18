@@ -1,10 +1,11 @@
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
 from rxbp.flowableopmixin import FlowableOpMixin
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ValueType
 
 
 def buffer(buffer_size: int):
@@ -134,7 +135,7 @@ def first(raise_exception: Callable[[Callable[[], None]], None] = None):
     return FlowableOperator(func)
 
 
-def flat_map(selector: Callable[[Any], Flowable]):
+def flat_map(func: Callable[[Any], Flowable]):
     """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
     as input and returns an inner observable. The resulting observable concatenates the items of each inner
     observable.
@@ -143,23 +144,32 @@ def flat_map(selector: Callable[[Any], Flowable]):
     :return: a flattened Flowable
     """
 
-    def func(left: FlowableOpMixin):
-        return left.flat_map(selector=selector)
+    def op_func(source: FlowableOpMixin):
+        return source.flat_map(func=func)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
-def map(selector: Callable[[Any], Any]):
+def map(func: Callable[[Any], Any]):
     """ Maps each item emitted by the source by applying the given function
 
-    :param selector: function that defines the mapping applied to each element
+    :param func: function that defines the mapping applied to each element
     :return: mapped Flowable
     """
 
-    def func(source: FlowableOpMixin):
-        return source.map(selector=selector)
+    def op_func(source: FlowableOpMixin):
+        return source.map(func=func)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
+
+
+def map_to_iterator(
+        func: Callable[[ValueType], Iterator[ValueType]],
+):
+    def op_func(source: FlowableOpMixin):
+        return source.map_to_iterator(func=func)
+
+    return FlowableOperator(op_func)
 
 
 def match(*others: Flowable):
@@ -210,6 +220,16 @@ def pairwise():
 
     def func(source: FlowableOpMixin):
         return source.pairwise()
+
+    return FlowableOperator(func)
+
+
+def reduce(
+        func: Callable[[Any, Any], Any],
+        initial: Any,
+):
+    def func(source: FlowableOpMixin):
+        return source.reduce(func=func, initial=initial)
 
     return FlowableOperator(func)
 

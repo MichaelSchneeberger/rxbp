@@ -18,7 +18,7 @@ subject = Subject()
 
 
 fdict = {
-    't_main': rxbp.from_rx(subject, base='t_main'), #.range(0, 1000, base='t_main').map(lambda i: 10 * i/1000 * 1.01 + 1.4),
+    't_main': rxbp.from_rx(subject, base='t_main'),
     't_1': rxbp.range(0, 100, base='t_1').map(lambda i: 10 * i/100 * 0.9 + 2.1),
     't_2': rxbp.range(0, 100, base='t_2').map(lambda i: 10 * i/100 * 1.05 + 0.9),
 }
@@ -137,13 +137,15 @@ rxbp.multicast.from_flowable(fdict).pipe(
     rxbp.multicast.op.map(interpolate_v1),
     rxbp.multicast.op.map(interpolate_v2),
     rxbp.multicast.op.map(sel_flow),
-).to_flowable().subscribe(lambda v: result.append(v))
+).to_flowable().subscribe(
+    on_next=lambda v: result.append(v),
+    on_completed=lambda: print('completed')
+)
 
 
 rx.range(0, 1000).pipe(
     rxop.map(lambda i: 10 * i/1000 * 1.01 + 1.4),
 ).subscribe(subject)
-
 
 t, v1, v2 = list(zip(*result))
 

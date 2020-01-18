@@ -5,6 +5,7 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.typing import ElementType
 
 
@@ -19,32 +20,42 @@ class ObserveOnObservable(Observable):
         class ObserveOnObserver(Observer):
             def __init__(self, scheduler: Scheduler):
                 self.scheduler = scheduler
+                self.trampoline = TrampolineScheduler()
 
             def on_next(self, elem: ElementType):
                 ack_subject = AckSubject()
 
-                def action(_, __):
-                    inner_ack = observer.on_next(elem)
+                def action_on_scheduler(_, __):
+                    def action_on_trampoline(_, __):
+                        inner_ack = observer.on_next(elem)
 
-                    if isinstance(inner_ack, ContinueAck):
-                        ack_subject.on_next(inner_ack)
-                    elif isinstance(inner_ack, StopAck):
-                        ack_subject.on_next(inner_ack)
-                    else:
-                        inner_ack.subscribe(ack_subject)
+                        if isinstance(inner_ack, ContinueAck):
+                            ack_subject.on_next(inner_ack)
+                        elif isinstance(inner_ack, StopAck):
+                            ack_subject.on_next(inner_ack)
+                        else:
+                            inner_ack.subscribe(ack_subject)
 
-                self.scheduler.schedule(action)
+                    self.trampoline.schedule(action_on_trampoline)
+
+                self.scheduler.schedule(action_on_scheduler)
                 return ack_subject
 
             def on_error(self, exc):
                 def action(_, __):
-                    observer.on_error(exc)
+                    def action_on_trampoline(_, __):
+                        observer.on_error(exc)
+
+                    self.trampoline.schedule(action_on_trampoline)
 
                 self.scheduler.schedule(action)
 
             def on_completed(self):
                 def action(_, __):
-                    observer.on_completed()
+                    def action_on_trampoline(_, __):
+                        observer.on_completed()
+
+                    self.trampoline.schedule(action_on_trampoline)
 
                 self.scheduler.schedule(action)
 
