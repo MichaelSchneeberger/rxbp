@@ -255,7 +255,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.Stopped)
         self.assertEqual(self.exception, sink.exception)
 
-    def test_wait_on_right_to_wait_on_right_with_asynchronous_ack(self):
+    def test_asynchronous_ack_from_selectors(self):
         """
                          ack.on_next
         WaitOnLeftRight ------------> WaitOnLeftRight
@@ -291,80 +291,38 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(ack1.has_value)
         self.assertTrue(ack2.has_value)
 
-    # def test_do_not_send_selector_if_no_element_got_selected_with_asynchronous_ack(self):
-    #     """
-    #                      ack.on_next
-    #     WaitOnLeftRight ------------> WaitOnLeft
-    #     """
-    #
-    #     sink = TestObserver(immediate_coninue=0)
-    #     left_sel_sink = TestObserver(immediate_coninue=0)
-    #     right_sel_sink = TestObserver(immediate_coninue=0)
-    #     obs = ControlledZipObservable(
-    #         left=self.left, right=self.right, scheduler=self.scheduler,
-    #         request_left=lambda left, right: left <= right,
-    #         request_right=lambda left, right: right <= left,
-    #         match_func=lambda left, right: left == right,
-    #     )
-    #     obs.observe(ObserverInfo(sink))
-    #     obs.left_selector.observe(ObserverInfo(left_sel_sink))
-    #     obs.right_selector.observe(ObserverInfo(right_sel_sink))
-    #
-    #     ack1 = AckSubject()
-    #     ack2 = AckSubject()
-    #
-    #     self.left.on_next_single(1).subscribe(ack1)
-    #     self.right.on_next_single(2).subscribe(ack2)
-    #
-    #     self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeft)
-    #     self.assertEqual([], left_sel_sink.received)
-    #
-    #     self.left.on_next_single(2).subscribe(ack1)
-    #
-    #     self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeftRight)
-    #
-    #     for instance_obj, class_obj in zip(left_sel_sink.received, [SelectCompleted, SelectNext, SelectCompleted]):
-    #         self.assertIsInstance(instance_obj, class_obj)
+    def test_select_message_even_if_no_two_elements_match(self):
+        """
+                         ack.on_next
+        WaitOnLeftRight ------------> WaitOnLeft
+        """
 
-    # def test_use_case_1_sync_ack(self):
-    #     sink = TestObserver()
-    #     obs = ControlledZipObservable(left=self.left, right=self.right, scheduler=self.scheduler,
-    #                                   request_left=lambda l, r: True,
-    #                                   request_right=lambda l, r: isinstance(l, self.Go),
-    #                                   match_func=lambda l, r: True)
-    #     obs.observe(ObserverInfo(sink))
-    #
-    #     go = self.Go()
-    #     stop = self.Stop()
-    #
-    #     ack1 = self.left.on_next_iter([go, stop, stop, go])
-    #     self.assertListEqual(sink.received, [])
-    #
-    #     ack2 = self.right.on_next_iter([1, 2, 3])
-    #     self.assertListEqual(sink.received, [(go, 1), (stop, 2), (stop, 2), (go, 2)])
-    #
-    # def test_use_case_1_async_ack(self):
-    #     sink = TestObserver(immediate_coninue=0)
-    #     obs = ControlledZipObservable(left=self.left, right=self.right, scheduler=self.scheduler,
-    #                                   request_left=lambda l, r: True,
-    #                                   request_right=lambda l, r: isinstance(l, self.Go),
-    #                                   match_func=lambda l, r: True)
-    #     obs.observe(ObserverInfo(sink))
-    #
-    #     go = self.Go()
-    #     stop = self.Stop()
-    #
-    #     ack1 = self.left.on_next_iter([go, stop])
-    #     self.assertListEqual(sink.received, [])
-    #
-    #     ack2 = self.right.on_next_iter([1, 2, 3])
-    #     self.assertListEqual(sink.received, [(go, 1), (stop, 2)])
-    #
-    #     sink.ack.on_next(continue_ack)
-    #     self.assertTrue(ack1.has_value)
-    #
-    #     ack3 = self.left.on_next_iter([stop, go])
-    #     self.assertListEqual(sink.received, [(go, 1), (stop, 2), (stop, 2), (go, 2)])
-    #
-    #     sink.ack.on_next(continue_ack)
-    #     self.assertTrue(ack3.has_value)
+        sink = TestObserver(immediate_coninue=0)
+        left_sel_sink = TestObserver(immediate_coninue=0)
+        right_sel_sink = TestObserver(immediate_coninue=0)
+        obs = ControlledZipObservable(
+            left=self.left, right=self.right, scheduler=self.scheduler,
+            request_left=lambda left, right: left <= right,
+            request_right=lambda left, right: right <= left,
+            match_func=lambda left, right: left == right,
+        )
+        obs.observe(ObserverInfo(sink))
+        obs.left_selector.observe(ObserverInfo(left_sel_sink))
+        obs.right_selector.observe(ObserverInfo(right_sel_sink))
+
+        ack1 = AckSubject()
+        ack2 = AckSubject()
+
+        self.left.on_next_single(1).subscribe(ack1)
+        self.right.on_next_single(2).subscribe(ack2)
+
+        self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeft)
+        self.assertIsInstance(left_sel_sink.received[0], SelectCompleted)
+
+        self.left.on_next_single(2).subscribe(ack1)
+
+        self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeftRight)
+
+        for instance_obj, class_obj in zip(left_sel_sink.received, [SelectCompleted, SelectNext, SelectCompleted]):
+            self.assertIsInstance(instance_obj, class_obj)
+

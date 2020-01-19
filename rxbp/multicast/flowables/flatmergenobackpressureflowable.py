@@ -2,9 +2,9 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.multicast.observables.flatmergenobackpressureobservable import FlatMergeNoBackpressureObservable
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FlatMergeNoBackpressureFlowable(FlowableBase):

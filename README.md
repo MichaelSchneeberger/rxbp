@@ -25,7 +25,7 @@ pip3 install --pre rxbp
 Example
 -------
 
-*rxbackpressure* has a similar syntax like RxPY.
+*rxbackpressure* has a similar syntax as RxPY.
 
 ```python
 # example taken from RxPY
@@ -37,15 +37,15 @@ composed = source.pipe(
     rxbp.op.map(lambda s: len(s)),
     rxbp.op.filter(lambda i: i >= 5)
 )
-composed.subscribe(lambda value: print("Received {0}".format(value)))
+composed.subscribe(lambda value: print(f"Received {value}"))
 ```
 
 Integrate RxPY
 --------------
 
-A RxPY Observable can be converted to a *Flowable* by using the `from_rx` method.
+A RxPY Observable can be converted to a *Flowable* by using the `from_rx` function.
 Equivalently, a *Flowable* can be converted to a RxPY Observable 
-by using the `to_rx` method.
+by using the `to_rx` function.
 
 ```python
 import rx
@@ -62,7 +62,7 @@ composed = source.pipe(
 )
 
 # convert Flowable to Observable
-composed.to_rx().subscribe(lambda value: print("Received {0}".format(value)))
+composed.to_rx().subscribe(lambda value: print(f"Received {value}"))
 ```
 
 Differences from RxPY
@@ -70,7 +70,7 @@ Differences from RxPY
 
 ### Flowable
 
-Similar to a RxPY Observable, a *Flowable* implements a `subscribe` 
+Similar to an RxPY Observable, a *Flowable* implements a `subscribe` 
 method, which is a mechanism that allows to describe a 
 data flow from its source to some sink. The description is
 done with *rxbackpressure* operators exposed by `rxbp.op`.
@@ -83,9 +83,9 @@ executed by calling its `subscribe` method. This will start a chain
 reaction, where each downsream *Flowables* calls the `subscribe` 
 method of its upstream *Flowable* until
 the sources start emitting the data. Once a *Flowable* is subscribed, we
-allow it to have internal mutable states for performance reasons.
+allow it to have internal mutable states.
  
-Compared to RxPY Observables, a *Flowable* uses `Observers` that are
+Compared to RxPY Observables, however, a *Flowable* uses `Observers` that are
 able to back-pressure on an `on_next` method call.
 
 ### MultiCast (experimental)
@@ -219,9 +219,9 @@ Flowable
 - `from_` - create a Flowable that emits each element of an iterable
 - `from_iterable` - see `from_`
 - `from_list` - create a Flowable that emits each element of a list
+- `from_range` - creates a Flowable that emits elements defined by the range
 - `from_rx` - creates a Flowable from a rx Observable that buffers each element emitted by the Observable
 - `return_value` - creates a Flowable that emits a single element
-- `range` - creates a Flowable that emits elements defined by the range
 
 ### Transforming operators
 
@@ -230,9 +230,12 @@ Flowable
 - `flat_map` - flattens a Flowable of Flowables
 - `map` - applies a function to each element emitted by the Flowable
 - `pairwise` - pairing two consecutive elements emitted by the Flowable
+- `reduce` - applies an accumulator function over a Flowable sequence and returns a single element
 - `repeat_first` - repeat the first element by the Flowable forever (until disposed)
 - `share` - multicasts the elements of the Flowable to possibly multiple subscribers
-- `scan` - applies an accumulator function over a Flowable sequence and returns each intermediate result.
+- `scan` - applies an accumulator function over a Flowable sequence and 
+returns each intermediate result.
+- `to_list` - collects the elements of a Flowable sequence and emits a single element
 - `zip_with_index` - the same as `map`, except that the selector function takes 
 index in addition to the value
 
@@ -242,7 +245,7 @@ index in addition to the value
 - `controlled_zip` - combines the elements emitted by two Flowables 
 into pairs in a controlled sequence. 
 - `match` - combines the elements emitted by two Flowables into matching pairs.
-- `collect_flowables` - combines the elements emitted by two Flowables into pairs in 
+- `zip` - combines the elements emitted by two Flowables into pairs in 
 a strict sequence.
 
 ### Other operators
@@ -263,8 +266,6 @@ MultiCast (experimental)
 - `empty` - create an empty *Multicast*
 - `from_flowable` - creates a *Multicast* from a *Flowable* by making it
 a *SharedFlowable*
-- `from_event` - creates a *Multicast* from an event, e.g. the first element emitted
-by a *Flowable*
 
 ### Transforming operators
 
@@ -273,8 +274,6 @@ by a *Flowable*
 - `flat_map` - maps each *Multicast* value by applying a given function and flattens the result.
 - `lift` - lift the current `Observable[T1]` to a `Observable[T2[MultiCast[T1]]]`.
 - `map` - maps each *Multicast* value by applying a given function.
-- `map_with_context` - maps each *Multicast* value by applying a given function, 
-which takes MultiCast context (see `share` operator) as argument
 - `merge` - merges two or more *Multicast* streams together.
 - `reduce_flowable` - creates a *Multicast* that emits a single value
 - `collect_flowables` - zips *Multicast*s emitting a single *Flowable* to a *Multicast* emitting a single value

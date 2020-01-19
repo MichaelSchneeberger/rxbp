@@ -3,11 +3,11 @@ from typing import Callable, Any
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.selectors.base import Base
-from rxbp.selectors.selector import IdentitySelector, ObservableSelector
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.selectors.selectionop import select_observable
+from rxbp.selectors.selector import IdentitySelector, ObservableSelector
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class MatchFlowable(FlowableBase):

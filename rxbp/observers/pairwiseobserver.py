@@ -1,7 +1,7 @@
 import types
 
-from rxbp.ack.stopack import stop_ack
 from rxbp.ack.continueack import continue_ack
+from rxbp.ack.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 

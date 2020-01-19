@@ -1,12 +1,11 @@
 from typing import Dict
 
-import rxbp
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.selectors.base import Base
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.testing.testobservable import TestObservable
 
 

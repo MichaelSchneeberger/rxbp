@@ -1,6 +1,5 @@
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.observables.debugobservable import DebugObservable
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.publishosubject import PublishOSubject

@@ -4,6 +4,7 @@ from typing import Optional
 from rx import Observable
 from rx.core import typing
 from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime, ScheduledAction, ScheduledPeriodicAction
+
 from rxbp.ack.continueack import continue_ack
 from rxbp.flowablebase import FlowableBase
 from rxbp.observer import Observer
@@ -32,6 +33,11 @@ def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Schedu
                 @property
                 def now(self) -> datetime:
                     return self.scheduler.now
+
+                @property
+                def is_order_guaranteed(self) -> bool:
+                    # unknown property, therefore select pessimistically
+                    return False
 
                 def schedule(self, action: ScheduledAction, state: TState = None) -> Disposable:
                     return self.scheduler.schedule(action=action, state=state)

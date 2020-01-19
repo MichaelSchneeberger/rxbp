@@ -1,8 +1,8 @@
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import StopAck
 from rxbp.ack.continueack import ContinueAck
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.operators.map import _map
 from rxbp.ack.operators.zip import _zip
+from rxbp.ack.stopack import StopAck
 
 
 def _merge(self, ack2: AckMixin) -> AckMixin:

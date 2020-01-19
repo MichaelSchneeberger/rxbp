@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Callable, Any, Union, List, Dict
+from typing import Callable, Union, List, Dict
 
 from rxbp.flowable import Flowable
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin

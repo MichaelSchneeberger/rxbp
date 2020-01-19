@@ -3,9 +3,9 @@ from typing import Callable
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.firstobservable import FirstObservable
 from rxbp.selectors.bases import NumericalBase
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FirstFlowable(FlowableBase):

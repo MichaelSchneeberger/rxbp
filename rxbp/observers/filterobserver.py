@@ -2,8 +2,8 @@ import functools
 from typing import Callable, Any
 
 from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import stop_ack
 from rxbp.ack.operators.merge import _merge
+from rxbp.ack.stopack import stop_ack
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
 from rxbp.selectors.selectionmsg import select_next, select_completed

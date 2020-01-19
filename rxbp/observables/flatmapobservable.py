@@ -1,13 +1,13 @@
-import sys
 import threading
 from typing import Callable, Any, Optional
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import StopAck, stop_ack
-from rxbp.ack.continueack import ContinueAck, continue_ack
+
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -147,8 +147,7 @@ class FlatMapObservable(Observable):
             try:
                 # materialize received values immediately
                 outer_vals = list(outer_elem)
-            except:
-                exc = sys.exc_info()
+            except Exception as exc:
                 self._on_error(exc)
                 return stop_ack
 

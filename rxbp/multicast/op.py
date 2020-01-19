@@ -1,8 +1,6 @@
-from typing import List, Callable, Union, Dict, Any, Iterator
+from typing import Callable
 
-from rxbp.flowable import Flowable
 from rxbp.multicast.flowableop import FlowableOp
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastoperator import MultiCastOperator

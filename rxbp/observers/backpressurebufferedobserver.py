@@ -1,11 +1,11 @@
 import threading
 from queue import Queue
 
-from rxbp.ack.stopack import StopAck, stop_ack
-from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType

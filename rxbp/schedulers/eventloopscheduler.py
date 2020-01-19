@@ -4,4 +4,6 @@ from rxbp.scheduler import SchedulerBase
 
 
 class EventLoopScheduler(SchedulerBase, ParentEventLoopScheduler):
-    pass
+    @property
+    def is_order_guaranteed(self) -> bool:
+        return True

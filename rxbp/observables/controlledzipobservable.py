@@ -2,12 +2,12 @@ import threading
 from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import stop_ack
-from rxbp.ack.continueack import continue_ack
+
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.operators.merge import _merge
+from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
@@ -115,9 +115,6 @@ class ControlledZipObservable(Observable):
             last_right_sel_ack = prev_state.right_sel_ack
             other_upstream_ack = prev_state.right_ack
 
-            left_sel = prev_state.left_sel
-            right_sel = prev_state.right_sel
-
         elif not is_left and isinstance(prev_state, ControlledZipStates.WaitOnRight):
             left_val = prev_state.left_val
             left_iter = prev_state.left_iter
@@ -129,16 +126,13 @@ class ControlledZipObservable(Observable):
             last_right_sel_ack = None
             other_upstream_ack = prev_state.left_ack
 
-            left_sel = prev_state.left_sel
-            right_sel = prev_state.right_sel
-
         else:
             raise Exception('unknown state "{}", is_left {}'.format(prev_state, is_left))
 
         # keep elements to be sent in a buffer. Only when the incoming batch of elements is iterated over, the
         # elements in the buffer are sent.
-        left_index_buffer = left_sel or []                  # index of the elements from the left observable that got selected
-        right_index_buffer = right_sel or []                 #   by the match function
+        left_index_buffer = []                  # index of the elements from the left observable that got selected
+        right_index_buffer = []                 # by the match function
         zipped_output_buffer = []
 
         request_new_elem_from_left = False

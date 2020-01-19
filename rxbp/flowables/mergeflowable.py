@@ -1,8 +1,8 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.mergeobservable import MergeObservable
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class MergeFlowable(FlowableBase):

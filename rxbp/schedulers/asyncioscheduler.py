@@ -4,6 +4,7 @@ from threading import Thread
 from typing import Union, Callable, Any
 
 from rx.disposable import Disposable
+
 from rxbp.scheduler import SchedulerBase
 
 

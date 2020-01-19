@@ -2,6 +2,7 @@ from typing import Callable
 
 import rx
 from rx import operators as rxop
+
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.typing import MultiCastValue

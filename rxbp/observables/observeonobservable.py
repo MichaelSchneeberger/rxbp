@@ -1,6 +1,6 @@
-from rxbp.ack.stopack import StopAck
-from rxbp.ack.continueack import ContinueAck
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import ContinueAck
+from rxbp.ack.stopack import StopAck
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -22,42 +22,48 @@ class ObserveOnObservable(Observable):
                 self.scheduler = scheduler
                 self.trampoline = TrampolineScheduler()
 
+                if scheduler.is_order_guaranteed:
+                    def schedule_func(action):
+                        self.scheduler.schedule(action)
+
+                # if the order of schedule actions cannot be guaranteed
+                # by the scheduler, then use a TrampolineScheduler on top
+                # of the scheduler to guarantee the order
+                else:
+                    def schedule_func(action):
+                        def action_on_scheduler(_, __):
+                            self.trampoline.schedule(action)
+                        self.scheduler.schedule(action_on_scheduler)
+
+                self.schedule_func = schedule_func
+
             def on_next(self, elem: ElementType):
                 ack_subject = AckSubject()
 
-                def action_on_scheduler(_, __):
-                    def action_on_trampoline(_, __):
-                        inner_ack = observer.on_next(elem)
+                def action(_, __):
+                    inner_ack = observer.on_next(elem)
 
-                        if isinstance(inner_ack, ContinueAck):
-                            ack_subject.on_next(inner_ack)
-                        elif isinstance(inner_ack, StopAck):
-                            ack_subject.on_next(inner_ack)
-                        else:
-                            inner_ack.subscribe(ack_subject)
+                    if isinstance(inner_ack, ContinueAck):
+                        ack_subject.on_next(inner_ack)
+                    elif isinstance(inner_ack, StopAck):
+                        ack_subject.on_next(inner_ack)
+                    else:
+                        inner_ack.subscribe(ack_subject)
 
-                    self.trampoline.schedule(action_on_trampoline)
-
-                self.scheduler.schedule(action_on_scheduler)
+                self.schedule_func(action)
                 return ack_subject
 
             def on_error(self, exc):
                 def action(_, __):
-                    def action_on_trampoline(_, __):
-                        observer.on_error(exc)
+                    observer.on_error(exc)
 
-                    self.trampoline.schedule(action_on_trampoline)
-
-                self.scheduler.schedule(action)
+                self.schedule_func(action)
 
             def on_completed(self):
                 def action(_, __):
-                    def action_on_trampoline(_, __):
-                        observer.on_completed()
+                    observer.on_completed()
 
-                    self.trampoline.schedule(action_on_trampoline)
-
-                self.scheduler.schedule(action)
+                self.schedule_func(action)
 
         observe_on_observer = ObserveOnObserver(scheduler=self.scheduler)
         observer_on_subscription = ObserverInfo(observe_on_observer, is_volatile=observer_info.is_volatile)

@@ -2,9 +2,9 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.fastfilterobservable import FastFilterObservable
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FastFilterFlowable(FlowableBase):

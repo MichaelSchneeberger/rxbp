@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Iterator
+from typing import Callable
 
 from rxbp.multicast.flowableop import FlowableOp
 from rxbp.multicast.typing import MultiCastValue

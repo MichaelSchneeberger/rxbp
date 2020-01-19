@@ -1,6 +1,7 @@
 from typing import List
 
 from rx.disposable import CompositeDisposable
+
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo

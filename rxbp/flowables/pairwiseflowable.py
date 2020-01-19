@@ -1,10 +1,10 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.pairwiseobservable import PairwiseObservable
-from rxbp.selectors.bases import PairwiseBase
 from rxbp.selectors.base import Base
+from rxbp.selectors.bases import PairwiseBase
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class PairwiseFlowable(FlowableBase):

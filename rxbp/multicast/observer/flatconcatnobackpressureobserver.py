@@ -1,8 +1,8 @@
 import threading
 from typing import Callable, Any, List
 
-from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.continueack import continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer

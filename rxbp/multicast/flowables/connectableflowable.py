@@ -1,10 +1,11 @@
 from rx.disposable import Disposable
+
 from rxbp.flowablebase import FlowableBase
 from rxbp.multicast.observables.connectableobservable import ConnectableObservable
 from rxbp.observers.connectableobserver import ConnectableObserver
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class ConnectableFlowable(FlowableBase):

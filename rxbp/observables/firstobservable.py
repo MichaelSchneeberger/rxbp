@@ -1,7 +1,7 @@
-import sys
 from typing import Callable
 
 from rx.internal import SequenceContainsNoElementsError
+
 from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -52,11 +52,8 @@ class FirstObservable(Observable):
                             func()
                         else:
                             source.raise_exception(func)
-                    except:
-                        exc = sys.exc_info()
+                    except Exception as exc:
                         observer.on_error(exc)
-                # else:
-                #     observer.on_completed()
 
         first_observer = FirstObserver()
         map_subscription = ObserverInfo(first_observer, is_volatile=observer_info.is_volatile)

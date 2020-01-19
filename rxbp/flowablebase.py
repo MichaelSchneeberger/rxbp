@@ -3,9 +3,9 @@ from abc import ABC, abstractmethod
 from typing import Callable, Any
 
 from rx.disposable import Disposable
-from rxbp.ack.stopack import stop_ack
+
 from rxbp.ack.continueack import continue_ack
-from rxbp.flowableopmixin import FlowableOpMixin
+from rxbp.ack.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler

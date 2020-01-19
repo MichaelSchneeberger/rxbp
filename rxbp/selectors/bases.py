@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 from typing import Any, Iterable, List
 
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.selectors.base import Base
 from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
-from rxbp.selectors.selector import Selector, IdentitySelector, ObservableSelector
 from rxbp.selectors.observables.identityselectorobservable import IdentitySelectorObservable
+from rxbp.selectors.selector import Selector, IdentitySelector, ObservableSelector
 from rxbp.subscriber import Subscriber
 
 

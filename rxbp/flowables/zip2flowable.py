@@ -2,10 +2,10 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.zip2observable import Zip2Observable
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.selectors.selector import IdentitySelector
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class Zip2Flowable(FlowableBase):

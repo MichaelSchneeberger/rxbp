@@ -9,6 +9,10 @@ class TestScheduler(SchedulerBase, VirtualTimeScheduler):
         self.r = UncaughtExceptionReport()
         self.execution_model = BatchedExecution(16)
 
+    @property
+    def is_order_guaranteed(self) -> bool:
+        return True
+
     def report_failure(self, exc: Exception):
         return self.r.report_failure(exc)
 

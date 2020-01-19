@@ -1,8 +1,9 @@
 import functools
 import itertools
-from typing import Callable, Any, Generic, Tuple, List, Iterator
+from typing import Callable, Any, Generic, Tuple, Iterator
 
 import rx
+
 import rxbp
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableopmixin import FlowableOpMixin

@@ -2,10 +2,10 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.filterobservable import FilterObservable
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.selectors.selectionop import merge_selectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FilterFlowable(FlowableBase):

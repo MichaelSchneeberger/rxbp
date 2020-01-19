@@ -1,8 +1,7 @@
 from typing import Callable, Iterator
 
 import rx
-from rx import operators as rxop, Observable
-from rx.core import Observer
+from rx import Observable
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase

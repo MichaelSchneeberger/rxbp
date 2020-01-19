@@ -1,7 +1,6 @@
-from typing import Callable, Any, Iterator
+from typing import Callable, Iterator
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription

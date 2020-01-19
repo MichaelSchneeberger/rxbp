@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Generic, Callable, Iterator
+from typing import Generic, Callable
 
 import rx
 from rx import operators as rxop
@@ -17,7 +17,6 @@ from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
 from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
 from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
-from rxbp.multicast.multicasts.maptoiteratormulticast import MapToIteratorMultiCast
 from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast

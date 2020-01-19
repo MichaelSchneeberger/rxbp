@@ -7,9 +7,8 @@ from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubj
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.bases import ObjectRefBase
-from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription
 from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.subscriber import Subscriber
 
 
 class RefCountFlowable(FlowableBase):

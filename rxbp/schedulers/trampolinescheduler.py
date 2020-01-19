@@ -8,6 +8,7 @@ from rx.core import typing
 from rx.internal import PriorityQueue
 from rx.scheduler.scheduleditem import ScheduledItem
 from rx.scheduler.scheduler import Scheduler
+
 from rxbp.scheduler import SchedulerBase as RxBPSchedulerBase
 
 log = logging.getLogger('Rx')
@@ -39,6 +40,10 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
         self.queue = PriorityQueue()
 
         self.lock = threading.RLock()
+
+    @property
+    def is_order_guaranteed(self) -> bool:
+        return True
 
     def schedule(self,
                  action: typing.ScheduledAction,
