@@ -277,7 +277,7 @@ def return_value(elem: Any):
             class EmptyObservable(Observable):
                 def observe(self, observer_info: ObserverInfo) -> Disposable:
                     def action(_, __):
-                        observer_info.observer.on_next(elem)
+                        observer_info.observer.on_next([elem])
                         observer_info.observer.on_completed()
 
                     return subscriber.subscribe_scheduler.schedule(action)

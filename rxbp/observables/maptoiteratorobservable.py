@@ -29,7 +29,7 @@ class MapToIteratorObservable(Observable):
                     for v in elem:
                         yield from func(v)
 
-                return observer.on_next(map_gen())
+                return observer.on_next(list(map_gen()))
 
             def on_error(self, exc):
                 return observer.on_error(exc)

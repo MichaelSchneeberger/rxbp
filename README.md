@@ -76,9 +76,9 @@ data flow from its source to some sink. The description is
 done with *rxbackpressure* operators exposed by `rxbp.op`.
 
 Like in functional programming, usings *rxbackpressure* operators 
-does not create any mutable states but rather concatenates functions 
-without calling them yet. Or, we first describe what we intend to 
-do in form of a plan, and then we execute the plan. A *Flowable* is 
+does not create any mutable states, but rather concatenates functions 
+without calling them yet. We first describe what we intend to 
+do in form of a plan and then execute the plan. A *Flowable* is 
 executed by calling its `subscribe` method. This will start a chain 
 reaction, where each downsream *Flowables* calls the `subscribe` 
 method of its upstream *Flowable* until
@@ -86,23 +86,22 @@ the sources start emitting the data. Once a *Flowable* is subscribed, we
 allow it to have internal mutable states.
  
 Compared to RxPY Observables, however, a *Flowable* uses `Observers` that are
-able to back-pressure on an `on_next` method call.
+able to back-pressure on an `on_next` method call. This has an effect
+on how certain operators behave differently from the ones in RxPY.
 
 ### MultiCast (experimental)
 
-A `MultiCast` is used when a *Flowable* emits elements to more than
+A *MultiCast* is used when a *Flowable* emits elements to more than
 one `Observer`, and can be though of a nested *Flowable* of type
  `rx.Observable[T[Flowable]]`.
 
-In RxPY, there are operators called `publish` and `share`,
-which create a multicast observable that can then be subscribed
-by more than one downstream subscriber. In *rxbackpressure*, however,
-there is no such operator, and there are good reasons for that.
-The problem is that an RxPY observable sequence using a multicast 
-observable can only be subscribed once. This is because calling
-the `subscribe` method of a multicast observable more than once will
-not rerun the observable but register the subscriber to a multicast
-subscription.
+This implementation is quite different from RxPY and there are good
+reasons for that. In RxPY, there is an operator called `share`,
+that turns an *Observable* into a so-called hot *Observable* allowing
+multiple downstream subscribers to receive the same elements. Turning
+an *Observable* hot produces a side-effect such that subsequent `subscribe`
+calls don't propagate upstream. The following example calls the 
+*Observable* twice, but the second time no elements are sent. 
 
 ``` python
 import rx
@@ -125,18 +124,18 @@ The previous code outputs:
 3
 ```
 
-To get rid of this drawback, *rxbackpressure* introduces the `MultiCast`
-type.
-A `MultiCast` represents a collection of *Flowable* and can
- be though of as `rx.Observable[T[Flowable]]` where T is defined by the user.
-Operators on *MultiCasts* are exposed through `rxbp.multicast.op`.
+In *rxbackpressure*, however, a *Flowable* can only be "shared" if it 
+is nested inside a *MultiCast*. A *MultiCast* represents a collection 
+of possibly hot *Flowables* and can be though of being of type
+`rx.Observable[T[Flowable]]`, where `T` is defined by the user.
+Operators on *MultiCasts* stream are exposed through `rxbp.multicast.op`.
 
 ```python
 import rxbp
 
 f = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
     rxbp.multicast.op.map(lambda base: base.pipe(
-        rxbp.op.collect_flowables(base.pipe(
+        rxbp.op.zip(base.pipe(
             rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),
         ),
@@ -158,7 +157,7 @@ The previous code outputs:
 
 ### match operator (experimental)
 
-The `match` operator tries to match two *Flowable*, 
+The `match` operator tries to match two *Flowables*, 
 and raises an exception otherwise.
 Two observables match if they have the same base or if there exists 
 a mapping that maps 
@@ -166,10 +165,10 @@ one base to the base of the other *Flowable*. These mappings
 are called *selectors* and propagated internally when subscribing
 to a *Flowable*.
 
-If two Flowables have the same base, 
-they should match in the sense of the `collect_flowables` operator,
+If two *Flowables* have the same base, 
+they should match in the sense of the `zip` operator,
 e.g. every pair of elements that get zipped from the two
- Flowables should belong together.
+ *Flowables* should belong together.
 
 ```python
 import rxbp
@@ -196,15 +195,15 @@ When to use a Flowable, when RxPY Observable?
 
 A *Flowable* is used when some asynchronous stage cannot process the
 data fast enough, or needs to synchronize the data with some other event.
-Let's take the `collect_flowables` operator for instance. It gets elements from
+Let's take the `zip` operator for instance. It gets elements from
 two or more sources and emits a tuple once it received one
 element from each source. But what happens if one source emits the
-elements before the others do? Without back-pressure, the `collect_flowables` operation
+elements before the others do? Without back-pressure, the `zip` operation
 has to buffer the elements until it receives data from the other sources.
 This might be ok depending on how much data needs to be buffered. But
-often we can not risk having too much data buffered somewhere in our
-stream, which might lead to an out of memory exception. Therefore, it
-is better to back-pressure data sources until that data is actually
+sometimes we can not risk having too much data buffered somewhere in our
+stream, which might lead to an out of memory exception. In this case,
+back-pressure holds the data back until it is actually
 needed.
 
 The advantage of a RxPY Observable is that it is generally faster
@@ -263,9 +262,12 @@ MultiCast (experimental)
 
 ### Create a MultiCast
 
-- `empty` - create an empty *Multicast*
-- `from_flowable` - creates a *Multicast* from a *Flowable* by making it
-a *SharedFlowable*
+- `empty` - create an empty *MultiCast*
+- `from_flowable` - creates a *MultiCast* from a *Flowable* by making it
+a *MultiCastFlowable*
+- `from_iterable` - create a *MultiCast* from an iterable
+- `from_observable` - create a *MultiCast* from an *rx.Observable*
+- `return_value` - create a *MultiCast* that emits a single element
 
 ### Transforming operators
 

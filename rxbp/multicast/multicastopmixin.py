@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Any
+
+import rx
 
 from rxbp.multicast.flowableop import FlowableOp
 from rxbp.multicast.typing import MultiCastValue
@@ -9,6 +11,13 @@ from rxbp.typing import ValueType
 class MultiCastOpMixin(ABC):
     @abstractmethod
     def debug(self, name: str = None):
+        ...
+
+    @abstractmethod
+    def default_if_empty(
+            self,
+            val: Any,
+    ):
         ...
 
     @abstractmethod
@@ -66,6 +75,10 @@ class MultiCastOpMixin(ABC):
     # @abstractmethod
     # def map_to_iterator(self, func: Callable[[MultiCastValue], Iterator[MultiCastValue]]):
     #     ...
+
+    @abstractmethod
+    def observe_on(self, scheduler: rx.typing.Scheduler):
+        ...
 
     @abstractmethod
     def reduce_flowable(

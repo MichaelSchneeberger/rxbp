@@ -1,4 +1,6 @@
-from typing import Callable
+from typing import Callable, Any
+
+import rx
 
 from rxbp.multicast.flowableop import FlowableOp
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
@@ -12,6 +14,15 @@ from rxbp.typing import ValueType
 def debug(name: str):
     def op_func(source: MultiCastOpMixin):
         return source.debug(name=name)
+
+    return MultiCastOperator(op_func)
+
+
+def default_if_empty(
+        val: Any,
+):
+    def op_func(source: MultiCastOpMixin):
+        return source.default_if_empty(val=val)
 
     return MultiCastOperator(op_func)
 
@@ -113,6 +124,13 @@ def map_with_op(func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
 #         return source.map_to_iterator(func=func)
 #
 #     return MultiCastOperator(op_func)
+
+
+def observe_on(scheduler: rx.typing.Scheduler):
+    def op_func(source: MultiCastOpMixin):
+        return source.observe_on(scheduler=scheduler)
+
+    return MultiCastOperator(op_func)
 
 
 def reduce_flowable(

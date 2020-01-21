@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Generic, Callable
+from typing import Generic, Callable, Any
 
 import rx
 from rx import operators as rxop
@@ -12,12 +12,14 @@ from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
+from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
 from rxbp.multicast.multicasts.defermulticast import DeferMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
 from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
 from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
 from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
+from rxbp.multicast.multicasts.observeonmulticast import ObserveOnMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
 from rxbp.multicast.multicasts.zipmulticast import ZipMultiCast
@@ -50,6 +52,12 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     ):
 
         return self._copy(DebugMultiCast(source=self, name=name))
+
+    def default_if_empty(
+            self,
+            val: Any,
+    ):
+        return self._copy(DefaultIfEmptyMultiCast(source=self, val=val))
 
     def empty(self):
         return rxbp.multicast.empty()
@@ -142,6 +150,9 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
 
     def pipe(self, *operators: MultiCastOperator) -> 'MultiCast':
         return reduce(lambda acc, op: op(acc), operators, self)
+
+    def observe_on(self, scheduler: rx.typing.Scheduler):
+        return self._copy(ObserveOnMultiCast(source=self, scheduler=scheduler))
 
     def reduce_flowable(
             self,

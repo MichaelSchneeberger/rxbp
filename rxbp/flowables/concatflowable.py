@@ -32,7 +32,7 @@ class ConcatFlowable(FlowableBase):
 
                 selector = PublishOSubject(scheduler=subscriber.scheduler)
 
-                class ObservableWithPassivListener(Observable):
+                class ObservableWithPassiveListener(Observable):
                     def __init__(self, observable: Observable, selector: OSubjectBase):
                         self.observable = observable
                         self.selector = selector
@@ -41,11 +41,13 @@ class ConcatFlowable(FlowableBase):
                         observer = observer_info.observer
                         source = self
 
-                        class ObserverWithPassivListener(Observer):
+                        class ObserverWithPassiveListener(Observer):
 
                             def on_next(self, elem: ElementType) -> AckMixin:
-                                ack1 = source.selector.on_next(elem)
-                                ack2 = observer.on_next(elem)
+                                buffer = list(elem)     # todo: add try except
+
+                                ack1 = source.selector.on_next(buffer)
+                                ack2 = observer.on_next(buffer)
                                 return _merge(ack1, ack2)
 
                             def on_error(self, exc: Exception):
@@ -56,10 +58,10 @@ class ConcatFlowable(FlowableBase):
                                 source.selector.on_completed()
                                 observer.on_completed()
 
-                        observer_info = observer_info.copy(observer=ObserverWithPassivListener())
+                        observer_info = observer_info.copy(observer=ObserverWithPassiveListener())
                         return self.observable.observe(observer_info)
 
-                observable = ObservableWithPassivListener(subscription.observable, selector)
+                observable = ObservableWithPassiveListener(subscription.observable, selector)
 
                 yield subscription, observable, selector
 

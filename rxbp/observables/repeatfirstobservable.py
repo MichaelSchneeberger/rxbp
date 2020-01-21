@@ -11,14 +11,12 @@ from rxbp.typing import ElementType
 
 
 class RepeatFirstObservable(Observable):
-    def __init__(self, source: Observable, scheduler: Scheduler, batch_size: int):
+    def __init__(self, source: Observable, scheduler: Scheduler):
         self.source = source
         self.scheduler = scheduler
-        self.batch_size = batch_size
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
-        batch_size = self.batch_size
         source = self
 
         class RepeatFirstObserver(Observer):
@@ -36,7 +34,11 @@ class RepeatFirstObservable(Observable):
                         observer.on_error(exc)
                         return stop_ack
 
-                batch = [first_elem for _ in range(batch_size)]
+                def gen_batch():
+                    while True:
+                        yield first_elem
+
+                batch = gen_batch()
 
                 def action(_, __):
                     while True:

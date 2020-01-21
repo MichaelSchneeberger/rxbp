@@ -92,30 +92,30 @@ def from_flowable(
     return MultiCast(FromObjectMultiCast())
 
 
-def from_event(
-        source: Flowable,
-        func: Callable[[Any], MultiCastBase] = None,
-):
-    """ Emits `MultiCastBases` with `MultiCastBases` defined by a lift_func
-    """
-
-    class FromEventMultiCast(MultiCastBase):
-        def get_source(self, info: MultiCastInfo) -> Flowable:
-            subscribe_on_flowable = Flowable(SubscribeOnFlowable(source, scheduler=info.source_scheduler))
-            first_flowable = subscribe_on_flowable.pipe(
-                rxbp.op.first(raise_exception=lambda f: f()),
-            )
-
-            if func is None:
-                result = first_flowable
-            else:
-                result = first_flowable.pipe(
-                    rxbp.op.map(func=func),
-                )
-
-            return to_rx(result, subscribe_schduler=info.multicast_scheduler)
-
-    return MultiCast(FromEventMultiCast())
+# def from_event(
+#         source: Flowable,
+#         func: Callable[[Any], MultiCastBase] = None,
+# ):
+#     """ Emits `MultiCastBases` with `MultiCastBases` defined by a lift_func
+#     """
+#
+#     class FromEventMultiCast(MultiCastBase):
+#         def get_source(self, info: MultiCastInfo) -> Flowable:
+#             subscribe_on_flowable = Flowable(SubscribeOnFlowable(source, scheduler=info.source_scheduler))
+#             first_flowable = subscribe_on_flowable.pipe(
+#                 rxbp.op.first(raise_exception=lambda f: f()),
+#             )
+#
+#             if func is None:
+#                 result = first_flowable
+#             else:
+#                 result = first_flowable.pipe(
+#                     rxbp.op.map(func=func),
+#                 )
+#
+#             return to_rx(result, subscribe_schduler=info.multicast_scheduler)
+#
+#     return MultiCast(FromEventMultiCast())
 
 
 def merge(

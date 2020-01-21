@@ -42,10 +42,7 @@ class MergeSelectorObservable(Observable):
 
         # state once observed
         self.termination_state = RawTerminationStates.InitState()
-        self.state = RawControlledZipStates.WaitOnLeftRight(
-            left_sel=None,
-            right_sel=None,
-        )
+        self.state = RawControlledZipStates.WaitOnLeftRight()
 
     def _iterate_over_batch(
             self,
@@ -99,22 +96,18 @@ class MergeSelectorObservable(Observable):
             left_val = val
             left_iter = iterable
             left_in_ack = upstream_ack
-            last_left_sel_ack = None
             right_val = prev_state.right_val
             right_iter = prev_state.right_iter
             right_in_ack = prev_state.right_ack
-            last_right_sel_ack = prev_state.right_sel_ack
             other_upstream_ack = prev_state.right_ack
 
         elif not is_left and isinstance(prev_state, ControlledZipStates.WaitOnRight):
             left_val = prev_state.left_val
             left_iter = prev_state.left_iter
             left_in_ack = prev_state.left_ack
-            last_left_sel_ack = prev_state.left_sel_ack
             right_val = val
             right_iter = iterable
             right_in_ack = upstream_ack
-            last_right_sel_ack = None
             other_upstream_ack = prev_state.left_ack
 
         else:
@@ -183,19 +176,13 @@ class MergeSelectorObservable(Observable):
 
         # all elements in the left and right iterable are send downstream
         if request_new_elem_from_left and request_new_elem_from_right:
-            next_state = RawControlledZipStates.WaitOnLeftRight(
-                left_sel=None,
-                right_sel=None,
-            )
+            next_state = RawControlledZipStates.WaitOnLeftRight()
 
         elif request_new_elem_from_left:
             next_state = RawControlledZipStates.WaitOnLeft(
                 right_val=right_val,
                 right_iter=right_iter,
                 right_ack=right_in_ack,
-                right_sel_ack=None,
-                left_sel=None,
-                right_sel=None,
             )
 
         elif request_new_elem_from_right:
@@ -203,9 +190,6 @@ class MergeSelectorObservable(Observable):
                 left_val=left_val,
                 left_iter=left_iter,
                 left_ack=left_in_ack,
-                left_sel_ack=None,
-                left_sel=None,
-                right_sel=None,
             )
 
         else:
@@ -221,10 +205,6 @@ class MergeSelectorObservable(Observable):
         prev_termination_state = raw_prev_termination_state.get_measured_state()
 
         def stop_active_acks():
-            if isinstance(last_right_sel_ack, AckSubject):
-                last_right_sel_ack.on_next(stop_ack)
-            elif isinstance(last_left_sel_ack, AckSubject):
-                last_left_sel_ack.on_next(stop_ack)
             other_upstream_ack.on_next(stop_ack)
 
         # stop back-pressuring both sources, because there is no need to request elements
@@ -240,12 +220,14 @@ class MergeSelectorObservable(Observable):
         # from completed source
         elif isinstance(prev_termination_state, TerminationStates.RightCompletedState) \
                 and request_new_elem_from_right:
+
             self._signal_on_complete_or_on_error(state=next_state)
             stop_active_acks()
             return stop_ack
 
         # in error state, stop back-pressuring both sources
         elif isinstance(prev_termination_state, TerminationStates.ErrorState):
+
             self._signal_on_complete_or_on_error(state=next_state, ex=prev_termination_state.ex)
             stop_active_acks()
             return stop_ack

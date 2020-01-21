@@ -2,6 +2,8 @@ from typing import List
 
 from rx.disposable import CompositeDisposable
 
+from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -37,8 +39,20 @@ class ConcatObservable(Observable):
 
             def on_completed(self):
                 try:
-                    next_source = next(iter_conn_obs)
-                    next_source.connect()
+                    class _(Single):
+                        def on_next(self, elem):
+                            next_source = next(iter_conn_obs)
+                            next_source.connect()
+
+                        def on_error(self, exc: Exception):
+                            pass
+
+                    if isinstance(self.ack, AckSubject):
+                        self.ack.subscribe(_())
+                    else:
+                        next_source = next(iter_conn_obs)
+                        next_source.connect()
+
                 except StopIteration:
                     observer.on_completed()
 

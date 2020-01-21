@@ -291,7 +291,7 @@ class TestControlledZipObservable(TestCaseBase):
         self.assertTrue(ack1.has_value)
         self.assertTrue(ack2.has_value)
 
-    def test_select_message_even_if_no_two_elements_match(self):
+    def test_select_message_if_no_two_elements_match(self):
         """
                          ack.on_next
         WaitOnLeftRight ------------> WaitOnLeft
@@ -300,6 +300,8 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_coninue=0)
         left_sel_sink = TestObserver(immediate_coninue=0)
         right_sel_sink = TestObserver(immediate_coninue=0)
+        ack1 = AckSubject()
+        ack2 = AckSubject()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -309,9 +311,6 @@ class TestControlledZipObservable(TestCaseBase):
         obs.observe(ObserverInfo(sink))
         obs.left_selector.observe(ObserverInfo(left_sel_sink))
         obs.right_selector.observe(ObserverInfo(right_sel_sink))
-
-        ack1 = AckSubject()
-        ack2 = AckSubject()
 
         self.left.on_next_single(1).subscribe(ack1)
         self.right.on_next_single(2).subscribe(ack2)
