@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Callable, Any, Iterator
 
+from rxbp.flowablebase import FlowableBase
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.base import Base
 from rxbp.typing import ValueType
@@ -8,21 +9,21 @@ from rxbp.typing import ValueType
 
 class FlowableOpMixin(ABC):
     @abstractmethod
-    def buffer(self, buffer_size: int) -> 'FlowableOpMixin':
+    def buffer(self, buffer_size: int) -> FlowableBase:
         ...
 
     @abstractmethod
-    def concat(self, *sources: 'FlowableOpMixin') -> 'FlowableOpMixin':
+    def concat(self, *sources: FlowableBase) -> FlowableBase:
         ...
 
     @abstractmethod
     def controlled_zip(
             self,
-            right: 'FlowableOpMixin',
+            right: FlowableBase,
             request_left: Callable[[Any, Any], bool] = None,
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
-    ) -> 'FlowableOpMixin':
+    ) -> FlowableBase:
         ...
 
     @abstractmethod
@@ -34,31 +35,31 @@ class FlowableOpMixin(ABC):
             on_ack=None,
             on_raw_ack=None,
             on_ack_msg=None,
-    ) -> 'FlowableOpMixin':
+    ) -> FlowableBase:
         ...
 
     @abstractmethod
-    def fast_filter(self, predicate: Callable[[Any], bool]) -> 'FlowableOpMixin':
+    def fast_filter(self, predicate: Callable[[Any], bool]) -> FlowableBase:
         ...
 
     @abstractmethod
-    def filter(self, predicate: Callable[[Any], bool]) -> 'FlowableOpMixin':
+    def filter(self, predicate: Callable[[Any], bool]) -> FlowableBase:
         ...
 
     @abstractmethod
-    def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'FlowableOpMixin':
+    def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> FlowableBase:
         ...
 
     @abstractmethod
-    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None) -> 'FlowableOpMixin':
+    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None) -> FlowableBase:
         ...
 
     @abstractmethod
-    def flat_map(self, func: Callable[[Any], 'FlowableOpMixin']) -> 'FlowableOpMixin':
+    def flat_map(self, func: Callable[[Any], FlowableBase]) -> FlowableBase:
         ...
 
     @abstractmethod
-    def map(self, func: Callable[[Any], Any]) -> 'FlowableOpMixin':
+    def map(self, func: Callable[[Any], Any]) -> FlowableBase:
         ...
 
     @abstractmethod
@@ -69,19 +70,19 @@ class FlowableOpMixin(ABC):
         ...
 
     @abstractmethod
-    def match(self, *others: 'FlowableOpMixin') -> 'FlowableOpMixin':
+    def match(self, *others: FlowableBase) -> FlowableBase:
         ...
 
     @abstractmethod
-    def merge(self, *others: 'FlowableOpMixin') -> 'FlowableOpMixin':
+    def merge(self, *others: FlowableBase) -> FlowableBase:
         ...
 
     @abstractmethod
-    def observe_on(self, scheduler: Scheduler) -> 'FlowableOpMixin':
+    def observe_on(self, scheduler: Scheduler) -> FlowableBase:
         ...
 
     @abstractmethod
-    def pairwise(self) -> 'FlowableOpMixin':
+    def pairwise(self) -> FlowableBase:
         ...
 
     @abstractmethod
@@ -89,36 +90,36 @@ class FlowableOpMixin(ABC):
             self,
             func: Callable[[Any, Any], Any],
             initial: Any,
-    ) -> 'FlowableOpMixin':
+    ) -> FlowableBase:
         ...
 
     @abstractmethod
-    def repeat_first(self) -> 'FlowableOpMixin':
+    def repeat_first(self) -> FlowableBase:
         ...
 
     @abstractmethod
-    def scan(self, func: Callable[[Any, Any], Any], initial: Any) -> 'FlowableOpMixin':
+    def scan(self, func: Callable[[Any, Any], Any], initial: Any) -> FlowableBase:
         ...
 
-    def share(self) -> 'FlowableOpMixin':
+    def share(self) -> FlowableBase:
         raise Exception('this Flowable cannot be shared. Use multicasting to share Flowables.')
 
     @abstractmethod
-    def _share(self) -> 'FlowableOpMixin':
+    def _share(self) -> FlowableBase:
         ...
 
     @abstractmethod
-    def set_base(self, val: Base) -> 'FlowableOpMixin':
+    def set_base(self, val: Base) -> FlowableBase:
         ...
 
     @abstractmethod
-    def to_list(self) -> 'FlowableOpMixin':
+    def to_list(self) -> FlowableBase:
         ...
 
     @abstractmethod
-    def zip(self, *others: 'FlowableOpMixin') -> 'FlowableOpMixin':
+    def zip(self, *others: FlowableBase) -> FlowableBase:
         ...
 
     @abstractmethod
-    def zip_with_index(self) -> 'FlowableOpMixin':
+    def zip_with_index(self) -> FlowableBase:
         ...

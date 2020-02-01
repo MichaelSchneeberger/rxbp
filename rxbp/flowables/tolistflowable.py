@@ -1,7 +1,7 @@
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.tolistobservable import ToListObservable
-from rxbp.selectors.bases import NumericalBase
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.bases.numericalbase import NumericalBase
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -19,4 +19,4 @@ class ToListFlowable(FlowableBase):
         # to_list emits exactly one element
         base = NumericalBase(1)
 
-        return Subscription(BaseSelectorsTuple(base=base), observable=observable)
+        return Subscription(BaseAndSelectors(base=base), observable=observable)

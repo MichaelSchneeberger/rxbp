@@ -42,7 +42,7 @@ from rxbp.typing import ValueType
 class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
     """ A `Flowable` implements a `subscribe` method allowing to describe a
     data flow from source to sink. The "description" is
-    done with *rxbackpressure* operators exposed to `rxbp.op`.
+    done with *rxbp* operators exposed by `rxbp.op`.
 
     Like in functional programming, usings *rxbackpressure* operators does not create
     any mutable states but rather concatenates functions without calling them
@@ -75,7 +75,7 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
 
     def concat(self, *sources: FlowableBase) -> 'Flowable':
         all_sources = itertools.chain([self], sources)
-        flowable = ConcatFlowable(sources=all_sources)
+        flowable = ConcatFlowable(sources=list(all_sources))
         return self._copy(flowable)
 
     def controlled_zip(
@@ -85,9 +85,18 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
     ) -> 'Flowable[ValueType]':
-        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
+        """
+        Creates a new Flowable from two Flowables by combining their items in pairs. Which
+        item gets paired with an item from the other Flowable is determined by two functions
+        called `request_left` and `request_right`.
 
-        :param selector: a mapping function applied over the generated pairs
+        :param right: other Flowable
+        :param request_left: a function that returns True, if a new element from the left \
+        Flowable is requested to build the the next pair
+        :param request_right: a function that returns True, if a new element from the left \
+        Flowable is requested to build the the next pair
+        :param match_func: a filter function that returns True, if the current pair is sent \
+        downstream
         :return: zipped Flowable
         """
 

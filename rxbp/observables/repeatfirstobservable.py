@@ -29,8 +29,7 @@ class RepeatFirstObservable(Observable):
                     except StopIteration:
                         # empty element, wait for next
                         return continue_ack
-                    except:
-                        exc = sys.exc_info()
+                    except Exception as exc:
                         observer.on_error(exc)
                         return stop_ack
 

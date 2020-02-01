@@ -4,7 +4,7 @@ from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.selectors.base import Base
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -22,7 +22,7 @@ class FlowableOp:
                 )
 
                 return Subscription(
-                    info=BaseSelectorsTuple(
+                    info=BaseAndSelectors(
                         base=base,
                     ),
                     observable=observable,

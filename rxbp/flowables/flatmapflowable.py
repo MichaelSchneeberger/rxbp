@@ -2,7 +2,7 @@ from typing import Any, Callable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.flatmapobservable import FlatMapObservable
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -28,4 +28,4 @@ class FlatMapFlowable(FlowableBase):
         # base becomes undefined after flat mapping
         base = None
 
-        return Subscription(BaseSelectorsTuple(base=base), observable=observable)
+        return Subscription(BaseAndSelectors(base=base), observable=observable)

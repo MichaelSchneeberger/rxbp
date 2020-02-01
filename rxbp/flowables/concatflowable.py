@@ -1,81 +1,39 @@
-from typing import Iterable
+from typing import Iterable, List
 
-from rx.core.typing import Disposable
-
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.operators.merge import _merge
 from rxbp.flowablebase import FlowableBase
-from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.observablesubjects.osubjectbase import OSubjectBase
-from rxbp.observablesubjects.publishosubject import PublishOSubject
-from rxbp.observer import Observer
-from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.bases import ConcatBase
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.bases.concatbase import ConcatBase
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.typing import ElementType
 
 
 class ConcatFlowable(FlowableBase):
-    def __init__(self, sources: Iterable[FlowableBase]):
-
+    def __init__(self, sources: List[FlowableBase]):
         super().__init__()
 
-        self._sources = list(sources)
+        self._sources = sources
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         def gen_subscriptions():
             for source in self._sources:
                 subscription = source.unsafe_subscribe(subscriber)
+                yield subscription
 
-                selector = PublishOSubject(scheduler=subscriber.scheduler)
-
-                class ObservableWithPassiveListener(Observable):
-                    def __init__(self, observable: Observable, selector: OSubjectBase):
-                        self.observable = observable
-                        self.selector = selector
-
-                    def observe(self, observer_info: ObserverInfo) -> Disposable:
-                        observer = observer_info.observer
-                        source = self
-
-                        class ObserverWithPassiveListener(Observer):
-
-                            def on_next(self, elem: ElementType) -> AckMixin:
-                                buffer = list(elem)     # todo: add try except
-
-                                ack1 = source.selector.on_next(buffer)
-                                ack2 = observer.on_next(buffer)
-                                return _merge(ack1, ack2)
-
-                            def on_error(self, exc: Exception):
-                                source.selector.on_error(exc)
-                                observer.on_error(exc)
-
-                            def on_completed(self):
-                                source.selector.on_completed()
-                                observer.on_completed()
-
-                        observer_info = observer_info.copy(observer=ObserverWithPassiveListener())
-                        return self.observable.observe(observer_info)
-
-                observable = ObservableWithPassiveListener(subscription.observable, selector)
-
-                yield subscription, observable, selector
-
-        subscriptions, sources, selectors = zip(*gen_subscriptions())
+        subscriptions = list(gen_subscriptions())
 
         observable = ConcatObservable(
-            sources=sources,
+            sources=[s.observable for s in subscriptions],
             scheduler=subscriber.scheduler,
             subscribe_scheduler=subscriber.subscribe_scheduler,
         )
 
-        base = ConcatBase([s.info for s in subscriptions], selectors)
+        base = ConcatBase(
+            underlying=[s.info for s in subscriptions],
+            sources=observable.selectors,
+        )
 
         return Subscription(
-            info=BaseSelectorsTuple(base=base),
+            info=BaseAndSelectors(base=base),
             observable=observable,
         )

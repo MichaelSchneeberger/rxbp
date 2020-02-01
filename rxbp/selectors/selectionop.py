@@ -1,5 +1,6 @@
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
+from rxbp.observables.debugobservable import DebugObservable
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
@@ -37,7 +38,7 @@ def select_observable(obs: Observable, selector: Observable, scheduler: Schedule
 
     obs = ControlledZipObservable(
         obs,
-        selector,
+        DebugObservable(selector),
         request_left=request_left,
         request_right=lambda l, r: True,
         match_func=lambda l, r: isinstance(r, SelectNext),

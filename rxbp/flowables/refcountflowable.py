@@ -6,8 +6,8 @@ from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import ObjectRefBase
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.bases.objectrefbase import ObjectRefBase
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 
 
@@ -47,7 +47,7 @@ class RefCountFlowable(FlowableBase):
                 subject = self._subject_gen(subscriber.scheduler)
 
                 if subscription.info.base is None:
-                    subscription_info = BaseSelectorsTuple(base=ObjectRefBase(), selectors=subscription.info.selectors)
+                    subscription_info = BaseAndSelectors(base=ObjectRefBase(), selectors=subscription.info.selectors)
                 else:
                     subscription_info = subscription.info
 

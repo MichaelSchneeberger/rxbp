@@ -1,6 +1,5 @@
 from abc import ABC
-from collections import Iterator
-from typing import Optional, Any
+from typing import Optional, Any, Iterator
 
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.mixins.ackmixin import AckMixin

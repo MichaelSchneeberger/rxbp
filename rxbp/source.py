@@ -17,8 +17,9 @@ from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.base import Base
-from rxbp.selectors.bases import NumericalBase, ObjectRefBase
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.bases.numericalbase import NumericalBase
+from rxbp.selectors.bases.objectrefbase import ObjectRefBase
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -47,7 +48,7 @@ def empty():
                     return subscriber.subscribe_scheduler.schedule(action)
 
             return Subscription(
-                info=BaseSelectorsTuple(
+                info=BaseAndSelectors(
                     base=base,
                 ),
                 observable=EmptyObservable(),
@@ -86,7 +87,7 @@ def from_iterable(iterable: Iterable, base: Base = None):
                     return subscriber.subscribe_scheduler.schedule(action)
 
             return Subscription(
-                info=BaseSelectorsTuple(
+                info=BaseAndSelectors(
                     base=base,
                 ),
                 observable=FromIterableObservable(),
@@ -156,7 +157,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
                 )
 
                 return Subscription(
-                    info=BaseSelectorsTuple(
+                    info=BaseAndSelectors(
                         base=base,
                     ),
                     observable=observable,
@@ -191,7 +192,7 @@ def from_list(buffer: List, batch_size: int = None):
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
 
         return Subscription(
-            info=BaseSelectorsTuple(base=base),
+            info=BaseAndSelectors(base=base),
             observable=observable,
         )
 
@@ -255,7 +256,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
         observable = ToBackpressureObservable(scheduler=subscriber.scheduler,
                                               subscribe_scheduler=subscriber.subscribe_scheduler)
         return Subscription(
-            info=BaseSelectorsTuple(base=base_),
+            info=BaseAndSelectors(base=base_),
             observable=observable,
         )
 
@@ -283,7 +284,7 @@ def return_value(elem: Any):
                     return subscriber.subscribe_scheduler.schedule(action)
 
             return Subscription(
-                info=BaseSelectorsTuple(
+                info=BaseAndSelectors(
                     base=base,
                 ),
                 observable=EmptyObservable(),

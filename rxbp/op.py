@@ -16,10 +16,10 @@ def buffer(buffer_size: int):
 
 
 def concat(*sources: FlowableBase):
-    """ Consecutively subscribe each Flowable in a batch after all Flowables of the previous batch complete
+    """ Concatentates Flowables sequences together by back-pressuring the tail Flowables until
+    the current Flowable completed
 
-    :param sources:
-    :return:
+    :param sources: other Flowables that get concatenate to the selected Flowable
     """
 
     def op_func(left: FlowableOpMixin):
@@ -34,15 +34,19 @@ def controlled_zip(
         request_right: Callable[[Any, Any], bool] = None,
         match_func: Callable[[Any, Any], bool] = None,
 ):
-    """ Creates a new observable from two observables by combining their item in pairs in a controlled manner
+    """
+    Creates a new Flowable from two Flowables by combining their items in pairs. Which
+    item gets paired with an item from the other Flowable is determined by two functions
+    called `request_left` and `request_right`.
 
-    :param right: other observable
-    :param request_left: a function that returns True, if a new element from the left observable is requested \
-    to build the the next pair
-    :param request_right: a function that returns True, if a new element from the left observable is requested \
-    to build the the next pair
-    :param match_func: a filter function that returns True, if the current pair is sent downstream
-    :return: zipped observable
+    :param right: other Flowable
+    :param request_left: a function that returns True, if a new element from the left \
+    Flowable is requested to build the the next pair
+    :param request_right: a function that returns True, if a new element from the left \
+    Flowable is requested to build the the next pair
+    :param match_func: a filter function that returns True, if the current pair is sent \
+    downstream
+    :return: zipped Flowable
     """
 
     def op_func(left: FlowableOpMixin):
@@ -58,10 +62,9 @@ def controlled_zip(
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
     def op_func(source: FlowableOpMixin):
-        """ Prints debug messages to the console when providing the name argument
+        """ Prints debug messages to the console when providing the `name` argument
 
-        :param source:
-        :return:
+        :on_next: customize the on next depug print
         """
 
         return source.debug(
@@ -74,13 +77,6 @@ def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=No
         )
 
     return FlowableOperator(op_func)
-
-
-# def execute_on(scheduler: Scheduler):
-#     def func(source: FlowableOpMixin):
-#         return source.execute_on(scheduler=scheduler)
-#
-#     return FlowableOperator(func)
 
 
 def fast_filter(predicate: Callable[[Any], bool]):
@@ -97,7 +93,7 @@ def fast_filter(predicate: Callable[[Any], bool]):
 
 
 def filter(predicate: Callable[[Any], bool]):
-    """ Only emits those items for which the given predicate holds
+    """ Only emits those items for which the given predicate holds.
 
     :param predicate: a function that returns True, if the current element passes the filter
     :return: filtered Flowable
@@ -136,9 +132,10 @@ def first(raise_exception: Callable[[Callable[[], None]], None] = None):
 
 
 def flat_map(func: Callable[[Any], Flowable]):
-    """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
-    as input and returns an inner observable. The resulting observable concatenates the items of each inner
-    observable.
+    """
+    Applies a function to each item emitted by the source and flattens the result.
+    The function takes the Flowable's value type as input and returns an inner Flowable.
+    The resulting Flowable concatenates the items of each inner Flowable.
 
     :param selector: A function that takes any type as input and returns an Flowable.
     :return: a flattened Flowable
@@ -151,10 +148,10 @@ def flat_map(func: Callable[[Any], Flowable]):
 
 
 def map(func: Callable[[Any], Any]):
-    """ Maps each item emitted by the source by applying the given function
+    """ Maps each item emitted by the source by applying the given function.
 
-    :param func: function that defines the mapping applied to each element
-    :return: mapped Flowable
+    :param func: function that defines the mapping applied to each element of the \
+    Flowable sequence.
     """
 
     def op_func(source: FlowableOpMixin):
@@ -166,6 +163,12 @@ def map(func: Callable[[Any], Any]):
 def map_to_iterator(
         func: Callable[[ValueType], Iterator[ValueType]],
 ):
+    """ Creates a Flowable that maps each item emitted by the source to an iterator
+    and emits each element of the iterator.
+
+    :param func: function that defines the mapping applied to each element to an iterator.
+    """
+
     def op_func(source: FlowableOpMixin):
         return source.map_to_iterator(func=func)
 
@@ -173,10 +176,10 @@ def map_to_iterator(
 
 
 def match(*others: Flowable):
-    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+    """ Creates a new Flowable from two or more Flowables by zipping their elements in a
+    matching manner.
 
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped Flowable
+    :param others:
     """
 
     def op_func(left: FlowableOpMixin):

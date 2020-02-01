@@ -2,7 +2,7 @@ from typing import Any
 
 from rxbp.ack.continueack import continue_ack
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subjects.subjectbase import SubjectBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
@@ -16,7 +16,7 @@ class Subject(SubjectBase):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         self._obs_subject = CacheServeFirstOSubject(scheduler=subscriber.scheduler)
-        return Subscription(BaseSelectorsTuple(base=None), self._obs_subject)
+        return Subscription(BaseAndSelectors(base=None), self._obs_subject)
 
     def on_next(self, elem: Any):
         if self._obs_subject is not None:

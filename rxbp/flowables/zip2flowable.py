@@ -2,8 +2,8 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.zip2observable import Zip2Observable
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
-from rxbp.selectors.selector import IdentitySelector
+from rxbp.selectors.baseandselectors import BaseAndSelectors, BaseSelectorsAndSelectorMaps
+from rxbp.selectors.selectormap import IdentitySelectorMap
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -38,8 +38,8 @@ class Zip2Flowable(FlowableBase):
 
         # The resulting collect_flowables Flowable propagates selectors from left and right downstream if the bases of
         # left and right Flowable match
-        if isinstance(result, BaseSelectorsTuple.MatchedBaseMapping):
-            if isinstance(result.left, IdentitySelector) and isinstance(result.right, IdentitySelector):
+        if isinstance(result, BaseSelectorsAndSelectorMaps):
+            if isinstance(result.left, IdentitySelectorMap) and isinstance(result.right, IdentitySelectorMap):
                 base = left_subscription.info.base
 
                 selectors = {}
@@ -61,6 +61,6 @@ class Zip2Flowable(FlowableBase):
         )
 
         return Subscription(
-            info=BaseSelectorsTuple(base=base, selectors=selectors),
+            info=BaseAndSelectors(base=base, selectors=selectors),
             observable=observable,
         )

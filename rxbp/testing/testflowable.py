@@ -3,7 +3,7 @@ from typing import Dict
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.selectors.base import Base
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.testing.testobservable import TestObservable
@@ -22,7 +22,7 @@ class TestFlowable(FlowableBase):
         self.subscriber = subscriber
 
         return Subscription(
-            info=BaseSelectorsTuple(base=self.base, selectors=self.selectors),
+            info=BaseAndSelectors(base=self.base, selectors=self.selectors),
             observable=self.observable,
         )
 

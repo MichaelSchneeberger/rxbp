@@ -3,7 +3,7 @@ from typing import Callable, Any
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.selectors.selectionop import merge_selectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
@@ -51,7 +51,7 @@ class ControlledZipFlowable(FlowableBase):
         )
 
         # 3.a) share_flowable all upstream (left) selectors with left_selector
-        def gen_merged_selector(info: BaseSelectorsTuple, current_selector: Observable):
+        def gen_merged_selector(info: BaseAndSelectors, current_selector: Observable):
             if info.selectors is not None:
                 for base, selector in info.selectors.items():
                     selector = merge_selectors(
@@ -75,6 +75,6 @@ class ControlledZipFlowable(FlowableBase):
         ))
 
         return Subscription(
-            BaseSelectorsTuple(base=None, selectors={**left_selectors, **right_selectors}),
+            BaseAndSelectors(base=None, selectors={**left_selectors, **right_selectors}),
             observable=observable,
         )

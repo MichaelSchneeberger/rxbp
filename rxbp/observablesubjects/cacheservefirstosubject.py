@@ -375,8 +375,7 @@ class CacheServeFirstOSubject(OSubjectBase):
         else:
             try:
                 materialized_values = list(elem)
-            except:
-                exc = sys.exc_info()
+            except Exception as exc:
                 self.on_error(exc)
                 return stop_ack
 
