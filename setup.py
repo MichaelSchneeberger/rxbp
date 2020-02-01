@@ -10,7 +10,7 @@ def my_test_suite():
 
 setup(
     name='rxbp',
-    version='3.0.0a5',
+    version='3.0.0a6',
     packages=find_packages(),
     install_requires=['rx==3.0.1'],
     description='A rxpy extension with back-pressure',
