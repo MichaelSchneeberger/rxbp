@@ -10,13 +10,19 @@ from rxbp.testing.testobservable import TestObservable
 
 
 class TestFlowable(FlowableBase):
-    def __init__(self, base: Base = None, selectors: Dict[Base, Observable] = None, subscriber: Subscriber = None):
+    def __init__(
+            self,
+            base: Base = None,
+            selectors: Dict[Base, Observable] = None,
+            subscriber: Subscriber = None,
+            observable: Observable = None,
+    ):
         super().__init__()
 
         self.base = base
         self.selectors = selectors
         self.subscriber = subscriber
-        self.observable = TestObservable()
+        self.observable = observable or TestObservable()
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         self.subscriber = subscriber

@@ -290,10 +290,10 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return self._copy(flowable)
 
-    def _share(self):#, bind_to: MultiCastContext):
-        # assert isinstance(bind_to, MultiCastContext), \
-        #     f'"{bind_to}" does not give the Flowable the ability to share its elements'
+    def share(self) -> 'Flowable':
+        return self._copy(super().share())
 
+    def _share(self):
         return self._copy(RefCountFlowable(source=self))
 
     def set_base(self, val: Base):

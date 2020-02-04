@@ -1,5 +1,5 @@
 import math
-from typing import Iterable, Any, List
+from typing import Iterable, Any, List, Optional
 
 import rx
 from rx import operators
@@ -22,6 +22,20 @@ from rxbp.selectors.bases.objectrefbase import ObjectRefBase
 from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
+
+
+def _create_base(base: Optional[Any]) -> Base:
+    if base is not None:
+        if isinstance(base, str):
+            base = ObjectRefBase(base)
+        elif isinstance(base, int):
+            base = NumericalBase(base)
+        elif isinstance(base, Base):
+            base = base
+        else:
+            raise Exception(f'illegal base "{base}"')
+
+    return base
 
 
 def concat(sources: Iterable[FlowableBase]):
@@ -57,21 +71,10 @@ def empty():
     return Flowable(EmptyFlowable())
 
 
-def from_iterable(iterable: Iterable, base: Base = None):
+def from_iterable(iterable: Iterable, base: Any = None):
     # return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
 
-    if base is not None:
-        if isinstance(base, str):
-            base = ObjectRefBase(base)
-        elif isinstance(base, int):
-            base = NumericalBase(base)
-        elif isinstance(base, Base):
-            base = base
-        else:
-            raise Exception(f'illegal base "{base}"')
-
-    else:
-        base = None
+    base = _create_base(base)
 
     class FromIterableFlowable(FlowableBase):
         def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
@@ -106,19 +109,10 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
 
     n_elements = stop_idx - start_idx
 
-    if base is not None:
-        if isinstance(base, str):
-            base = ObjectRefBase(base)
-        elif isinstance(base, int):
-            base = NumericalBase(base)
-        elif isinstance(base, Base):
-            base = base
-        else:
-            raise Exception(f'illegal base "{base}"')
-    elif n_elements is not None:
+    base = _create_base(base)
+
+    if base is None:
         base = NumericalBase(n_elements)
-    else:
-        base = None
 
     if batch_size is None:
         class FromRangeIterable:
@@ -166,30 +160,43 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
         return Flowable(FromIterableFlowable())
 
 
-def from_list(buffer: List, batch_size: int = None):
-    # return _from_iterable(iterable=buffer, batch_size=batch_size, n_elements=len(buffer))
+def from_list(buffer: List, batch_size: int = None, base: Any = None):
+    base = _create_base(base)
 
-    base = NumericalBase(len(buffer))
+    if base is None:
+        base = NumericalBase(len(buffer))
 
     def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
 
-        if batch_size is None or batch_size == 1:
-            iterator = ([e] for e in buffer)
+        if batch_size is None or len(buffer) == batch_size:
+            class FromListObservable(Observable):
+                def observe(self, observer_info: ObserverInfo) -> Disposable:
+                    def action(_, __):
+                        observer_info.observer.on_next(buffer)
+                        observer_info.observer.on_completed()
+
+                    return subscriber.subscribe_scheduler.schedule(action)
+
+            observable = FromListObservable()
+
         else:
-            n_full_slices = int(len(buffer) / batch_size)
+            if batch_size is None or batch_size == 1:
+                iterator = ([e] for e in buffer)
+            else:
+                n_full_slices = int(len(buffer) / batch_size)
 
-            def gen():
-                idx = 0
-                for _ in range(n_full_slices):
-                    next_idx = idx + batch_size
-                    yield buffer[idx:next_idx]
-                    idx = next_idx
-                yield buffer[idx:]
+                def gen():
+                    idx = 0
+                    for _ in range(n_full_slices):
+                        next_idx = idx + batch_size
+                        yield buffer[idx:next_idx]
+                        idx = next_idx
+                    yield buffer[idx:]
 
-            iterator = gen()
+                iterator = gen()
 
-        observable = IteratorAsObservable(iterator=iterator, scheduler=subscriber.scheduler,
-                                          subscribe_scheduler=subscriber.subscribe_scheduler)
+            observable = IteratorAsObservable(iterator=iterator, scheduler=subscriber.scheduler,
+                                              subscribe_scheduler=subscriber.subscribe_scheduler)
 
         return Subscription(
             info=BaseAndSelectors(base=base),
@@ -212,11 +219,9 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
     batch_size_ = batch_size or 1
 
-    if isinstance(base, Base):
-        base_ = base
-    elif base is not None:
-        base_ = ObjectRefBase(base)
-    else:
+    base = _create_base(base)
+
+    if base is None:
         base_ = ObjectRefBase(source)
 
     def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
