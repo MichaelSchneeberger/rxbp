@@ -38,15 +38,25 @@ def _create_base(base: Optional[Any]) -> Base:
     return base
 
 
-def concat(sources: Iterable[FlowableBase]):
-    return Flowable(ConcatFlowable(sources=sources))
+def concat(*sources: Flowable):
+    """
+    Concatentates Flowables sequences together by back-pressuring the tail Flowables until
+    the current Flowable has completed.
+
+    :param sources: Zero or more Flowables
+    """
+
+    if len(sources) == 0:
+        return empty()
+    else:
+        return sources[0].concat(*sources[1:])
+
+    # return Flowable(ConcatFlowable(sources=sources))
 
 
 def empty():
-    """ Converts an element into an observable
-
-    :param elem: the single item sent by the observable
-    :return: single item observable
+    """
+    create a *Flowable* emitting no elements
     """
 
     base = NumericalBase(0)
@@ -72,7 +82,14 @@ def empty():
 
 
 def from_iterable(iterable: Iterable, base: Any = None):
-    # return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
+    """
+    Create a Flowable that emits each element of the given iterable.
+
+    An iterable cannot be sent in batches.
+
+    :param iterable: the iterable whose elements are sent
+    :param base: the base of the Flowable sequence
+    """
 
     base = _create_base(base)
 
@@ -99,7 +116,69 @@ def from_iterable(iterable: Iterable, base: Any = None):
     return Flowable(FromIterableFlowable())
 
 
+def from_list(buffer: List, batch_size: int = None, base: Any = None):
+    """
+    Create a Flowable that emits each element of the given list.
+
+    :param buffer: the list whose elements are sent
+    :param batch_size: determines the number of elements that are sent in a batch
+    :param base: the base of the Flowable sequence
+    """
+    base = _create_base(base)
+
+    if base is None:
+        base = NumericalBase(len(buffer))
+
+    def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
+
+        if batch_size is None or len(buffer) == batch_size:
+            class FromListObservable(Observable):
+                def observe(self, observer_info: ObserverInfo) -> Disposable:
+                    def action(_, __):
+                        observer_info.observer.on_next(buffer)
+                        observer_info.observer.on_completed()
+
+                    return subscriber.subscribe_scheduler.schedule(action)
+
+            observable = FromListObservable()
+
+        else:
+            if batch_size is None or batch_size == 1:
+                iterator = ([e] for e in buffer)
+            else:
+                n_full_slices = int(len(buffer) / batch_size)
+
+                def gen():
+                    idx = 0
+                    for _ in range(n_full_slices):
+                        next_idx = idx + batch_size
+                        yield buffer[idx:next_idx]
+                        idx = next_idx
+                    yield buffer[idx:]
+
+                iterator = gen()
+
+            observable = IteratorAsObservable(iterator=iterator, scheduler=subscriber.scheduler,
+                                              subscribe_scheduler=subscriber.subscribe_scheduler)
+
+        return Subscription(
+            info=BaseAndSelectors(base=base),
+            observable=observable,
+        )
+
+    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func))
+
+
 def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = None):
+    """
+    Create a Flowable that emits elements defined by the range.
+
+    :param arg1: start identifier
+    :param arg2: end identifier
+    :param batch_size: determines the number of elements that are sent in a batch
+    :param base: the base of the Flowable sequence
+    """
+
     if arg2 is None:
         start_idx = 0
         stop_idx = arg1
@@ -160,61 +239,15 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
         return Flowable(FromIterableFlowable())
 
 
-def from_list(buffer: List, batch_size: int = None, base: Any = None):
-    base = _create_base(base)
-
-    if base is None:
-        base = NumericalBase(len(buffer))
-
-    def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
-
-        if batch_size is None or len(buffer) == batch_size:
-            class FromListObservable(Observable):
-                def observe(self, observer_info: ObserverInfo) -> Disposable:
-                    def action(_, __):
-                        observer_info.observer.on_next(buffer)
-                        observer_info.observer.on_completed()
-
-                    return subscriber.subscribe_scheduler.schedule(action)
-
-            observable = FromListObservable()
-
-        else:
-            if batch_size is None or batch_size == 1:
-                iterator = ([e] for e in buffer)
-            else:
-                n_full_slices = int(len(buffer) / batch_size)
-
-                def gen():
-                    idx = 0
-                    for _ in range(n_full_slices):
-                        next_idx = idx + batch_size
-                        yield buffer[idx:next_idx]
-                        idx = next_idx
-                    yield buffer[idx:]
-
-                iterator = gen()
-
-            observable = IteratorAsObservable(iterator=iterator, scheduler=subscriber.scheduler,
-                                              subscribe_scheduler=subscriber.subscribe_scheduler)
-
-        return Subscription(
-            info=BaseAndSelectors(base=base),
-            observable=observable,
-        )
-
-    return Flowable(AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func))
-
-
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
             base: Any = None) -> Flowable:
-    """ Wraps a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
+    """
+    Wrap a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
 
-    :param source: a rx.observable
-    :param batch_size: defines the number of values send in a batch via `on_next` method
-    :param overflow_strategy: defines which batches are ignored once the buffer is full
-    :param base:
-    :return:
+    :param source: an rx.observable
+    :param overflow_strategy: define which batches are ignored once the buffer is full
+    :param batch_size: determines the number of elements that are sent in a batch
+    :param base: the base of the Flowable sequence
     """
 
     batch_size_ = batch_size or 1
@@ -269,10 +302,10 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
 
 def return_value(elem: Any):
-    """ Converts an element into an observable
+    """
+    Create a *Flowable* that emits a single element.
 
-    :param elem: the single item sent by the observable
-    :return: single item observable
+    :param elem: the single element sent by the Flowable
     """
 
     base = NumericalBase(1)
@@ -298,21 +331,12 @@ def return_value(elem: Any):
     return Flowable(EmptyFlowable())
 
 
-def merge(*sources: Flowable) -> Flowable:
-    """
-    """
-
-    if len(sources) == 0:
-        return empty()
-    else:
-        return sources[0].merge(*sources[1:])
-
-
 def match(*sources: Flowable) -> Flowable:
-    """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+    """
+    Create a new Flowable from zero or more Flowables by first filtering and duplicating (if necessary)
+    the elements of each Flowable and zip the resulting Flowable sequences together.
 
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped observable
+    :param sources: zeros or more Flowables to be matched
     """
 
     if len(sources) == 0:
@@ -321,11 +345,24 @@ def match(*sources: Flowable) -> Flowable:
         return sources[0].match(*sources[1:])
 
 
-def zip(*sources: Flowable) -> Flowable: #, result_selector: Callable[..., Any] = None) -> Flowable:
-    """ Creates a new observable from two observables by combining their item in pairs in a strict sequence.
+def merge(*sources: Flowable) -> Flowable:
+    """
+    Merge the elements of zero or more *Flowables* into a single *Flowable*.
 
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped observable
+    :param sources: zero or more Flowables whose elements are merged
+    """
+
+    if len(sources) == 0:
+        return empty()
+    else:
+        return sources[0].merge(*sources[1:])
+
+
+def zip(*sources: Flowable) -> Flowable: #, result_selector: Callable[..., Any] = None) -> Flowable:
+    """
+    Create a new Flowable from zero or more Flowables by combining their item in pairs in a strict sequence.
+
+    :param sources: zero or more Flowables whose elements are zipped together
     """
 
     if len(sources) == 0:

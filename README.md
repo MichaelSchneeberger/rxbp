@@ -215,43 +215,62 @@ Flowable
 
 ### Create a Flowable
 
-- `from_` - create a Flowable that emits each element of an iterable
+- `empty` - create a *Flowable* emitting no elements
+- `from_` - create a *Flowable* that emits each element of an iterable
 - `from_iterable` - see `from_`
-- `from_list` - create a Flowable that emits each element of a list
-- `from_range` - creates a Flowable that emits elements defined by the range
-- `from_rx` - creates a Flowable from a rx Observable that buffers each element emitted by the Observable
-- `return_value` - creates a Flowable that emits a single element
+- `from_list` - create a *Flowable* that emits each element of a list
+- `from_range` - create a *Flowable* that emits elements defined by the range
+- `from_rx` - wrap a rx.Observable and exposes it as a *Flowable*, relaying signals in a backpressure-aware manner.
+- `return_value` - create a *Flowable* that emits a single element
 
 ### Transforming operators
 
-- `filter` - emits only those element for which the given predicate holds
-- `first` - emits the first element only
-- `flat_map` - flattens a Flowable of Flowables
-- `map` - applies a function to each element emitted by the Flowable
-- `pairwise` - pairing two consecutive elements emitted by the Flowable
-- `reduce` - applies an accumulator function over a Flowable sequence and returns a single element
-- `repeat_first` - repeat the first element by the Flowable forever (until disposed)
-- `share` - multicasts the elements of the Flowable to possibly multiple subscribers
-- `scan` - applies an accumulator function over a Flowable sequence and 
+- `filter` - emit only those elements for which the given predicate holds
+- `first` - emit the first element only
+- `flat_map` - apply a function to each item emitted by the source and 
+flattens the result.
+- `map` - map each element emitted by the source by applying the given 
+function
+- `map_to_iterator` - create a *Flowable* that maps each element emitted 
+by the source to an iterator and emits each element of these iterators.
+- `pairwise` - create a *Flowable* that emits a pair for each consecutive 
+pairs of elements in the *Flowable* sequence
+- `reduce` - Apply an accumulator function over a Flowable sequence and 
+emits a single element
+- `repeat_first` - Return a *Flowable* that repeats the first element it 
+receives from the source forever (until disposed).
+- `scan` - apply an accumulator function over a *Flowable* sequence and 
 returns each intermediate result.
-- `to_list` - collects the elements of a Flowable sequence and emits a single element
-- `zip_with_index` - the same as `map`, except that the selector function takes 
-index in addition to the value
+- `to_list` - Create a new *Flowable* that collects the elements from 
+the source sequence, and emits a single element of type List.
+- `zip_with_index` - zip each item emitted by the source with the 
+enumerated index
 
 ### Combining operators
 
-- `concat` - consecutively subscribe each Flowable after the previous Flowable completes
-- `controlled_zip` - combines the elements emitted by two Flowables 
-into pairs in a controlled sequence. 
-- `match` - combines the elements emitted by two Flowables into matching pairs.
-- `zip` - combines the elements emitted by two Flowables into pairs in 
-a strict sequence.
+- `concat` - Concatentates *Flowable* sequences together by back-pressuring 
+the tail *Flowables* until the current *Flowable* has completed
+- `controlled_zip` - create a new *Flowable* from two *Flowables* by combining 
+their elements in pairs. Which element gets paired with an element from 
+the other *Flowable* is determined by two functions called `request_left` and 
+`request_right`
+- `match` - create a new *Flowable* from two *Flowables* by first filtering and 
+duplicating (if necessary) the elements of each *Flowable* and zip the resulting 
+*Flowable* sequences together
+- `merge` - merge the elements of the *Flowable* sequences into a single *Flowable*
+- `zip` - Create a new *Flowable* from two *Flowables* by combining their 
+item in pairs in a strict sequence
 
 ### Other operators
 
-- `debug` - prints debug messages to the console
-- `execute_on` - inject new scheduler that is used to subscribe Flowable
-- `observe_on` - schedules element emitted by the Flowable on a dedicated scheduler
+- `buffer` - buffer the element emitted by the source without back-pressure until 
+the buffer is full
+- `debug` - print debug messages to the console
+- `execute_on` - inject new scheduler that is used to subscribe the *Flowable*
+- `observe_on` - schedule elements emitted by the source on a dedicated scheduler
+- `set_base` - overwrite the base of the current Flowable sequence
+- `share` - multicast the elements of the *Flowable* to possibly 
+multiple subscribers
 
 ### Create a rx Observable
 

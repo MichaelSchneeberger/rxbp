@@ -1,5 +1,6 @@
 from typing import Callable, Any, Iterator
 
+from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -23,13 +24,17 @@ class MapToIteratorObservable(Observable):
 
         class MapToIteratorObserver(Observer):
             def on_next(self, elem: ElementType):
-                # `map` does not consume elements from the iterator/list
-                # it is not its responsibility to catch an exception
                 def map_gen():
                     for v in elem:
                         yield from func(v)
 
-                return observer.on_next(list(map_gen()))
+                try:
+                    buffer = list(map_gen())
+                except Exception as exc:
+                    observer.on_error(exc)
+                    return stop_ack
+
+                return observer.on_next(buffer)
 
             def on_error(self, exc):
                 return observer.on_error(exc)

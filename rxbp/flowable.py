@@ -74,6 +74,9 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(flowable)
 
     def concat(self, *sources: FlowableBase) -> 'Flowable':
+        if len(sources) == 0:
+            return self
+
         all_sources = itertools.chain([self], sources)
         flowable = ConcatFlowable(sources=list(all_sources))
         return self._copy(flowable)
@@ -139,21 +142,21 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         flowable = FilterFlowable(source=self, predicate=predicate)
         return self._copy(flowable)
 
-    def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'Flowable[ValueType]':
-        """ Only emits those items for which the given predicate holds
-
-        :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
-        filter
-        :return: filtered Flowable
-        """
-
-        flowable = self.pipe(
-            rxbp.op.zip_with_index(),
-            rxbp.op.filter(lambda t2: predicate(t2[0], t2[1])),
-            rxbp.op.map(lambda t2: t2[0]),
-        )
-
-        return flowable
+    # def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'Flowable[ValueType]':
+    #     """ Only emits those items for which the given predicate holds
+    #
+    #     :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
+    #     filter
+    #     :return: filtered Flowable
+    #     """
+    #
+    #     flowable = self.pipe(
+    #         rxbp.op.zip_with_index(),
+    #         rxbp.op.filter(lambda t2: predicate(t2[0], t2[1])),
+    #         rxbp.op.map(lambda t2: t2[0]),
+    #     )
+    #
+    #     return flowable
 
     def first(self, raise_exception: Callable[[Callable[[], None]], None] = None):
         """ Repeat the first item forever

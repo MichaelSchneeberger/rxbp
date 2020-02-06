@@ -7,7 +7,7 @@ from rxbp.selectors.base import Base
 from rxbp.typing import ValueType
 
 
-class FlowableOpMixin(ABC):
+class FlowableOpMixin(ABC): # todo add generic
     @abstractmethod
     def buffer(self, buffer_size: int) -> FlowableBase:
         ...
@@ -39,6 +39,10 @@ class FlowableOpMixin(ABC):
         ...
 
     @abstractmethod
+    def execute_on(self, scheduler: Scheduler):
+        ...
+
+    @abstractmethod
     def fast_filter(self, predicate: Callable[[Any], bool]) -> FlowableBase:
         ...
 
@@ -46,9 +50,9 @@ class FlowableOpMixin(ABC):
     def filter(self, predicate: Callable[[Any], bool]) -> FlowableBase:
         ...
 
-    @abstractmethod
-    def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> FlowableBase:
-        ...
+    # @abstractmethod
+    # def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> FlowableBase:
+    #     ...
 
     @abstractmethod
     def first(self, raise_exception: Callable[[Callable[[], None]], None] = None) -> FlowableBase:
