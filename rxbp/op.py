@@ -121,19 +121,6 @@ def filter(predicate: Callable[[Any], bool]):
     return FlowableOperator(op_func)
 
 
-# def filter_with_index(predicate: Callable[[Any, int], bool]):
-#     """ Only emits those items for which the given predicate holds
-#
-#     :param predicate: a function that returns True, if the current element passes the filter
-#     :return: filtered Flowable
-#     """
-#
-#     def op_func(left: FlowableOpMixin):
-#         return left.filter_with_index(predicate=predicate)
-#
-#     return FlowableOperator(op_func)
-
-
 def first(raise_exception: Callable[[Callable[[], None]], None] = None):
     """
     Emit the first element only and stop the Flowable sequence thereafter.
@@ -252,6 +239,7 @@ def reduce(
     :param initial: The initial accumulator value
     :return: a Flowable that emits the final accumulated value
     """
+
     def op_func(source: FlowableOpMixin):
         return source.reduce(func=func, initial=initial)
 
@@ -260,7 +248,8 @@ def reduce(
 
 def repeat_first():
     """
-    Return a Flowable that repeats the first element it receives from the source forever (until disposed).
+    Return a Flowable that repeats the first element it receives from the source
+    forever (until disposed).
     """
 
     def op_func(source: FlowableOpMixin):
@@ -316,6 +305,7 @@ def to_list():
     Create a new Flowable that collects the elements from the source sequence,
     and emits a single element of type List.
     """
+
     def op_func(source: FlowableOpMixin):
         return source.to_list()
 

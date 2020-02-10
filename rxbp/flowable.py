@@ -4,7 +4,6 @@ from typing import Callable, Any, Generic, Tuple, Iterator
 
 import rx
 
-import rxbp
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableopmixin import FlowableOpMixin
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
@@ -88,20 +87,6 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
     ) -> 'Flowable[ValueType]':
-        """
-        Creates a new Flowable from two Flowables by combining their items in pairs. Which
-        item gets paired with an item from the other Flowable is determined by two functions
-        called `request_left` and `request_right`.
-
-        :param right: other Flowable
-        :param request_left: a function that returns True, if a new element from the left \
-        Flowable is requested to build the the next pair
-        :param request_right: a function that returns True, if a new element from the left \
-        Flowable is requested to build the the next pair
-        :param match_func: a filter function that returns True, if the current pair is sent \
-        downstream
-        :return: zipped Flowable
-        """
 
         flowable = ControlledZipFlowable(
             left=self,
@@ -132,37 +117,11 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(flowable)
 
     def filter(self, predicate: Callable[[Any], bool]) -> 'Flowable[ValueType]':
-        """ Only emits those items for which the given predicate holds
-
-        :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
-        filter
-        :return: filtered Flowable
-        """
 
         flowable = FilterFlowable(source=self, predicate=predicate)
         return self._copy(flowable)
 
-    # def filter_with_index(self, predicate: Callable[[Any, int], bool]) -> 'Flowable[ValueType]':
-    #     """ Only emits those items for which the given predicate holds
-    #
-    #     :param predicate: a function that evaluates the items emitted by the source returning True if they pass the
-    #     filter
-    #     :return: filtered Flowable
-    #     """
-    #
-    #     flowable = self.pipe(
-    #         rxbp.op.zip_with_index(),
-    #         rxbp.op.filter(lambda t2: predicate(t2[0], t2[1])),
-    #         rxbp.op.map(lambda t2: t2[0]),
-    #     )
-    #
-    #     return flowable
-
     def first(self, raise_exception: Callable[[Callable[[], None]], None] = None):
-        """ Repeat the first item forever
-
-        :return:
-        """
 
         flowable = FirstFlowable(source=self, raise_exception=raise_exception)
         return self._copy(flowable)
@@ -172,11 +131,6 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(flowable)
 
     def map(self, func: Callable[[ValueType], Any]):
-        """ Maps each item emitted by the source by applying the given function
-
-        :param func: function that defines the mapping
-        :return: mapped Flowable
-        """
 
         flowable = MapFlowable(source=self, func=func)
         return self._copy(flowable)
@@ -189,11 +143,6 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(flowable)
 
     def match(self, *others: 'Flowable'):
-        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
-
-        :param selector: a mapping function applied over the generated pairs
-        :return: matched Flowable
-        """
 
         if len(others) == 0:
             return self.map(lambda v: (v,))
@@ -218,11 +167,6 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
             return self._copy(obs)
 
     def merge(self, *others: 'Flowable'):
-        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
-
-        :param selector: a mapping function applied over the generated pairs
-        :return: zipped Flowable
-        """
 
         if len(others) == 0:
             return self
@@ -244,20 +188,10 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
             return self._copy(obs)
 
     def observe_on(self, scheduler: Scheduler):
-        """ Operator that specifies a specific scheduler, on which observers will observe events
-
-        :param scheduler: a rxbackpressure scheduler
-        :return: an Flowable running on specified scheduler
-        """
 
         return self._copy(ObserveOnFlowable(source=self, scheduler=scheduler))
 
     def pairwise(self) -> 'Flowable':
-        """ Creates an Flowable that pairs each neighbouring two items from the source
-
-        :param selector: (optional) selector function
-        :return: paired Flowable
-        """
 
         return self._copy(PairwiseFlowable(source=self))
 
@@ -278,10 +212,6 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(flowable)
 
     def repeat_first(self):
-        """ Repeat the first item forever
-
-        :return:
-        """
 
         flowable = RepeatFirstFlowable(source=self)
         return self._copy(flowable)
@@ -300,6 +230,7 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(RefCountFlowable(source=self))
 
     def set_base(self, val: Base):
+
         def unsafe_unsafe_subscribe(subscriber: Subscriber) -> Subscription:
             subscription = self.unsafe_subscribe(subscriber=subscriber)
 
@@ -314,24 +245,20 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         return self._copy(flowable)
 
     def to_list(self):
+
         flowable = ToListFlowable(source=self)
         return self._copy(flowable)
 
     def to_rx(self, batched: bool = None) -> rx.Observable:
         """ Converts this Flowable to an rx.Observable
 
-        :param scheduler:
-        :return:
+        :param batched: if True, then the elements emitted by the Observable are expected to
+        be a list or an iterator.
         """
 
         return to_rx(source=self, batched=batched)
 
     def zip(self, *others: 'Flowable'):
-        """ Creates a new Flowable from two Flowables by combining their item in pairs in a strict sequence.
-
-        :param selector: a mapping function applied over the generated pairs
-        :return: zipped Flowable
-        """
 
         if len(others) == 0:
             return self.map(lambda v: (v,))
@@ -356,11 +283,6 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
             return self._copy(obs)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
-        """ Zips each item emmited by the source with their indices
-
-        :param selector: a mapping function applied over the generated pairs
-        :return: zipped with index Flowable
-        """
 
         flowable = ZipWithIndexFlowable(source=self, selector=selector)
         return self._copy(flowable)
