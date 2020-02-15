@@ -4,7 +4,7 @@ import rxbp
 from rxbp.flowable import Flowable
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicasts.defermulticast import DeferMultiCast
+from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast
 from rxbp.multicast.testing.testrxobserver import TestRxObserver
@@ -29,7 +29,7 @@ class TestDeferMultiCast(unittest.TestCase):
         self.source2 = TestFlowable()
 
     def test_send_single_flowable(self):
-        reduce_multicast = DeferMultiCast(
+        reduce_multicast = LoopFlowableMultiCast(
             source=self.source_multicast,
             func=lambda m: MultiCast(m).pipe(
                 rxbp.multicast.op.map(lambda t: t[0]),
@@ -43,7 +43,7 @@ class TestDeferMultiCast(unittest.TestCase):
         self.assertEqual(1, len(self.rx_sink.received))
 
     def test_subscribe_single_flowable(self):
-        reduce_multicast = DeferMultiCast(
+        reduce_multicast = LoopFlowableMultiCast(
             source=self.source_multicast,
             func=lambda m: MultiCast(m).pipe(
                 rxbp.multicast.op.map(lambda t: t[0]),

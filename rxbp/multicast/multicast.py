@@ -13,7 +13,7 @@ from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
-from rxbp.multicast.multicasts.defermulticast import DeferMultiCast
+from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
 from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
 from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
@@ -22,14 +22,15 @@ from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.observeonmulticast import ObserveOnMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
-from rxbp.multicast.multicasts.zipmulticast import ZipMultiCast
+from rxbp.multicast.multicasts.collectmulticast import CollectMultiCast
 from rxbp.multicast.rxextensions.merge_ import merge_op
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
 
 
 class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
-    """ A `MultiCast` represents a collection of *Flowable* and can
+    """
+    A `MultiCast` represents a collection of *Flowable* and can
      be though of as `Flowable[T[Flowable]]` where T is defined by the user.
     """
 
@@ -44,7 +45,10 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
         return self.underlying.get_source(info=info)
 
     def collect_flowables(self, *others: 'MultiCast'):
-        return self._copy(ZipMultiCast(sources=[self] + list(others)))
+        if len(others) == 0:
+            return self
+
+        return self._copy(CollectMultiCast(sources=[self] + list(others)))
 
     def debug(
             self,
@@ -55,9 +59,9 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
 
     def default_if_empty(
             self,
-            val: Any,
+            lazy_val: Callable[[], Any],
     ):
-        return self._copy(DefaultIfEmptyMultiCast(source=self, val=val))
+        return self._copy(DefaultIfEmptyMultiCast(source=self, lazy_val=lazy_val))
 
     def empty(self):
         return rxbp.multicast.empty()
@@ -113,14 +117,14 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
 
         return LoopMultiCast()
 
-    def loop_flowable(
+    def loop_flowables(
             self,
             func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType,
     ):
         def lifted_func(multicast: MultiCastBase):
             return func(MultiCast(multicast))
 
-        return self._copy(DeferMultiCast(source=self, func=lifted_func, initial=initial))
+        return self._copy(LoopFlowableMultiCast(source=self, func=lifted_func, initial=initial))
 
     def map(
             self,
@@ -154,7 +158,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     def observe_on(self, scheduler: rx.typing.Scheduler):
         return self._copy(ObserveOnMultiCast(source=self, scheduler=scheduler))
 
-    def reduce_flowable(
+    def reduce_flowables(
             self,
             maintain_order: bool = None,
     ):

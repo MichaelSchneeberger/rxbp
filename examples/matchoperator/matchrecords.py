@@ -129,7 +129,7 @@ def sel_flow(fdict: Dict[str, Flowable]):
 result = []
 
 
-rxbp.multicast.from_flowable(fdict).pipe(
+rxbp.multicast.return_flowable(fdict).pipe(
     rxbp.multicast.op.map(time_value_flowables),
     rxbp.multicast.op.map(sync_t1_to_tmain),
     rxbp.multicast.op.map(sync_t2_to_tmain),

@@ -72,11 +72,11 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return self._copy(flowable)
 
-    def concat(self, *sources: FlowableBase) -> 'Flowable':
-        if len(sources) == 0:
+    def concat(self, *others: FlowableBase) -> 'Flowable':
+        if len(others) == 0:
             return self
 
-        all_sources = itertools.chain([self], sources)
+        all_sources = itertools.chain([self], others)
         flowable = ConcatFlowable(sources=list(all_sources))
         return self._copy(flowable)
 

@@ -21,11 +21,11 @@ def merge_and_reduce(multicast: MultiCast):
         multicast,
         multicast,
     ).pipe(
-        rxbp.multicast.op.reduce_flowable(),
+        rxbp.multicast.op.reduce_flowables(),
     )
 
 
-result = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
+result = rxbp.multicast.return_flowable(rxbp.range(10)).pipe(
     rxbp.multicast.op.share(connect_and_zip),
     rxbp.multicast.op.share(merge_and_reduce),
 ).to_flowable().run()

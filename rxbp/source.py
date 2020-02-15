@@ -56,7 +56,7 @@ def concat(*sources: Flowable):
 
 def empty():
     """
-    create a *Flowable* emitting no elements
+    create a Flowable emitting no elements
     """
 
     base = NumericalBase(0)
@@ -116,14 +116,16 @@ def from_iterable(iterable: Iterable, base: Any = None):
     return Flowable(FromIterableFlowable())
 
 
-def from_list(buffer: List, batch_size: int = None, base: Any = None):
+def from_list(val: List, batch_size: int = None, base: Any = None):
     """
     Create a Flowable that emits each element of the given list.
 
-    :param buffer: the list whose elements are sent
+    :param val: the list whose elements are sent
     :param batch_size: determines the number of elements that are sent in a batch
     :param base: the base of the Flowable sequence
     """
+
+    buffer = val
     base = _create_base(base)
 
     if base is None:
@@ -132,9 +134,11 @@ def from_list(buffer: List, batch_size: int = None, base: Any = None):
     def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
 
         if batch_size is None or len(buffer) == batch_size:
+
             class FromListObservable(Observable):
                 def observe(self, observer_info: ObserverInfo) -> Disposable:
                     def action(_, __):
+                        # send the entire buffer at once
                         observer_info.observer.on_next(buffer)
                         observer_info.observer.on_completed()
 
@@ -240,7 +244,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
 
 
 def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: OverflowStrategy = None,
-            base: Any = None) -> Flowable:
+            base: Any = None, is_batched: bool = None) -> Flowable:
     """
     Wrap a rx.Observable and exposes it as a Flowable, relaying signals in a backpressure-aware manner.
 
@@ -248,6 +252,8 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
     :param overflow_strategy: define which batches are ignored once the buffer is full
     :param batch_size: determines the number of elements that are sent in a batch
     :param base: the base of the Flowable sequence
+    :param is_batched: if set to True, the elements emitted by the source rx.Observable are
+    either of type List or of type Iterator
     """
 
     batch_size_ = batch_size or 1
@@ -285,10 +291,19 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                         buffer_size=buffer_size,
                     )
 
-                disposable = source.pipe(
-                    operators.buffer_with_count(batch_size_),
-                ).subscribe(on_next=rx_observer.on_next, on_error=rx_observer.on_error,
-                            on_completed=rx_observer.on_completed, scheduler=self.scheduler)
+                if is_batched is True:
+                    batched_source = source
+                else:
+                    batched_source = source.pipe(
+                        operators.buffer_with_count(batch_size_),
+                    )
+
+                disposable = batched_source.subscribe(
+                    on_next=rx_observer.on_next,
+                    on_error=rx_observer.on_error,
+                    on_completed=rx_observer.on_completed,
+                    scheduler=self.scheduler,
+                )
                 return disposable
 
         observable = ToBackpressureObservable(scheduler=subscriber.scheduler,
@@ -301,11 +316,11 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
     return Flowable(AnonymousFlowableBase(unsafe_subscribe_func))
 
 
-def return_value(elem: Any):
+def return_value(val: Any):
     """
-    Create a *Flowable* that emits a single element.
+    Create a Flowable that emits a single element.
 
-    :param elem: the single element sent by the Flowable
+    :param val: the single element emitted by the Flowable
     """
 
     base = NumericalBase(1)
@@ -316,7 +331,7 @@ def return_value(elem: Any):
             class EmptyObservable(Observable):
                 def observe(self, observer_info: ObserverInfo) -> Disposable:
                     def action(_, __):
-                        observer_info.observer.on_next([elem])
+                        observer_info.observer.on_next([val])
                         observer_info.observer.on_completed()
 
                     return subscriber.subscribe_scheduler.schedule(action)

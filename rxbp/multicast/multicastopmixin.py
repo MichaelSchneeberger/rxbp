@@ -16,12 +16,12 @@ class MultiCastOpMixin(ABC):
     @abstractmethod
     def default_if_empty(
             self,
-            val: Any,
+            lazy_val: Callable[[], Any],
     ):
         ...
 
     @abstractmethod
-    def loop_flowable(
+    def loop_flowables(
             self,
             func: Callable[[MultiCastValue], MultiCastValue],
             initial: ValueType,
@@ -81,7 +81,7 @@ class MultiCastOpMixin(ABC):
         ...
 
     @abstractmethod
-    def reduce_flowable(
+    def reduce_flowables(
             self,
             maintain_order: bool = None,
     ):

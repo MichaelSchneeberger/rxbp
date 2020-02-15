@@ -10,8 +10,8 @@ objects emitting each one Flowable.
 import rxbp
 
 result = rxbp.multicast.collect_flowables(
-    rxbp.multicast.from_flowable(rxbp.range(4)),
-    rxbp.multicast.from_flowable(rxbp.range(4)),
+    rxbp.multicast.return_flowable(rxbp.range(4)),
+    rxbp.multicast.return_flowable(rxbp.range(4)),
 ).pipe(
     rxbp.multicast.op.map(lambda v: v[0].merge(v[1]))
 ).to_flowable().run()

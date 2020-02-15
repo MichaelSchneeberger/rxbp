@@ -4,7 +4,7 @@ import rxbp
 from rxbp.flowable import Flowable
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicasts.defermulticast import DeferMultiCast
+from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
 from rxbp.multicast.multicasts.maptoiteratormulticast import MapToIteratorMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast

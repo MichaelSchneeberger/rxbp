@@ -66,12 +66,13 @@ def controlled_zip(
 
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
+    """
+    Print debug messages to the console when providing the `name` argument
+
+    :on_next: customize the on next debug console print
+    """
+
     def op_func(source: FlowableOpMixin):
-        """ Print debug messages to the console when providing the `name` argument
-
-        :on_next: customize the on next debug console print
-        """
-
         return source.debug(
             name=name,
             on_next=on_next,
@@ -96,7 +97,8 @@ def execute_on(scheduler: Scheduler):
 
 
 def fast_filter(predicate: Callable[[Any], bool]):
-    """ Only emit those elements for which the given predicate holds.
+    """
+    Only emit those elements for which the given predicate holds.
 
     :param predicate: a function that returns True, if the current element passes the filter
     :return: filtered Flowable
@@ -109,7 +111,8 @@ def fast_filter(predicate: Callable[[Any], bool]):
 
 
 def filter(predicate: Callable[[Any], bool]):
-    """ Only emit those elements for which the given predicate holds.
+    """
+    Only emit those elements for which the given predicate holds.
 
     :param predicate: a function that returns True, if the current element passes the filter
     :return: filtered Flowable
@@ -219,7 +222,8 @@ def observe_on(scheduler: Scheduler):
 
 def pairwise():
     """
-    Create a Flowable that emits a pair for each consecutive pairs of elements in the Flowable sequence.
+    Create a Flowable that emits a pair for each consecutive pairs of elements
+    in the Flowable sequence.
     """
 
     def op_func(source: FlowableOpMixin):

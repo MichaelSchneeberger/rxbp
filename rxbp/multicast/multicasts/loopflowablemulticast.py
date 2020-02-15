@@ -26,7 +26,7 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class DeferMultiCast(MultiCastBase):
+class LoopFlowableMultiCast(MultiCastBase):
     def __init__(
             self,
             source: MultiCastBase,
@@ -111,11 +111,11 @@ class DeferMultiCast(MultiCastBase):
         output = self.func(init)
 
         def map_func(base: MultiCastValue):
-            match_error_message = f'loop_flowable function returned "{base}" which does not match initial "{initial}"'
+            match_error_message = f'loop_flowables function returned "{base}" which does not match initial "{initial}"'
 
             if isinstance(base, Flowable) and len(initial_dict) == 1:
 
-                # if initial would be a dicitonary, then the input to the loop_flowable operator
+                # if initial would be a dicitonary, then the input to the loop_flowables operator
                 # must be a dicitonary and not a Flowable.
                 assert not isinstance(initial, dict), match_error_message
 
@@ -142,7 +142,7 @@ class DeferMultiCast(MultiCastBase):
                 else:
                     flowable_state = base
 
-                match_error_message = f'loop_flowable function returned "{flowable_state.keys()}", ' \
+                match_error_message = f'loop_flowables function returned "{flowable_state.keys()}", ' \
                                       f'which does not match initial "{initial.keys()}"'
 
                 assert isinstance(initial, dict) and set(initial.keys()) <= set(flowable_state.keys()), match_error_message
@@ -175,11 +175,11 @@ class DeferMultiCast(MultiCastBase):
                             is_first[0] = False
                             close_loop = True
 
-                    # close loop_flowable loop only if first subscribed
+                    # close loop_flowables loop only if first subscribed
                     if close_loop:
 
                         def gen_index_for_each_deferred_state():
-                            """ for each value returned by the loop_flowable function """
+                            """ for each value returned by the loop_flowables function """
                             for key in initial_dict.keys():
                                 def for_func(key=key):
                                     return Flowable(MapFlowable(shared_flowable_state[key], func=lambda v: (key, v)))
@@ -228,7 +228,7 @@ class DeferMultiCast(MultiCastBase):
 
                         start.flowable = BreakingTheLoopFlowable()
 
-                    # subscribe method call might close the loop_flowable loop
+                    # subscribe method call might close the loop_flowables loop
                     subscription = self.source.unsafe_subscribe(subscriber)
 
                     class DeferObservable(Observable):

@@ -1,4 +1,5 @@
 from .op import filter
-from .source import empty, from_flowable, collect_flowables, merge, return_value, from_iterable, from_observable
+from .source import empty, return_flowable, collect_flowables, merge, from_iterable, from_rx_observable, from_flowable
 
 from_ = from_iterable
+just = return_flowable

@@ -320,10 +320,10 @@ def loop_previous_state(looped_multicast: MultiCast):
     )
 
 
-simulation = rxbp.multicast.from_flowable({'idx': rxbp.range(n_samples, batch_size=100)}).pipe(
+simulation = rxbp.multicast.return_flowable({'idx': rxbp.range(n_samples, batch_size=100)}).pipe(
     rxbp.multicast.op.map(create_time),
     rxbp.multicast.op.map(create_phi),
-    rxbp.multicast.op.loop_flowable(
+    rxbp.multicast.op.loop_flowables(
         func=loop_previous_state,
         initial={
             'u': 0,

@@ -38,7 +38,7 @@ class CollectableMultiCast(MultiCastOpMixin):
         main = self._main.debug(name=name)
         return CollectableMultiCast(main=main, collected=self._collected)
 
-    def loop_flowable(self, func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType):
+    def loop_flowables(self, func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType):
         raise NotImplementedError
 
     def empty(self):
@@ -74,11 +74,11 @@ class CollectableMultiCast(MultiCastOpMixin):
     def pipe(self, *operators: MultiCastOperator) -> 'CollectableMultiCast':
         return reduce(lambda acc, op: op(acc), operators, self)
 
-    def reduce_flowable(
+    def reduce_flowables(
             self,
             maintain_order: bool = None,
     ):
-        main = self._main.reduce_flowable(maintain_order=maintain_order)
+        main = self._main.reduce_flowables(maintain_order=maintain_order)
         return CollectableMultiCast(main=main, collected=self._collected)
 
     def share(self):
