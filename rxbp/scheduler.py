@@ -36,6 +36,10 @@ class Scheduler(RxScheduler, ABC):
     def is_order_guaranteed(self) -> bool:
         ...
 
+    @abstractmethod
+    def sleep(self, seconds: float) -> None:
+        ...
+
 
 class SchedulerBase(Scheduler, ABC):
     def __init__(self, r: UncaughtExceptionReport = None, execution_model: ExecutionModel = None):

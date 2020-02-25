@@ -3,6 +3,7 @@ from . import multicast
 from . import op
 from .source import from_iterable, from_range, from_list, return_value, from_rx, concat, zip, match, \
     merge, empty
+from . import imperative
 
 # from .multicast.source import from_flowables as to_multicast
 

@@ -197,12 +197,12 @@ A *Flowable* is used when some asynchronous stage cannot process the data fast e
 or needs to synchronize the data with some other event. Let's take the `zip` operator 
 as an example. It receives elements from two or more sources and emits a tuple once it 
 received one element from each source. But what happens if one source emits the 
-elements before the others do? Without back-pressure, the `zip` operator has to buffer 
-the elements from the eager source until it receives elements from the other sources.
-This might be ok depending on how many elements needs to be buffered. But often we can 
-not risk having too much data buffered somewhere in our stream, which might lead to an 
-out of memory exception. The back-pressure capability prevents that by holding the data 
-back until it is actually needed.
+elements before the other does? Without back-pressure, the `zip` operator has to buffer 
+the elements from the eager source until it receives the elements from the other source.
+This might be ok depending on how many elements need to be buffered. But often it is too
+risky to buffer elements somewhere in our stream as it potentially leads to an 
+out of memory exception. The back-pressure capability prevents buffers to grow by holding 
+the data back until it is actually needed.
 
 The advantage of a RxPY Observable is that it is generally faster and more lightweight.
 
@@ -281,7 +281,7 @@ MultiCast (experimental)
 - `empty` - create a *MultiCast* emitting no elements
 - `return_flowable` - turn zero or more *Flowables* into multi-cast *Flowables* 
 emitted as a single element inside a  *MultiCast*
-- `return_value` - create a *MultiCast* emitting a single element
+- `return_` - create a *MultiCast* emitting a single element
 - `from_iterable` - create a *MultiCast* from an iterable
 - `from_rx_observable` - create a *MultiCast* from an *rx.Observable*
 - `from_flowable` - (similar to `from_rx_observable`) create a *MultiCast* 

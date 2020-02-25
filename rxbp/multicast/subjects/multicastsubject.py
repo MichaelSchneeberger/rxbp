@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Generic
 
 import rx
 from rx.subject import Subject
@@ -9,7 +10,7 @@ from rxbp.multicast.typing import MultiCastValue
 
 
 @dataclass
-class MultiCastSubject(MultiCastBase):
+class MultiCastSubject(MultiCastBase[MultiCastValue], Generic[MultiCastValue]):
     subject = Subject()
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:

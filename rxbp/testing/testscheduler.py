@@ -3,7 +3,7 @@ from rx.scheduler.virtualtimescheduler import VirtualTimeScheduler
 from rxbp.scheduler import SchedulerBase, ExecutionModel, UncaughtExceptionReport, BatchedExecution
 
 
-class TestScheduler(SchedulerBase, VirtualTimeScheduler):
+class TestScheduler(VirtualTimeScheduler, SchedulerBase):
     def __init__(self):
         super().__init__()
         self.r = UncaughtExceptionReport()
@@ -22,3 +22,6 @@ class TestScheduler(SchedulerBase, VirtualTimeScheduler):
     @staticmethod
     def add(absolute, relative):
         return absolute + relative
+
+    def sleep(self, seconds: float):
+        return self.advance_by(seconds)

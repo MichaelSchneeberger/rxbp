@@ -11,10 +11,13 @@ from rxbp.flowables.bufferflowable import BufferFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.debugflowable import DebugFlowable
+from rxbp.flowables.defaultifemptyflowable import DefaultIfEmptyFlowable
+from rxbp.flowables.doactionflowable import DoActionFlowable
 from rxbp.flowables.executeonflowable import ExecuteOnFlowable
 from rxbp.flowables.fastfilterflowable import FastFilterFlowable
 from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
+from rxbp.flowables.firstordefaultflowable import FirstOrDefaultFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.maptoiteratorflowable import MapToIteratorFlowable
@@ -56,19 +59,19 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
     able to back-pressure an `on_next` method call.
     """
 
-    def __init__(self, flowable: FlowableBase):
+    def __init__(self, underlying: FlowableBase):
         super().__init__()
 
-        self.subscriptable = flowable
+        self.underlying = underlying
 
     @classmethod
     def _copy(cls, flowable: FlowableBase):
         return cls(flowable)
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-        return self.subscriptable.unsafe_subscribe(subscriber=subscriber)
+        return self.underlying.unsafe_subscribe(subscriber=subscriber)
 
-    def buffer(self, buffer_size: int) -> 'Flowable':
+    def buffer(self, buffer_size: int = None) -> 'Flowable':
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return self._copy(flowable)
 
@@ -109,6 +112,24 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
             on_ack_msg=on_ack_msg,
         ))
 
+    def default_if_empty(self, lazy_val: Callable[[], Any]):
+        return self._copy(DefaultIfEmptyFlowable(source=self, lazy_val=lazy_val))
+
+    def do_action(
+            self,
+            on_next: Callable[[Any], None] = None,
+            on_completed: Callable[[], None] = None,
+            on_error: Callable[[Exception], None] = None,
+            on_disposed: Callable[[], None] = None,
+    ):
+        return self._copy(DoActionFlowable(
+            source=self,
+            on_next=on_next,
+            on_completed=on_completed,
+            on_error=on_error,
+            on_disposed=on_disposed,
+        ))
+
     def execute_on(self, scheduler: Scheduler):
         return self._copy(ExecuteOnFlowable(source=self, scheduler=scheduler))
 
@@ -121,9 +142,12 @@ class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
         flowable = FilterFlowable(source=self, predicate=predicate)
         return self._copy(flowable)
 
-    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None):
-
+    def first(self, raise_exception: Callable[[Callable[[], None]], None]):
         flowable = FirstFlowable(source=self, raise_exception=raise_exception)
+        return self._copy(flowable)
+
+    def first_or_default(self, lazy_val: Callable[[], Any]):
+        flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
         return self._copy(flowable)
 
     def flat_map(self, func: Callable[[Any], FlowableBase]):

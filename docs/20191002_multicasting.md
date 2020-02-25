@@ -95,7 +95,7 @@ place and consume its elements in another place?
 Having the `share` operator, this is possible by "tunneling" a Flowable. 
 This converts a Flowable into a Flowable of
 *multi-cast Flowables* of type `Flowable[Flowable]`. This is 
-achieved by using `rxbp.return_value` inside the shared function as follows.
+achieved by using `rxbp.return_` inside the shared function as follows.
  
 ``` python
 import rxbp.depricated
@@ -103,7 +103,7 @@ import rxbp
 
 # create a tunneled shared Flowable in one place
 tunneled_shared = rxbp.range(10).pipe(
-    rxbp.depricated.share(lambda f1: rxbp.return_value(f1)),
+    rxbp.depricated.share(lambda f1: rxbp.return_(f1)),
 )
 
 # consume the shared Flowable in another place
@@ -131,7 +131,7 @@ single Flowable.
 import rxbp
 source1 = rxbp.range(10).pipe(
     rxbp.depricated.share(
-        lambda input: rxbp.return_value({'input': input})),
+        lambda input: rxbp.return_({'input': input})),
     ),
 )
 ```

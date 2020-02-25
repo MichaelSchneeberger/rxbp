@@ -1,27 +1,27 @@
-from typing import Callable
+from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
-from rxbp.observables.firstobservable import FirstObservable
-from rxbp.selectors.bases.numericalbase import NumericalBase
+from rxbp.observables.firstordefaultobservable import FirstOrDefaultObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
+from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class FirstFlowable(FlowableBase):
+class FirstOrDefaultFlowable(FlowableBase):
     def __init__(
             self,
             source: FlowableBase,
-            raise_exception: Callable[[Callable[[], None]], None],
+            lazy_val: Callable[[], Any],
     ):
         super().__init__()
 
         self._source = source
-        self.raise_exception = raise_exception
+        self.lazy_val = lazy_val
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = FirstObservable(source=subscription.observable, raise_exception=self.raise_exception)
+        observable = FirstOrDefaultObservable(source=subscription.observable, lazy_val=self.lazy_val)
 
         # first emits exactly one element
         base = NumericalBase(1)

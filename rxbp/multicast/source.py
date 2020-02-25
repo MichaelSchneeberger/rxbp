@@ -1,17 +1,21 @@
 from typing import Any, Callable, Union, Dict, Iterable, List
 
 import rx
+from rx.disposable import CompositeDisposable
 
 import rxbp
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
+from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.op import merge as merge_op
+from rxbp.multicast.typing import MultiCastValue
 from rxbp.torx import to_rx
 
 
@@ -25,6 +29,46 @@ def empty():
             return rx.empty(scheduler=info.multicast_scheduler)
 
     return MultiCast(EmptyMultiCast())
+
+
+def build_imperative_multicast(
+    func: Callable[[ImperativeMultiCastBuilder], ImperativeMultiCastBuild],
+    composite_disposable: CompositeDisposable = None,
+):
+
+    class BuildBlockingFlowableMultiCast(MultiCastBase):
+        def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
+
+            def on_completed():
+                for subject in imperative_call.subjects:
+                    subject.on_completed()
+
+            def on_error(exc: Exception):
+                for subject in imperative_call.subjects:
+                    subject.on_error(exc)
+
+            composite_disposable_ = composite_disposable or CompositeDisposable()
+
+            builder = ImperativeMultiCastBuilder(
+                composite_disposable=composite_disposable_,
+                scheduler=info.source_scheduler,
+            )
+
+            imperative_call = func(builder)
+
+            flowable = imperative_call.blocking_flowable.pipe(
+                rxbp.op.do_action(
+                    on_disposed=lambda: composite_disposable_.dispose(),
+                    on_completed=on_completed,
+                    on_error=on_error,
+                ),
+            )
+
+            return imperative_call.output_selector(
+                flowable,
+            ).get_source(info=info)
+
+    return MultiCast(BuildBlockingFlowableMultiCast())
 
 
 def return_flowable(

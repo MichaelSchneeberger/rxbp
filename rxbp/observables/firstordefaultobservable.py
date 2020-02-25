@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any
 
 from rx.internal import SequenceContainsNoElementsError
 
@@ -9,27 +9,27 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.typing import ElementType
 
 
-class FirstObservable(Observable):
+class FirstOrDefaultObservable(Observable):
     def __init__(
             self,
             source: Observable,
-            raise_exception: Callable[[Callable[[], None]], None],
+            lazy_val: Callable[[], Any],
     ):
         super().__init__()
 
         self.source = source
-        self.raise_exception = raise_exception
+        self.lazy_val = lazy_val
 
         self.is_first = True
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
 
-        source = self
+        outer_self = self
 
         class FirstObserver(Observer):
             def on_next(self, elem: ElementType):
-                source.is_first = False
+                outer_self.is_first = False
                 first_elem = next(iter(elem))
 
                 def gen_first():
@@ -43,12 +43,10 @@ class FirstObservable(Observable):
                 return observer.on_error(exc)
 
             def on_completed(self):
-                if source.is_first:
-                    def func():
-                        raise SequenceContainsNoElementsError()
-
+                if outer_self.is_first:
                     try:
-                        source.raise_exception(func)
+                        observer.on_next(outer_self.lazy_val())
+                        observer.on_completed()
                     except Exception as exc:
                         observer.on_error(exc)
 

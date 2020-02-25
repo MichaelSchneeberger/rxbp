@@ -6,14 +6,10 @@ from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
 
 def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
-    condition = threading.Condition()
     notifications = []
 
     def send_notification(n):
-        condition.acquire()
         notifications.append(n)
-        condition.notify()  # signal that a new item is available
-        condition.release()
 
     def on_next(v):
         send_notification(('N', v))
@@ -24,14 +20,20 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
     def on_completed():
         send_notification(('C', None))
 
+    subscribe_scheduler = TrampolineScheduler()
+    scheduler = scheduler or subscribe_scheduler
+
     source.subscribe(on_next=on_next, on_error=on_error, on_completed=on_completed, scheduler=scheduler,
                      subscribe_scheduler=TrampolineScheduler())
 
     def gen():
         while True:
-            condition.acquire()
-            while not len(notifications):
-                condition.wait()
+            while True:
+                if len(notifications):
+                    break
+
+                scheduler.sleep(1)
+
             kind, value = notifications.pop(0)
 
             if kind == "E":
@@ -40,7 +42,7 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
             if kind == "C":
                 return  # StopIteration
 
-            condition.release()
+            # condition.release()
             yield value
 
     return gen()

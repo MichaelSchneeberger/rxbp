@@ -32,17 +32,24 @@ class MultiCastOpMixin(ABC):
     def empty(self):
         ...
 
-    # @abstractmethod
-    # def share_flowable(
-    #         self,
-    #         func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]],
-    # ):
-    #     ...
-
     @abstractmethod
     def filter(
             self,
             predicate: Callable[[MultiCastValue], bool],
+    ):
+        ...
+
+    @abstractmethod
+    def first(
+            self,
+            raise_exception: Callable[[Callable[[], None]], None],
+    ):
+        ...
+
+    @abstractmethod
+    def first_or_default(
+            self,
+            lazy_val: Callable[[], Any],
     ):
         ...
 

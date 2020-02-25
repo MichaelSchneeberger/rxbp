@@ -8,7 +8,7 @@ from rxbp.scheduler import Scheduler
 from rxbp.typing import ValueType
 
 
-def buffer(buffer_size: int):
+def buffer(buffer_size: int = None):
     """
     Buffer the element emitted by the source without back-pressure until the buffer is full.
     """
@@ -85,6 +85,36 @@ def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=No
     return FlowableOperator(op_func)
 
 
+def default_if_empty(lazy_val: Callable[[], Any]):
+    """
+    Only the elements of the source or a default value if the source is an empty sequence
+
+    :param lazy_val: a function that returns the default value
+    """
+
+    def op_func(left: FlowableOpMixin):
+        return left.default_if_empty(lazy_val=lazy_val)
+
+    return FlowableOperator(op_func)
+
+
+def do_action(
+        on_next: Callable[[Any], None] = None,
+        on_completed: Callable[[], None] = None,
+        on_error: Callable[[Exception], None] = None,
+        on_disposed: Callable[[], None] = None,
+):
+    def op_func(left: FlowableOpMixin):
+        return left.do_action(
+            on_next=on_next,
+            on_completed=on_completed,
+            on_error=on_error,
+            on_disposed=on_disposed,
+        )
+
+    return FlowableOperator(op_func)
+
+
 def execute_on(scheduler: Scheduler):
     """
     Inject new scheduler that is used to subscribe the Flowable.
@@ -124,13 +154,35 @@ def filter(predicate: Callable[[Any], bool]):
     return FlowableOperator(op_func)
 
 
-def first(raise_exception: Callable[[Callable[[], None]], None] = None):
+def first(raise_exception: Callable[[Callable[[], None]], None]):
+    """
+    Emit the first element only and stop the Flowable sequence thereafter.
+
+    The `raise_exception` argument needs to be given as follows:
+
+    ::
+
+        rxbp.op.first(raise_exception=lambda f: f())
+
+    The `raise_exception` argument is called in case there is no first element.
+    Like RxPY, a SequenceContainsNoElementsError is risen. But on top of that
+    the place where the `first` argument is used is added to the traceback by
+    providing the `raise_exception` argument.
+    """
+
+    def op_func(source: FlowableOpMixin):
+        return source.first(raise_exception=raise_exception)
+
+    return FlowableOperator(op_func)
+
+
+def first_or_default(lazy_val: Callable[[], Any]):
     """
     Emit the first element only and stop the Flowable sequence thereafter.
     """
 
     def op_func(source: FlowableOpMixin):
-        return source.first(raise_exception=raise_exception)
+        return source.first_or_default(lazy_val=lazy_val)
 
     return FlowableOperator(op_func)
 

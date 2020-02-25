@@ -8,7 +8,6 @@ from rx.core.typing import Disposable
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
-from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.observable import Observable
 from rxbp.observables.iteratorasobservable import IteratorAsObservable
 from rxbp.observerinfo import ObserverInfo
@@ -17,9 +16,9 @@ from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.base import Base
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.selectors.bases.objectrefbase import ObjectRefBase
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -278,7 +277,7 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
                                                           strategy=overflow_strategy)
                 else:
                     if overflow_strategy is None:
-                        buffer_size = 1000
+                        buffer_size = None
                     elif isinstance(overflow_strategy, BackPressure):
                         buffer_size = overflow_strategy.buffer_size
                     else:
@@ -325,13 +324,13 @@ def return_value(val: Any):
 
     base = NumericalBase(1)
 
-    class EmptyFlowable(FlowableBase):
+    class ReturnValueFlowable(FlowableBase):
         def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
 
             class EmptyObservable(Observable):
                 def observe(self, observer_info: ObserverInfo) -> Disposable:
                     def action(_, __):
-                        observer_info.observer.on_next([val])
+                        _ = observer_info.observer.on_next([val])
                         observer_info.observer.on_completed()
 
                     return subscriber.subscribe_scheduler.schedule(action)
@@ -343,7 +342,7 @@ def return_value(val: Any):
                 observable=EmptyObservable(),
             )
 
-    return Flowable(EmptyFlowable())
+    return Flowable(ReturnValueFlowable())
 
 
 def match(*sources: Flowable) -> Flowable:

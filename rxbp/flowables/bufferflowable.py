@@ -5,7 +5,7 @@ from rxbp.subscription import Subscription
 
 
 class BufferFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, buffer_size: int):
+    def __init__(self, source: FlowableBase, buffer_size: int = None):
         super().__init__()
 
         self._source = source

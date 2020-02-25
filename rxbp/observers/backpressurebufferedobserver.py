@@ -1,5 +1,7 @@
+import math
 import threading
 from queue import Queue
+from typing import Optional
 
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import ContinueAck, continue_ack
@@ -17,13 +19,16 @@ class BackpressureBufferedObserver(Observer):
             underlying: Observer,
             scheduler: Scheduler,
             subscribe_scheduler: Scheduler,
-            buffer_size: int,
+            buffer_size: Optional[int],
     ):
         self.underlying = underlying
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
         self.em = scheduler.get_execution_model()
-        self.buffer_size = buffer_size
+        if buffer_size is None:
+            self.buffer_size = math.inf
+        else:
+            self.buffer_size = buffer_size
 
         # states of buffered subscriber
         self.queue = Queue()

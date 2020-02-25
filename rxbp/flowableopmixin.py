@@ -9,7 +9,7 @@ from rxbp.typing import ValueType
 
 class FlowableOpMixin(ABC): # todo add generic
     @abstractmethod
-    def buffer(self, buffer_size: int) -> FlowableBase:
+    def buffer(self, buffer_size: int = None) -> FlowableBase:
         """
         Buffer the element emitted by the source without back-pressure until the buffer is full.
         """
@@ -70,6 +70,26 @@ class FlowableOpMixin(ABC): # todo add generic
         ...
 
     @abstractmethod
+    def default_if_empty(self, lazy_val: Callable[[], Any]):
+        """
+        Only the elements of the source or a default value if the source is an empty sequence
+
+        :param lazy_val: a function that returns the default value
+        """
+
+        ...
+
+    @abstractmethod
+    def do_action(
+            self,
+            on_next: Callable[[Any], None] = None,
+            on_completed: Callable[[], None] = None,
+            on_error: Callable[[Exception], None] = None,
+            on_disposed: Callable[[], None] = None,
+    ):
+        ...
+
+    @abstractmethod
     def execute_on(self, scheduler: Scheduler):
         """
         Inject new scheduler that is used to subscribe the Flowable.
@@ -98,7 +118,15 @@ class FlowableOpMixin(ABC): # todo add generic
         ...
 
     @abstractmethod
-    def first(self, raise_exception: Callable[[Callable[[], None]], None] = None) -> FlowableBase:
+    def first(self, raise_exception: Callable[[Callable[[], None]], None]) -> FlowableBase:
+        """
+        Emit the first element only and stop the Flowable sequence thereafter.
+        """
+
+        ...
+
+    @abstractmethod
+    def first_or_default(self, lazy_val: Callable[[], Any]) -> FlowableBase:
         """
         Emit the first element only and stop the Flowable sequence thereafter.
         """

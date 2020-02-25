@@ -11,18 +11,20 @@ from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
+from rxbp.multicast.multicasts.collectmulticast import CollectMultiCast
 from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
-from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
+from rxbp.multicast.multicasts.firstmulticast import FirstMultiCast
+from rxbp.multicast.multicasts.firstordefaultmulticast import FirstOrDefaultMultiCast
 from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
 from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
+from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
 from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.observeonmulticast import ObserveOnMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
-from rxbp.multicast.multicasts.collectmulticast import CollectMultiCast
 from rxbp.multicast.rxextensions.merge_ import merge_op
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
@@ -72,11 +74,29 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     ):
         return self._copy(FilterMultiCast(source=self, predicate=predicate))
 
+    def first(
+            self,
+            raise_exception: Callable[[Callable[[], None]], None],
+    ):
+        return self._copy(FirstMultiCast(source=self, raise_exception=raise_exception))
+
+    def first_or_default(
+            self,
+            lazy_val: Callable[[], Any],
+    ):
+        return self._copy(FirstOrDefaultMultiCast(source=self, lazy_val=lazy_val))
+
     def flat_map(
             self,
             func: Callable[[MultiCastValue], 'MultiCast[MultiCastValue]'],
     ):
         return self._copy(FlatMapMultiCast(source=self, func=func))
+
+    # def build_imperative_multicast(
+    #         self,
+    #         func: Callable[[Any], ImperativeCall]
+    # ):
+    #     return self._copy(FlatMapMultiCast(source=self, func=func))
 
     def lift(
             self,

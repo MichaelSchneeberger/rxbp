@@ -8,7 +8,7 @@ from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestOps(unittest.TestCase):
+class TestToRx(unittest.TestCase):
     def setUp(self) -> None:
         self.scheduler = TestScheduler()
         self.source = TestFlowable()
@@ -33,7 +33,7 @@ class TestOps(unittest.TestCase):
     def test_on_next_on_completed(self):
         Flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
 
-        self.assertEqual(self.scheduler, self.source.subscriber.scheduler.scheduler)
+        self.assertEqual(self.scheduler, self.source.subscriber.scheduler.underlying)
 
         ack = self.source.on_next_list([1, 2, 3])
 

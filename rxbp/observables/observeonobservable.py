@@ -1,6 +1,6 @@
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import ContinueAck
-from rxbp.ack.stopack import StopAck
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -40,6 +40,15 @@ class ObserveOnObservable(Observable):
             def on_next(self, elem: ElementType):
                 ack_subject = AckSubject()
 
+                if isinstance(elem, list):
+                    elem = elem
+                else:
+                    try:
+                        elem = list(elem)
+                    except Exception as exc:
+                        observer.on_error(exc)
+                        return stop_ack
+
                 def action(_, __):
                     inner_ack = observer.on_next(elem)
 
@@ -47,6 +56,8 @@ class ObserveOnObservable(Observable):
                         ack_subject.on_next(inner_ack)
                     elif isinstance(inner_ack, StopAck):
                         ack_subject.on_next(inner_ack)
+                    elif inner_ack is None:
+                        raise Exception(f'observer {observer} returned None instead of an Ack')
                     else:
                         inner_ack.subscribe(ack_subject)
 
@@ -54,10 +65,10 @@ class ObserveOnObservable(Observable):
                 return ack_subject
 
             def on_error(self, exc):
-                def action(_, __):
-                    observer.on_error(exc)
+                # def action(_, __):
+                observer.on_error(exc)
 
-                self.schedule_func(action)
+                # self.schedule_func(action)
 
             def on_completed(self):
                 def action(_, __):

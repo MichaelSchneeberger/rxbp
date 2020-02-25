@@ -1,12 +1,17 @@
 from typing import Callable, Any
 
 import rx
+from rx.disposable import CompositeDisposable
 
 from rxbp.multicast.flowableop import FlowableOp
+from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
 from rxbp.multicast.multicast import MultiCast
+from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
+from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
 
@@ -66,13 +71,6 @@ def default_if_empty(
     return MultiCastOperator(op_func)
 
 
-# todo: add loop
-# def loop(
-#         func: Callable[[MultiCastValue], MultiCastValue],
-# ):
-#     pass
-
-
 def loop_flowables(
         func: Callable[[MultiCastValue], MultiCastValue],
         initial: ValueType,
@@ -103,6 +101,33 @@ def filter(
 
     def op_func(source: MultiCastOpMixin):
         return source.filter(predicate=predicate)
+
+    return MultiCastOperator(op_func)
+
+
+def first(
+        raise_exception: Callable[[Callable[[], None]], None],
+):
+    """
+    Either emits the elements of the source or a single element
+    returned by `lazy_val` if the source doesn't emit any elements.
+
+    :param lazy_val: a function that returns the single elements
+    """
+
+    def op_func(source: MultiCastOpMixin):
+        return source.first(raise_exception=raise_exception)
+
+    return MultiCastOperator(op_func)
+
+
+def first_or_default(lazy_val: Callable[[], Any]):
+    """
+    Emit the first element only and stop the Flowable sequence thereafter.
+    """
+
+    def op_func(source: MultiCastOpMixin):
+        return source.first_or_default(lazy_val=lazy_val)
 
     return MultiCastOperator(op_func)
 

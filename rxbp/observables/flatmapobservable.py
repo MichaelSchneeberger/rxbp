@@ -37,7 +37,7 @@ class FlatMapObservable(Observable):
         self.state = RawFlatMapStates.InitialState()
         self.composite_disposable = CompositeDisposable()
 
-        self.observer_info = None
+        self.observer_info: Optional[ObserverInfo] = None
 
     class InnerObserver(Observer):
         def __init__(

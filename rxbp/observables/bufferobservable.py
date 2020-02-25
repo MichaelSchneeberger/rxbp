@@ -1,3 +1,5 @@
+from typing import Optional
+
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObserver
@@ -10,7 +12,7 @@ class BufferObservable(Observable):
             source: Observable,
             scheduler: Scheduler,
             subscribe_scheduler: Scheduler,
-            buffer_size: int,
+            buffer_size: Optional[int],
     ):
         self.source = source
         self.buffer_size = buffer_size

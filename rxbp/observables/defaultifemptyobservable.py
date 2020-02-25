@@ -1,4 +1,5 @@
-from typing import Callable
+import types
+from typing import Callable, Any
 
 from rx.internal import SequenceContainsNoElementsError
 
@@ -9,49 +10,45 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.typing import ElementType
 
 
-class FirstObservable(Observable):
+class DefaultIfEmptyObservable(Observable):
     def __init__(
             self,
             source: Observable,
-            raise_exception: Callable[[Callable[[], None]], None],
+            lazy_val: Callable[[], Any],
     ):
         super().__init__()
 
         self.source = source
-        self.raise_exception = raise_exception
+        self.lazy_val = lazy_val
 
         self.is_first = True
 
     def observe(self, observer_info: ObserverInfo):
         observer = observer_info.observer
 
-        source = self
+        outer_self = self
 
-        class FirstObserver(Observer):
+        class DefaultIfEmptyObserver(Observer):
             def on_next(self, elem: ElementType):
-                source.is_first = False
-                first_elem = next(iter(elem))
+                outer_self.is_first = False
 
-                def gen_first():
-                    yield first_elem
+                self.on_next = types.MethodType(observer.on_next, self)
 
-                observer.on_next(gen_first())
-                observer.on_completed()
-                return stop_ack
+                return observer.on_next(elem)
 
             def on_error(self, exc):
                 return observer.on_error(exc)
 
             def on_completed(self):
-                if source.is_first:
-                    def func():
-                        raise SequenceContainsNoElementsError()
-
+                if outer_self.is_first:
                     try:
-                        source.raise_exception(func)
+                        observer.on_next(outer_self.lazy_val())
+                        observer.on_completed()
                     except Exception as exc:
                         observer.on_error(exc)
+                else:
+                    observer.on_completed()
 
-        first_observer = FirstObserver()
+        first_observer = DefaultIfEmptyObserver()
         map_subscription = ObserverInfo(first_observer, is_volatile=observer_info.is_volatile)
         return self.source.observe(map_subscription)

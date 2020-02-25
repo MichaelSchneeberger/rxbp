@@ -1,3 +1,4 @@
+import traceback
 from datetime import datetime
 from typing import Optional
 
@@ -25,14 +26,17 @@ def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Schedu
     class FromFlowableObservable(Observable):
         def _subscribe_core(self, observer: typing.Observer, scheduler: typing.Scheduler = None):
             class RxBPScheduler(SchedulerBase):
-                def __init__(self, scheduler):
+                def __init__(self, underlying):
                     super().__init__()
 
-                    self.scheduler = scheduler
+                    self.underlying = underlying
+
+                def sleep(self, seconds: float) -> None:
+                    pass
 
                 @property
                 def now(self) -> datetime:
-                    return self.scheduler.now
+                    return self.underlying.now
 
                 @property
                 def is_order_guaranteed(self) -> bool:
@@ -40,15 +44,15 @@ def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Schedu
                     return False
 
                 def schedule(self, action: ScheduledAction, state: TState = None) -> Disposable:
-                    return self.scheduler.schedule(action=action, state=state)
+                    return self.underlying.schedule(action=action, state=state)
 
                 def schedule_relative(self, duetime: RelativeTime, action: ScheduledAction,
                                       state: TState = None) -> Disposable:
-                    return self.scheduler.schedule_relative(duetime=duetime, action=action, state=state)
+                    return self.underlying.schedule_relative(duetime=duetime, action=action, state=state)
 
                 def schedule_absolute(self, duetime: AbsoluteTime, action: ScheduledAction,
                                       state: TState = None) -> Disposable:
-                    return self.scheduler.schedule_absolute(duetime=duetime, action=action, state=state)
+                    return self.underlying.schedule_absolute(duetime=duetime, action=action, state=state)
 
                 def schedule_periodic(self, period: RelativeTime, action: ScheduledPeriodicAction,
                                       state: Optional[TState] = None) -> Disposable:
@@ -81,7 +85,7 @@ def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Schedu
                 to_rx_observer.on_next = on_next
 
             trampoline_scheduler = subscribe_schduler or TrampolineScheduler()
-            scheduler_ = RxBPScheduler(scheduler=scheduler) if scheduler is not None else trampoline_scheduler
+            scheduler_ = RxBPScheduler(underlying=scheduler) if scheduler is not None else trampoline_scheduler
             subscriber = Subscriber(scheduler=scheduler_, subscribe_scheduler=trampoline_scheduler)
             subscription = ObserverInfo(observer=to_rx_observer)
             return source.subscribe_(subscriber=subscriber, observer_info=subscription)
