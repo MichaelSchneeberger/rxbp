@@ -7,7 +7,7 @@ from rxbp.observerinfo import ObserverInfo
 
 class Observable(ABC):
     """
-    An Observable is a rxbackpressure internal object that uses mutable state where it increases efficiency.
+    An Observable is an rxbackpressure internal object that uses mutable state where it increases efficiency.
 
     In most cases, an Observable is initiated (possibly multiple times) when subscribing to a Flowable.
     Like Flowables, Observables are chained together from data source to data sink (e.g. downstream). Calling the

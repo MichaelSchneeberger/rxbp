@@ -13,7 +13,7 @@ class TestFromRange(unittest.TestCase):
         self.scheduler = TestScheduler()
 
     def test_happy_case(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_range(1, 4).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
@@ -28,7 +28,7 @@ class TestFromRange(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_batch_size(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_range(1, 4, batch_size=2).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,

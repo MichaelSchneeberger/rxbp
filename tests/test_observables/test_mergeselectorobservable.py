@@ -231,7 +231,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         WaitOnLeft --------------------> WaitOnLeft ------------------> Stopped
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         self.obs.observe(ObserverInfo(sink))
         self.right.on_next_list([select_completed])
 
@@ -250,7 +250,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         WaitOnRight -------------> Stopped
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         self.obs.observe(ObserverInfo(sink))
         ack1 = self.left.on_next_list([select_completed])
 

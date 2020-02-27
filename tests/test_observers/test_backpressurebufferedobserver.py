@@ -50,7 +50,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         self.assertEqual([0], sink.received)
 
     def test_acknowledge_zero_buffer(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         observer = BackpressureBufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,

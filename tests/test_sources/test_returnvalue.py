@@ -20,7 +20,7 @@ class TestReturnValue(unittest.TestCase):
         self.assertEqual(NumericalBase(1), subscription.info.base)
 
     def test_use_case(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.return_value(1).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))

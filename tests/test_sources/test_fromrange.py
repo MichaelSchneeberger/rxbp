@@ -20,7 +20,7 @@ class TestFromRange(unittest.TestCase):
         self.assertEqual(NumericalBase(3), subscription.info.base)
 
     def test_use_case(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_range(1, 4).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
@@ -31,7 +31,7 @@ class TestFromRange(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_from_list_batch_size_of_one(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_range(1, 4, batch_size=1).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
@@ -47,7 +47,7 @@ class TestFromRange(unittest.TestCase):
         self.assertEqual([1, 2], sink.received)
 
     def test_from_list_batch_size_of_two(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_range(1, 4, batch_size=2).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
