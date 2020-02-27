@@ -1,6 +1,6 @@
-from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.ack.continueack import ContinueAck
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -24,8 +24,11 @@ class DebugObservable(Observable):
             self.on_raw_ack = on_raw_ack or (lambda v: print('{}.on_raw_ack {}'.format(name, v)))
             self.on_next_exception = on_next_exception or (lambda v: print('{}.on_next exception raised "{}"'.format(name, v)))
         else:
-            empty_func0 = lambda: None
-            empty_func1 = lambda v: None
+            def empty_func0():
+                return None
+
+            def empty_func1(v):
+                return None
 
             self.on_next_func = on_next or empty_func1
             self.on_error_func = on_error or empty_func1
@@ -53,11 +56,7 @@ class DebugObservable(Observable):
 
                 source.on_next_func(materialized)
 
-                try:
-                    ack = observer.on_next(materialized)
-                except Exception as e:
-                    # self.on_next_exception(e)
-                    raise
+                ack = observer.on_next(materialized)
 
                 if isinstance(ack, ContinueAck) or isinstance(ack, StopAck):
                     source.on_sync_ack(ack)

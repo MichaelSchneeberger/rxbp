@@ -1,5 +1,5 @@
 from rxbp.flowables.zip2flowable import Zip2Flowable
-from rxbp.selectors.bases import NumericalBase
+from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testflowable import TestFlowable

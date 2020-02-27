@@ -8,11 +8,11 @@ from rxbp.typing import ValueType
 
 
 class MapFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, selector: Callable[[ValueType], Any]):
+    def __init__(self, source: FlowableBase, func: Callable[[ValueType], Any]):
         super().__init__()
 
         self._source = source
-        self._selector = selector
+        self._selector = func
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)

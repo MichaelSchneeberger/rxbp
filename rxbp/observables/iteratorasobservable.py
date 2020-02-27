@@ -1,10 +1,11 @@
 from typing import Iterator, Any
 
 from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
-from rxbp.ack.stopack import StopAck
+
 from rxbp.ack.continueack import ContinueAck
 from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase, ExecutionModel, Scheduler
@@ -80,25 +81,25 @@ class IteratorAsObservable(Observable):
                   disposable: BooleanDisposable, em: ExecutionModel, sync_index: int):
         while True:
             try:
-                next_item = next(self.iterator)
-                has_next = True
-            except StopIteration:
-                has_next = False
-                next_item = None
-            except Exception as e:
-                # stream errors == True
-                self.trigger_cancel(scheduler)
-
-                if not disposable.is_disposed:
-                    observer.on_error(e)
-                else:
-                    scheduler.report_failure(e)
-
-                has_next = False
-                next_item = None
-
-            try:
                 ack = observer.on_next(current_item)
+
+                try:
+                    next_item = next(self.iterator)
+                    has_next = True
+                except StopIteration:
+                    has_next = False
+                    next_item = None
+                except Exception as e:
+                    # stream errors == True
+                    self.trigger_cancel(scheduler)
+
+                    if not disposable.is_disposed:
+                        observer.on_error(e)
+                    else:
+                        scheduler.report_failure(e)
+
+                    has_next = False
+                    next_item = None
 
                 if not has_next:
                     try:
@@ -125,5 +126,5 @@ class IteratorAsObservable(Observable):
                     else:
                         self.trigger_cancel(scheduler)
                         break
-            except:
+            except Exception:
                 raise Exception('fatal error')

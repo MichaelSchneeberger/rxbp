@@ -7,7 +7,6 @@ from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.rxextensions.liftobservable import LiftObservable
 from rxbp.multicast.typing import MultiCastValue
-from rxbp.observables.refcountobservable import RefCountObservable
 
 
 class LiftMultiCast(MultiCastBase):

@@ -2,11 +2,12 @@ import threading
 from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import stop_ack
-from rxbp.ack.continueack import continue_ack
+
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.operators.merge import _merge
+from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
@@ -50,7 +51,10 @@ class ControlledZipObservable(Observable):
 
         # state once observed
         self.termination_state = RawTerminationStates.InitState()
-        self.state = RawControlledZipStates.WaitOnLeftRight()
+        self.state = RawControlledZipStates.WaitOnLeftRight(
+            # left_sel=None,
+            # right_sel=None,
+        )
 
     def _iterate_over_batch(
             self,
@@ -104,22 +108,22 @@ class ControlledZipObservable(Observable):
             left_val = val
             left_iter = iterable
             left_in_ack = upstream_ack
-            last_left_sel_ack = None
+            # last_left_sel_ack = None
             right_val = prev_state.right_val
             right_iter = prev_state.right_iter
             right_in_ack = prev_state.right_ack
-            last_right_sel_ack = prev_state.right_sel_ack
+            # last_right_sel_ack = prev_state.right_sel_ack
             other_upstream_ack = prev_state.right_ack
 
         elif not is_left and isinstance(prev_state, ControlledZipStates.WaitOnRight):
             left_val = prev_state.left_val
             left_iter = prev_state.left_iter
             left_in_ack = prev_state.left_ack
-            last_left_sel_ack = prev_state.left_sel_ack
+            # last_left_sel_ack = prev_state.left_sel_ack
             right_val = val
             right_iter = iterable
             right_in_ack = upstream_ack
-            last_right_sel_ack = None
+            # last_right_sel_ack = None
             other_upstream_ack = prev_state.left_ack
 
         else:
@@ -128,7 +132,7 @@ class ControlledZipObservable(Observable):
         # keep elements to be sent in a buffer. Only when the incoming batch of elements is iterated over, the
         # elements in the buffer are sent.
         left_index_buffer = []                  # index of the elements from the left observable that got selected
-        right_index_buffer = []                 #   by the match function
+        right_index_buffer = []                 # by the match function
         zipped_output_buffer = []
 
         request_new_elem_from_left = False
@@ -181,24 +185,29 @@ class ControlledZipObservable(Observable):
         if left_index_buffer:
             left_out_ack = self.left_selector.on_next(left_index_buffer)
         else:
-            left_out_ack = last_left_sel_ack or continue_ack
+            left_out_ack = continue_ack #last_left_sel_ack or continue_ack
 
         # only send elements over the right selector observer, if there are any to be sent
         if right_index_buffer:
             right_out_ack = self.right_selector.on_next(right_index_buffer)
         else:
-            right_out_ack = last_right_sel_ack or continue_ack
+            right_out_ack = continue_ack #last_right_sel_ack or continue_ack
 
         # all elements in the left and right iterable are send downstream
         if request_new_elem_from_left and request_new_elem_from_right:
-            next_state = RawControlledZipStates.WaitOnLeftRight()
+            next_state = RawControlledZipStates.WaitOnLeftRight(
+                # right_sel=right_sel,
+                # left_sel=left_sel,
+            )
 
         elif request_new_elem_from_left:
             next_state = RawControlledZipStates.WaitOnLeft(
                 right_val=right_val,
                 right_iter=right_iter,
                 right_ack=right_in_ack,
-                right_sel_ack=right_out_ack,
+                # right_sel=right_sel,
+                # left_sel=left_sel,
+                # right_sel_ack=right_out_ack,
             )
 
         elif request_new_elem_from_right:
@@ -206,7 +215,9 @@ class ControlledZipObservable(Observable):
                 left_val=left_val,
                 left_iter=left_iter,
                 left_ack=left_in_ack,
-                left_sel_ack=left_out_ack,
+                # right_sel=right_sel,
+                # left_sel=left_sel,
+                # left_sel_ack=left_out_ack,
             )
 
         else:
@@ -222,10 +233,10 @@ class ControlledZipObservable(Observable):
         prev_termination_state = raw_prev_termination_state.get_measured_state()
 
         def stop_active_acks():
-            if isinstance(last_right_sel_ack, AckSubject):
-                last_right_sel_ack.on_next(stop_ack)
-            elif isinstance(last_left_sel_ack, AckSubject):
-                last_left_sel_ack.on_next(stop_ack)
+            # if isinstance(last_right_sel_ack, AckSubject):
+            #     last_right_sel_ack.on_next(stop_ack)
+            # elif isinstance(last_left_sel_ack, AckSubject):
+            #     last_left_sel_ack.on_next(stop_ack)
             other_upstream_ack.on_next(stop_ack)
 
         # stop back-pressuring both sources, because there is no need to request elements
@@ -254,6 +265,9 @@ class ControlledZipObservable(Observable):
         # finish connecting ack only if not in Stopped or Error state
         else:
 
+            # result_out_ack = AckSubject()
+            # _merge(_merge(zip_out_ack, left_out_ack), right_out_ack).subscribe(result_out_ack)
+
             if request_new_elem_from_left and request_new_elem_from_right:
 
                 # integrate selector acks
@@ -264,6 +278,7 @@ class ControlledZipObservable(Observable):
                 if is_left:
                     result_ack_right.subscribe(right_in_ack)
                     return result_ack_left
+
                 else:
                     result_ack_left.subscribe(left_in_ack)
                     return result_ack_right
@@ -271,23 +286,34 @@ class ControlledZipObservable(Observable):
             # all elements in the left buffer are send to the observer, back-pressure only left
             elif request_new_elem_from_left:
 
-                result_left_ack = _merge(zip_out_ack, left_out_ack)
+                # result_ack_left = _merge(zip_out_ack, left_out_ack)
+
+                # result_out_ack = AckSubject()
+                # _merge(_merge(zip_out_ack, left_out_ack), right_out_ack).subscribe(result_out_ack)
+                result_out_ack = _merge(_merge(zip_out_ack, left_out_ack), right_out_ack)
+
                 if is_left:
-                    return result_left_ack
+                    return result_out_ack
+
                 else:
-                    result_left_ack.subscribe(left_in_ack)
+                    result_out_ack.subscribe(left_in_ack)
                     return right_in_ack
 
             # all elements in the left buffer are send to the observer, back-pressure only right
             elif request_new_elem_from_right:
 
-                result_right_ack = _merge(zip_out_ack, right_out_ack)
+                # result_ack_right = _merge(zip_out_ack, left_out_ack)
+
+                # result_out_ack = AckSubject()
+                # _merge(_merge(zip_out_ack, left_out_ack), right_out_ack).subscribe(result_out_ack)
+                result_out_ack = _merge(_merge(zip_out_ack, left_out_ack), right_out_ack)
 
                 if is_left:
-                    result_right_ack.subscribe(right_in_ack)
+                    result_out_ack.subscribe(right_in_ack)
                     return left_in_ack
+
                 else:
-                    return result_right_ack
+                    return result_out_ack
 
             else:
                 raise Exception('illegal case')
@@ -319,7 +345,7 @@ class ControlledZipObservable(Observable):
         """ this function is called once, because 'on_complete' or 'on_error' are called once according to the rxbp
         convention
 
-        :param state: controlled connect_flowable state
+        :param state: controlled collect_flowables state
         :param ex: catched exception to be forwarded downstream
         :return:
         """

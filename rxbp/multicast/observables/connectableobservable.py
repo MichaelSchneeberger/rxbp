@@ -1,4 +1,5 @@
 from rx.core.typing import Disposable
+
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver

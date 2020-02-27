@@ -2,14 +2,18 @@ from typing import Callable
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.firstobservable import FirstObservable
-from rxbp.selectors.bases import NumericalBase
+from rxbp.selectors.bases.numericalbase import NumericalBase
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FirstFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, raise_exception: Callable[[Callable[[], None]], None] = None):
+    def __init__(
+            self,
+            source: FlowableBase,
+            raise_exception: Callable[[Callable[[], None]], None],
+    ):
         super().__init__()
 
         self._source = source
@@ -22,4 +26,4 @@ class FirstFlowable(FlowableBase):
         # first emits exactly one element
         base = NumericalBase(1)
 
-        return Subscription(BaseSelectorsTuple(base=base), observable=observable)
+        return Subscription(BaseAndSelectors(base=base), observable=observable)

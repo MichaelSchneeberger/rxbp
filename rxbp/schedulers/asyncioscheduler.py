@@ -4,6 +4,7 @@ from threading import Thread
 from typing import Union, Callable, Any
 
 from rx.disposable import Disposable
+
 from rxbp.scheduler import SchedulerBase
 
 
@@ -18,13 +19,18 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
             t.setDaemon(True)
             t.start()
 
+    @property
+    def is_order_guaranteed(self) -> bool:
+        return True
+
     def start_loop(self):
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
     @property
     def now(self):
-        return self.loop.time()
+        # return self.loop.time()
+        return datetime.datetime.now()
 
     def schedule(self,
                  action: Callable[[SchedulerBase, Any], None],

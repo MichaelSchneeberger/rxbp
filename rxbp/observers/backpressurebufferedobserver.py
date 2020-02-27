@@ -1,11 +1,13 @@
+import math
 import threading
 from queue import Queue
+from typing import Optional
 
-from rxbp.ack.stopack import StopAck, stop_ack
-from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
@@ -17,13 +19,16 @@ class BackpressureBufferedObserver(Observer):
             underlying: Observer,
             scheduler: Scheduler,
             subscribe_scheduler: Scheduler,
-            buffer_size: int,
+            buffer_size: Optional[int],
     ):
         self.underlying = underlying
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
         self.em = scheduler.get_execution_model()
-        self.buffer_size = buffer_size
+        if buffer_size is None:
+            self.buffer_size = math.inf
+        else:
+            self.buffer_size = buffer_size
 
         # states of buffered subscriber
         self.queue = Queue()
@@ -93,20 +98,21 @@ class BackpressureBufferedObserver(Observer):
             try:
                 ack = self.underlying.on_next(next)
                 return ack
-            except:
-                raise NotImplementedError
+            except Exception as exc:
+                signal_error(exc)
+                return stop_ack
 
         def signal_complete():
-            try:
-                self.underlying.on_completed()
-            except:
-                raise NotImplementedError
+            # try:
+            self.underlying.on_completed()
+            # except:
+            #     raise NotImplementedError
 
         def signal_error(ex):
-            try:
-                self.underlying.on_error(ex)
-            except:
-                raise NotImplementedError
+            # try:
+            self.underlying.on_error(ex)
+            # except:
+            #     raise NotImplementedError
 
         def go_async(next, next_size: int, ack: AckSubject, processed: int):
             def on_next(v):
@@ -194,9 +200,9 @@ class BackpressureBufferedObserver(Observer):
                             bp.on_next(continue_ack)
                         return
 
-        try:
-            fast_loop(prev_ack=self.last_iteration_ack, last_processed=0, start_index=0)
-        except:
-            raise NotImplementedError
+        # try:
+        fast_loop(prev_ack=self.last_iteration_ack, last_processed=0, start_index=0)
+        # except:
+        #     raise NotImplementedError
 
 

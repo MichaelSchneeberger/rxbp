@@ -12,46 +12,59 @@ from rxbp.testing.testscheduler import TestScheduler
 class TestConcatObservable(unittest.TestCase):
     def setUp(self) -> None:
         self.scheduler = TestScheduler()
-        self.sink = TestObserver()
+        self.sources = [TestObservable(), TestObservable()]
+        self.obs = ConcatObservable(
+            sources=self.sources, 
+            scheduler=self.scheduler, 
+            subscribe_scheduler=self.scheduler,
+        )
         self.exception = Exception('dummy')
 
     def test_initialization(self):
         sources = []
         ConcatObservable(sources=sources, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
 
-    def test_no_backpressure(self):
-        sources = [TestObservable(), TestObservable()]
-        obs = ConcatObservable(sources=sources, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
-        obs.observe(ObserverInfo(self.sink))
+    def test_on_next_first(self):
+        sink = TestObserver()
+        self.obs.observe(ObserverInfo(sink))
 
-        ack = sources[0].on_next_single(1)
+        ack = self.sources[0].on_next_single(1)
 
         self.assertIsInstance(ack, ContinueAck)
+        self.assertEqual([1], sink.received)
 
-    def test_backpressure(self):
-        sources = [TestObservable(), TestObservable()]
-        obs = ConcatObservable(sources=sources, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
-        obs.observe(ObserverInfo(self.sink))
+    def test_on_next_second(self):
+        sink = TestObserver()
+        self.obs.observe(ObserverInfo(sink))
 
-        ack = sources[1].on_next_single(1)
+        ack = self.sources[1].on_next_single(1)
 
-        self.assertNotIsInstance(ack, ContinueAck)
+        self.assertFalse(ack.is_sync)
+        self.assertEqual([], sink.received)
+
+    def test_on_next_second_complete_first(self):
+        sink = TestObserver()
+        self.obs.observe(ObserverInfo(sink))
+        ack = self.sources[1].on_next_single(1)
+
+        self.sources[0].on_completed()
+
+        self.assertIsInstance(ack.value, ContinueAck)
+        self.assertEqual([1], sink.received)
 
     def test_on_error(self):
-        sources = [TestObservable(), TestObservable()]
-        obs = ConcatObservable(sources=sources, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
-        obs.observe(ObserverInfo(self.sink))
+        sink = TestObserver()
+        self.obs.observe(ObserverInfo(sink))
 
-        sources[0].on_error(self.exception)
+        self.sources[0].on_error(self.exception)
 
-        self.assertEqual(self.exception, self.sink.exception)
+        self.assertEqual(self.exception, sink.exception)
 
     def test_on_error_on_next(self):
-        sources = [TestObservable(), TestObservable()]
-        obs = ConcatObservable(sources=sources, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
-        obs.observe(ObserverInfo(self.sink))
-        sources[0].on_error(self.exception)
+        sink = TestObserver()
+        self.obs.observe(ObserverInfo(sink))
+        self.sources[0].on_error(self.exception)
 
-        ack = sources[1].on_next_single(0)
+        ack = self.sources[1].on_next_single(0)
 
         self.assertIsInstance(ack, StopAck)

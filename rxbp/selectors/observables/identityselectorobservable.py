@@ -1,4 +1,5 @@
 from rx.core.typing import Disposable
+
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -18,24 +19,14 @@ class IdentitySelectorObservable(Observable):
 
         class IdentityObserver(Observer):
             def on_next(self, elem: ElementType):
-                # class IdentitySingle(Single):
-                #     def on_error(self, exc: Exception):
-                #         pass
-                #
-                #     def on_next(self, a):
-                #         if isinstance(a, Continue):
-                #             inner_ack = observer.on_next(select_completed)
-                #             inner_ack.subscribe(ack_subject)
+                def gen_select_msg():
+                    for _ in elem:
+                        yield select_next
+                        yield select_completed
 
-                buffer = list(elem())
-                # print('IdentityObserver.on_next({})'.format(buffer))
-                # print('IdentityObserver.observer = {}'.format(observer))
-                select_msg_buffer = [select_next for _ in range(len(buffer))] + [select_completed]
+                # val = list(gen_select_msg())
 
-                def gen():
-                    yield from select_msg_buffer
-
-                ack = observer.on_next(gen)
+                ack = observer.on_next(gen_select_msg())
                 return ack
 
             def on_error(self, exc: Exception):

@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from rx.scheduler.scheduler import Scheduler as RxScheduler
 
@@ -23,14 +23,25 @@ class UncaughtExceptionReport:
 
 
 class Scheduler(RxScheduler, ABC):
+    @abstractmethod
     def report_failure(self, exc: Exception):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def get_execution_model(self) -> ExecutionModel:
-        raise NotImplementedError
+        ...
+
+    @property
+    @abstractmethod
+    def is_order_guaranteed(self) -> bool:
+        ...
+
+    @abstractmethod
+    def sleep(self, seconds: float) -> None:
+        ...
 
 
-class SchedulerBase(Scheduler):
+class SchedulerBase(Scheduler, ABC):
     def __init__(self, r: UncaughtExceptionReport = None, execution_model: ExecutionModel = None):
         super().__init__()
 

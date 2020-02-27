@@ -1,9 +1,9 @@
 from abc import ABC
-from collections import Iterator
-from typing import Optional, Any
+from typing import Optional, Any, Iterator
 
-from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.selectors.selectionmsg import SelectionMsg
 
 
 class ControlledZipStates:
@@ -22,12 +22,16 @@ class ControlledZipStates:
                 right_val: Any,
                 right_ack: AckSubject,
                 right_iter: Iterator,
-                right_sel_ack: Optional[AckMixin],
+                # right_sel: Optional[SelectionMsg],
+                # left_sel: Optional[SelectionMsg],
+                # right_sel_ack: Optional[AckMixin],
         ):
             self.right_val = right_val
             self.right_ack = right_ack
             self.right_iter = right_iter
-            self.right_sel_ack = right_sel_ack
+            # self.right_sel = right_sel
+            # self.left_sel = left_sel
+            # self.right_sel_ack = right_sel_ack
 
     class WaitOnRight(ZipState):
         """ Equivalent of WaitOnLeft """
@@ -37,12 +41,16 @@ class ControlledZipStates:
                 left_val: Any,
                 left_ack: AckSubject,
                 left_iter: Iterator,
-                left_sel_ack: Optional[AckMixin],
+                # right_sel: Optional[SelectionMsg],
+                # left_sel: Optional[SelectionMsg],
+                # left_sel_ack: Optional[AckMixin],
         ):
             self.left_val = left_val
             self.left_iter = left_iter
             self.left_ack = left_ack
-            self.left_sel_ack = left_sel_ack
+            # self.right_sel = right_sel
+            # self.left_sel = left_sel
+            # self.left_sel_ack = left_sel_ack
 
     class WaitOnLeftRight(ZipState):
         """ Zip observable actor has or will back-pressure the left and right source, but
@@ -51,7 +59,13 @@ class ControlledZipStates:
         In this state, the left and right buffer are empty.
         """
 
-        pass
+        # def __init__(
+        #         self,
+        #         right_sel: Optional[SelectionMsg],
+        #         left_sel: Optional[SelectionMsg],
+        # ):
+        #     self.right_sel = right_sel
+        #     self.left_sel = left_sel
 
     class ZipElements(ZipState):
         """ Zip observable actor is zipping the values just received by a source and

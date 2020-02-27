@@ -8,12 +8,24 @@ from rx.core import typing
 from rx.internal import PriorityQueue
 from rx.scheduler.scheduleditem import ScheduledItem
 from rx.scheduler.scheduler import Scheduler
+
 from rxbp.scheduler import SchedulerBase as RxBPSchedulerBase
 
 log = logging.getLogger('Rx')
 
 
 class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
+    def __init__(self):
+        """Gets a scheduler that schedules work as soon as possible on the
+        current thread."""
+
+        super().__init__()
+
+        self.idle = True
+        self.queue = PriorityQueue()
+
+        self.lock = threading.RLock()
+
     class Trampoline(object):
         @classmethod
         def run(cls, queue: PriorityQueue) -> None:
@@ -29,16 +41,12 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
                     else:
                         time.sleep(diff.total_seconds())
 
-    def __init__(self):
-        """Gets a scheduler that schedules work as soon as possible on the
-        current thread."""
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)
 
-        super().__init__()
-
-        self.idle = True
-        self.queue = PriorityQueue()
-
-        self.lock = threading.RLock()
+    @property
+    def is_order_guaranteed(self) -> bool:
+        return True
 
     def schedule(self,
                  action: typing.ScheduledAction,
@@ -88,7 +96,7 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
         duetime = self.to_datetime(duetime)
 
         if duetime > self.now:
-            log.warning("Do not schedule blocking work!")
+            log.warning("Do not schedule imperative work!")
 
         si: ScheduledItem[typing.TState] = ScheduledItem(self, state, action, duetime)
 

@@ -1,5 +1,5 @@
 from abc import ABC
-from collections import Iterator
+from typing import Iterator
 
 from rxbp.ack.acksubject import AckSubject
 

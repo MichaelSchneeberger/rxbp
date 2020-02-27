@@ -1,23 +1,24 @@
 import sys
 import threading
 import types
+from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Any, Tuple
 
 import rx
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
 from rx.disposable import Disposable, BooleanDisposable
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import StopAck, stop_ack
-from rxbp.ack.continueack import ContinueAck, continue_ack
+
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import ExecutionModel, Scheduler
-from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.typing import ElementType
 
 
@@ -26,12 +27,26 @@ class CacheServeFirstOSubject(OSubjectBase):
     and buffers the last elements according to the slowest subscriber.
     """
 
+    def __init__(self, scheduler: Scheduler, name=None):
+        super().__init__()
+
+        self.name = name
+        self.scheduler = scheduler
+
+        # mutable state
+        # self.state = self.NormalState()
+        self.shared_state = self.SharedState()
+
+        self.lock = threading.RLock()
+
     class SharedState:
         """ Buffers all elements from the most recently received element to the earliest element
         that has not yet been sent to all subscribers
         """
 
         def __init__(self):
+
+            self.state = CacheServeFirstOSubject.NormalState()
 
             # notification buffer
             self.first_idx = -1
@@ -44,8 +59,12 @@ class CacheServeFirstOSubject(OSubjectBase):
             # used for deque the buffer
             self.current_index: Dict['CacheServeFirstOSubject.InnerSubscription', int] = {}
 
+            self.subscriptions: List['CacheServeFirstOSubject.InnerSubscription'] = []
+
             # the inner subscription reaching the end of the buffer requests a new element
             self.current_ack: Optional[AckSubject] = None
+
+            self.is_disposed = False
 
         def add_inner_subscription(self, subscription):
             self.inactive_subscriptions.append(subscription)
@@ -128,31 +147,36 @@ class CacheServeFirstOSubject(OSubjectBase):
             self.first_idx += 1
             self.queue.pop(0)
 
-    class State(MeasuredState):
-        pass
+    class State(ABC):
+        @abstractmethod
+        def get_measured_state(self):
+            ...
 
     @dataclass
     class NormalState(State):
-        pass
+        def get_measured_state(self):
+            return self
 
     class CompletedState(State):
-        pass
+        def __init__(self):
+            self.prev_state: CacheServeFirstOSubject.State = None
+
+        def get_measured_state(self):
+            previous_state = self.prev_state.get_measured_state()
+
+            if isinstance(previous_state, CacheServeFirstOSubject.ExceptionState):
+                return self.prev_state
+            else:
+                return self
 
     class ExceptionState(State):
         def __init__(self, exc):
             self.exc = exc
 
-    def __init__(self, scheduler: Scheduler, name=None):
-        super().__init__()
+            self.prev_state = None
 
-        self.name = name
-        self.scheduler = scheduler
-
-        # mutable state
-        self.state = self.NormalState()
-        self.shared_state = self.SharedState()
-
-        self.lock = threading.RLock()
+        def get_measured_state(self):
+            return self
 
     class InnerSubscription:
         def __init__(
@@ -258,10 +282,6 @@ class CacheServeFirstOSubject(OSubjectBase):
                         self.observer.on_completed()
                         break
 
-                    elif isinstance(notification, OnError):
-                        self.observer.on_error(notification.exception)
-                        break
-
                     else:
                         ack = self.observer.on_next(notification.value)
 
@@ -292,6 +312,11 @@ class CacheServeFirstOSubject(OSubjectBase):
                         break
 
                     else:
+
+                        meas_state = self.shared_state.state.get_measured_state()
+                        if isinstance(meas_state, CacheServeFirstOSubject.ExceptionState):
+                            break
+
                         single = self.AsyncAckSingle(
                             inner_subscription=self,
                             current_index=current_index,
@@ -323,15 +348,19 @@ class CacheServeFirstOSubject(OSubjectBase):
         )
 
         with self.lock:
-            prev_state = self.state
+            prev_state = self.shared_state.state
 
             self.shared_state.add_inner_subscription(inner_subscription)
 
-        if isinstance(prev_state, self.ExceptionState):
-            observer.on_error(prev_state.exc)
+            self.shared_state.subscriptions.append(inner_subscription)
+
+        meas_state = prev_state.get_measured_state()
+
+        if isinstance(meas_state, self.ExceptionState):
+            observer.on_error(meas_state.exc)
             return Disposable()
 
-        elif isinstance(prev_state, self.CompletedState):
+        elif isinstance(meas_state, self.CompletedState):
             observer.on_completed()
             return Disposable()
 
@@ -346,8 +375,7 @@ class CacheServeFirstOSubject(OSubjectBase):
         else:
             try:
                 materialized_values = list(elem)
-            except:
-                exc = sys.exc_info()
+            except Exception as exc:
                 self.on_error(exc)
                 return stop_ack
 
@@ -363,7 +391,14 @@ class CacheServeFirstOSubject(OSubjectBase):
                 inner_ack = inner_subscription.notify_on_next(
                     materialized_values, current_index)
                 yield inner_ack
+
+                if isinstance(inner_ack, StopAck):
+                    break
+
         inner_ack_list = list(gen_inner_ack())
+
+        if any(isinstance(ack, StopAck) for ack in inner_ack_list):
+            return stop_ack
 
         dequeue_buffer = self.shared_state.should_dequeue(current_index)
         if dequeue_buffer:
@@ -383,14 +418,14 @@ class CacheServeFirstOSubject(OSubjectBase):
         state = self.CompletedState()
 
         with self.lock:
-            prev_state = self.state
+            state.prev_state = self.shared_state.state
             self.state = state
 
             # add item to buffer
             inactive_subsriptions = self.shared_state.on_completed()
 
         # send notification to inactive subscriptions
-        if isinstance(prev_state, self.NormalState):    # todo: necessary?
+        if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
             for inner_subscription in inactive_subsriptions:
                 inner_subscription.notify_on_completed()
 
@@ -398,15 +433,17 @@ class CacheServeFirstOSubject(OSubjectBase):
         state = self.ExceptionState(exception)
 
         with self.lock:
-            prev_state = self.state
+            state.prev_state = self.shared_state.state
             self.state = state
 
-            # add item to buffer
-            inactive_subsriptions = self.shared_state.on_error(exception)
+            # # add item to buffer
+            # inactive_subsriptions = self.shared_state.on_error(exception)
+
+        subscriptions = self.shared_state.subscriptions
 
         # send notification to inactive subscriptions
-        if isinstance(prev_state, self.NormalState):    # todo: necessary?
-            for inner_subscription in inactive_subsriptions:
+        if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
+            for inner_subscription in subscriptions:
                 inner_subscription.notify_on_error(exception)
 
     def dispose(self):

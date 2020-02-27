@@ -1,6 +1,7 @@
 from typing import List, Iterable
 
 from rx.disposable import Disposable
+
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -10,6 +11,8 @@ from rxbp.typing import ValueType
 class TestObservable(Observable):
     def __init__(self, observer: Observer = None):
         self.observer = observer
+
+        self.is_disposed = False
 
     def on_next_single(self, val: ValueType):
         return self.on_next([val])
@@ -34,4 +37,8 @@ class TestObservable(Observable):
 
     def observe(self, observer_info: ObserverInfo):
         self.observer = observer_info.observer
-        return Disposable()
+
+        def dispose_func():
+            self.is_disposed = True
+
+        return Disposable(dispose_func)

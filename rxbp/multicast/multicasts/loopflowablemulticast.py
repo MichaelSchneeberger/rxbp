@@ -21,12 +21,12 @@ from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class DeferMultiCast(MultiCastBase):
+class LoopFlowableMultiCast(MultiCastBase):
     def __init__(
             self,
             source: MultiCastBase,
@@ -77,7 +77,7 @@ class DeferMultiCast(MultiCastBase):
         def gen_deferred():
             for key in initial_dict.keys():
                 def for_func(key=key):
-                    return key, MultiCastFlowable(MapFlowable(source=shared, selector=lambda d: d[key]))
+                    return key, MultiCastFlowable(MapFlowable(source=shared, func=lambda d: d[key]))
 
                 yield for_func()
 
@@ -111,11 +111,11 @@ class DeferMultiCast(MultiCastBase):
         output = self.func(init)
 
         def map_func(base: MultiCastValue):
-            match_error_message = f'loop_flowable function returned "{base}" which does not match initial "{initial}"'
+            match_error_message = f'loop_flowables function returned "{base}" which does not match initial "{initial}"'
 
             if isinstance(base, Flowable) and len(initial_dict) == 1:
 
-                # if initial would be a dicitonary, then the input to the loop_flowable operator
+                # if initial would be a dicitonary, then the input to the loop_flowables operator
                 # must be a dicitonary and not a Flowable.
                 assert not isinstance(initial, dict), match_error_message
 
@@ -142,7 +142,7 @@ class DeferMultiCast(MultiCastBase):
                 else:
                     flowable_state = base
 
-                match_error_message = f'loop_flowable function returned "{flowable_state.keys()}", ' \
+                match_error_message = f'loop_flowables function returned "{flowable_state.keys()}", ' \
                                       f'which does not match initial "{initial.keys()}"'
 
                 assert isinstance(initial, dict) and set(initial.keys()) <= set(flowable_state.keys()), match_error_message
@@ -155,7 +155,9 @@ class DeferMultiCast(MultiCastBase):
                 raise Exception(f'illegal case "{base}"')
 
             # share flowables
-            shared_flowable_state = {key: RefCountFlowable(value) for key, value in flowable_state.items()}
+            shared_flowable_state = {key: RefCountFlowable(value) for key, value in flowable_state.items() if key in initial_dict}
+            not_deferred_flowables = {key: value for key, value in flowable_state.items() if
+                                     key not in initial_dict}
 
             lock = threading.RLock()
             is_first = [True]
@@ -173,14 +175,14 @@ class DeferMultiCast(MultiCastBase):
                             is_first[0] = False
                             close_loop = True
 
-                    # close loop_flowable loop only if first subscribed
+                    # close loop_flowables loop only if first subscribed
                     if close_loop:
 
                         def gen_index_for_each_deferred_state():
-                            """ for each value returned by the loop_flowable function """
+                            """ for each value returned by the loop_flowables function """
                             for key in initial_dict.keys():
                                 def for_func(key=key):
-                                    return Flowable(MapFlowable(shared_flowable_state[key], selector=lambda v: (key, v)))
+                                    return Flowable(MapFlowable(shared_flowable_state[key], func=lambda v: (key, v)))
                                 yield for_func()
                         indexed_deferred_values = gen_index_for_each_deferred_state()
 
@@ -220,13 +222,13 @@ class DeferMultiCast(MultiCastBase):
                                         return CompositeDisposable(self.disposable, d2)
 
                                 return Subscription(
-                                    info=BaseSelectorsTuple(None),
+                                    info=BaseAndSelectors(None),
                                     observable=BreakingTheLoopObservable(),
                                 )
 
                         start.flowable = BreakingTheLoopFlowable()
 
-                    # subscribe method call might close the loop_flowable loop
+                    # subscribe method call might close the loop_flowables loop
                     subscription = self.source.unsafe_subscribe(subscriber)
 
                     class DeferObservable(Observable):
@@ -237,12 +239,14 @@ class DeferMultiCast(MultiCastBase):
 
                     defer_observable = DeferObservable()
 
-                    return Subscription(info=BaseSelectorsTuple(None), observable=defer_observable)
+                    return Subscription(info=BaseAndSelectors(None), observable=defer_observable)
 
             # create a flowable for all deferred values
-            new_states = {k: MultiCastFlowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()}
+            new_states = {
+                k: MultiCastFlowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()
+            }
 
-            return from_state(new_states)
+            return from_state({**new_states, **not_deferred_flowables})
 
         return output.get_source(info=info).pipe(
             rxop.map(map_func),

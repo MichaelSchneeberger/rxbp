@@ -2,10 +2,10 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.zip2observable import Zip2Observable
-from rxbp.selectors.selector import IdentitySelector
+from rxbp.selectors.baseandselectors import BaseAndSelectors, BaseSelectorsAndSelectorMaps
+from rxbp.selectors.selectormap import IdentitySelectorMap
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class Zip2Flowable(FlowableBase):
@@ -19,7 +19,7 @@ class Zip2Flowable(FlowableBase):
         :param left:
         :param right:
         :param func:
-        :param auto_match: if set to False then this Flowable works like a normal connect_flowable operation, if set to False then \
+        :param auto_match: if set to False then this Flowable works like a normal collect_flowables operation, if set to False then \
         it checks if the left and right Flowable either match (by their corresponding bases) or there is a \
         transformation (called selector) to make them match
         """
@@ -36,10 +36,10 @@ class Zip2Flowable(FlowableBase):
 
         result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
 
-        # The resulting connect_flowable Flowable propagates selectors from left and right downstream if the bases of
+        # The resulting collect_flowables Flowable propagates selectors from left and right downstream if the bases of
         # left and right Flowable match
-        if isinstance(result, BaseSelectorsTuple.MatchedBaseMapping):
-            if isinstance(result.left, IdentitySelector) and isinstance(result.right, IdentitySelector):
+        if isinstance(result, BaseSelectorsAndSelectorMaps):
+            if isinstance(result.left, IdentitySelectorMap) and isinstance(result.right, IdentitySelectorMap):
                 base = left_subscription.info.base
 
                 selectors = {}
@@ -61,6 +61,6 @@ class Zip2Flowable(FlowableBase):
         )
 
         return Subscription(
-            info=BaseSelectorsTuple(base=base, selectors=selectors),
+            info=BaseAndSelectors(base=base, selectors=selectors),
             observable=observable,
         )

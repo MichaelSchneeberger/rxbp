@@ -3,17 +3,23 @@ Multicasting
 (02.10.2019)
 
 
-An especially annoying problem with RxPY is that an *Observer* might 
-miss elements, because it got subscribed too late to a hot 
-*Observable*. A *multi-cast Observable* for example (created by 
-`publish` or `share` operator) turns a *cold Observable* into a 
-*hot Observable* the first time it gets subscribed. Thereafter, 
-there is no guarantee that another *Observable* can be subscribed
-before the first elements get emitted.
+An especially annoying problem with RxPY is that an *Observer* might miss 
+elements, because it got subscribed too late to a hot *Observable*. A 
+multi-casted *Observable* created by the `share` operator for example 
+turns a *cold Observable* into a *hot Observable* the first time it gets 
+subscribed. Thereafter, there is no guarantee that if another 
+*Observable* subscribes to it some elements has not already been emitted.
 
-The following code defines a hot *multi-cast Observable* with the 
-`share` operator and subscribes to it twice. The second time it gets
-subscribed, however, no elements are sent, because the *Observable*
+When using the `share` operator, we normally don't really intend to make an 
+*Observable* hot. We rather want to split the *Observable* into branches, 
+apply operators on each branch and merge the branches with an operator like 
+`zip` or `merge`. The resulting *Observable* is then supposed to be a cold
+*Observable* again, which behaves the same way each time it is getting
+subscribed.
+
+The following code defines a hot multi-casted *Observable* by using the 
+problematic `share` operator and subscribes to it twice. The second time it gets
+subscribed, however, no elements are sent, because the *hot Observable*
 is already completed.
 
 ``` python
@@ -37,20 +43,16 @@ The previous code outputs:
 3
 ```
 
-A detailed description of the problem can be found 
-[here](https://github.com/ReactiveX/RxPY/issues/309).
-
 Of course, if you know what you are doing you can implement an
-*Observable* stream, where the subscription of *Observable*s happens
+*Observable* stream, where the subscription of *hot Observable*s happens
 always before the first element is emitted. But the point is, that
 there is no mechanism provided by RxPY that would prevent it and safe
 us from these situations.
 
 Let's see how we can do better. But instead of directly looking at the
-end result, we will step by step go through the different ideas that lead
+end result, we will go step by step through the different ideas that lead
 to the final implementation of the `MultiCast` type. The first step
-was to omit the `publish` operator in rxbackpressure, and change 
-the `share` operator as follows:
+was to change the `share` operator as follows:
 
 ``` python
 def share(func: Callable[[MultiCastFlowable], Flowable])
@@ -59,10 +61,10 @@ def share(func: Callable[[MultiCastFlowable], Flowable])
 The `share` operator does not directly create a *multi-cast Flowable*, 
 but instead it returns a *unicast Flowable* and
 exposes a *multi-cast Flowable* as an argument to the function `func`. Inside
-the function `func`, the *multi-cast Flowable* can used multiple
-times as it the case for the *shared Observable* in *RxPY*. The following
+the function `func`, the *multi-cast Flowable* can be used multiple
+times as it is the case in *RxPY*. The following
 example zips the elements from the same source but skips every second
-element on the second connect_flowable input.
+element on the second *Flowable*.
  
 ``` python
 import rxbp.depricated
@@ -70,7 +72,7 @@ import rxbp
 
 rxbp.range(10).pipe(
     rxbp.depricated.share(lambda f1: f1.pipe(
-        rxbp.op.connect_flowable(f1.pipe(
+        rxbp.op.zip(f1.pipe(
             rxbp.op.filter(lambda v: v % 2 == 0)),
         )
     )),
@@ -89,11 +91,11 @@ The previous code outputs:
 ### Tunneling a shared Flowable
 
 This is nice, but what if we want to create a *multi-cast Flowable* in one
-place and consume its elements in another place somewhere downstream?
+place and consume its elements in another place?
 Having the `share` operator, this is possible by "tunneling" a Flowable. 
-By "tunneling", we mean to convert a Flowable into a Flowable of
-*multi-cast Flowable(s)* of type `Flowable[Flowable]`. This is 
-achieved by using `rxbp.return_value` inside the shared function as follows.
+This converts a Flowable into a Flowable of
+*multi-cast Flowables* of type `Flowable[Flowable]`. This is 
+achieved by using `rxbp.return_` inside the shared function as follows.
  
 ``` python
 import rxbp.depricated
@@ -101,13 +103,13 @@ import rxbp
 
 # create a tunneled shared Flowable in one place
 tunneled_shared = rxbp.range(10).pipe(
-    rxbp.depricated.share(lambda f1: rxbp.return_value(f1)),
+    rxbp.depricated.share(lambda f1: rxbp.return_(f1)),
 )
 
 # consume the shared Flowable in another place
 tunneled_shared.pipe(
     rxbp.op.flat_map(lambda f1: f1.pipe(
-        rxbp.op.connect_flowable(f1.pipe(
+        rxbp.op.zip(f1.pipe(
             rxbp.op.filter(lambda v: v % 2 == 0)),
         ),
     )),
@@ -115,49 +117,43 @@ tunneled_shared.pipe(
 ```
 
 The `tunneled_shared` Flowable emits a single element of type `Flowable`,
-which is then consumed by the `flat_map` operation downstream.
+which is then consumed by the `flat_map` operator downstream.
 
 A "tunnel" can contain a single Flowable, but it can also contain multiple 
 Flowables. For instance, we could tunnel a dictionary of Flowables of type
-`Flowable[Dict[str, Flowable]`. A "tunnel" is therfore like a stream of
-Flowables that operators downstream can consume, add new Flowables or
-remove Flowables.
+`Flowable[Dict[str, Flowable]`. A "tunnel" is therefore like a stream of
+Flowables that can be consumed somewhere downstream.
 
 In this example, a dictionary is send through the "tunnel" instead of a
-Flowable.
+single Flowable.
 
 ``` python
-import rxbp.depricated
-from dataclasses import dataclass
-
 import rxbp
-from rxbp.flowable import Flowable
-
 source1 = rxbp.range(10).pipe(
     rxbp.depricated.share(
-        lambda input: {'input': input}),
+        lambda input: rxbp.return_({'input': input})),
     ),
 )
 ```
 
 `source1` represents the tunnel that emits a dictionary with a single
-Flowable. We can either extend the dictionary by create new Flowables 
-from the single Flowable and append them to the dictionary. Or, we create
-a new Flowable from the single Flowable and merge it to the "tunnel" as
-shown in the following code.
+Flowable. We can either extend the dictionary by creating new Flowables 
+derived from the single Flowable and append them to the dictionary. Or, we 
+create a new Flowable from the single Flowable and merge it to the "tunnel" 
+as shown in the following code.
 
 ``` python
 source2 = source1.pipe(
     rxbp.op.share(lambda source: source.pipe(
         rxbp.op.flat_map(
             lambda fdict: fdict["input"].pipe(
-                rxbp.op.connect_flowable(fdict["input"].pipe(
+                rxbp.op.zip(fdict["input"].pipe(
                     rxbp.op.filter(lambda v: v % 2 == 0)),
                 ),
             )
         ),
         rxbp.op.share(
-            lambda zipped: rxbp.return_value(
+            lambda zipped: rxbp.return_flowable(
                 {'zipped': zipped}
             )
         ),
@@ -167,7 +163,7 @@ source2 = source1.pipe(
 ```
 
 In the end, we select a single Flowable and flat_map it, which will
-turn the "tunnel" back to a Flowable.
+convert the "tunneled" Flowable back to a normal Flowable.
 
 ``` python
 # source2.pipe(
@@ -195,10 +191,10 @@ which represents the old stream and the operation we just added.
 "Tunneling" Flowables is tricky, because it requires the elements to be sent
 throught a "tunnel" without delay. Even the back-pressure functionality 
 of rxbp can introduce a delay. Futhermore, it requires the coordination
-between sending Flowables through the "tunnel" and subscribing to them.
-This needs to happen in a very specific order.
+between sending Flowables through the "tunnel" and subscribing to them as
+this needs to happen in a very specific order.
 
-To make sure that all these requirement are fulfilled, a new object is
+To make sure that all these requirements are fulfilled, a new object is
 added to the rxbp library that implements the different operations on
 a "tunnel". It is called `MultiCast`.
 
@@ -218,5 +214,5 @@ implements a `pipe` method that let you concatenate operations on
 the *MultiCast* objects.
 
 A *Flowable* can 
-be converter to a *Multicast* by the `rxbp.multicast.from_flowable` 
+be converter to a *Multicast* by the `rxbp.multicast.return_flowable` 
 operator.

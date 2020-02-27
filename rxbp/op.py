@@ -1,30 +1,36 @@
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowableoperator import FlowableOperator
 from rxbp.flowableopmixin import FlowableOpMixin
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ValueType
 
 
-def buffer(buffer_size: int):
-    def func(source: FlowableOpMixin):
+def buffer(buffer_size: int = None):
+    """
+    Buffer the element emitted by the source without back-pressure until the buffer is full.
+    """
+
+    def op_func(source: FlowableOpMixin):
         return source.buffer(buffer_size=buffer_size)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def concat(*sources: FlowableBase):
-    """ Consecutively subscribe each Flowable in a batch after all Flowables of the previous batch complete
+    """
+    Concatentates Flowables sequences together by back-pressuring the tail Flowables until
+    the current Flowable has completed.
 
-    :param sources:
-    :return:
+    :param sources: other Flowables that get concatenate to this Flowable.
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.concat(*sources)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def controlled_zip(
@@ -33,18 +39,22 @@ def controlled_zip(
         request_right: Callable[[Any, Any], bool] = None,
         match_func: Callable[[Any, Any], bool] = None,
 ):
-    """ Creates a new observable from two observables by combining their item in pairs in a controlled manner
+    """
+    Creates a new Flowable from two Flowables by combining their elements in pairs. Which
+    element gets paired with an element from the other Flowable is determined by two functions
+    called `request_left` and `request_right`.
 
-    :param right: other observable
-    :param request_left: a function that returns True, if a new element from the left observable is requested \
-    to build the the next pair
-    :param request_right: a function that returns True, if a new element from the left observable is requested \
-    to build the the next pair
-    :param match_func: a filter function that returns True, if the current pair is sent downstream
-    :return: zipped observable
+    :param right: other Flowable
+    :param request_left: a function that returns True, if a new element from the left \
+    Flowable is requested to build the the next pair
+    :param request_right: a function that returns True, if a new element from the left \
+    Flowable is requested to build the the next pair
+    :param match_func: a filter function that returns True, if the current pair is sent \
+    downstream
+    :return: zipped Flowable
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.controlled_zip(
             right=right,
             request_left=request_left,
@@ -52,17 +62,17 @@ def controlled_zip(
             match_func=match_func,
         )
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
-    def func(source: FlowableOpMixin):
-        """ Prints debug messages to the console when providing the name argument
+    """
+    Print debug messages to the console when providing the `name` argument
 
-        :param source:
-        :return:
-        """
+    :on_next: customize the on next debug console print
+    """
 
+    def op_func(source: FlowableOpMixin):
         return source.debug(
             name=name,
             on_next=on_next,
@@ -72,178 +82,261 @@ def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=No
             on_ack_msg=on_ack_msg,
         )
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
-# def execute_on(scheduler: Scheduler):
-#     def func(source: FlowableOpMixin):
-#         return source.execute_on(scheduler=scheduler)
-#
-#     return FlowableOperator(func)
+def default_if_empty(lazy_val: Callable[[], Any]):
+    """
+    Only the elements of the source or a default value if the source is an empty sequence
+
+    :param lazy_val: a function that returns the default value
+    """
+
+    def op_func(left: FlowableOpMixin):
+        return left.default_if_empty(lazy_val=lazy_val)
+
+    return FlowableOperator(op_func)
+
+
+def do_action(
+        on_next: Callable[[Any], None] = None,
+        on_completed: Callable[[], None] = None,
+        on_error: Callable[[Exception], None] = None,
+        on_disposed: Callable[[], None] = None,
+):
+    def op_func(left: FlowableOpMixin):
+        return left.do_action(
+            on_next=on_next,
+            on_completed=on_completed,
+            on_error=on_error,
+            on_disposed=on_disposed,
+        )
+
+    return FlowableOperator(op_func)
+
+
+def execute_on(scheduler: Scheduler):
+    """
+    Inject new scheduler that is used to subscribe the Flowable.
+    """
+
+    def op_func(left: FlowableOpMixin):
+        return left.execute_on(scheduler=scheduler)
+
+    return FlowableOperator(op_func)
 
 
 def fast_filter(predicate: Callable[[Any], bool]):
-    """ Only emits those items for which the given predicate holds
+    """
+    Only emit those elements for which the given predicate holds.
 
     :param predicate: a function that returns True, if the current element passes the filter
     :return: filtered Flowable
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.fast_filter(predicate=predicate)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def filter(predicate: Callable[[Any], bool]):
-    """ Only emits those items for which the given predicate holds
+    """
+    Only emit those elements for which the given predicate holds.
 
     :param predicate: a function that returns True, if the current element passes the filter
     :return: filtered Flowable
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.filter(predicate=predicate)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
-def filter_with_index(predicate: Callable[[Any, int], bool]):
-    """ Only emits those items for which the given predicate holds
+def first(raise_exception: Callable[[Callable[[], None]], None]):
+    """
+    Emit the first element only and stop the Flowable sequence thereafter.
 
-    :param predicate: a function that returns True, if the current element passes the filter
-    :return: filtered Flowable
+    The `raise_exception` argument needs to be given as follows:
+
+    ::
+
+        rxbp.op.first(raise_exception=lambda f: f())
+
+    The `raise_exception` argument is called in case there is no first element.
+    Like RxPY, a SequenceContainsNoElementsError is risen. But on top of that
+    the place where the `first` argument is used is added to the traceback by
+    providing the `raise_exception` argument.
     """
 
-    def func(left: FlowableOpMixin):
-        return left.filter_with_index(predicate=predicate)
-
-    return FlowableOperator(func)
-
-
-def first(raise_exception: Callable[[Callable[[], None]], None] = None):
-    """ Maps each item emitted by the source by applying the given function
-
-    :param selector: function that defines the mapping applied to each element
-    :return: mapped Flowable
-    """
-
-    def func(source: FlowableOpMixin):
+    def op_func(source: FlowableOpMixin):
         return source.first(raise_exception=raise_exception)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
-def flat_map(selector: Callable[[Any], Flowable]):
-    """ Applies a function to each item emitted by the source and flattens the result. The function takes any type
-    as input and returns an inner observable. The resulting observable concatenates the items of each inner
-    observable.
-
-    :param selector: A function that takes any type as input and returns an Flowable.
-    :return: a flattened Flowable
+def first_or_default(lazy_val: Callable[[], Any]):
+    """
+    Emit the first element only and stop the Flowable sequence thereafter.
     """
 
-    def func(left: FlowableOpMixin):
-        return left.flat_map(selector=selector)
+    def op_func(source: FlowableOpMixin):
+        return source.first_or_default(lazy_val=lazy_val)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
-def map(selector: Callable[[Any], Any]):
-    """ Maps each item emitted by the source by applying the given function
+def flat_map(func: Callable[[Any], Flowable]):
+    """
+    Apply a function to each item emitted by the source and flattens the result.
 
-    :param selector: function that defines the mapping applied to each element
-    :return: mapped Flowable
+    The specified function must return a Flowable. The resulting Flowable
+    concatenates the elements of each inner Flowables.
+    The resulting Flowable concatenates the items of each inner Flowable.
     """
 
-    def func(source: FlowableOpMixin):
-        return source.map(selector=selector)
+    def op_func(source: FlowableOpMixin):
+        return source.flat_map(func=func)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
+
+
+def map(func: Callable[[Any], Any]):
+    """ Map each element emitted by the source by applying the given function.
+
+    :param func: function that defines the mapping applied to each element of the \
+    Flowable sequence.
+    """
+
+    def op_func(source: FlowableOpMixin):
+        return source.map(func=func)
+
+    return FlowableOperator(op_func)
+
+
+def map_to_iterator(
+        func: Callable[[ValueType], Iterator[ValueType]],
+):
+    """
+    Create a Flowable that maps each element emitted by the source to an iterator
+    and emits each element of these iterators.
+
+    :param func: function that defines the mapping applied to each element to an iterator.
+    """
+
+    def op_func(source: FlowableOpMixin):
+        return source.map_to_iterator(func=func)
+
+    return FlowableOperator(op_func)
 
 
 def match(*others: Flowable):
-    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+    """
+    Create a new Flowable from this and other Flowables by first filtering and duplicating (if necessary)
+    the elements of each Flowable and zip the resulting Flowable sequences together.
 
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped Flowable
+    :param sources: other Flowables that get matched with this Flowable.
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.match(*others)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def merge(*others: Flowable):
-    """ Maps each item emitted by the source by applying the given function
+    """
+    Merge the elements of this and the other Flowable sequences into a single *Flowable*.
 
-    :param selector: function that defines the mapping applied to each element
-    :return: mapped Flowable
+    :param sources: other Flowables that get merged to this Flowable.
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.merge(*others)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def observe_on(scheduler: Scheduler):
-    """ Operator that specifies a specific scheduler, on which observers will observe events
+    """
+    Schedule elements emitted by the source on a dedicated scheduler.
 
     :param scheduler: a rxbackpressure scheduler
     :return: an Flowable running on specified scheduler
     """
 
-    def func(source: FlowableOpMixin):
+    def op_func(source: FlowableOpMixin):
         return source.observe_on(scheduler=scheduler)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def pairwise():
-    """ Creates a Flowable that pairs each neighbouring two items from the source
-
-    :param selector: (optional) selector function
-    :return: paired Flowable
+    """
+    Create a Flowable that emits a pair for each consecutive pairs of elements
+    in the Flowable sequence.
     """
 
-    def func(source: FlowableOpMixin):
+    def op_func(source: FlowableOpMixin):
         return source.pairwise()
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
-def repeat_first():
-    """ Returns a flowable that repeats the first item it receives forever.
-
-    :return: a flowable
+def reduce(
+        func: Callable[[Any, Any], Any],
+        initial: Any,
+):
     """
-
-    def func(source: FlowableOpMixin):
-        return source.repeat_first()
-
-    return FlowableOperator(func)
-
-
-def scan(func: Callable[[Any, Any], Any], initial: Any):
-    """ Applies an accumulator function over a flowable sequence and
-    returns each intermediate result. The initial value is used
-    as the initial accumulator value.
+    Apply an accumulator function over a Flowable sequence and emits a single element.
 
     :param func: An accumulator function to be invoked on each element
     :param initial: The initial accumulator value
-    :return: a flowable that emits the accumulated values
+    :return: a Flowable that emits the final accumulated value
     """
 
-    def inner_func(source: FlowableOpMixin):
+    def op_func(source: FlowableOpMixin):
+        return source.reduce(func=func, initial=initial)
+
+    return FlowableOperator(op_func)
+
+
+def repeat_first():
+    """
+    Return a Flowable that repeats the first element it receives from the source
+    forever (until disposed).
+    """
+
+    def op_func(source: FlowableOpMixin):
+        return source.repeat_first()
+
+    return FlowableOperator(op_func)
+
+
+def scan(func: Callable[[Any, Any], Any], initial: Any):
+    """
+    Apply an accumulator function over a Flowable sequence and return each intermediate result.
+
+    The initial value is used as the initial accumulator value.
+
+    :param func: An accumulator function to be invoked on each element
+    :param initial: The initial accumulator value
+    :return: a Flowable that emits the accumulated values
+    """
+
+    def op_func(source: FlowableOpMixin):
         return source.scan(func=func, initial=initial)
 
-    return FlowableOperator(inner_func)
+    return FlowableOperator(op_func)
 
 
-def share(): #ability: MultiCastContext):
+def share():
     """
+    Broadcast the elements of the Flowable to possibly multiple subscribers.
+
+    This function is only valid when used inside a Multicast. Otherwise, it
+    raise an exception.
     """
 
     def inner_func(source: FlowableOpMixin):
@@ -253,39 +346,47 @@ def share(): #ability: MultiCastContext):
 
 
 def set_base(val: Any):
-    def func(source: FlowableOpMixin):
+    """
+    Overwrite the base of the current Flowable sequence.
+    """
+
+    def op_func(source: FlowableOpMixin):
         return source.set_base(val=val)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def to_list():
-    def func(source: FlowableOpMixin):
+    """
+    Create a new Flowable that collects the elements from the source sequence,
+    and emits a single element of type List.
+    """
+
+    def op_func(source: FlowableOpMixin):
         return source.to_list()
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def zip(*others: Flowable):
-    """ Creates a new flowable from two flowables by combining their item in pairs in a strict sequence.
+    """
+    Create a new Flowable from one or more Flowables by combining their item in pairs in a strict sequence.
 
-    :param selector: a mapping function applied over the generated pairs
-    :return: zipped Flowable
+    :param others: :param sources: other Flowables that get zipped to this Flowable.
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.zip(*others)
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)
 
 
 def zip_with_index():
-    """ Zips each item emmited by the source with their indices
-
-    :return: zipped with index Flowable
+    """
+    Zip each item emitted by the source with the enumerated index.
     """
 
-    def func(left: FlowableOpMixin):
+    def op_func(left: FlowableOpMixin):
         return left.zip_with_index()
 
-    return FlowableOperator(func)
+    return FlowableOperator(op_func)

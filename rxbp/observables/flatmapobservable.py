@@ -1,13 +1,13 @@
-import sys
 import threading
 from typing import Callable, Any, Optional
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import StopAck, stop_ack
-from rxbp.ack.continueack import ContinueAck, continue_ack
+
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.single import Single
+from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -22,13 +22,13 @@ class FlatMapObservable(Observable):
     def __init__(
             self,
             source: Observable,
-            selector: Callable[[Any], Observable],
+            func: Callable[[Any], Observable],
             scheduler: Scheduler,
             subscribe_scheduler: Scheduler,
             delay_errors: bool = False,
     ):
         self._source = source
-        self._selector = selector
+        self._func = func
         self._scheduler = scheduler
         self._subscribe_scheduler = subscribe_scheduler
         self._delay_errors = delay_errors
@@ -37,7 +37,7 @@ class FlatMapObservable(Observable):
         self.state = RawFlatMapStates.InitialState()
         self.composite_disposable = CompositeDisposable()
 
-        self.observer_info = None
+        self.observer_info: Optional[ObserverInfo] = None
 
     class InnerObserver(Observer):
         def __init__(
@@ -147,28 +147,19 @@ class FlatMapObservable(Observable):
             try:
                 # materialize received values immediately
                 outer_vals = list(outer_elem)
-            except:
-                exc = sys.exc_info()
+            except Exception as exc:
                 self._on_error(exc)
                 return stop_ack
 
-        next_state = RawFlatMapStates.Active()
-
-        with self.lock:
-            next_state.raw_prev_state = self.state
-            self.state = next_state
-
-        meas_state = next_state.raw_prev_state.get_measured_state()
-
-        if isinstance(meas_state, FlatMapStates.Stopped):
-            return stop_ack
-
-        # # previous state should be WaitOnOuter
-        # if not (isinstance(meas_state, FlatMapStates.InitialState) or isinstance(meas_state, FlatMapStates.WaitOnOuter)):
-        #     # - state should not be Completed, because only outer observer can complete the observable,
-        #     #   in that case `on_next` should not be called anymore (by rxbp convention)
+        # next_state = RawFlatMapStates.Active()
         #
-        #     self._report_invalid_state(meas_state, 'on_next (1)')
+        # with self.lock:
+        #     next_state.raw_prev_state = self.state
+        #     self.state = next_state
+        #
+        # meas_state = next_state.raw_prev_state.get_measured_state()
+        #
+        # if isinstance(meas_state, FlatMapStates.Stopped):
         #     return stop_ack
 
         # the ack that might be returned by this `on_next`
@@ -195,7 +186,11 @@ class FlatMapObservable(Observable):
             conn_subscription = self.observer_info.copy(conn_observer)
 
             # apply selector to get inner observable (per element received)
-            inner_observable = self._selector(val)
+            try:
+                inner_observable = self._func(val)
+            except Exception as exc:
+                self._on_error(exc)  # todo: check this
+                return stop_ack
 
             # observe inner observable
             disposable = inner_observable.observe(conn_subscription)
@@ -210,7 +205,22 @@ class FlatMapObservable(Observable):
         observer_info = self.observer_info.copy(inner_observer)
 
         # apply selector to get inner observable (per element received)
-        inner_observable = self._selector(outer_vals[0])
+        try:
+            inner_observable = self._func(outer_vals[0])
+        except Exception as exc:
+            self._on_error(exc)                       # todo: check this
+            return stop_ack
+
+        next_state = RawFlatMapStates.Active()
+
+        with self.lock:
+            next_state.raw_prev_state = self.state
+            self.state = next_state
+
+        meas_state = next_state.raw_prev_state.get_measured_state()
+
+        if isinstance(meas_state, FlatMapStates.Stopped):
+            return stop_ack
 
         # observe inner observable
         disposable = inner_observable.observe(observer_info)

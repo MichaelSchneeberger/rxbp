@@ -1,177 +1,175 @@
-from typing import Any, Callable, Union, Dict
+from typing import Any, Callable, Union, Dict, Iterable, List
 
 import rx
+from rx.disposable import CompositeDisposable
+
 import rxbp
 from rxbp.flowable import Flowable
-from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
+from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.op import merge as merge_op
-from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription
+from rxbp.multicast.typing import MultiCastValue
 from rxbp.torx import to_rx
 
 
 def empty():
+    """
+    create a MultiCast emitting no elements
+    """
 
-    class FromObjectMultiCast(MultiCastBase):
+    class EmptyMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
             return rx.empty(scheduler=info.multicast_scheduler)
 
-    return MultiCast(FromObjectMultiCast())
+    return MultiCast(EmptyMultiCast())
 
 
-# def from_flowable(
-#         *source: Union[Flowable, Dict[Any, Flowable], FlowableStateMixin],
-# ):
-#     def return_value(val):
-#         class FromObjectMultiCast(MultiCastBase):
-#             def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-#                 # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
-#                 # this "subscribe scheduler" is not automatically provided in rx, that is
-#                 # why it must be provided as the `scheduler` argument of the `return_value`
-#                 # operator.
-#                 return rx.return_value(val, scheduler=info.multicast_scheduler)
-#
-#         return MultiCast(FromObjectMultiCast())
-#
-#     if len(source) == 0:
-#         return empty()
-#
-#     def share_flowable(f: Flowable):
-#         # class MultiCastFlowable(FlowableBase):
-#         #     def __init__(self, source: FlowableBase):
-#         #         self.source = source
-#         #
-#         #     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-#         #         new_subscriber = Subscriber(
-#         #             scheduler=subscriber.scheduler,
-#         #             subscribe_scheduler=subscriber.subscribe_scheduler,
-#         #             is_multicasted=True,
-#         #         )
-#         #
-#         #         return self.source.unsafe_subscribe(new_subscriber)
-#         # return Flowable(MultiCastFlowable(source=f)).share()
-#         return f.share()
-#
-#     first = source[0]
-#     if isinstance(first, Flowable):
-#         assert all(isinstance(s, Flowable) for s in source)
-#
-#         if len(source) == 1:
-#             val = share_flowable(source[0])
-#         else:
-#             val = [share_flowable(s).share() for s in source]
-#         multicast = return_value(val)
-#
-#     elif isinstance(first, list):
-#         val = [share_flowable(s).share() for s in first]
-#         multicast = return_value(val)
-#
-#     elif isinstance(first, dict):
-#
-#         val = {key: share_flowable(s).share() for key, s in first.items()}
-#         multicast = return_value(val)
-#
-#     elif isinstance(first, FlowableStateMixin):
-#         state = first.get_flowable_state()
-#
-#         val = {key: share_flowable(s).share() for key, s in state.items()}
-#         multicast = return_value(val)
-#
-#     else:
-#         raise Exception(f'unexpected argument "{first}"')
-#
-#     return multicast
-
-
-def from_flowable(
-        *source: Union[Flowable, Dict[Any, Flowable], FlowableStateMixin],
+def build_imperative_multicast(
+    func: Callable[[ImperativeMultiCastBuilder], ImperativeMultiCastBuild],
+    composite_disposable: CompositeDisposable = None,
 ):
-    # def return_value(is_list: bool = None, is_dict: bool = None):
-    #     if is_list is True:
-    #         init_val = []
-    #     elif is_dict is True:
-    #         init_val = {}
-    #     else:
-    #         init_val = {}
-    #
-    #     class FromObjectMultiCast(MultiCastBase):
-    #         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-    #             # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
-    #             # this "subscribe scheduler" is not automatically provided in rx, that is
-    #             # why it must be provided as the `scheduler` argument of the `return_value`
-    #             # operator.
-    #             return rx.return_value(init_val, scheduler=info.multicast_scheduler)
-    #
-    #     return MultiCast(FromObjectMultiCast())
 
-    if len(source) == 0:
-        return empty()
+    class BuildBlockingFlowableMultiCast(MultiCastBase):
+        def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
 
-    first = source[0]
+            def on_completed():
+                for subject in imperative_call.subjects:
+                    subject.on_completed()
 
-    def to_multi_cast_flowable(f: Flowable):
-        assert isinstance(f, Flowable), f'{f} is not a Flowable'
-        assert not isinstance(f, MultiCastFlowable), "it's not allowed to multicast a Multicast Flowable"
+            def on_error(exc: Exception):
+                for subject in imperative_call.subjects:
+                    subject.on_error(exc)
 
-        return MultiCastFlowable(RefCountFlowable(f))
+            composite_disposable_ = composite_disposable or CompositeDisposable()
 
-    if isinstance(first, Flowable):
-        if len(source) == 1:
-            init_val = to_multi_cast_flowable(first)
+            builder = ImperativeMultiCastBuilder(
+                composite_disposable=composite_disposable_,
+                scheduler=info.source_scheduler,
+            )
+
+            imperative_call = func(builder)
+
+            flowable = imperative_call.blocking_flowable.pipe(
+                rxbp.op.do_action(
+                    on_disposed=lambda: composite_disposable_.dispose(),
+                    on_completed=on_completed,
+                    on_error=on_error,
+                ),
+            )
+
+            return imperative_call.output_selector(
+                flowable,
+            ).get_source(info=info)
+
+    return MultiCast(BuildBlockingFlowableMultiCast())
+
+
+def return_flowable(
+        val: Union[
+            Flowable,
+            List[Flowable],
+            Dict[Any, Flowable],
+            FlowableStateMixin,
+        ],
+):
+    """
+    Turn zero or more Flowables into multi-cast Flowables emitted as a single
+    element inside a MultiCast.
+
+    :param val: an object that may contain a non-multi-casted Flowables
+    """
+
+    def to_multi_cast_flowable(inner_val: Flowable):
+        if isinstance(inner_val, Flowable):
+            # assert isinstance(f, Flowable), f'{f} is not a Flowable'
+            assert not isinstance(inner_val, MultiCastFlowable), \
+                "it's not allowed to multicast a multi-casted Flowable"
+
+            return MultiCastFlowable(RefCountFlowable(inner_val))
         else:
-            init_val = [to_multi_cast_flowable(s) for s in source]
+            return inner_val
 
-    elif isinstance(first, list):
-        init_val = [to_multi_cast_flowable(s) for s in first]
+    if isinstance(val, Flowable):
+        return_val = to_multi_cast_flowable(val)
 
-    elif isinstance(first, dict):
-        init_val = {key: to_multi_cast_flowable(s) for key, s in first.items()}
+    elif isinstance(val, list):
+        return_val = [to_multi_cast_flowable(s) for s in val]
 
-    elif isinstance(first, FlowableStateMixin):
-        state = first.get_flowable_state()
-        init_val = {key: to_multi_cast_flowable(s) for key, s in state.items()}
+    elif isinstance(val, dict):
+        return_val = {key: to_multi_cast_flowable(s) for key, s in val.items()}
+
+    elif isinstance(val, FlowableStateMixin):
+        state = val.get_flowable_state()
+        new_state = {key: to_multi_cast_flowable(s) for key, s in state.items()}
+        return_val = val.set_flowable_state(new_state)
 
     else:
-        raise Exception(f'unexpected argument "{first}"')
+        raise Exception(f'unexpected argument "{val}"')
 
-    class FromObjectMultiCast(MultiCastBase):
+    return return_value(return_val)
+
+
+def return_value(val: Any):
+    """
+    Create a MultiCast that emits a single element.
+
+    :param val: The single element emitted by the MultiCast
+    """
+
+    class ReturnValueMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
             # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
             # this "subscribe scheduler" is not automatically provided in rx, that is
-            # why it must be provided as the `scheduler` argument of the `return_value`
+            # why it must be provided as the `scheduler` argument of the `return_flowable`
             # operator.
-            return rx.return_value(init_val, scheduler=info.multicast_scheduler)
+            return rx.return_value(val, scheduler=info.multicast_scheduler)
 
-    return MultiCast(FromObjectMultiCast())
+    return MultiCast(ReturnValueMultiCast())
 
 
-def from_event(
+def from_iterable(vals: Iterable[Any]):
+    """
+    Create a *MultiCast* emitting elements taken from an iterable.
+
+    :param vals: the iterable whose elements are sent
+    """
+
+    class FromIterableMultiCast(MultiCastBase):
+        def get_source(self, info: MultiCastInfo) -> Flowable:
+            return rx.from_(vals, scheduler=info.multicast_scheduler)
+
+    return MultiCast(FromIterableMultiCast())
+
+
+def from_rx_observable(val: rx.typing.Observable):
+    """
+    Create a *MultiCast* from an *rx.Observable*.
+    """
+
+    class FromObservableMultiCast(MultiCastBase):
+        def get_source(self, info: MultiCastInfo) -> Flowable:
+            return val
+
+    return MultiCast(FromObservableMultiCast())
+
+
+def from_flowable(
         source: Flowable,
-        func: Callable[[Any], MultiCastBase] = None,
 ):
-    """ Emits `MultiCastBases` with `MultiCastBases` defined by a lift_func
+    """
+    Create a MultiCast that emit each element received by the Flowable.
     """
 
     class FromEventMultiCast(MultiCastBase):
         def get_source(self, info: MultiCastInfo) -> Flowable:
-            subscribe_on_flowable = Flowable(SubscribeOnFlowable(source, scheduler=info.source_scheduler))
-            first_flowable = subscribe_on_flowable.pipe(
-                rxbp.op.first(raise_exception=lambda f: f()),
-            )
-
-            if func is None:
-                result = first_flowable
-            else:
-                result = first_flowable.pipe(
-                    rxbp.op.map(selector=func),
-                )
+            result = Flowable(SubscribeOnFlowable(source, scheduler=info.multicast_scheduler))
 
             return to_rx(result, subscribe_schduler=info.multicast_scheduler)
 
@@ -181,7 +179,8 @@ def from_event(
 def merge(
         *sources: MultiCast
 ):
-    """ Merges zero or more `MultiCast` streams together
+    """
+    Merge the elements of the *MultiCast* sequences into a single *MultiCast*.
     """
 
     if len(sources) == 0:
@@ -196,9 +195,14 @@ def merge(
         )
 
 
-def connect_flowable(
+def collect_flowables(
       *sources: MultiCast,
 ):
+    """
+    Zips MultiCasts emitting a single Flowable to a MultiCast emitting a single tuple
+    of Flowables.
+    """
+
     if len(sources) == 0:
         return empty()
 
@@ -207,20 +211,5 @@ def connect_flowable(
 
     else:
         return sources[0].pipe(
-            rxbp.multicast.op.connect_flowable(*sources[1:])
+            rxbp.multicast.op.collect_flowables(*sources[1:])
         )
-
-# def return_value(val: Any):
-#     class FromObjectMultiCast(MultiCastBase):
-#         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-#             return rx.return_value(val, scheduler=info.multicast_scheduler)
-#
-#     return MultiCast(FromObjectMultiCast())
-
-
-# def from_iterable(vals: Iterable[Any]):
-#     class FromIterableMultiCast(MultiCastBase):
-#         def get_source(self, info: MultiCastInfo) -> Flowable:
-#             return rxbp.from_(vals)
-#
-#     return MultiCast(FromIterableMultiCast())

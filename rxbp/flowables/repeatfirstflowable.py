@@ -15,5 +15,5 @@ class RepeatFirstFlowable(FlowableBase):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = RepeatFirstObservable(source=subscription.observable, scheduler=subscriber.scheduler, batch_size=1)
+        observable = RepeatFirstObservable(source=subscription.observable, scheduler=subscriber.scheduler)
         return Subscription(info=subscription.info, observable=observable)

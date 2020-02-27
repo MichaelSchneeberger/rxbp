@@ -1,14 +1,14 @@
 """
-This example demonstrates a use-case of the loop_flowable operator. The loop_flowable
+This example demonstrates a use-case of the loop_flowables operator. The loop_flowables
 operator is used to create a loop within Flowables, e.g. it defines
 Flowables that emit elements derived from element previously send by
 these Flowables. An initial value is required to start the loop, e.g.
 start sending elements. A loop is only stopped by back-pressuring the
 flow to a stop.
 
-The loop_flowable operator takes two arguments `initial` and `func`, which are
+The loop_flowables operator takes two arguments `initial` and `func`, which are
 used to define the initial elements send out of the loop and a function
-that maps the Flowables send to the loop_flowable operator and the deferred
+that maps the Flowables send to the loop_flowables operator and the deferred
 Flowables to some output. The output has to match the initial values.
 
 Example of a matching `initial` and `func` types:
@@ -21,8 +21,8 @@ Example of a matching `initial` and `func` types:
 import rxbp
 
 
-result = rxbp.multicast.from_flowable({'input': rxbp.range(10)}).pipe(
-    rxbp.multicast.op.loop_flowable(                                        # create a loop with two Flowables
+result = rxbp.multicast.return_flowable({'input': rxbp.range(10)}).pipe(
+    rxbp.multicast.op.loop_flowables(                                        # create a loop with two Flowables
         initial=[1, 2],                                             # define the first elements sent by these Flwables
         func=lambda mc: mc.pipe(                                    # define the stream between where the loop starts ...
             rxbp.multicast.op.map(lambda t: [
@@ -45,10 +45,11 @@ print(result)
 
 # the same example as before, but this time a dictionary is returned
 # instead of a list.
-result = rxbp.multicast.from_flowable({'input': rxbp.range(10)}).pipe(
-    rxbp.multicast.op.loop_flowable(
+result = rxbp.multicast.return_flowable({'input': rxbp.range(10)}).pipe(
+    rxbp.multicast.op.loop_flowables(
         func=lambda mc: mc.pipe(
             rxbp.multicast.op.map(lambda t: {
+                **t,
                 'a': t['input'].pipe(
                     rxbp.op.zip(t['a'], t['b']),
                     rxbp.op.map(lambda v: sum(v)),
@@ -62,7 +63,7 @@ result = rxbp.multicast.from_flowable({'input': rxbp.range(10)}).pipe(
         ),
         initial={'a': 1, 'b': 2},
     ),
-    rxbp.multicast.op.map(lambda t: t['a']),
+    # rxbp.multicast.op.map(lambda t: t['a']),
 ).to_flowable().run()
 
 print(result)

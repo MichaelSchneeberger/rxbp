@@ -38,7 +38,7 @@ def select_observable(obs: Observable, selector: Observable, scheduler: Schedule
 
     obs = ControlledZipObservable(
         obs,
-        selector,
+        DebugObservable(selector),
         request_left=request_left,
         request_right=lambda l, r: True,
         match_func=lambda l, r: isinstance(r, SelectNext),

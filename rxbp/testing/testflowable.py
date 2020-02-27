@@ -1,29 +1,34 @@
 from typing import Dict
 
-import rxbp
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.selectors.base import Base
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.testing.testobservable import TestObservable
 
 
 class TestFlowable(FlowableBase):
-    def __init__(self, base: Base = None, selectors: Dict[Base, Observable] = None, subscriber: Subscriber = None):
+    def __init__(
+            self,
+            base: Base = None,
+            selectors: Dict[Base, Observable] = None,
+            subscriber: Subscriber = None,
+            observable: Observable = None,
+    ):
         super().__init__()
 
         self.base = base
         self.selectors = selectors
         self.subscriber = subscriber
-        self.observable = TestObservable()
+        self.observable = observable or TestObservable()
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         self.subscriber = subscriber
 
         return Subscription(
-            info=BaseSelectorsTuple(base=self.base, selectors=self.selectors),
+            info=BaseAndSelectors(base=self.base, selectors=self.selectors),
             observable=self.observable,
         )
 

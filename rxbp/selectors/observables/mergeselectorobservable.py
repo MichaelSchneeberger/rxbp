@@ -1,10 +1,11 @@
 import threading
 
 from rx.disposable import CompositeDisposable
+
+from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.continueack import continue_ack
 from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.stopack import stop_ack
-from rxbp.ack.continueack import continue_ack
-from rxbp.ack.acksubject import AckSubject
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -95,22 +96,18 @@ class MergeSelectorObservable(Observable):
             left_val = val
             left_iter = iterable
             left_in_ack = upstream_ack
-            last_left_sel_ack = None
             right_val = prev_state.right_val
             right_iter = prev_state.right_iter
             right_in_ack = prev_state.right_ack
-            last_right_sel_ack = prev_state.right_sel_ack
             other_upstream_ack = prev_state.right_ack
 
         elif not is_left and isinstance(prev_state, ControlledZipStates.WaitOnRight):
             left_val = prev_state.left_val
             left_iter = prev_state.left_iter
             left_in_ack = prev_state.left_ack
-            last_left_sel_ack = prev_state.left_sel_ack
             right_val = val
             right_iter = iterable
             right_in_ack = upstream_ack
-            last_right_sel_ack = None
             other_upstream_ack = prev_state.left_ack
 
         else:
@@ -125,36 +122,50 @@ class MergeSelectorObservable(Observable):
 
         while True:
 
-            if isinstance(right_val, SelectNext):
-                # add to buffer
-                zipped_output_buffer.append(left_val)
+            # iterate over next series of SelectComplete (if exists)
+            # break loop when encountering SelectNext or end of list
+            while True:
+                # collect SelectComplete, because they don't appear on the right side
+                if isinstance(left_val, SelectCompleted):
+                    zipped_output_buffer.append(left_val)
 
-            elif isinstance(right_val, SelectCompleted):
+                else:
+                    break
 
-                # iterate over next series of SelectComplete (if exists)
-                # break loop when encountering SelectNext or end of list
-                while True:
-                    try:
-                        left_val = next(left_iter)
+                try:
+                    left_val = next(left_iter)
+                except StopIteration:
+                    request_new_elem_from_left = True
+                    break
 
-                        if isinstance(left_val, SelectCompleted):
-                            zipped_output_buffer.append(left_val)
-                        else:
-                            break
-
-                    except StopIteration:
-                        request_new_elem_from_left = True
-                        break
-
-            # always read next right value
-            try:
-                right_val = next(right_iter)
-            except StopIteration:
-                request_new_elem_from_right = True
+            # break loop when there are no more right elements
+            if request_new_elem_from_right or request_new_elem_from_left:
                 break
 
-            # break loop when there are no more left elements
-            if request_new_elem_from_left:
+            # left send SelectNext
+            stop_right = False
+            while True:
+                if isinstance(right_val, SelectNext):
+                    # add to buffer
+                    zipped_output_buffer.append(left_val)
+
+                elif isinstance(right_val, SelectCompleted):
+                    stop_right = True
+
+                # always read next right value
+                try:
+                    right_val = next(right_iter)
+                except StopIteration:
+                    request_new_elem_from_right = True
+                    break
+
+                if stop_right:
+                    break
+
+            try:
+                left_val = next(left_iter)
+            except StopIteration:
+                request_new_elem_from_left = True
                 break
 
         # only send elements downstream, if there are any to be sent
@@ -172,7 +183,6 @@ class MergeSelectorObservable(Observable):
                 right_val=right_val,
                 right_iter=right_iter,
                 right_ack=right_in_ack,
-                right_sel_ack=None,
             )
 
         elif request_new_elem_from_right:
@@ -180,7 +190,6 @@ class MergeSelectorObservable(Observable):
                 left_val=left_val,
                 left_iter=left_iter,
                 left_ack=left_in_ack,
-                left_sel_ack=None,
             )
 
         else:
@@ -196,10 +205,6 @@ class MergeSelectorObservable(Observable):
         prev_termination_state = raw_prev_termination_state.get_measured_state()
 
         def stop_active_acks():
-            if isinstance(last_right_sel_ack, AckSubject):
-                last_right_sel_ack.on_next(stop_ack)
-            elif isinstance(last_left_sel_ack, AckSubject):
-                last_left_sel_ack.on_next(stop_ack)
             other_upstream_ack.on_next(stop_ack)
 
         # stop back-pressuring both sources, because there is no need to request elements
@@ -215,12 +220,14 @@ class MergeSelectorObservable(Observable):
         # from completed source
         elif isinstance(prev_termination_state, TerminationStates.RightCompletedState) \
                 and request_new_elem_from_right:
+
             self._signal_on_complete_or_on_error(state=next_state)
             stop_active_acks()
             return stop_ack
 
         # in error state, stop back-pressuring both sources
         elif isinstance(prev_termination_state, TerminationStates.ErrorState):
+
             self._signal_on_complete_or_on_error(state=next_state, ex=prev_termination_state.ex)
             stop_active_acks()
             return stop_ack
@@ -233,16 +240,18 @@ class MergeSelectorObservable(Observable):
                 # directly return ack depending on whether left or right called `iterate_over_batch`
                 if is_left:
                     zip_out_ack.subscribe(right_in_ack)
-                    return zip_out_ack
+
                 else:
                     zip_out_ack.subscribe(left_in_ack)
-                    return zip_out_ack
+
+                return zip_out_ack
 
             # all elements in the left buffer are send to the observer, back-pressure only left
             elif request_new_elem_from_left:
 
                 if is_left:
                     return zip_out_ack
+
                 else:
                     zip_out_ack.subscribe(left_in_ack)
                     return right_in_ack
@@ -253,6 +262,7 @@ class MergeSelectorObservable(Observable):
                 if is_left:
                     zip_out_ack.subscribe(right_in_ack)
                     return left_in_ack
+
                 else:
                     return zip_out_ack
 
@@ -266,7 +276,7 @@ class MergeSelectorObservable(Observable):
             try:
                 materialized_elem = list(elem)
             except Exception as exc:
-                self.observer._on_error(exc)
+                self.observer.on_error(exc)
                 return stop_ack
 
         if all(isinstance(e, SelectCompleted) for e in materialized_elem):
@@ -275,7 +285,7 @@ class MergeSelectorObservable(Observable):
             try:
                 return_ack = self._iterate_over_batch(elem=elem, is_left=True)
             except Exception as exc:
-                self.observer._on_error(exc)
+                self.observer.on_error(exc)
                 return stop_ack
             return return_ack
 
@@ -295,7 +305,7 @@ class MergeSelectorObservable(Observable):
         """ this function is called once, because 'on_complete' or 'on_error' are called once according to the rxbp
         convention
 
-        :param state: controlled connect_flowable state
+        :param state: controlled collect_flowables state
         :param ex: catched exception to be forwarded downstream
         :return:
         """

@@ -18,7 +18,7 @@ from rxbp.source import from_rx
 from rxbp.subscriber import Subscriber
 
 
-class ZipMultiCast(MultiCastBase):
+class CollectMultiCast(MultiCastBase):
     def __init__(
             self,
             sources: List[MultiCastBase],

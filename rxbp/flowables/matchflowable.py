@@ -3,11 +3,11 @@ from typing import Callable, Any
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.selectors.base import Base
-from rxbp.selectors.selector import IdentitySelector, ObservableSelector
+from rxbp.selectors.baseandselectors import BaseAndSelectors, BaseSelectorsAndSelectorMaps
 from rxbp.selectors.selectionop import select_observable
+from rxbp.selectors.selectormap import IdentitySelectorMap, ObservableSelectorMap
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class MatchFlowable(FlowableBase):
@@ -41,7 +41,7 @@ class MatchFlowable(FlowableBase):
         # The resulting matched Flowable propagates selectors of left or right downstream if
         # * both bases match, or
         # * the base of one Flowable matches some selector of the other Flowable
-        if isinstance(result, BaseSelectorsTuple.MatchedBaseMapping):
+        if isinstance(result, BaseSelectorsAndSelectorMaps):
 
             # base and selectors of resulting Flowable
             base = result.base_selectors.base
@@ -49,14 +49,14 @@ class MatchFlowable(FlowableBase):
 
             # left Flowable needs no transformation to match the other Flowable
             # the resulting Flowable has base and selectors of left Flowable
-            if isinstance(result.left, IdentitySelector):
+            if isinstance(result.left, IdentitySelectorMap):
                 # base = left_subscription.info.base
                 # if left_subscription.info.selectors is not None:
                 #     selectors = {**selectors, **left_subscription.info.selectors}
                 sel_left_obs = left_subscription.observable
 
             # left Flowable needs a transformation to match the other Flowable
-            elif isinstance(result.left, ObservableSelector):
+            elif isinstance(result.left, ObservableSelectorMap):
                 sel_left_obs = select_observable(
                     left_subscription.observable,
                     result.left.observable,
@@ -65,13 +65,13 @@ class MatchFlowable(FlowableBase):
             else:
                 raise Exception(f'illegal selector "{result.left}"')
 
-            if isinstance(result.right, IdentitySelector):
+            if isinstance(result.right, IdentitySelectorMap):
                 # base = right_subscription.info.base
                 # if right_subscription.info.selectors is not None:
                 #     selectors = {**selectors, **right_subscription.info.selectors}
                 sel_right_obs = right_subscription.observable
 
-            elif isinstance(result.right, ObservableSelector):
+            elif isinstance(result.right, ObservableSelectorMap):
                 sel_right_obs = select_observable(
                     right_subscription.observable,
                     result.right.observable,
@@ -100,4 +100,4 @@ class MatchFlowable(FlowableBase):
             selector=self._func,
         )
 
-        return Subscription(info=BaseSelectorsTuple(base=base, selectors=selectors), observable=observable)
+        return Subscription(info=BaseAndSelectors(base=base, selectors=selectors), observable=observable)

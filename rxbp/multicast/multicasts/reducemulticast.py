@@ -16,14 +16,13 @@ from rxbp.multicast.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastflowable import MultiCastFlowable
-from rxbp.multicast.rxextensions.debug_ import debug
 from rxbp.multicast.rxextensions.liftobservable import LiftObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.subscriber import Subscriber
 
 
-# todo: should it also reduce_flowable MultiCast[MultiCast[Flowable]] to MultiCast[SingleMultiCast[SingleFlowable]]?
+# todo: should it also reduce_flowables MultiCast[MultiCast[Flowable]] to MultiCast[SingleMultiCast[SingleFlowable]]?
 class ReduceMultiCast(MultiCastBase):
     def __init__(
             self,

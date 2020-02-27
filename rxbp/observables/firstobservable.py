@@ -1,7 +1,7 @@
-import sys
 from typing import Callable
 
 from rx.internal import SequenceContainsNoElementsError
+
 from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -13,7 +13,7 @@ class FirstObservable(Observable):
     def __init__(
             self,
             source: Observable,
-            raise_exception: Callable[[Callable[[], None]], None] = None,
+            raise_exception: Callable[[Callable[[], None]], None],
     ):
         super().__init__()
 
@@ -48,15 +48,9 @@ class FirstObservable(Observable):
                         raise SequenceContainsNoElementsError()
 
                     try:
-                        if source.raise_exception is None:
-                            func()
-                        else:
-                            source.raise_exception(func)
-                    except:
-                        exc = sys.exc_info()
+                        source.raise_exception(func)
+                    except Exception as exc:
                         observer.on_error(exc)
-                # else:
-                #     observer.on_completed()
 
         first_observer = FirstObserver()
         map_subscription = ObserverInfo(first_observer, is_volatile=observer_info.is_volatile)

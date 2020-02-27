@@ -3,9 +3,10 @@ import threading
 from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import stop_ack
+
 from rxbp.ack.acksubject import AckSubject
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import stop_ack, StopAck
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -21,20 +22,20 @@ class Zip2Observable(Observable):
 
     Common scenario with synchronous acknowledgment (if possible):
 
-        s1.connect_flowable(s2).subscribe(o, scheduler=s)
+        s1.collect_flowables(s2).subscribe(o, scheduler=s)
 
-    ^ callstack         connect_flowable          connect_flowable
+    ^ callstack         collect_flowables          collect_flowables
     |                   /            /
     |             o   s1       o   s1
     |            /   / ack1   /   / ack1
-    |    connect_flowable   connect_flowable --       connect_flowable --
+    |    collect_flowables   collect_flowables --       collect_flowables --
     |    /     /            /
     |   s1    s2----------- -----------     ...
     |  /     /
     | s     s                                 time
     --------------------------------------------->
 
-    ack1: asynchronous acknowledgment returned by connect_flowable.on_next called by s1
+    ack1: asynchronous acknowledgment returned by collect_flowables.on_next called by s1
     """
 
     def __init__(self, left: Observable, right: Observable, selector: Callable[[Any, Any], Any] = None):
@@ -166,7 +167,7 @@ class Zip2Observable(Observable):
             )
 
         else:
-            raise Exception('after the connect_flowable operation, a new element needs '
+            raise Exception('after the collect_flowables operation, a new element needs '
                             'to be requested from at least one source')
 
         with self.lock:
@@ -198,6 +199,10 @@ class Zip2Observable(Observable):
         # in error state, stop back-pressuring both sources
         elif isinstance(prev_termination_state, TerminationStates.ErrorState):
             self._signal_on_complete_or_on_error(state=next_state, exc=prev_termination_state.ex)
+            other_upstream_ack.on_next(stop_ack)
+            return stop_ack
+
+        elif isinstance(downstream_ack, StopAck):
             other_upstream_ack.on_next(stop_ack)
             return stop_ack
 

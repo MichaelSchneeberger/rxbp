@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Union
+from typing import Generic
 
 import rx
-import rxbp
 from rx import operators as rxop
+
+import rxbp
 from rxbp.flowable import Flowable
 from rxbp.flowablebase import FlowableBase
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
+from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.rxextensions.debug_ import debug
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
@@ -31,9 +32,22 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                     if isinstance(v, Flowable):
                         return v
                     elif isinstance(v, list):
-                        return v[0]
-                    elif isinstance(v, dict):
-                        return next(v.values())
+                        flist = [f.to_list() for f in v if isinstance(f, Flowable)]
+                        return rxbp.zip(*flist)
+                    elif isinstance(v, dict) or isinstance(v, FlowableDict):
+                        if isinstance(v, dict):
+                            fdict = v
+                        else:
+                            fdict = v.get_flowable_state()
+
+                        # keys, flist = zip(*((key, f) for key, f in fdict.items() if isinstance(f, Flowable)))
+                        # return flist[0]
+
+                        keys, flist = zip(*((key, f.to_list()) for key, f in fdict.items() if isinstance(f, Flowable)))
+                        return rxbp.zip(*flist).pipe(
+                            # rxbp.op.debug(('d1')),
+                            rxbp.op.map(lambda vlist: dict(zip(keys, vlist))),
+                        )
                     else:
                         raise Exception(f'illegal value "{v}"')
 
@@ -47,9 +61,10 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                 source_flowable = rxbp.from_rx(
                     source.get_source(info=info).pipe(
                         rxop.filter(lambda v: any([
-                            isinstance(v, FlowableBase),
-                            isinstance(v, list) and len(v) == 1,
-                            isinstance(v, dict) and len(v) == 1,
+                            isinstance(v, Flowable),
+                            isinstance(v, list) and any(isinstance(e, FlowableBase) for e in v),# and len(v) == 1,
+                            isinstance(v, dict) and any(isinstance(e, FlowableBase) for e in v.values()),# and len(v) == 1,
+                            isinstance(v, FlowableDict) and any(isinstance(e, FlowableBase) for e in v.get_flowable_state().values()),# and len(v) == 1,
                         ])),
                         rxop.first(),
                 ))

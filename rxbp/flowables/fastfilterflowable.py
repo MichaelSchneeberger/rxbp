@@ -2,9 +2,9 @@ from typing import Callable, Any
 
 from rxbp.flowablebase import FlowableBase
 from rxbp.observables.fastfilterobservable import FastFilterObservable
+from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 class FastFilterFlowable(FlowableBase):
@@ -26,4 +26,4 @@ class FastFilterFlowable(FlowableBase):
             predicate=self._predicate,
         )
 
-        return Subscription(info=BaseSelectorsTuple(base=None), observable=observable)
+        return Subscription(info=BaseAndSelectors(base=None), observable=observable)
