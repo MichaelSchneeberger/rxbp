@@ -12,8 +12,6 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.selectors.baseandselectors import BaseAndSelectors
-from rxbp.subjects.subject import Subject
-from rxbp.subjects.subjectbase import SubjectBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType

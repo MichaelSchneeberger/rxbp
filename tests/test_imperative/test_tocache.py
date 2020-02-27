@@ -17,7 +17,7 @@ class TestOpsAndSinks(unittest.TestCase):
         self.scheduler = TestScheduler()
         self.source = TestFlowable()
 
-    def test_1(self):
+    def test_common_case(self):
         cache = to_cache(source=Flowable(self.source), scheduler=self.scheduler)
 
         ack1 = self.source.on_next_single(1)

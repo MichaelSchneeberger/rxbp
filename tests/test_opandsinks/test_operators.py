@@ -9,7 +9,7 @@ from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestOpsAndSinks(unittest.TestCase):
+class TestOperators(unittest.TestCase):
     def setUp(self) -> None:
         self.scheduler = TestScheduler()
         self.left_base = ObjectRefBase('left')

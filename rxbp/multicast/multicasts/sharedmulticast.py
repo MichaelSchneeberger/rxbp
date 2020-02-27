@@ -1,3 +1,5 @@
+import threading
+
 import rx
 from rx import operators as rxop
 
@@ -10,15 +12,20 @@ class SharedMultiCast(MultiCastBase):
     def __init__(
             self,
             source: MultiCastBase,
-            subject: Subject()
+            subject: Subject,
     ):
         self.source = source
         self.subject = subject
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-        shared_source = self.source.get_source(info=info).pipe(
-            rxop.multicast(subject=self.subject),
-            rxop.ref_count(),
-        )
+        self._shared_source = None
+        self._lock = threading.RLock()
 
-        return shared_source
+    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+        with self._lock:
+            if self._shared_source is None:
+                self._shared_source = self.source.get_source(info=info).pipe(
+                    rxop.multicast(subject=self.subject),
+                    rxop.ref_count(),
+                )
+
+        return self._shared_source

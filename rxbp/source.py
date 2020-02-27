@@ -261,6 +261,8 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
     if base is None:
         base_ = ObjectRefBase(source)
+    else:
+        base_ = base
 
     def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
         class ToBackpressureObservable(Observable):

@@ -18,6 +18,7 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
         send_notification(('E', exc))
 
     def on_completed():
+        print('completed')
         send_notification(('C', None))
 
     subscribe_scheduler = TrampolineScheduler()
@@ -32,7 +33,7 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
                 if len(notifications):
                     break
 
-                scheduler.sleep(1)
+                scheduler.sleep(0.1)
 
             kind, value = notifications.pop(0)
 
@@ -42,7 +43,6 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
             if kind == "C":
                 return  # StopIteration
 
-            # condition.release()
             yield value
 
     return gen()

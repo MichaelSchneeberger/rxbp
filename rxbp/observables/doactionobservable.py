@@ -3,6 +3,7 @@ from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable, Disposable
 
+from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -41,7 +42,15 @@ class DoActionObservable(Observable):
 
         if self.on_next is not None:
             def on_next(_, val):
-                self.on_next(val)
+                if not isinstance(val, list):
+                    try:
+                        val = list(val)
+                    except Exception as exc:
+                        self.on_error(exc)
+                        return stop_ack
+
+                for item in val:
+                    self.on_next(item)
                 return observer.on_next(val)
 
             do_action_observer.on_next = types.MethodType(on_next, do_action_observer)

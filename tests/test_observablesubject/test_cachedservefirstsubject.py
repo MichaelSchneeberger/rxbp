@@ -310,3 +310,13 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.scheduler.advance_by(1)
 
         self.assertEqual(self.exc, o1.exception)
+
+    def test_on_disposed(self):
+        sink = TestObserver(immediate_coninue=0)
+        disposable = self.subject.observe(ObserverInfo(sink))
+
+        disposable.dispose()
+
+        self.source.on_next_single(1)
+
+        self.assertEqual([], sink.received)

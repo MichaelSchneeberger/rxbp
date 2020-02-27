@@ -7,7 +7,7 @@ from typing import List, Dict, Optional, Any, Tuple
 
 import rx
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
-from rx.disposable import Disposable, BooleanDisposable
+from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable, SingleAssignmentDisposable
 
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import ContinueAck, continue_ack
@@ -68,6 +68,12 @@ class CacheServeFirstOSubject(OSubjectBase):
 
         def add_inner_subscription(self, subscription):
             self.inactive_subscriptions.append(subscription)
+            self.subscriptions.append(subscription)
+
+        def remove_subscription(self, subscription):
+            if subscription in self.inactive_subscriptions:
+                self.inactive_subscriptions.remove(subscription)
+            self.subscriptions.remove(subscription)
 
         def dispose(self):
 
@@ -84,7 +90,16 @@ class CacheServeFirstOSubject(OSubjectBase):
             self.should_dequeue = types.MethodType(lambda _: False, self)
             self.dequeue = types.MethodType(lambda: None, self)
 
-        def get_element_for(self, subscription, index: int, ack: AckMixin = None) -> Tuple[bool, Any]:
+        def get_element_for(
+                self,
+                subscription: 'CacheServeFirstOSubject.InnerSubscription',
+                index: int,
+                ack: AckMixin = None,
+        ) -> Tuple[bool, Any]:
+
+            if subscription.disposable.is_disposed:
+                return False, None
+
             last_index = self.first_idx + len(self.queue)
 
             if index < last_index:
@@ -186,7 +201,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                 observer: Observer,
                 scheduler: Scheduler,
                 em: ExecutionModel,
-                disposable: BooleanDisposable,
+                disposable: SingleAssignmentDisposable,
         ):
             self.shared_state = shared_state
             self.lock = lock
@@ -337,7 +352,7 @@ class CacheServeFirstOSubject(OSubjectBase):
 
         observer = observer_info.observer
         em = self.scheduler.get_execution_model()
-        disposable = BooleanDisposable()
+        disposable = SingleAssignmentDisposable()
         inner_subscription = self.InnerSubscription(
             shared_state=self.shared_state,
             lock=self.lock,
@@ -347,12 +362,14 @@ class CacheServeFirstOSubject(OSubjectBase):
             disposable=disposable,
         )
 
+        def dispose_func():
+            self.shared_state.remove_subscription(inner_subscription)
+
+        disposable.disposable = Disposable(dispose_func)
+
         with self.lock:
             prev_state = self.shared_state.state
-
             self.shared_state.add_inner_subscription(inner_subscription)
-
-            self.shared_state.subscriptions.append(inner_subscription)
 
         meas_state = prev_state.get_measured_state()
 
@@ -397,8 +414,9 @@ class CacheServeFirstOSubject(OSubjectBase):
 
         inner_ack_list = list(gen_inner_ack())
 
-        if any(isinstance(ack, StopAck) for ack in inner_ack_list):
-            return stop_ack
+        if all(isinstance(ack, StopAck) for ack in inner_ack_list):
+            if len(inner_ack_list) == len(self.shared_state.subscriptions):
+                return stop_ack
 
         dequeue_buffer = self.shared_state.should_dequeue(current_index)
         if dequeue_buffer:

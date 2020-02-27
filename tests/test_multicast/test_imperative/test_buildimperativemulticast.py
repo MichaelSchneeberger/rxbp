@@ -20,7 +20,7 @@ class TestImperativeMultiCastBuilder(unittest.TestCase):
         self.sink2 = TestObserver()
         self.sink3 = TestObserver()
 
-    def test_1(self):
+    def test_common_case(self):
         s1 = [None]
         s2 = [None]
         s3 = [None]
