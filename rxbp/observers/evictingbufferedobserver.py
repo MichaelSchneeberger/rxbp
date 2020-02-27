@@ -1,9 +1,10 @@
 import threading
 from typing import List, Any
 
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import Continue, continue_ack, Stop
-from rxbp.ack.observeon import _observe_on
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import StopAck
+from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
 from rxbp.observer import Observer
 from rxbp.overflowstrategy import OverflowStrategy, DropOld, ClearBuffer
@@ -104,7 +105,7 @@ class EvictingBufferedObserver(Observer):
 
     def on_next(self, elem):
         if self.upstream_is_complete or self.downstream_is_complete:
-            return Stop()
+            return StopAck()
         else:
             dropped = self.queue.offer(elem)
             increment = 1 - dropped
@@ -155,25 +156,25 @@ class EvictingBufferedObserver(Observer):
             except:
                 raise NotImplementedError
 
-        def go_async(current_queue: List, next_val, next_size: int, ack: AckBase, processed: int):
+        def go_async(current_queue: List, next_val, next_size: int, ack: AckMixin, processed: int):
             class AckSingle(Single):
                 def on_error(self, exc: Exception):
                     raise NotImplementedError
 
                 def on_next(_, v):
-                    if isinstance(v, Continue):
+                    if isinstance(v, ContinueAck):
                         next_ack = signal_next(next_val)
-                        is_sync = isinstance(ack, Continue) or isinstance(ack, Stop)
+                        is_sync = isinstance(ack, ContinueAck) or isinstance(ack, StopAck)
                         next_frame = self.em.next_frame_index(0) if is_sync else 0
                         fast_loop(current_queue, next_ack, processed+next_size, next_frame)
-                    elif isinstance(v, Stop):
+                    elif isinstance(v, StopAck):
                         self.downstream_is_complete = True
 
             _observe_on(ack, self.scheduler).subscribe(AckSingle())
 
-        def fast_loop(prev_queue: List, prev_ack: AckBase, last_processed:int, start_index: int):
+        def fast_loop(prev_queue: List, prev_ack: AckMixin, last_processed:int, start_index: int):
             ack = continue_ack if prev_ack is None else prev_ack
-            is_first_iteration = isinstance(ack, Continue)
+            is_first_iteration = isinstance(ack, ContinueAck)
             processed = last_processed
             next_index = start_index
             current_queue = prev_queue
@@ -197,16 +198,16 @@ class EvictingBufferedObserver(Observer):
                         if next_index > 0 or is_first_iteration:
                             is_first_iteration = False
 
-                            if isinstance(ack, Continue):
+                            if isinstance(ack, ContinueAck):
                                 ack = signal_next(next_val)
-                                if isinstance(ack, Stop):
+                                if isinstance(ack, StopAck):
                                     self.downstream_is_complete = True
                                     return
                                 else:
-                                    is_sync = isinstance(ack, Continue)
+                                    is_sync = isinstance(ack, ContinueAck)
                                     next_index = self.em.next_frame_index(next_index) if is_sync else 0
                                     processed += next_size
-                            elif isinstance(ack, Stop):
+                            elif isinstance(ack, StopAck):
                                 self.downstream_is_complete = True
                                 return
                             else:

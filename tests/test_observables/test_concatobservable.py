@@ -1,6 +1,7 @@
 import unittest
 
-from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.stopack import StopAck
+from rxbp.ack.continueack import ContinueAck
 from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
@@ -25,7 +26,7 @@ class TestConcatObservable(unittest.TestCase):
 
         ack = sources[0].on_next_single(1)
 
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
 
     def test_backpressure(self):
         sources = [TestObservable(), TestObservable()]
@@ -34,7 +35,7 @@ class TestConcatObservable(unittest.TestCase):
 
         ack = sources[1].on_next_single(1)
 
-        self.assertNotIsInstance(ack, Continue)
+        self.assertNotIsInstance(ack, ContinueAck)
 
     def test_on_error(self):
         sources = [TestObservable(), TestObservable()]
@@ -53,4 +54,4 @@ class TestConcatObservable(unittest.TestCase):
 
         ack = sources[1].on_next_single(0)
 
-        self.assertIsInstance(ack, Stop)
+        self.assertIsInstance(ack, StopAck)

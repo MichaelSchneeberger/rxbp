@@ -71,8 +71,11 @@ class LiftObservable(Observable):
             self.lock = threading.RLock()
 
         def on_next(self, val):
-            if self.is_first:
+            with self.lock:
+                is_first = self.is_first
                 self.is_first = False
+
+            if is_first:
 
                 self.observable = LiftObservable.LiftedSingleObservable(
                     val,
@@ -87,69 +90,83 @@ class LiftObservable(Observable):
 
                 # observable didn't get subscribed
                 if self.observable.observer is None:
+                    # print('nobody subscribed')
+
                     def on_next_if_not_subscribed(self, val):
                         pass
 
                     self.on_next = types.MethodType(on_next_if_not_subscribed, self)
 
                     # if there is no inner subscriber, dispose the source
-                    self.disposable.disposable()
+                    self.disposable.dispose()
                     return
 
-                self.elements.append(val)
+            self.observable.observer.on_next(val)
 
-                def action(_, __):
-                    while True:
-
-                        has_elem = True
-                        with self.lock:
-                            if self.elements:
-                                val = self.elements.pop(0)
-                            else:
-                                has_elem = False
-
-                        if has_elem:
-                            self.observable.observer.on_next(val)
-
-                        else:
-                            break
-
-                schedule_disposable = self.subscribe_scheduler.schedule(action)
-                self.disposable.add(schedule_disposable)
-
-            else:
-                has_elem = True
-                with self.lock:
-                    if self.elements:
-                        self.elements.append(val)
-                    else:
-                        has_elem = False
-
-                if not has_elem:
-                    def on_next_after_all_sent(self, val):
-                        # if self.observable.observer is not None:
-                        self.observable.observer.on_next(val)
-
-                    self.on_next = types.MethodType(on_next_after_all_sent, self)
-                    on_next_after_all_sent(self, val)
+            #     self.elements.append(val)
+            #
+            #     def action(_, __):
+            #         while True:
+            #
+            #             has_elem = True
+            #             with self.lock:
+            #                 if self.elements:
+            #                     val = self.elements.pop(0)
+            #                 else:
+            #                     has_elem = False
+            #
+            #             if has_elem:
+            #                 self.observable.observer.on_next(val)
+            #
+            #             else:
+            #                 break
+            #
+            #     schedule_disposable = self.subscribe_scheduler.schedule(action)
+            #     self.disposable.add(schedule_disposable)
+            #
+            # else:
+            #     has_elem = True
+            #     with self.lock:
+            #         if self.elements:
+            #             self.elements.append(val)
+            #         else:
+            #             has_elem = False
+            #
+            #     if not has_elem:
+            #         def on_next_after_all_sent(self, val):
+            #             # if self.observable.observer is not None:
+            #             self.observable.observer.on_next(val)
+            #
+            #         self.on_next = types.MethodType(on_next_after_all_sent, self)
+            #         on_next_after_all_sent(self, val)
 
         def on_error(self, exc: Exception):
-            if self.is_first:
+            with self.lock:
+                is_first = self.is_first
+                self.is_first = False
+
+            if is_first:
                 self.observer.on_error(exc)
             else:
-                def action(_, __):
-                    self.observable.observer.on_error(exc)
-
-                self.subscribe_scheduler.schedule(action)
+                self.observable.observer.on_error(exc)
+            #     def action(_, __):
+            #         self.observable.observer.on_error(exc)
+            #
+            #     self.subscribe_scheduler.schedule(action)
 
         def on_completed(self):
-            if self.is_first:
+            with self.lock:
+                is_first = self.is_first
+                self.is_first = False
+
+            if is_first:
                 self.observer.on_completed()
             else:
-                def action(_, __):
-                    self.observable.observer.on_completed()
-
-                self.subscribe_scheduler.schedule(action)
+                self.observable.observer.on_completed()
+            #     def action(_, __):
+            #         self.observable.observer.on_completed()
+            #
+            #     self.subscribe_scheduler.schedule(action)
 
     def _subscribe_core(
             self,

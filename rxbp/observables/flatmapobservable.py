@@ -3,8 +3,9 @@ import threading
 from typing import Callable, Any, Optional
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
@@ -50,23 +51,22 @@ class FlatMapObservable(Observable):
             self.outer_upstream_ack = outer_upstream_ack
 
         def on_next(self, elem: ElementType):
-            # print(f'FlatMap.on_next({elem})')
 
             # on_next, on_completed, on_error are called ordered/non-concurrently
             ack = self.outer.observer_info.observer.on_next(elem)
 
             # if ack==Stop, then update state
-            if isinstance(ack, Stop):
+            if isinstance(ack, StopAck):
                 self.outer.state = RawFlatMapStates.Stopped()
                 self.outer_upstream_ack.on_next(ack)
 
-            elif not isinstance(ack, Continue):
+            elif not isinstance(ack, ContinueAck):
                 class ResultSingle(Single):
                     def on_error(self, exc: Exception):
                         raise NotImplementedError
 
                     def on_next(_, ack):
-                        if isinstance(ack, Stop):
+                        if isinstance(ack, StopAck):
                             self.outer.state = RawFlatMapStates.Stopped()
                             self.outer_upstream_ack.on_next(ack)
                 ack.subscribe(ResultSingle())
@@ -228,8 +228,6 @@ class FlatMapObservable(Observable):
         meas_prev_state = next_state.raw_prev_state.get_measured_state()
         meas_state = next_state.get_measured_state()
 
-        # print(meas_state)
-
         # only if state is WaitOnNextChild, complete observer
         if isinstance(meas_state, FlatMapStates.Stopped):
 
@@ -260,7 +258,7 @@ class FlatMapObservable(Observable):
 
         class FlatMapOuterObserver(Observer):
 
-            def on_next(_, elem: ElementType) -> AckBase:
+            def on_next(_, elem: ElementType) -> AckMixin:
                 return self._on_next(elem)
 
             def on_error(_, exc: Exception):

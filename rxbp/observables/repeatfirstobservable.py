@@ -1,6 +1,7 @@
 import sys
 
-from rxbp.ack.ackimpl import Continue, Stop, stop_ack, continue_ack
+from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -41,14 +42,14 @@ class RepeatFirstObservable(Observable):
                     while True:
                         ack = observer.on_next(batch)
 
-                        if isinstance(ack, Continue):
+                        if isinstance(ack, ContinueAck):
                             pass
-                        elif isinstance(ack, Stop):
+                        elif isinstance(ack, StopAck):
                             break
                         else:
                             class RepeatFirstSingle(Single):
                                 def on_next(self, elem):
-                                    if isinstance(elem, Continue):
+                                    if isinstance(elem, ContinueAck):
                                         source.scheduler.schedule(action)
 
                                 def on_error(self, exc: Exception):

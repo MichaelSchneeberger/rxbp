@@ -1,8 +1,8 @@
 from typing import Iterable
 
 from rx.core.typing import Disposable
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.merge import _merge
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.operators.merge import _merge
 from rxbp.flowablebase import FlowableBase
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
@@ -12,7 +12,8 @@ from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases import ConcatBase
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 from rxbp.typing import ElementType
 
 
@@ -41,7 +42,7 @@ class ConcatFlowable(FlowableBase):
 
                         class ObserverWithPassivListener(Observer):
 
-                            def on_next(self, elem: ElementType) -> AckBase:
+                            def on_next(self, elem: ElementType) -> AckMixin:
                                 ack1 = source.selector.on_next(elem)
                                 ack2 = observer.on_next(elem)
                                 return _merge(ack1, ack2)
@@ -57,15 +58,11 @@ class ConcatFlowable(FlowableBase):
                         observer_info = observer_info.copy(observer=ObserverWithPassivListener())
                         return self.observable.observe(observer_info)
 
-                # subject = ObservableCacheServeFirstSubject(scheduler=subscriber.scheduler)
-                # observable = RefCountObservable(source=subscription.observable, subject=subject)
-
                 observable = ObservableWithPassivListener(subscription.observable, selector)
 
-                # yield subscription.info, subscription.observable
-                yield subscription.info, observable, selector
+                yield subscription, observable, selector
 
-        infos, sources, selectors = zip(*gen_subscriptions())
+        subscriptions, sources, selectors = zip(*gen_subscriptions())
 
         observable = ConcatObservable(
             sources=sources,
@@ -73,5 +70,9 @@ class ConcatFlowable(FlowableBase):
             subscribe_scheduler=subscriber.subscribe_scheduler,
         )
 
-        return Subscription(info=SubscriptionInfo(ConcatBase(infos, selectors)), observable=observable)
-        # return Subscription(info=SubscriptionInfo(base=None), observable=observable)
+        base = ConcatBase([s.info for s in subscriptions], selectors)
+
+        return Subscription(
+            info=BaseSelectorsTuple(base=base),
+            observable=observable,
+        )

@@ -1,4 +1,4 @@
-from rxbp.ack.ackimpl import Continue, continue_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import DropOld
 from rxbp.testing.testcasebase import TestCaseBase
@@ -23,13 +23,13 @@ class TestEvictingBufferedObserver(TestCaseBase):
         s1.on_next_single(1)
         s1.on_next_single(2)
         ack = s1.on_next_single(3)
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
 
         ack = s1.on_next_single(4)
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
 
         ack = s1.on_next_single(5)
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
 
         self.assertEqual(len(self.sink.received), 0)
 

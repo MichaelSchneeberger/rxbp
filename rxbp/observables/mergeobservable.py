@@ -1,8 +1,9 @@
 import threading
 
 from rx.disposable import CompositeDisposable
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import Continue, continue_ack, stop_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import stop_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
@@ -60,8 +61,8 @@ class MergeObservable(Observable):
         def __init__(self, source: 'MergeObservable'):
             self.source = source
 
-        def on_next(self, ack: AckBase):
-            if isinstance(ack, Continue):
+        def on_next(self, ack: AckMixin):
+            if isinstance(ack, ContinueAck):
                 next_state = RawMergeStates.OnAckReceived()
 
                 with self.source.lock:

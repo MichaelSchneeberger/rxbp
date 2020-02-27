@@ -1,4 +1,4 @@
-from rxbp.ack.ackimpl import Continue
+from rxbp.ack.continueack import ContinueAck
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.flatmapstates import FlatMapStates
@@ -33,21 +33,21 @@ class TestFlatMapObservable(TestCaseBase):
         self.assertFalse(ack1.has_value)
 
         ack2 = self.s2.on_next_iter([1, 2])
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack2, ContinueAck)
 
         self.assertListEqual(sink.received, [1, 2])
 
         self.s2.on_completed()
-        self.assertIsInstance(ack1.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
         self.assertIsInstance(obs.state.get_measured_state(), FlatMapStates.WaitOnOuter)
 
         ack1 = self.s1.on_next_single(self.s3)
         ack2 = self.s3.on_next_iter([3, 4])
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [1, 2, 3, 4])
 
         self.s3.on_completed()
-        self.assertIsInstance(ack1.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
         self.assertIsInstance(obs.state.get_measured_state(), FlatMapStates.WaitOnOuter)
 
         self.s1.on_completed()
@@ -91,7 +91,7 @@ class TestFlatMapObservable(TestCaseBase):
         self.s1.on_completed()
 
         ack2 = self.s2.on_next_iter([1, 2])
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack2, ContinueAck)
 
         ack3 = self.s3.on_next_iter([3, 4])
         self.assertFalse(ack3.has_value)

@@ -1,7 +1,8 @@
-from rxbp.ack.ackimpl import Continue, continue_ack, Stop
+from rxbp.ack.stopack import StopAck
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.flat_map import _merge_all
-from rxbp.ack.map import _map
+from rxbp.ack.operators.mergeall import _merge_all
+from rxbp.ack.operators.map import _map
 from rxbp.ack.single import Single
 
 from rxbp.observer import Observer
@@ -170,11 +171,11 @@ class ConnectableObserver(Observer):
     def on_next(self, elem: ElementType):
         if not self.is_connected:
             def __(v):
-                if isinstance(v, Continue):
+                if isinstance(v, ContinueAck):
                     ack = self.underlying.on_next(elem)
                     return ack
                 else:
-                    return Stop()
+                    return StopAck()
 
             new_ack = AckSubject()
             # _merge_all(_map(_observe_on(self.connected_ack, scheduler=self.scheduler), func=__)).subscribe(new_ack)
@@ -186,7 +187,7 @@ class ConnectableObserver(Observer):
             ack = self.underlying.on_next(elem)
             return ack
         else:
-            return Stop()
+            return StopAck()
 
     def on_error(self, err):
         self.was_canceled = True
@@ -196,7 +197,7 @@ class ConnectableObserver(Observer):
                 raise NotImplementedError
 
             def on_next(_, v):
-                if isinstance(v, Continue):
+                if isinstance(v, ContinueAck):
                     self.underlying.on_error(err)
 
         # _observe_on(self.connected_ack, scheduler=self.scheduler).subscribe(ResultSingle())
@@ -210,7 +211,7 @@ class ConnectableObserver(Observer):
                 raise NotImplementedError
 
             def on_next(_, v):
-                if isinstance(v, Continue):
+                if isinstance(v, ContinueAck):
                     self.underlying.on_completed()
 
         # _observe_on(self.connected_ack, scheduler=self.scheduler).subscribe(ResultSingle())

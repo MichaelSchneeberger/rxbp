@@ -1,6 +1,7 @@
 import sys
 
-from rxbp.ack.ackimpl import continue_ack, stop_ack
+from rxbp.ack.stopack import stop_ack
+from rxbp.ack.continueack import continue_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo

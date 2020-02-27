@@ -15,7 +15,11 @@ class TestZipFlowable(TestCaseBase):
         self.scheduler = TestScheduler()
         self.sink = TestObserver()
 
-    def test_not_matching_base(self):
+    def test_non_matching_base(self):
+        """ A non-matching base should not create any selectors when
+        gettings zipped.
+        """
+
         b1 = NumericalBase(1)
         b2 = NumericalBase(2)
         b3 = NumericalBase(3)

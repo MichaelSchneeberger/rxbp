@@ -1,9 +1,10 @@
 import threading
 from queue import Queue
 
-from rxbp.ack.ackimpl import Continue, continue_ack, Stop, stop_ack
+from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.observeon import _observe_on
+from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -93,7 +94,6 @@ class BackpressureBufferedObserver(Observer):
                 ack = self.underlying.on_next(next)
                 return ack
             except:
-                # print(f'next value = "{list(next)}"')
                 raise NotImplementedError
 
         def signal_complete():
@@ -110,12 +110,12 @@ class BackpressureBufferedObserver(Observer):
 
         def go_async(next, next_size: int, ack: AckSubject, processed: int):
             def on_next(v):
-                if isinstance(v, Continue):
+                if isinstance(v, ContinueAck):
                     next_ack = signal_next(next)
-                    is_sync = isinstance(ack, Continue) or isinstance(ack, Stop)
+                    is_sync = isinstance(ack, ContinueAck) or isinstance(ack, StopAck)
                     next_frame = self.em.next_frame_index(0) if is_sync else 0
                     fast_loop(next_ack, processed+next_size, next_frame)
-                elif isinstance(v, Stop):
+                elif isinstance(v, StopAck):
                     self.downstream_is_complete = True
 
             class ResultSingle(Single):
@@ -133,7 +133,7 @@ class BackpressureBufferedObserver(Observer):
                 pass
 
             ack = continue_ack if prev_ack is None else prev_ack
-            is_first_iteration = isinstance(ack, Continue)
+            is_first_iteration = isinstance(ack, ContinueAck)
             processed = last_processed
             next_index = start_index
 
@@ -151,16 +151,16 @@ class BackpressureBufferedObserver(Observer):
                     if next_index > 0 or is_first_iteration:
                         is_first_iteration = False
 
-                        if isinstance(ack, Continue):
+                        if isinstance(ack, ContinueAck):
                             ack = signal_next(next)
-                            if isinstance(ack, Stop):
+                            if isinstance(ack, StopAck):
                                 self.downstream_is_complete = True
                                 return
                             else:
-                                is_sync = isinstance(ack, Continue)
+                                is_sync = isinstance(ack, ContinueAck)
                                 next_index = self.em.next_frame_index(next_index) if is_sync else 0
                                 processed += next_size
-                        elif isinstance(ack, Stop):
+                        elif isinstance(ack, StopAck):
                             stop_streaming()
                             return
                         else:

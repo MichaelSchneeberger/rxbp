@@ -242,6 +242,16 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     return FlowableOperator(inner_func)
 
 
+def share(): #ability: MultiCastContext):
+    """
+    """
+
+    def inner_func(source: FlowableOpMixin):
+        return source.share()#bind_to=ability)
+
+    return FlowableOperator(inner_func)
+
+
 def set_base(val: Any):
     def func(source: FlowableOpMixin):
         return source.set_base(val=val)

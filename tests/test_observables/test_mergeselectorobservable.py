@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.ackimpl import Continue
+from rxbp.ack.continueack import ContinueAck
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.observables.mergeselectorobservable import MergeSelectorObservable
 from rxbp.selectors.selectionmsg import select_next, select_completed
@@ -36,7 +36,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
 
         ack = self.left.on_next_list([select_completed])
 
-        self.assertIsInstance(ack, Continue)
+        self.assertIsInstance(ack, ContinueAck)
         self.assertEqual([select_completed], sink.received)
 
     def test_wait_on_left_right_to_wait_on_right(self):

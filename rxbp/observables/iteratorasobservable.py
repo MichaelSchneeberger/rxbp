@@ -1,8 +1,9 @@
 from typing import Iterator, Any
 
 from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
-from rxbp.ack.ackimpl import Continue, Stop
-from rxbp.ack.observeon import _observe_on
+from rxbp.ack.stopack import StopAck
+from rxbp.ack.continueack import ContinueAck
+from rxbp.ack.operators.observeon import _observe_on
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
@@ -59,7 +60,7 @@ class IteratorAsObservable(Observable):
     def reschedule(self, ack, next_item, observer, scheduler: SchedulerBase, disposable, em: ExecutionModel):
         class ResultSingle(Single):
             def on_next(_, next):
-                if isinstance(next, Continue):
+                if isinstance(next, ContinueAck):
                     try:
                         self.fast_loop(next_item, observer, scheduler, disposable, em, sync_index=0)
                     except Exception as e:
@@ -108,9 +109,9 @@ class IteratorAsObservable(Observable):
                         observer.on_completed()
                     break
                 else:
-                    if isinstance(ack, Continue):
+                    if isinstance(ack, ContinueAck):
                         next_index = em.next_frame_index(sync_index)
-                    elif isinstance(ack, Stop):
+                    elif isinstance(ack, StopAck):
                         next_index = -1
                     else:
                         next_index = 0

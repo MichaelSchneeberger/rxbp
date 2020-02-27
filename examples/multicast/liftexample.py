@@ -1,9 +1,16 @@
+"""
+This example demonstrates the use-case of the lift operator defined
+on MultiCast objects. The lift operator lifts a `MultiCast[T1]` to
+a `MultiCast[T2[MultiCast[T1]]]`, which enables to group `MultiCast`
+objects within a MultiCast stream.
+"""
+
 import rxbp
 from rxbp.multicast.multicast import MultiCast
 
 
-def and_zip(multicast: MultiCast):
-    return rxbp.multicast.zip(
+def connect_and_zip(multicast: MultiCast):
+    return rxbp.multicast.connect_flowable(
         multicast,
         multicast,
     ).pipe(
@@ -16,13 +23,13 @@ def merge_and_reduce(multicast: MultiCast):
         multicast,
         multicast,
     ).pipe(
-        rxbp.multicast.op.reduce(),
+        rxbp.multicast.op.reduce_flowable(),
     )
 
 
 result = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
-    rxbp.multicast.op.lift(lambda m: m),
-    rxbp.multicast.op.map(and_zip),
+    rxbp.multicast.op.lift(lambda m, _: m),
+    rxbp.multicast.op.map(connect_and_zip),
     rxbp.multicast.op.map(merge_and_reduce),
     rxbp.multicast.op.flat_map(lambda m: m),
 ).to_flowable().run()

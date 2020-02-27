@@ -4,7 +4,7 @@ from rxbp.observer import Observer
 class ObserverInfo:
     """ A class holding information about "observing" an Observable.
 
-    This class is used as single argument to `observe` method defined in an Observable as it let's us extend it
+    This class is used as single argument to `observe` method defined in an Observable as it let's us share_flowable it
     in a later phase if needed without changing the Observable interface.
     """
 

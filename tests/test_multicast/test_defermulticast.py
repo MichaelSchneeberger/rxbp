@@ -15,7 +15,7 @@ from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestReduceMultiCast(unittest.TestCase):
+class TestDeferMultiCast(unittest.TestCase):
     def setUp(self) -> None:
         self.multicast_scheduler = TestScheduler()
         self.source_scheduler = TestScheduler()

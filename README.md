@@ -135,8 +135,8 @@ Operators on *MultiCasts* are exposed through `rxbp.multicast.op`.
 import rxbp
 
 f = rxbp.multicast.from_flowable(rxbp.range(10)).pipe(
-    rxbp.multicast.op.extend(lambda base: base[0].pipe(
-        rxbp.op.zip(base[0].pipe(
+    rxbp.multicast.op.map(lambda base: base.pipe(
+        rxbp.op.connect_flowable(base.pipe(
             rxbp.op.map(lambda v: v + 1),
             rxbp.op.filter(lambda v: v % 2 == 0)),
         ),
@@ -167,21 +167,17 @@ are called *selectors* and propagated internally when subscribing
 to a *Flowable*.
 
 If two Flowables have the same base, 
-they should match in the sense of the `zip` operator,
+they should match in the sense of the `connect_flowable` operator,
 e.g. every pair of elements that get zipped from the two
  Flowables should belong together.
 
 ```python
-import rxbp.depricated
 import rxbp
-from rxbp import op
 
 rxbp.range(10).pipe(
-    rxbp.depricated.share(lambda f1: f1.pipe(
-        rxbp.op.match(f1.pipe(
-            rxbp.op.filter(lambda v: v % 2 == 0)),
-        )
-    )),
+    rxbp.op.match(rxbp.range(10).pipe(
+        rxbp.op.filter(lambda v: v % 2 == 0)),
+    )
 ).subscribe(print)
 ```
 
@@ -200,10 +196,10 @@ When to use a Flowable, when RxPY Observable?
 
 A *Flowable* is used when some asynchronous stage cannot process the
 data fast enough, or needs to synchronize the data with some other event.
-Let's take the `zip` operator for instance. It gets elements from
+Let's take the `connect_flowable` operator for instance. It gets elements from
 two or more sources and emits a tuple once it received one
 element from each source. But what happens if one source emits the
-elements before the others do? Without back-pressure, the `zip` operation
+elements before the others do? Without back-pressure, the `connect_flowable` operation
 has to buffer the elements until it receives data from the other sources.
 This might be ok depending on how much data needs to be buffered. But
 often we can not risk having too much data buffered somewhere in our
@@ -235,8 +231,9 @@ Flowable
 - `map` - applies a function to each element emitted by the Flowable
 - `pairwise` - pairing two consecutive elements emitted by the Flowable
 - `repeat_first` - repeat the first element by the Flowable forever (until disposed)
-- `scan` - Applies an accumulator function over a Flowable sequence and returns each intermediate result.
-- `zip_with_index` - The same as `map`, except that the selector function takes 
+- `share` - multicasts the elements of the Flowable to possibly multiple subscribers
+- `scan` - applies an accumulator function over a Flowable sequence and returns each intermediate result.
+- `zip_with_index` - the same as `map`, except that the selector function takes 
 index in addition to the value
 
 ### Combining operators
@@ -245,7 +242,7 @@ index in addition to the value
 - `controlled_zip` - combines the elements emitted by two Flowables 
 into pairs in a controlled sequence. 
 - `match` - combines the elements emitted by two Flowables into matching pairs.
-- `zip` - combines the elements emitted by two Flowables into pairs in 
+- `connect_flowable` - combines the elements emitted by two Flowables into pairs in 
 a strict sequence.
 
 ### Other operators
@@ -258,7 +255,7 @@ a strict sequence.
 
 - `to_rx` - create a rx Observable from a Observable
 
-MultiCast
+MultiCast (experimental)
 ---------
 
 ### Create a MultiCast
@@ -271,15 +268,16 @@ by a *Flowable*
 
 ### Transforming operators
 
-- `defer` - used to create a *Flowable* loop
-- `extend` - create a new multicasted *Flowable* 
+- `loop_flowable` - used to create a *Flowable* loop
 - `filter` - only emits those *Multicast* values for which the given predicate hold.
 - `flat_map` - maps each *Multicast* value by applying a given function and flattens the result.
 - `lift` - lift the current `Observable[T1]` to a `Observable[T2[MultiCast[T1]]]`.
 - `map` - maps each *Multicast* value by applying a given function.
+- `map_with_context` - maps each *Multicast* value by applying a given function, 
+which takes MultiCast context (see `share` operator) as argument
 - `merge` - merges two or more *Multicast* streams together.
-- `reduce` - creates a *Multicast* that emits a single value
-- `zip` - zips *Multicast*s emitting a single *Flowable* to a *Multicast* emitting a single value
+- `reduce_flowable` - creates a *Multicast* that emits a single value
+- `connect_flowable` - zips *Multicast*s emitting a single *Flowable* to a *Multicast* emitting a single value
 
 ### Other operators 
 

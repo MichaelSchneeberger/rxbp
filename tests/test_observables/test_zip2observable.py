@@ -1,4 +1,4 @@
-from rxbp.ack.ackimpl import continue_ack, Continue
+from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.observables.zip2observable import Zip2Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.terminationstates import TerminationStates
@@ -13,7 +13,7 @@ class TestZip2Observable(TestCaseBase):
     """
     Zip2Observable is a stateful object, therefore we test methods of Zip2Observable as a function of its states
     called "zip_state" of type Zip2Observable.ZipState and "termination_state" of type Zip2Observable.TerminationState.
-    The termination state has four data types, which possibly have their own states. The zip state has five data
+    The termination state has four data types, which possibly have their own states. The connect_flowable state has five data
     types, which possibly have their own states as well.
 
     Zip2Observable is symmetric to left and right source Observable. Therefore, the test specific to the left source
@@ -123,8 +123,8 @@ class TestZip2Observable(TestCaseBase):
         ack2 = self.right.on_next_single(1)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeftRight)
-        self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1)])
 
     def test_multiple_elements_with_synchronous_ack(self):
@@ -141,8 +141,8 @@ class TestZip2Observable(TestCaseBase):
         ack2 = self.right.on_next_list([1, 2, 3])
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeftRight)
-        self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1), (2, 2), (3, 3)])
 
     def test_wait_on_right_to_wait_on_right_with_synchronous_ack(self):
@@ -160,7 +160,7 @@ class TestZip2Observable(TestCaseBase):
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnRight)
         self.assertFalse(ack1.has_value)
-        self.assertIsInstance(ack2, Continue)
+        self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1)])
 
     def test_wait_on_right_to_wait_on_left_with_synchronous_ack(self):
@@ -177,7 +177,7 @@ class TestZip2Observable(TestCaseBase):
         ack2 = self.right.on_next_list([1, 2, 3])
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeft)
-        self.assertIsInstance(ack1.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
         self.assertFalse(ack2.has_value)
         self.assertListEqual(sink.received, [(1, 1), (2, 2)])
 
@@ -196,8 +196,8 @@ class TestZip2Observable(TestCaseBase):
         sink.ack.on_next(continue_ack)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeftRight)
-        self.assertIsInstance(ack1.value, Continue)
-        self.assertIsInstance(ack2.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
+        self.assertIsInstance(ack2.value, ContinueAck)
         self.assertListEqual(sink.received, [(1, 1)])
 
     def test_acknowledge_left(self):
@@ -215,7 +215,7 @@ class TestZip2Observable(TestCaseBase):
         sink.ack.on_next(continue_ack)
 
         self.assertIsInstance(self.measure_state(obs), ZipStates.WaitOnLeft)
-        self.assertIsInstance(ack1.value, Continue)
+        self.assertIsInstance(ack1.value, ContinueAck)
         self.assertFalse(ack2.has_value)
         self.assertListEqual(sink.received, [(1, 1)])
 

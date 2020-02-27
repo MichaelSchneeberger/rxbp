@@ -1,22 +1,26 @@
 from functools import reduce
-from typing import Generic, Callable, Union, List, Dict
+from typing import Generic, Callable
 
 import rx
-import rxbp
 from rx import operators as rxop
 from rx.subject import Subject
-from rxbp.flowable import Flowable
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+
+import rxbp
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
+from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
 from rxbp.multicast.multicasts.defermulticast import DeferMultiCast
-from rxbp.multicast.multicasts.extendmulticast import ExtendMultiCast
+from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
+from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
+from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
+from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
+from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
 from rxbp.multicast.multicasts.zipmulticast import ZipMultiCast
-from rxbp.multicast.rxextensions.debug_ import debug as rx_debug
+from rxbp.multicast.rxextensions.merge_ import merge_op
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
 
@@ -29,104 +33,111 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     def __init__(self, underlying: MultiCastBase):
         self.underlying = underlying
 
-    def pipe(self, *operators: MultiCastOperator) -> 'MultiCast':
-        return reduce(lambda acc, op: op(acc), operators, self)
+    @classmethod
+    def _copy(cls, multi_cast: MultiCastBase):
+        return cls(multi_cast)
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
         return self.underlying.get_source(info=info)
 
-    def debug(self, name: str):
-        class DebugMultiCast(MultiCastBase):
-            def get_source(_, info: MultiCastInfo) -> rx.typing.Observable:
-                print(f'{name}.get_source({info})')
+    def connect_flowable(self, *others: 'MultiCast'):
+        return self._copy(ZipMultiCast(sources=[self] + list(others)))
 
-                return self.get_source(info=info).pipe(
-                    rx_debug(name),
-                )
+    def debug(
+            self,
+            name: str = None,
+    ):
 
-        return MultiCast(DebugMultiCast())
+        return self._copy(DebugMultiCast(source=self, name=name))
 
-    def defer(self, func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType):
+    def loop_flowable(
+            self,
+            func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType,
+    ):
         def lifted_func(multicast: MultiCastBase):
             return func(MultiCast(multicast))
 
-        return MultiCast(DeferMultiCast(source=self, func=lifted_func, initial=initial))
+        return self._copy(DeferMultiCast(source=self, func=lifted_func, initial=initial))
 
     def empty(self):
         return rxbp.multicast.empty()
 
-    def extend(self, func: Callable[[MultiCastValue], Union[Flowable, List, Dict, FlowableStateMixin]]):
-        return MultiCast(ExtendMultiCast(source=self, func=func))
+    def filter(
+            self,
+            predicate: Callable[[MultiCastValue], bool],
+    ):
+        return self._copy(FilterMultiCast(source=self, predicate=predicate))
 
-    def filter(self, func: Callable[[MultiCastValue], bool]):
-        class FilterMultiCast(MultiCastBase):
-            def get_source(_, info: MultiCastInfo) -> rx.typing.Observable:
-                source = self.get_source(info=info).pipe(
-                    rxop.filter(func)
-                )
-                return source
+    def flat_map(
+            self,
+            func: Callable[[MultiCastValue], 'MultiCast[MultiCastValue]'],
+    ):
+        return self._copy(FlatMapMultiCast(source=self, func=func))
 
-        return MultiCast(FilterMultiCast())
+    def lift(
+            self,
+            func: Callable[['MultiCast', MultiCastValue], MultiCastValue],
+    ):
+        def lifted_func(base: MultiCastBase, first: MultiCastValue):
+            return func(MultiCast(base), first)
 
-    def flat_map(self, func: Callable[[MultiCastValue], 'MultiCast[MultiCastValue]']):
-        class FlatMapMultiCast(MultiCastBase):
-            def get_source(_, info: MultiCastInfo) -> rx.typing.Observable:
-                return self.get_source(info=info).pipe(
-                    rxop.flat_map(lambda v: func(v).get_source(info=info)),
-                )
+        return self._copy(LiftMultiCast(
+            source=self,
+            func=lifted_func,
+        ))
 
-        return MultiCast(FlatMapMultiCast())
+    def loop(
+            self,
+            func: Callable[['MultiCast'], 'MultiCast[MultiCast]'],
+    ):
+        """        merge   flat_map    share
+                ---->o------->o-------->o---------->
+                     ^                  |
+                     *------------------*
+        """
 
-    def lift(self, func: Callable[['MultiCast'], MultiCastValue]):
-        class LiftMultiCast(MultiCastBase):
-            def get_source(_, info: MultiCastInfo) -> rx.typing.Observable:
-                class InnerLiftMultiCast(MultiCastBase):
-                    def __init__(self, source: Flowable[MultiCastValue]):
-                        self._source = source
+        class LoopMultiCast(MultiCastBase):
+            def get_source(
+                    self,
+                    info: MultiCastInfo,
+            ) -> rx.typing.Observable[MultiCastValue]:
+                source = self.get_source(info=info)
 
-                    def get_source(self, info: MultiCastInfo) -> Flowable:
-                        return self._source
-
-                source = self.get_source(info=info).pipe(
+                shared_multi_cast = rx.defer(lambda: shared_multi_cast).pipe(
+                    merge_op(source),
+                    rxop.flat_map(lambda mc: func(mc).get_source(info=info)),
                     rxop.share(),
                 )
 
-                inner_multicast = InnerLiftMultiCast(source=source)
-                multicast_val = func(MultiCast(inner_multicast))
-                return rx.return_value(multicast_val, scheduler=info.multicast_scheduler)
-        return MultiCast(LiftMultiCast())
+                return shared_multi_cast
 
-    def merge(self, *others: 'MultiCast'):
-        class MergeMultiCast(MultiCastBase):
-            def get_source(_, info: MultiCastInfo) -> rx.typing.Observable:
-                multicasts = reversed([self] + list(others))
-                return rx.merge(*[e.get_source(info=info) for e in multicasts])
+        return LoopMultiCast()
 
-        return MultiCast(MergeMultiCast())
+    def map(
+            self,
+            func: Callable[[MultiCastValue], MultiCastValue],
+    ):
+        return self._copy(MapMultiCast(source=self, func=func))
 
-    def map(self, func: Callable[[MultiCastValue], MultiCastValue]):
-        return MultiCast(MapMultiCast(source=self, func=func))
+    def merge(
+            self,
+            *others: 'MultiCast',
+    ):
+        sources = reversed([self] + list(others))
 
-    def reduce(
+        return self._copy(MergeMultiCast(sources=sources))
+
+    def pipe(self, *operators: MultiCastOperator) -> 'MultiCast':
+        return reduce(lambda acc, op: op(acc), operators, self)
+
+    def reduce_flowable(
             self,
             maintain_order: bool = None,
     ):
-        return MultiCast(ReduceMultiCast(source=self, maintain_order=maintain_order))
+        return self._copy(ReduceMultiCast(source=self, maintain_order=maintain_order))
 
-    def share(self):
+    def _share(self):
         subject = Subject()
 
-        class SharedMultiCast(MultiCastBase):
-            def get_source(_, info: MultiCastInfo) -> rx.typing.Observable:
-                shared_source = self.get_source(info=info).pipe(
-                    rxop.multicast(subject=subject),
-                    rxop.ref_count(),
-                )
-
-                return shared_source
-
-        multicast = MultiCast(SharedMultiCast())
+        multicast = self._copy(SharedMultiCast(source=self, subject=subject))
         return multicast
-
-    def zip(self, *others: 'MultiCast'):
-        return MultiCast(ZipMultiCast(sources=[self] + list(others)))

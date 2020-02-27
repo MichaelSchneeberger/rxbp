@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.ackimpl import Continue
+from rxbp.ack.continueack import ContinueAck
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
@@ -17,18 +17,18 @@ class TestPublishSubject(unittest.TestCase):
         subject = PublishOSubject(scheduler=self.scheduler)
         s1 = TestObservable(observer=subject)
 
-        self.assertIsInstance(s1.on_next_iter([1]), Continue)
-        self.assertIsInstance(s1.on_next_iter([2]), Continue)
-        self.assertIsInstance(s1.on_next_iter([3]), Continue)
+        self.assertIsInstance(s1.on_next_iter([1]), ContinueAck)
+        self.assertIsInstance(s1.on_next_iter([2]), ContinueAck)
+        self.assertIsInstance(s1.on_next_iter([3]), ContinueAck)
 
         o1 = TestObserver()
         o1.immediate_continue = 5
 
         subject.observe(ObserverInfo(o1))
 
-        self.assertIsInstance(s1.on_next_iter([4]), Continue)
-        self.assertIsInstance(s1.on_next_iter([5]), Continue)
-        self.assertIsInstance(s1.on_next_iter([6]), Continue)
+        self.assertIsInstance(s1.on_next_iter([4]), ContinueAck)
+        self.assertIsInstance(s1.on_next_iter([5]), ContinueAck)
+        self.assertIsInstance(s1.on_next_iter([6]), ContinueAck)
         s1.on_completed()
 
         self.assertEqual(sum(o1.received), 15)
@@ -47,9 +47,9 @@ class TestPublishSubject(unittest.TestCase):
 
         obs_list = list(gen_observers())
 
-        self.assertIsInstance(s1.on_next_iter([1]), Continue)
-        self.assertIsInstance(s1.on_next_iter([2]), Continue)
-        self.assertIsInstance(s1.on_next_iter([3]), Continue)
+        self.assertIsInstance(s1.on_next_iter([1]), ContinueAck)
+        self.assertIsInstance(s1.on_next_iter([2]), ContinueAck)
+        self.assertIsInstance(s1.on_next_iter([3]), ContinueAck)
         s1.on_completed()
 
         self.assertEqual(sum(sum(o.received) for o in obs_list), 60)

@@ -14,9 +14,11 @@ from rxbp.observers.backpressurebufferedobserver import BackpressureBufferedObse
 from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases import NumericalBase, Base, ObjectRefBase
+from rxbp.selectors.bases import NumericalBase, ObjectRefBase
+from rxbp.selectors.base import Base
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription, SubscriptionInfo
+from rxbp.subscription import Subscription
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
 
 
 def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None):
@@ -28,21 +30,6 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
     """
 
     batch_size_ = batch_size or 1
-
-    # def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
-    #     def gen():
-    #         for peak_first in iterator:
-    #             def generate_batch(peak_first=peak_first):
-    #                 yield peak_first
-    #                 for more in itertools.islice(iterator, batch_size_ - 1):
-    #                     yield more
-    #
-    #             yield generate_batch()
-    #
-    #     observable = IteratorAsObservable(iterator=gen(), scheduler=subscriber.scheduler,
-    #                                       subscribe_scheduler=subscriber.subscribe_scheduler)
-    #
-    #     return Subscription(info=SubscriptionInfo(base=base), observable=observable)
 
     class FromIteratorFlowable(FlowableBase):
         def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
@@ -58,12 +45,17 @@ def _from_iterator(iterator: Iterator, batch_size: int = None, base: Base = None
             observable = IteratorAsObservable(iterator=gen(), scheduler=subscriber.scheduler,
                                               subscribe_scheduler=subscriber.subscribe_scheduler)
 
-            return Subscription(info=SubscriptionInfo(base=base), observable=observable)
+            return Subscription(
+                info=BaseSelectorsTuple(
+                    base=base,
+                ),
+                observable=observable,
+            )
 
     return Flowable(FromIteratorFlowable())
 
 
-def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None, base: Base = None):
+def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int = None, base: Any = None):
     """ Converts an iterable into an observable
 
     :param iterable:
@@ -72,17 +64,19 @@ def _from_iterable(iterable: Iterable, batch_size: int = None, n_elements: int =
     """
 
     if base is not None:
-        base = base
+        if isinstance(base, str):
+            base = ObjectRefBase(base)
+        elif isinstance(base, int):
+            base = NumericalBase(base)
+        elif isinstance(base, Base):
+            base = base
+        else:
+            raise Exception(f'illegal base "{base}"')
+
     elif n_elements is not None:
         base = NumericalBase(n_elements)
     else:
         base = None
-
-    # def unsafe_subscribe_func(subscriber: Subscriber) -> Subscription:
-    #     iterator = iter(iterable)
-    #     subscriptable = _from_iterator(iterator=iterator, batch_size=batch_size, base=base)
-    #     subscription = subscriptable.unsafe_subscribe(subscriber)
-    #     return subscription
 
     class FromIterableFlowable(FlowableBase):
         def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
@@ -112,7 +106,7 @@ def from_iterable(iterable: Iterable, batch_size: int = None, base: Base = None)
     return _from_iterable(iterable=iterable, batch_size=batch_size, base=base)
 
 
-def from_range(arg1: int, arg2: int = None, batch_size: int = None):
+def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = None):
     if arg2 is None:
         start = 0
         stop = arg1
@@ -120,7 +114,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None):
         start = arg1
         stop = arg2
 
-    return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start)
+    return _from_iterable(iterable=range(start, stop), batch_size=batch_size, n_elements=stop-start, base=base)
 
 
 def from_list(buffer: List, batch_size: int = None):
@@ -148,7 +142,10 @@ def from_list(buffer: List, batch_size: int = None):
         observable = IteratorAsObservable(iterator=iterator, scheduler=subscriber.scheduler,
                                           subscribe_scheduler=subscriber.subscribe_scheduler)
 
-        return Subscription(info=SubscriptionInfo(base=base), observable=observable)
+        return Subscription(
+            info=BaseSelectorsTuple(base=base),
+            observable=observable,
+        )
 
     return Flowable(AnonymousFlowableBase(unsafe_subscribe_func=unsafe_subscribe_func))
 
@@ -206,7 +203,10 @@ def from_rx(source: rx.Observable, batch_size: int = None, overflow_strategy: Ov
 
         observable = ToBackpressureObservable(scheduler=subscriber.scheduler,
                                               subscribe_scheduler=subscriber.subscribe_scheduler)
-        return Subscription(info=SubscriptionInfo(base=base_), observable=observable)
+        return Subscription(
+            info=BaseSelectorsTuple(base=base_),
+            observable=observable,
+        )
 
     return Flowable(AnonymousFlowableBase(unsafe_subscribe_func))
 

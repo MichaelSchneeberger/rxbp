@@ -1,9 +1,9 @@
 import functools
 from typing import Callable, Any
 
-from rxbp.ack.ackbase import AckBase
-from rxbp.ack.ackimpl import stop_ack
-from rxbp.ack.merge import _merge
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.ack.stopack import stop_ack
+from rxbp.ack.operators.merge import _merge
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
 from rxbp.selectors.selectionmsg import select_next, select_completed
@@ -52,7 +52,7 @@ class FilterObserver(Observer):
                     if sel:
                         yield elem
 
-            ack1: AckBase = self.observer.on_next(gen_output())
+            ack1: AckMixin = self.observer.on_next(gen_output())
 
             return _merge(ack1, sel_ack)
         else:

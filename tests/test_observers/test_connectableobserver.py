@@ -1,4 +1,5 @@
-from rxbp.ack.ackimpl import Continue, Stop
+from rxbp.ack.stopack import StopAck
+from rxbp.ack.continueack import ContinueAck
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobserver import TestObserver
@@ -39,7 +40,7 @@ class TestConnectableObserver(TestCaseBase):
         observer.connect()
 
         self.assertEqual([1], sink.received)
-        self.assertIsInstance(ack.value, Continue)
+        self.assertIsInstance(ack.value, ContinueAck)
 
     def test_on_error(self):
         sink = TestObserver()
@@ -66,7 +67,7 @@ class TestConnectableObserver(TestCaseBase):
 
         self.assertEqual([1], sink.received)
         self.assertEqual(self.exception, sink.exception)
-        self.assertIsInstance(ack.value, Continue)
+        self.assertIsInstance(ack.value, ContinueAck)
 
     def test_on_next_on_error_then_connect_on_next(self):
         sink = TestObserver()
@@ -80,4 +81,4 @@ class TestConnectableObserver(TestCaseBase):
 
         self.assertEqual([1], sink.received)
         self.assertEqual(self.exception, sink.exception)
-        self.assertIsInstance(ack, Stop)
+        self.assertIsInstance(ack, StopAck)

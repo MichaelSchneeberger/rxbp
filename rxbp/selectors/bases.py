@@ -1,18 +1,13 @@
-from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, Iterable, List
 
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.selectors.getselectormixin import IdentitySelector, SelectorResult, SelectorFound, NoSelectorFound, \
-    GetSelectorMixin, ObservableSelector, Selector
+from rxbp.selectors.base import Base
+from rxbp.selectors.baseselectorstuple import BaseSelectorsTuple
+from rxbp.selectors.selector import Selector, IdentitySelector, ObservableSelector
 from rxbp.selectors.observables.identityselectorobservable import IdentitySelectorObservable
 from rxbp.subscriber import Subscriber
-
-
-class Base(GetSelectorMixin, ABC):
-    @abstractmethod
-    def get_name(self):
-        ...
 
 
 class NumericalBase(Base):
@@ -20,13 +15,17 @@ class NumericalBase(Base):
         self.num = num
 
     def get_name(self):
-        return '{}({})'.format(self.__class__.__name__, self.num)
+        return f'{self.__class__.__name__}({self.num})'
 
-    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
+    def get_selectors(self, other: Base, subscriber: Subscriber):
         if isinstance(other, NumericalBase) and self.num == other.num:
-            return SelectorFound(IdentitySelector(), IdentitySelector())
+            return Base.MatchedBaseMapping(
+                left=IdentitySelector(),
+                right=IdentitySelector(),
+                base=self,
+            )
         else:
-            return NoSelectorFound()
+            return None
 
 
 class ObjectRefBase(Base):
@@ -34,13 +33,17 @@ class ObjectRefBase(Base):
         self.obj = obj or self
 
     def get_name(self):
-        return '{}({})'.format(self.__class__.__name__, self.obj)
+        return f'{self.__class__.__name__}({self.obj})'
 
-    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
+    def get_selectors(self, other: Base, subscriber: Subscriber):
         if isinstance(other, ObjectRefBase) and self.obj == other.obj:
-            return SelectorFound(IdentitySelector(), IdentitySelector())
+            return Base.MatchedBaseMapping(
+                left=IdentitySelector(),
+                right=IdentitySelector(),
+                base=self,
+            )
         else:
-            return NoSelectorFound()
+            return None
 
 
 class PairwiseBase(Base):
@@ -48,19 +51,24 @@ class PairwiseBase(Base):
         self.underlying = underlying
 
     def get_name(self):
-        return 'PairwiseBase({})'.format(self.underlying.get_name())
+        return f'PairwiseBase({self.underlying.get_name()})'
 
-    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
+    def get_selectors(self, other: Base, subscriber: Subscriber):
         if isinstance(other, PairwiseBase):
-            return self.underlying.get_selectors(other.underlying, subscriber=subscriber)
-        else:
-            return NoSelectorFound()
+            result: Base.MatchedBaseMapping = self.underlying.get_selectors(other.underlying, subscriber=subscriber)
+
+            # after pairing, one cannot be transformed into the other
+            if isinstance(result, Base.MatchedBaseMapping):
+                if isinstance(result.left, IdentitySelector) and isinstance(result.right, IdentitySelector):
+                    return result
+
+        return None
 
 
 class ConcatBase(Base):
     def __init__(
             self,
-            underlying: Iterable[GetSelectorMixin],
+            underlying: Iterable[BaseSelectorsTuple],
             sources: List[Observable],
     ):
         self.underlying = list(underlying)
@@ -75,23 +83,20 @@ class ConcatBase(Base):
                 else:
                     yield str(base)
 
-        return 'ConcatBase({})'.format(', '.join(list(gen_names())))
+        source_names = ', '.join(list(gen_names()))
+        return f'ConcatBase({source_names})'
 
-    def get_selectors(self, other: Base, subscriber: Subscriber) -> SelectorResult:
+    def get_selectors(self, other: Base, subscriber: Subscriber):
         if isinstance(other, ConcatBase):
             other_base = other
 
             def gen_selectors():
                 for left, right in zip(self.underlying, other_base.underlying):
-                    # if isinstance(left.base, NumericalBase) and isinstance(right.base, NumericalBase):
-                    #     if left.base.num == 0 and right.base.num == 0:
-                    #         continue
-                    result = left.get_selectors(right, subscriber)
-                    yield result
-            results = list(gen_selectors())
+                    yield left.get_selectors(right, subscriber)
+            selector_results = list(gen_selectors())
 
-            if all(isinstance(result, SelectorFound) for result in results):
-                typed_results: List[SelectorFound] = results
+            if all(isinstance(result, BaseSelectorsTuple.MatchedBaseMapping) for result in selector_results):
+                typed_results: List[BaseSelectorsTuple.MatchedBaseMapping] = selector_results
 
                 left_selectors, right_selectors = zip(*[(result.left, result.right) for result in typed_results])
 
@@ -104,7 +109,10 @@ class ConcatBase(Base):
                         elif isinstance(selector, ObservableSelector):
                             yield selector.observable
 
+                base = None,
+
                 if all(isinstance(selector, IdentitySelector) for selector in left_selectors):
+                    base = self
                     left_selector = IdentitySelector()
                 else:
                     sources = list(gen_observables(left_selectors, self.sources))
@@ -115,21 +123,22 @@ class ConcatBase(Base):
                     ))
 
                 if all(isinstance(selector, IdentitySelector) for selector in right_selectors):
+                    base = other
                     right_selector = IdentitySelector()
                 else:
                     sources = list(gen_observables(right_selectors, other.sources))
-                    # print(sources)
                     right_selector = ObservableSelector(ConcatObservable(
                         sources=sources,
                         scheduler=subscriber.scheduler,
                         subscribe_scheduler=subscriber.subscribe_scheduler,
                     ))
 
-                return SelectorFound(
+                return Base.MatchedBaseMapping(
                     left=left_selector,
                     right=right_selector,
+                    base=base,
                 )
             else:
-                return NoSelectorFound()
+                return None
         else:
-            return NoSelectorFound()
+            return None

@@ -1,4 +1,5 @@
-from rxbp.ack.ackimpl import Continue, Stop, stop_ack
+from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.ack.continueack import ContinueAck
 from rxbp.ack.single import Single
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -58,7 +59,7 @@ class DebugObservable(Observable):
                     # self.on_next_exception(e)
                     raise
 
-                if isinstance(ack, Continue) or isinstance(ack, Stop):
+                if isinstance(ack, ContinueAck) or isinstance(ack, StopAck):
                     source.on_sync_ack(ack)
                 else:
                     source.on_raw_ack(ack)
