@@ -17,7 +17,7 @@ time_samples = rxbp.range(100).scan(lambda acc, _: acc + random() / 5, initial=0
 # generate the time intervals of interest
 time_intervals = rxbp.range(10).pairwise()
 
-# map each time samples to the corresponding time interval
+# map each time sample to the corresponding time interval
 time_intervals.pipe(
     rxbp.op.controlled_zip(
         right=time_samples,

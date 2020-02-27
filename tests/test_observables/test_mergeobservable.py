@@ -89,7 +89,7 @@ class TestMergeObservable(unittest.TestCase):
         NoneReceived ------------> NoneReceivedWaitAck
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -105,7 +105,7 @@ class TestMergeObservable(unittest.TestCase):
         NoneReceived ------------> NoneReceivedWaitAck
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -121,7 +121,7 @@ class TestMergeObservable(unittest.TestCase):
         NoneReceivedWaitAck ------------> LeftReceived
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -138,7 +138,7 @@ class TestMergeObservable(unittest.TestCase):
         NoneReceivedWaitAck ------------> RightReceived
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -155,7 +155,7 @@ class TestMergeObservable(unittest.TestCase):
         LeftReceived ------------> BothReceivedContinueLeft
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -173,7 +173,7 @@ class TestMergeObservable(unittest.TestCase):
         RightReceived ------------> BothReceivedContinueRight
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -191,7 +191,7 @@ class TestMergeObservable(unittest.TestCase):
         NoneReceivedWaitAck ------------> NoneReceived
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -207,7 +207,7 @@ class TestMergeObservable(unittest.TestCase):
         LeftReceived ------------> NoneReceivedWaitAck
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -225,7 +225,7 @@ class TestMergeObservable(unittest.TestCase):
         BothReceivedContinueLeft ------------> RightReceived
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -245,7 +245,7 @@ class TestMergeObservable(unittest.TestCase):
         Stopped -------------> Stopped
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -293,7 +293,7 @@ class TestMergeObservable(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_left_complete_to_error_asynchronous_ack(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
 
@@ -344,7 +344,7 @@ class TestMergeObservable(unittest.TestCase):
         """
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
         self.s1.on_completed()
@@ -361,7 +361,7 @@ class TestMergeObservable(unittest.TestCase):
         """
         """
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         obs = MergeObservable(self.s1, self.s2)
         obs.observe(ObserverInfo(sink))
         self.s1.on_next_single(1)

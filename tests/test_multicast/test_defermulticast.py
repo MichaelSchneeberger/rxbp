@@ -53,7 +53,7 @@ class TestDeferMultiCast(unittest.TestCase):
         reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
         self.source_multicast.on_next(Flowable(self.source1))
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = self.rx_sink.received[0].unsafe_subscribe(Subscriber(
             scheduler=self.source_scheduler, subscribe_scheduler=self.source_scheduler,
         ))

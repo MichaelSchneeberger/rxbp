@@ -24,7 +24,7 @@ class TestFromList(unittest.TestCase):
     def test_from_list(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_list(test_list).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
@@ -37,7 +37,7 @@ class TestFromList(unittest.TestCase):
     def test_from_list_batch_size_of_one(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_list(test_list, batch_size=1).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
@@ -55,7 +55,7 @@ class TestFromList(unittest.TestCase):
     def test_from_list_batch_size_of_two(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_list(test_list, batch_size=2).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
