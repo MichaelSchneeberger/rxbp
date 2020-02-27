@@ -261,9 +261,9 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnLeftRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver(immediate_coninue=0)
-        left_sel_sink = TestObserver(immediate_coninue=0)
-        right_sel_sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
+        left_sel_sink = TestObserver(immediate_continue=0)
+        right_sel_sink = TestObserver(immediate_continue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -297,9 +297,9 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnLeftRight ------------> WaitOnLeft
         """
 
-        sink = TestObserver(immediate_coninue=0)
-        left_sel_sink = TestObserver(immediate_coninue=0)
-        right_sel_sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
+        left_sel_sink = TestObserver(immediate_continue=0)
+        right_sel_sink = TestObserver(immediate_continue=0)
         ack1 = AckSubject()
         ack2 = AckSubject()
         obs = ControlledZipObservable(

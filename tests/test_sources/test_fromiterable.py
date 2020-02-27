@@ -25,7 +25,7 @@ class TestFromIterable(unittest.TestCase):
     def test_from_list(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         subscription = rxbp.from_iterable(test_list).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))

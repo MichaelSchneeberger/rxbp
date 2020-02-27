@@ -273,8 +273,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
                               CacheServeFirstOSubject.ExceptionState)
 
     def test_on_next_on_error_asynchronously(self):
-        o1 = TestObserver(immediate_coninue=0)
-        o2 = TestObserver(immediate_coninue=0)
+        o1 = TestObserver(immediate_continue=0)
+        o2 = TestObserver(immediate_continue=0)
         self.subject.observe(ObserverInfo(o1))
         self.subject.observe(ObserverInfo(o2))
 
