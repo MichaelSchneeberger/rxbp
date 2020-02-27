@@ -312,7 +312,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(self.exc, o1.exception)
 
     def test_on_disposed(self):
-        sink = TestObserver(immediate_coninue=0)
+        sink = TestObserver(immediate_continue=0)
         disposable = self.subject.observe(ObserverInfo(sink))
 
         disposable.dispose()

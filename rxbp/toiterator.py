@@ -18,14 +18,13 @@ def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
         send_notification(('E', exc))
 
     def on_completed():
-        print('completed')
         send_notification(('C', None))
 
     subscribe_scheduler = TrampolineScheduler()
     scheduler = scheduler or subscribe_scheduler
 
     source.subscribe(on_next=on_next, on_error=on_error, on_completed=on_completed, scheduler=scheduler,
-                     subscribe_scheduler=TrampolineScheduler())
+                     subscribe_scheduler=subscribe_scheduler)
 
     def gen():
         while True:
