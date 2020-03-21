@@ -3,7 +3,7 @@ This example is used in the README.md
 
 It creates a MultiCast object from a Flowable by using the `return_flowable`
 function. The Flowable boxed into a MultiCast object can now be
-subscribed to more than one observer. In this example, we use it to collect_flowables
+subscribed to more than one observer. In this example, we use it to join_flowables
 it with itself. The result is that a new Flowable is created that emits
 paired elements from the same source.
 

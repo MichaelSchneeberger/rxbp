@@ -1,7 +1,6 @@
 from typing import Callable, Any
 
-from rx.internal import SequenceContainsNoElementsError
-
+from rxbp.ack.continueack import continue_ack
 from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -29,13 +28,13 @@ class FirstOrDefaultObservable(Observable):
 
         class FirstObserver(Observer):
             def on_next(self, elem: ElementType):
+                try:
+                    first_elem = next(iter(elem))
+                except StopIteration:
+                    return continue_ack
+
                 outer_self.is_first = False
-                first_elem = next(iter(elem))
-
-                def gen_first():
-                    yield first_elem
-
-                observer.on_next(gen_first())
+                observer.on_next([first_elem])
                 observer.on_completed()
                 return stop_ack
 

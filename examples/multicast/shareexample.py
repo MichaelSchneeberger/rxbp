@@ -8,7 +8,7 @@ from rxbp.multicast.multicast import MultiCast
 
 
 def connect_and_zip(multicast: MultiCast):
-    return rxbp.multicast.collect_flowables(
+    return rxbp.multicast.join_flowables(
         multicast,
         multicast,
     ).pipe(
@@ -21,7 +21,7 @@ def merge_and_reduce(multicast: MultiCast):
         multicast,
         multicast,
     ).pipe(
-        rxbp.multicast.op.reduce_flowables(),
+        rxbp.multicast.op.collect_flowables(),
     )
 
 

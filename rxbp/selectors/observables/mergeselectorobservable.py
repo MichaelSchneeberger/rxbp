@@ -305,7 +305,7 @@ class MergeSelectorObservable(Observable):
         """ this function is called once, because 'on_complete' or 'on_error' are called once according to the rxbp
         convention
 
-        :param state: controlled collect_flowables state
+        :param state: controlled join_flowables state
         :param ex: catched exception to be forwarded downstream
         :return:
         """

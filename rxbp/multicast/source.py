@@ -195,7 +195,7 @@ def merge(
         )
 
 
-def collect_flowables(
+def join_flowables(
       *sources: MultiCast,
 ):
     """
@@ -211,5 +211,5 @@ def collect_flowables(
 
     else:
         return sources[0].pipe(
-            rxbp.multicast.op.collect_flowables(*sources[1:])
+            rxbp.multicast.op.join_flowables(*sources[1:])
         )

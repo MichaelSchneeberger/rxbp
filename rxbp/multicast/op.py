@@ -1,22 +1,17 @@
 from typing import Callable, Any
 
 import rx
-from rx.disposable import CompositeDisposable
 
 from rxbp.multicast.flowableop import FlowableOp
-from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
 from rxbp.multicast.multicast import MultiCast
-from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
-from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
 
 
-def collect_flowables(
+def join_flowables(
       *others: MultiCastOpMixin,
 ):
     """
@@ -30,7 +25,7 @@ def collect_flowables(
 
         # collect two Flowables emitted by two different MultiCast
         rxbp.multicast.return_flowable(rxbp.range(10)).pipe(
-            rxbp.multicast.op.collect_flowables(
+            rxbp.multicast.op.join_flowables(
                 rxbp.multicast.return_flowable(rxbp.range(10)),
             ),
         )
@@ -39,7 +34,7 @@ def collect_flowables(
     """
 
     def op_func(source: MultiCastOpMixin):
-        return source.collect_flowables(*others)
+        return source.join_flowables(*others)
 
     return MultiCastOperator(op_func)
 
@@ -200,7 +195,7 @@ def observe_on(scheduler: rx.typing.Scheduler):
     return MultiCastOperator(op_func)
 
 
-def reduce_flowables(
+def collect_flowables(
     maintain_order: bool = None,
 ):
     """
@@ -216,7 +211,7 @@ def reduce_flowables(
     """
 
     def op_func(source: MultiCastOpMixin):
-        return source.reduce_flowables(maintain_order=maintain_order)
+        return source.collect_flowables(maintain_order=maintain_order)
 
     return MultiCastOperator(op_func)
 

@@ -300,10 +300,10 @@ function
 
 ### Transforming operators (Flowables)
 
-- `collect_flowables` - zip one or more *Multicasts* (each emitting a single *Flowable*)
+- `join_flowables` - zip one or more *Multicasts* (each emitting a single *Flowable*)
  to a *Multicast* emitting a single element (tuple of *Flowables*)
 - `loop_flowables` - create a loop inside *Flowables*
-- `reduce_flowables` - create a *Multicast* that emits a single element containing 
+- `collect_flowables` - create a *Multicast* that emits a single element containing 
 the reduced *Flowables* of the first element sent by the source
 
 ### Other operators 

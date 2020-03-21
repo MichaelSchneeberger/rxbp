@@ -46,7 +46,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
         return self.underlying.get_source(info=info)
 
-    def collect_flowables(self, *others: 'MultiCast'):
+    def join_flowables(self, *others: 'MultiCast'):
         if len(others) == 0:
             return self
 
@@ -178,7 +178,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
     def observe_on(self, scheduler: rx.typing.Scheduler):
         return self._copy(ObserveOnMultiCast(source=self, scheduler=scheduler))
 
-    def reduce_flowables(
+    def collect_flowables(
             self,
             maintain_order: bool = None,
     ):

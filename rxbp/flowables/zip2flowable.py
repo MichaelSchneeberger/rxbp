@@ -19,7 +19,7 @@ class Zip2Flowable(FlowableBase):
         :param left:
         :param right:
         :param func:
-        :param auto_match: if set to False then this Flowable works like a normal collect_flowables operation, if set to False then \
+        :param auto_match: if set to False then this Flowable works like a normal join_flowables operation, if set to False then \
         it checks if the left and right Flowable either match (by their corresponding bases) or there is a \
         transformation (called selector) to make them match
         """
@@ -36,7 +36,7 @@ class Zip2Flowable(FlowableBase):
 
         result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
 
-        # The resulting collect_flowables Flowable propagates selectors from left and right downstream if the bases of
+        # The resulting join_flowables Flowable propagates selectors from left and right downstream if the bases of
         # left and right Flowable match
         if isinstance(result, BaseSelectorsAndSelectorMaps):
             if isinstance(result.left, IdentitySelectorMap) and isinstance(result.right, IdentitySelectorMap):

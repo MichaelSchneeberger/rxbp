@@ -409,9 +409,6 @@ class CacheServeFirstOSubject(OSubjectBase):
                     materialized_values, current_index)
                 yield inner_ack
 
-                if isinstance(inner_ack, StopAck):
-                    break
-
         inner_ack_list = list(gen_inner_ack())
 
         if all(isinstance(ack, StopAck) for ack in inner_ack_list):

@@ -79,16 +79,12 @@ class MultiCastOpMixin(ABC):
     def map_with_op(self, func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
         ...
 
-    # @abstractmethod
-    # def map_to_iterator(self, func: Callable[[MultiCastValue], Iterator[MultiCastValue]]):
-    #     ...
-
     @abstractmethod
     def observe_on(self, scheduler: rx.typing.Scheduler):
         ...
 
     @abstractmethod
-    def reduce_flowables(
+    def collect_flowables(
             self,
             maintain_order: bool = None,
     ):
@@ -102,7 +98,7 @@ class MultiCastOpMixin(ABC):
         raise Exception('this MultiCast cannot be shared. Use "lift" operator to share this MultiCast.')
 
     @abstractmethod
-    def collect_flowables(
+    def join_flowables(
             self,
             *others: 'MultiCastOpMixin',
     ):

@@ -34,5 +34,5 @@ f3 = rxbp.range(10).pipe(
 
 m2 = rxbp.match(m1, f3)
 
-result = m2.subscribe(print)
+result = m2.run()
 print(result)
