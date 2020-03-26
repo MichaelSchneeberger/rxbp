@@ -1,21 +1,29 @@
 from setuptools import setup, find_packages
-import unittest
+from os import path
 
 
-# def my_test_suite():
-#     test_loader = unittest.TestLoader()
-#     test_suite = test_loader.discover('test_rxbp', pattern='test_*.py')
-#     return test_suite
+here = path.abspath(path.dirname(__file__))
 
+# Get the long description from the README file
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='rxbp',
-    version='3.0.0a7',
-    packages=find_packages(),
-    install_requires=['rx==3.0.1'],
-    description='A rxpy extension with back-pressure',
+    version='3.0.0a8',
+    install_requires=['rx'],
+    description='An RxPY extension with back-pressure',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    url='https://github.com/MichaelSchneeberger/rxbackpressure',
     author='Michael Schneeberger',
     author_email='michael.schneeb@outlook.com',
-    download_url='https://github.com/MichaelSchneeberger/rxbackpressure',
-    test_suite='tests',
+    classifiers=[
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+    ],
+    keywords=['rx reactive extension back-pressure flowable multicast'],
+    packages=['rxbp'],
+    python_requires='>=3.7',
 )

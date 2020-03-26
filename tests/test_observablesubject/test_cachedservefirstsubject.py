@@ -14,7 +14,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.source = TestObservable()
         self.subject = CacheServeFirstOSubject(scheduler=self.scheduler)
         self.source.observe(ObserverInfo(self.subject))
-        self.exc = Exception('dummy')
+        self.exc = Exception()
 
     def test_initialize(self):
         CacheServeFirstOSubject(scheduler=self.scheduler)
@@ -29,7 +29,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         o1 = TestObserver()
         self.subject.observe(ObserverInfo(o1))
 
-        # state change
+        # state change (change to the same state)
         ack = self.source.on_next_single(1)
 
         # verification
