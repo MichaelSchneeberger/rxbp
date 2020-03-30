@@ -319,23 +319,10 @@ class ControlledZipObservable(Observable):
                 raise Exception('illegal case')
 
     def _on_next_left(self, elem: ElementType):
-
-        try:
-            return_ack = self._iterate_over_batch(elem=elem, is_left=True)
-        except Exception as exc:
-            # self.observer._on_error(exc)
-            self._on_error(exc)
-            return stop_ack
-        return return_ack
+        return self._iterate_over_batch(elem=elem, is_left=True)
 
     def _on_next_right(self, elem: ElementType):
-        try:
-            return_ack = self._iterate_over_batch(elem=elem, is_left=False)
-        except Exception as exc:
-            # self.observer._on_error(exc)
-            self._on_error(exc)
-            return stop_ack
-        return return_ack
+        return self._iterate_over_batch(elem=elem, is_left=False)
 
     def _signal_on_complete_or_on_error(
             self,

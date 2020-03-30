@@ -75,7 +75,6 @@ class Zip2Observable(Observable):
             self.state = next_state
 
         raw_prev_termination_state = next_state.prev_raw_termination_state
-
         curr_state = next_state.get_measured_state(raw_prev_termination_state)
 
         if isinstance(curr_state, ZipStates.Stopped):
@@ -107,9 +106,19 @@ class Zip2Observable(Observable):
                     break
 
                 yield self.selector(n1[0], n2)
-        zipped_elements = list(gen_zipped_elements())
+
+        try:
+            zipped_elements = list(gen_zipped_elements())
+        except Exception as exc:
+            self.observer.on_error(exc)
+            other_upstream_ack.on_next(stop_ack)
+            return stop_ack
 
         downstream_ack = self.observer.on_next(zipped_elements)
+
+        if isinstance(downstream_ack, StopAck):
+            other_upstream_ack.on_next(stop_ack)
+            return stop_ack
 
         # request new element from left source
         if n1[0] is None:
@@ -171,24 +180,21 @@ class Zip2Observable(Observable):
 
         curr_state = next_state.get_measured_state(raw_prev_termination_state)
 
+        # stop zip observable
         # previous state cannot be "Stopped", therefore don't check previous state
         if isinstance(curr_state, ZipStates.Stopped):
 
             prev_termination_state = raw_prev_termination_state.get_measured_state()
 
             if isinstance(prev_termination_state, TerminationStates.ErrorState):
-                self._signal_on_complete_or_on_error(state=next_state, exc=prev_termination_state.ex)
+                self.observer.on_error(prev_termination_state.ex)
                 other_upstream_ack.on_next(stop_ack)
                 return stop_ack
 
             else:
-                self._signal_on_complete_or_on_error(state=next_state)
+                self.observer.on_completed()
                 other_upstream_ack.on_next(stop_ack)
                 return stop_ack
-
-        elif isinstance(downstream_ack, StopAck):
-            other_upstream_ack.on_next(stop_ack)
-            return stop_ack
 
         # request new elements
         else:
