@@ -5,7 +5,6 @@ from rxbp.flowable import Flowable
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
-from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast
 from rxbp.multicast.testing.testrxobserver import TestRxObserver
 from rxbp.observerinfo import ObserverInfo
@@ -15,7 +14,7 @@ from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestDeferMultiCast(unittest.TestCase):
+class TestLoopFlowablesMultiCast(unittest.TestCase):
     def setUp(self) -> None:
         self.multicast_scheduler = TestScheduler()
         self.source_scheduler = TestScheduler()

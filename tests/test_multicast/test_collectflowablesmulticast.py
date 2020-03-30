@@ -2,7 +2,7 @@ import unittest
 
 from rxbp.flowable import Flowable
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
+from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast
 from rxbp.multicast.testing.testrxobserver import TestRxObserver
 from rxbp.observerinfo import ObserverInfo
@@ -12,7 +12,7 @@ from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
-class TestReduceMultiCast(unittest.TestCase):
+class TestCollectFlowablesMultiCast(unittest.TestCase):
     def setUp(self) -> None:
         self.multicast_scheduler = TestScheduler()
         self.source_scheduler = TestScheduler()
@@ -26,7 +26,7 @@ class TestReduceMultiCast(unittest.TestCase):
         self.source2 = TestFlowable()
 
     def test_send_single_flowable(self):
-        reduce_multicast = ReduceMultiCast(source=self.source_multicast)
+        reduce_multicast = CollectFlowablesMultiCast(source=self.source_multicast)
         reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
 
         self.source_multicast.on_next(Flowable(self.source1))
@@ -34,7 +34,7 @@ class TestReduceMultiCast(unittest.TestCase):
         self.assertEqual(1, len(self.rx_sink.received))
 
     def test_send_dictionary(self):
-        reduce_multicast = ReduceMultiCast(source=self.source_multicast)
+        reduce_multicast = CollectFlowablesMultiCast(source=self.source_multicast)
         reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
 
         self.source_multicast.on_next({'f1': Flowable(self.source1)})
@@ -42,7 +42,7 @@ class TestReduceMultiCast(unittest.TestCase):
         self.assertEqual(1, len(self.rx_sink.received))
 
     def test_reduce_single_flowables_without_maintaining_order(self):
-        reduce_multicast = ReduceMultiCast(source=self.source_multicast)
+        reduce_multicast = CollectFlowablesMultiCast(source=self.source_multicast)
         reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
         self.source_multicast.on_next(Flowable(self.source1))
         self.source_multicast.on_next(Flowable(self.source2))
@@ -69,7 +69,7 @@ class TestReduceMultiCast(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_reduce_single_flowables_with_maintaining_order(self):
-        reduce_multicast = ReduceMultiCast(
+        reduce_multicast = CollectFlowablesMultiCast(
             source=self.source_multicast,
             maintain_order=True,
         )

@@ -33,7 +33,7 @@ def join_flowables(
     :param others: other MultiCasts that all emit a single Flowable
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.join_flowables(*others)
 
     return MultiCastOperator(op_func)
@@ -44,7 +44,7 @@ def debug(name: str = None):
     Print debug messages to the console when providing the `name` argument
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.debug(name=name)
 
     return MultiCastOperator(op_func)
@@ -60,7 +60,7 @@ def default_if_empty(
     :param lazy_val: a function that returns the single elements
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.default_if_empty(lazy_val=lazy_val)
 
     return MultiCastOperator(op_func)
@@ -81,7 +81,7 @@ def loop_flowables(
     :param initial: initial values of the looped Flowables
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.loop_flowables(func=func, initial=initial)
 
     return MultiCastOperator(func=op_func)
@@ -94,7 +94,7 @@ def filter(
     Emit only those MultiCast for which the given predicate hold.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.filter(predicate=predicate)
 
     return MultiCastOperator(op_func)
@@ -110,7 +110,7 @@ def first(
     :param lazy_val: a function that returns the single elements
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.first(raise_exception=raise_exception)
 
     return MultiCastOperator(op_func)
@@ -121,7 +121,7 @@ def first_or_default(lazy_val: Callable[[], Any]):
     Emit the first element only and stop the Flowable sequence thereafter.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.first_or_default(lazy_val=lazy_val)
 
     return MultiCastOperator(op_func)
@@ -132,7 +132,7 @@ def flat_map(func: Callable[[MultiCastValue], MultiCastOpMixin]):
     Apply a function to each item emitted by the source and flattens the result.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.flat_map(func=func)
 
     return MultiCastOperator(op_func)
@@ -145,7 +145,7 @@ def lift(
     Lift the current `MultiCast[T]` to a `MultiCast[MultiCast[T]]`.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.lift(func=func).map(lambda m: LiftedMultiCast(m))
 
     return MultiCastOperator(op_func)
@@ -156,7 +156,7 @@ def map(func: Callable[[MultiCastValue], MultiCastValue]):
     Map each element emitted by the source by applying the given function.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.map(func=func)
 
     return MultiCastOperator(op_func)
@@ -167,7 +167,7 @@ def map_with_op(func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
     Maps each `MultiCast` value by applying the given function `func`
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.map_with_op(func=func)
 
     return MultiCastOperator(op_func)
@@ -178,7 +178,7 @@ def merge(*others: MultiCastOpMixin):
     Merge the elements of the *Flowable* sequences into a single *Flowable*.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.merge(*others)
 
     return MultiCastOperator(op_func)
@@ -189,7 +189,7 @@ def observe_on(scheduler: rx.typing.Scheduler):
     Schedule elements emitted by the source on a dedicated scheduler
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.observe_on(scheduler=scheduler)
 
     return MultiCastOperator(op_func)
@@ -210,7 +210,7 @@ def collect_flowables(
     sequence flattens the elements emitted by the sources.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return source.collect_flowables(maintain_order=maintain_order)
 
     return MultiCastOperator(op_func)
@@ -226,7 +226,7 @@ def share(
     raise an exception.
     """
 
-    def op_func(source: MultiCastOpMixin):
+    def op_func(source: MultiCast):
         return func(source._share())
 
     return MultiCastOperator(op_func)

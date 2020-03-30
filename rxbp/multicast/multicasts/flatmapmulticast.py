@@ -18,6 +18,14 @@ class FlatMapMultiCast(MultiCastBase):
         self.func = func
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+        def check_return_value_of_func(value):
+            multi_cast = self.func(value)
+
+            if not isinstance(multi_cast, MultiCastBase):
+                raise Exception(f'"{self.func}" should return a "MultiCast", but returned "{multi_cast}"')
+
+            return multi_cast.get_source(info=info)
+
         return self.source.get_source(info=info).pipe(
-            rxop.flat_map(lambda v: self.func(v).get_source(info=info)),
+            rxop.flat_map(check_return_value_of_func),
         )

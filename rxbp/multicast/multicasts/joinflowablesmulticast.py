@@ -18,7 +18,7 @@ from rxbp.source import from_rx
 from rxbp.subscriber import Subscriber
 
 
-class CollectMultiCast(MultiCastBase):
+class JoinFlowablesMultiCast(MultiCastBase):
     def __init__(
             self,
             sources: List[MultiCastBase],

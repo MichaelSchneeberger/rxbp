@@ -22,8 +22,7 @@ from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.subscriber import Subscriber
 
 
-# todo: should it also collect_flowables MultiCast[MultiCast[Flowable]] to MultiCast[SingleMultiCast[SingleFlowable]]?
-class ReduceMultiCast(MultiCastBase):
+class CollectFlowablesMultiCast(MultiCastBase):
     def __init__(
             self,
             source: MultiCastBase,

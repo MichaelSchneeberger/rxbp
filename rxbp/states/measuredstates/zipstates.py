@@ -1,4 +1,5 @@
 from abc import ABC
+from dataclasses import dataclass
 from typing import Iterator
 
 from rxbp.ack.acksubject import AckSubject
@@ -8,6 +9,7 @@ class ZipStates:
     class ZipState(ABC):
         pass
 
+    @dataclass
     class WaitOnLeft(ZipState):
         """ Zip observable actor has or will back-pressure the left source, but no element
         has yet been received.
@@ -15,16 +17,15 @@ class ZipStates:
         In this state, the left buffer is empty.
         """
 
-        def __init__(self, right_ack: AckSubject, right_iter: Iterator):
-            self.right_ack = right_ack
-            self.right_iter = right_iter
+        right_ack: AckSubject
+        right_iter: Iterator
 
+    @dataclass
     class WaitOnRight(ZipState):
         """ Equivalent of WaitOnLeft """
 
-        def __init__(self, left_ack: AckSubject, left_iter: Iterator):
-            self.left_iter = left_iter
-            self.left_ack = left_ack
+        left_ack: AckSubject
+        left_iter: Iterator
 
     class WaitOnLeftRight(ZipState):
         """ Zip observable actor has or will back-pressure the left and right source, but
@@ -35,6 +36,7 @@ class ZipStates:
 
         pass
 
+    @dataclass
     class ZipElements(ZipState):
         """ Zip observable actor is zipping the values just received by a source and
          from the buffer.
@@ -43,10 +45,10 @@ class ZipStates:
         method.
         """
 
-        def __init__(self, is_left: bool, ack: AckSubject, iter: Iterator):
-            self.is_left = is_left
-            self.ack = ack
-            self.iter = iter
+        left_ack: AckSubject
+        left_iter: Iterator
+        right_ack: AckSubject
+        right_iter: Iterator
 
     class Stopped(ZipState):
         pass

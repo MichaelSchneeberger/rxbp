@@ -63,7 +63,7 @@ class Zip2Observable(Observable):
         iterable = iter(elem)
         upstream_ack = AckSubject()
 
-        next_state = RawZipStates.ZipElements(
+        next_state = RawZipStates.ElementReceived(
             is_left=is_left,
             ack=upstream_ack,
             iter=iterable,
@@ -75,31 +75,23 @@ class Zip2Observable(Observable):
             self.state = next_state
 
         raw_prev_termination_state = next_state.prev_raw_termination_state
-        prev_raw_state = next_state.prev_raw_state
-        prev_state = prev_raw_state.get_measured_state(raw_prev_termination_state)
 
-        if isinstance(prev_state, ZipStates.Stopped):
+        curr_state = next_state.get_measured_state(raw_prev_termination_state)
+
+        if isinstance(curr_state, ZipStates.Stopped):
             return stop_ack
 
-        elif isinstance(prev_state, ZipStates.WaitOnLeftRight):
+        elif isinstance(curr_state, ZipStates.WaitOnRight) or isinstance(curr_state, ZipStates.WaitOnLeft):
             return upstream_ack
 
-        elif not is_left and isinstance(prev_state, ZipStates.WaitOnRight):
-            left_iter = prev_state.left_iter
-            left_ack = prev_state.left_ack
-            right_iter = iterable
-            right_ack = upstream_ack
-            other_upstream_ack = prev_state.left_ack
-
-        elif is_left and isinstance(prev_state, ZipStates.WaitOnLeft):
-            left_iter = iterable
-            left_ack = upstream_ack
-            right_iter = prev_state.right_iter
-            right_ack = prev_state.right_ack
-            other_upstream_ack = prev_state.right_ack
+        elif isinstance(curr_state, ZipStates.ZipElements):
+            if is_left:
+                other_upstream_ack = curr_state.right_ack
+            else:
+                other_upstream_ack = curr_state.left_ack
 
         else:
-            raise Exception(f'unknown state "{prev_state}", is_left {is_left}')
+            raise Exception(f'unknown state "{curr_state}", is_left {is_left}')
 
         # after zipping, n1 will not be None in case left
         # and right don't match in number of elements
@@ -109,8 +101,8 @@ class Zip2Observable(Observable):
             while True:
                 n1[0] = None
                 try:
-                    n1[0] = next(left_iter)
-                    n2 = next(right_iter)
+                    n1[0] = next(curr_state.left_iter)
+                    n2 = next(curr_state.right_iter)
                 except StopIteration:
                     break
 
@@ -126,8 +118,8 @@ class Zip2Observable(Observable):
 
             # request new element also from right source?
             try:
-                val = next(right_iter)
-                new_right_iter = itertools.chain([val], right_iter)
+                val = next(curr_state.right_iter)
+                new_right_iter = itertools.chain([val], curr_state.right_iter)
                 request_new_elem_from_right = False
 
             # request new element from left and right source
@@ -137,7 +129,7 @@ class Zip2Observable(Observable):
 
         # request new element only from right source
         else:
-            new_left_iter = itertools.chain(n1, left_iter)
+            new_left_iter = itertools.chain(n1, curr_state.left_iter)
             new_right_iter = None
 
             request_new_elem_from_left = False
@@ -155,7 +147,7 @@ class Zip2Observable(Observable):
 
             next_state = RawZipStates.WaitOnRight(
                 left_iter=new_left_iter,
-                left_ack=left_ack,
+                left_ack=curr_state.left_ack,
             )
 
         # request new element only from left source
@@ -163,7 +155,7 @@ class Zip2Observable(Observable):
 
             next_state = RawZipStates.WaitOnLeft(
                 right_iter=new_right_iter,
-                right_ack=right_ack,
+                right_ack=curr_state.right_ack,
             )
 
         else:
@@ -177,30 +169,22 @@ class Zip2Observable(Observable):
             # set next state
             self.state = next_state
 
-        prev_termination_state = raw_prev_termination_state.get_measured_state()
+        curr_state = next_state.get_measured_state(raw_prev_termination_state)
 
-        # stop or request new elements
-        # ----------------------------
+        # previous state cannot be "Stopped", therefore don't check previous state
+        if isinstance(curr_state, ZipStates.Stopped):
 
-        # stop requesting new elements from both sources, if left source is completed and
-        # no element from left source are in the buffer
-        if isinstance(prev_termination_state, TerminationStates.LeftCompletedState) and request_new_elem_from_left:
-            self._signal_on_complete_or_on_error(state=next_state)
-            other_upstream_ack.on_next(stop_ack)
-            return stop_ack
+            prev_termination_state = raw_prev_termination_state.get_measured_state()
 
-        # stop requesting new elements from both sources, if right source is completed and
-        # no element from right source are in the buffer
-        elif isinstance(prev_termination_state, TerminationStates.RightCompletedState) and request_new_elem_from_right:
-            self._signal_on_complete_or_on_error(state=next_state)
-            other_upstream_ack.on_next(stop_ack)
-            return stop_ack
+            if isinstance(prev_termination_state, TerminationStates.ErrorState):
+                self._signal_on_complete_or_on_error(state=next_state, exc=prev_termination_state.ex)
+                other_upstream_ack.on_next(stop_ack)
+                return stop_ack
 
-        # in error state, stop back-pressuring both sources
-        elif isinstance(prev_termination_state, TerminationStates.ErrorState):
-            self._signal_on_complete_or_on_error(state=next_state, exc=prev_termination_state.ex)
-            other_upstream_ack.on_next(stop_ack)
-            return stop_ack
+            else:
+                self._signal_on_complete_or_on_error(state=next_state)
+                other_upstream_ack.on_next(stop_ack)
+                return stop_ack
 
         elif isinstance(downstream_ack, StopAck):
             other_upstream_ack.on_next(stop_ack)
@@ -231,19 +215,11 @@ class Zip2Observable(Observable):
             return upstream_ack
 
     def _on_next_left(self, elem: ElementType):
-        # try:
         return_ack = self._iterate_over_batch(elem=elem, is_left=True)
-        # except Exception as exc:
-        #     self.observer.on_error(exc)
-        #     return stop_ack
         return return_ack
 
     def _on_next_right(self, elem: ElementType):
-        # try:
         return_ack = self._iterate_over_batch(elem=elem, is_left=False)
-        # except Exception as exc:
-        #     self.observer.on_error(exc)
-        #     return stop_ack
         return return_ack
 
     def _signal_on_complete_or_on_error(

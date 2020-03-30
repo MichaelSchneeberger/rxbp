@@ -11,7 +11,7 @@ from rxbp.multicast.multicastInfo import MultiCastInfo
 from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
-from rxbp.multicast.multicasts.collectmulticast import CollectMultiCast
+from rxbp.multicast.multicasts.joinflowablesmulticast import JoinFlowablesMultiCast
 from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
@@ -23,7 +23,7 @@ from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCas
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
 from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.observeonmulticast import ObserveOnMultiCast
-from rxbp.multicast.multicasts.reducemulticast import ReduceMultiCast
+from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
 from rxbp.multicast.rxextensions.merge_ import merge_op
 from rxbp.multicast.typing import MultiCastValue
@@ -50,7 +50,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
         if len(others) == 0:
             return self
 
-        return self._copy(CollectMultiCast(sources=[self] + list(others)))
+        return self._copy(JoinFlowablesMultiCast(sources=[self] + list(others)))
 
     def debug(
             self,
@@ -182,7 +182,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
             self,
             maintain_order: bool = None,
     ):
-        return self._copy(ReduceMultiCast(source=self, maintain_order=maintain_order))
+        return self._copy(CollectFlowablesMultiCast(source=self, maintain_order=maintain_order))
 
     def _share(self):
         subject = Subject()

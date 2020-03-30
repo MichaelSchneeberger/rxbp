@@ -1,4 +1,5 @@
 from abc import ABC
+from dataclasses import dataclass
 from typing import Iterator
 
 from rxbp.ack.acksubject import AckSubject
@@ -13,14 +14,10 @@ class RawZipStates:
     class ZipState(RawStateTerminationArg, ABC):
         pass
 
+    @dataclass
     class WaitOnLeft(ZipState):
-        def __init__(
-                self,
-                right_ack: AckSubject,
-                right_iter: Iterator,
-        ):
-            self.right_ack = right_ack
-            self.right_iter = right_iter
+        right_ack: AckSubject
+        right_iter: Iterator
 
         def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
             termination_state = raw_termination_state.get_measured_state()
@@ -33,14 +30,10 @@ class RawZipStates:
             else:
                 return ZipStates.WaitOnLeft(right_ack=self.right_ack, right_iter=self.right_iter)
 
+    @dataclass
     class WaitOnRight(ZipState):
-        def __init__(
-                self,
-                left_ack: AckSubject,
-                left_iter: Iterator,
-        ):
-            self.left_iter = left_iter
-            self.left_ack = left_ack
+        left_ack: AckSubject
+        left_iter: Iterator
 
         def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
             termination_state = raw_termination_state.get_measured_state()
@@ -62,7 +55,7 @@ class RawZipStates:
             else:
                 return ZipStates.Stopped()
 
-    class ZipElements(ZipState):
+    class ElementReceived(ZipState):
         def __init__(self, is_left: bool, ack: AckSubject, iter: Iterator):
             self.is_left = is_left
             self.ack = ack
@@ -82,16 +75,26 @@ class RawZipStates:
                 if isinstance(prev_state, ZipStates.Stopped):
                     raw_state = self.prev_raw_state
 
-                # Needed for `signal_on_complete_or_on_error`
                 elif isinstance(prev_state, ZipStates.WaitOnLeftRight):
                     if self.is_left:
                         raw_state = RawZipStates.WaitOnRight(left_ack=self.ack, left_iter=self.iter)
                     else:
                         raw_state = RawZipStates.WaitOnLeft(right_ack=self.ack, right_iter=self.iter)
 
-                else:
+                elif isinstance(prev_state, ZipStates.WaitOnLeft):
                     raw_state = RawZipStates.ZipElements(
-                        is_left=self.is_left, ack=self.ack, iter=self.iter)
+                        left_ack=self.ack, left_iter=self.iter,
+                        right_ack=prev_state.right_ack, right_iter=prev_state.right_iter,
+                    )
+
+                elif isinstance(prev_state, ZipStates.WaitOnRight):
+                    raw_state = RawZipStates.ZipElements(
+                        left_ack=prev_state.left_ack, left_iter=prev_state.left_iter,
+                        right_ack=self.ack, right_iter=self.iter,
+                    )
+
+                else:
+                    raise Exception(f'illegal previous state "{prev_state}"')
 
                 self.raw_state = raw_state
             else:
@@ -99,6 +102,6 @@ class RawZipStates:
 
             return raw_state.get_measured_state(raw_termination_state)
 
-    # class Stopped(ZipState):
-    #     def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
-    #         return ZipStates.Stopped()
+    class ZipElements(ZipStates.ZipElements, ZipState):
+        def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
+            return self
