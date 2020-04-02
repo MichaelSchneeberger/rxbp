@@ -1,4 +1,4 @@
-from typing import Any, Generic
+from typing import Any, Generic, List
 
 from rx.disposable import CompositeDisposable
 
@@ -87,6 +87,15 @@ class SafeFlowableSubject(MultiCastFlowable[ValueType], Observer, Generic[ValueT
 
             if self._observable_subject is not None:
                 return self._observable_subject.on_next([elem])
+
+        return continue_ack
+
+    def on_next_batch(self, elem: List[Any]):
+        if not self.is_stopped:
+            self.is_first = False
+
+            if self._observable_subject is not None:
+                return self._observable_subject.on_next(elem)
 
         return continue_ack
 

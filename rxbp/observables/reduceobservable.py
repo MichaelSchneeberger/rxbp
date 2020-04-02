@@ -35,17 +35,18 @@ class ReduceObservable(Observable):
                 self.acc = initial
 
             def on_next(self, elem: ElementType):
-                if isinstance(elem, list):
-                    materialized_values = elem
-                else:
-                    try:
+                try:
+                    if isinstance(elem, list):
+                        materialized_values = elem
+                    else:
                         materialized_values = list(elem)
-                    except Exception as exc:
-                        self.on_error(exc)
-                        return stop_ack
 
-                for value in materialized_values:
-                    self.acc = self.func(self.acc, value)
+                    for value in materialized_values:
+                        self.acc = self.func(self.acc, value)
+
+                except Exception as exc:
+                    self.on_error(exc)
+                    return stop_ack
 
                 return continue_ack
 

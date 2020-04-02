@@ -23,7 +23,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    keywords=['rx reactive extension back-pressure flowable multicast'],
+    keywords=['rx reactive extension back-pressure backpressure flowable multicast'],
     packages=['rxbp'],
     python_requires='>=3.7',
 )

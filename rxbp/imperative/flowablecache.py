@@ -49,4 +49,8 @@ class FlowableCache:
             return stop_ack
 
         self._observer.on_next = types.MethodType(on_next, self._observer)
+
+        if self._exception is not None:
+            raise self._exception
+
         return self._cache

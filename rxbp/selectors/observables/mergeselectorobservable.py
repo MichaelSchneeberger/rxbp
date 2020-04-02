@@ -70,7 +70,7 @@ class MergeSelectorObservable(Observable):
         except StopIteration:
             return continue_ack
 
-        next_state = RawControlledZipStates.ZipElements(
+        next_state = RawControlledZipStates.ElementReceived(
             val=val,
             is_left=is_left,
             ack=upstream_ack,
