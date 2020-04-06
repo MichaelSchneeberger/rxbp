@@ -60,7 +60,11 @@ class JoinFlowablesMultiCast(MultiCastBase):
 
                         conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 
-                        flattened_flowable = FlatConcatNoBackpressureFlowable(conn_flowable, to_flowable)
+                        flattened_flowable = FlatConcatNoBackpressureFlowable(
+                            source=conn_flowable,
+                            selector=to_flowable,
+                            subscribe_scheduler=info.source_scheduler,
+                        )
 
                         ref_count_flowable = RefCountFlowable(flattened_flowable)
 

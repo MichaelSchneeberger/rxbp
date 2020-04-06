@@ -76,8 +76,6 @@ class FlatConcatNoBackpressureObserver(Observer):
                 conn_observer = ConnectableObserver(
                     underlying=self.inner_observer,
                     scheduler=self.scheduler,
-                    subscribe_scheduler=self.subscribe_scheduler,
-                    is_volatile=self.is_volatile,
                 )
                 yield conn_observer
 
@@ -92,13 +90,17 @@ class FlatConcatNoBackpressureObserver(Observer):
         # - observe the other observables to each of the connectable observers
         #   (the connectable observers backpressure the source until its connected)
 
-        if len(prev_conn_observers) == 0:
-            obs_list[0].observe(ObserverInfo(observer=self.inner_observer, is_volatile=self.is_volatile))
-        else:
-            obs_list[0].observe(ObserverInfo(observer=conn_observers[0], is_volatile=self.is_volatile))
+        def observe_on_subscribe_scheduler():
+            if len(prev_conn_observers) == 0:
+                obs_list[0].observe(ObserverInfo(observer=self.inner_observer, is_volatile=self.is_volatile))
+            else:
+                obs_list[0].observe(ObserverInfo(observer=conn_observers[0], is_volatile=self.is_volatile))
 
-        for obs, conn_observer in zip(obs_list[1:], conn_observers[1:]):
-            obs.observe(ObserverInfo(observer=conn_observer, is_volatile=self.is_volatile))
+            for obs, conn_observer in zip(obs_list[1:], conn_observers[1:]):
+                obs.observe(ObserverInfo(observer=conn_observer, is_volatile=self.is_volatile))
+
+        # todo: connect disposable
+        disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
 
         return continue_ack
 
