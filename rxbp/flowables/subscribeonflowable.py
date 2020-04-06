@@ -17,7 +17,7 @@ class SubscribeOnFlowable(FlowableBase):
     def unsafe_subscribe(self, subscriber: Subscriber):
         scheduler = self._scheduler or TrampolineScheduler()
 
-        updated_subscriber = Subscriber(scheduler=scheduler,
+        updated_subscriber = Subscriber(scheduler=subscriber.scheduler,
                                         subscribe_scheduler=scheduler)
 
         subscription = self._source.unsafe_subscribe(updated_subscriber)

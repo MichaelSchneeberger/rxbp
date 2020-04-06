@@ -30,10 +30,10 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
 
                 def flat_map_func(v: MultiCastValue):
                     if isinstance(v, Flowable):
-                        return v
+                        result = v
                     elif isinstance(v, list):
                         flist = [f.to_list() for f in v if isinstance(f, Flowable)]
-                        return rxbp.zip(*flist)
+                        result = rxbp.zip(*flist)
                     elif isinstance(v, dict) or isinstance(v, FlowableDict):
                         if isinstance(v, dict):
                             fdict = v
@@ -44,18 +44,20 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                         # return flist[0]
 
                         keys, flist = zip(*((key, f.to_list()) for key, f in fdict.items() if isinstance(f, Flowable)))
-                        return rxbp.zip(*flist).pipe(
+                        result = rxbp.zip(*flist).pipe(
                             # rxbp.op.debug(('d1')),
                             rxbp.op.map(lambda vlist: dict(zip(keys, vlist))),
                         )
                     else:
                         raise Exception(f'illegal value "{v}"')
 
-                scheduler = TrampolineScheduler()
+                    return SubscribeOnFlowable(result, scheduler=subscriber.subscribe_scheduler)
+
+                subscribe_scheduler = TrampolineScheduler()
 
                 info = MultiCastInfo(
                     source_scheduler=subscriber.subscribe_scheduler,
-                    multicast_scheduler=scheduler,
+                    multicast_scheduler=subscribe_scheduler,
                 )
 
                 source_flowable = rxbp.from_rx(
@@ -68,7 +70,7 @@ class MultiCastBase(Generic[MultiCastValue], ABC):
                         ])),
                         rxop.first(),
                 ))
-                return Flowable(SubscribeOnFlowable(source_flowable, scheduler=info.multicast_scheduler)).pipe(
+                return Flowable(SubscribeOnFlowable(source_flowable, scheduler=subscribe_scheduler)).pipe(
                     rxbp.op.flat_map(flat_map_func),
                 ).unsafe_subscribe(subscriber=subscriber)
 
