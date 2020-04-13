@@ -56,6 +56,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
 
         self.source1.on_next_single(1)
 
@@ -72,8 +73,10 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
         self.source.on_next_single(self.source2)
+        self.scheduler.advance_by(1)
 
         self.source2.on_next_single('a')
 
@@ -90,8 +93,10 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
         self.source.on_next_single(self.source2)
+        self.scheduler.advance_by(1)
         self.source.on_completed()
         self.source2.on_next_single('a')
 
@@ -111,8 +116,10 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
         self.source.on_next_single(self.source2)
+        self.scheduler.advance_by(1)
         self.source.on_completed()
         self.source2.on_next_single('a')
         self.source1.on_next_single(2)
@@ -137,6 +144,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.source.on_next_single(self.source1)
         self.source.on_next_single(self.source2)
         self.source.on_next_single(self.source3)
+        self.scheduler.advance_by(1)
 
         self.source1.on_next_single(1)
         self.source2.on_next_single(2)

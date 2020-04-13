@@ -90,13 +90,18 @@ class FlatConcatNoBackpressureObserver(Observer):
         # - observe the other observables to each of the connectable observers
         #   (the connectable observers backpressure the source until its connected)
 
-        def observe_on_subscribe_scheduler():
-            if len(prev_conn_observers) == 0:
-                obs_list[0].observe(ObserverInfo(observer=self.inner_observer, is_volatile=self.is_volatile))
-            else:
-                obs_list[0].observe(ObserverInfo(observer=conn_observers[0], is_volatile=self.is_volatile))
+        first_obs = obs_list[0]
+        if len(prev_conn_observers) == 0:
+            first_conn_observer = self.inner_observer
+        else:
+            first_conn_observer = conn_observers[0]
+        other_obs = obs_list[1:]
+        other_conn_observers = conn_observers[1:]
 
-            for obs, conn_observer in zip(obs_list[1:], conn_observers[1:]):
+        def observe_on_subscribe_scheduler(_, __):
+            first_obs.observe(ObserverInfo(observer=first_conn_observer, is_volatile=self.is_volatile))
+
+            for obs, conn_observer in zip(other_obs, other_conn_observers):
                 obs.observe(ObserverInfo(observer=conn_observer, is_volatile=self.is_volatile))
 
         # todo: connect disposable

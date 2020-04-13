@@ -42,8 +42,13 @@ class TestCollectFlowablesMultiCast(unittest.TestCase):
         self.assertEqual(1, len(self.rx_sink.received))
 
     def test_reduce_single_flowables_without_maintaining_order(self):
-        reduce_multicast = CollectFlowablesMultiCast(source=self.source_multicast)
-        reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
+        rcollected_multicast = CollectFlowablesMultiCast(
+            source=self.source_multicast,
+            maintain_order=False,
+        )
+        rcollected_multicast.get_source(self.info).subscribe(self.rx_sink)
+
+        # send two Flowables to check maintain_order property
         self.source_multicast.on_next(Flowable(self.source1))
         self.source_multicast.on_next(Flowable(self.source2))
         self.source_multicast.on_completed()
@@ -57,6 +62,7 @@ class TestCollectFlowablesMultiCast(unittest.TestCase):
 
         # sending the lifted flowable is scheduled on the multicast_scheduler
         self.multicast_scheduler.advance_by(1)
+        self.source_scheduler.advance_by(1)
 
         self.source1.on_next_single(1)
         self.source2.on_next_single('a')
@@ -87,6 +93,7 @@ class TestCollectFlowablesMultiCast(unittest.TestCase):
 
         # sending the lifted flowable is scheduled on the multicast_scheduler
         self.multicast_scheduler.advance_by(1)
+        self.source_scheduler.advance_by(1)
 
         self.source1.on_next_single(1)
         self.source2.on_next_single('a')

@@ -57,6 +57,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
 
         self.source1.on_next_single(1)
 
@@ -73,8 +74,10 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
         self.source.on_next_single(self.source2)
+        self.scheduler.advance_by(1)
 
         self.source2.on_next_single('a')
 
@@ -91,8 +94,10 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
         self.source.on_next_single(self.source2)
+        self.scheduler.advance_by(1)
         self.source.on_completed()
         self.source2.on_next_single('a')
 
@@ -112,8 +117,10 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         )
         self.source.observe(ObserverInfo(observer=observer))
         self.source.on_next_single(self.source1)
+        self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
         self.source.on_next_single(self.source2)
+        self.scheduler.advance_by(1)
         self.source.on_completed()
         self.source2.on_next_single('a')
         self.source1.on_next_single(2)
@@ -121,6 +128,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         self.source2.on_next_single('b')
 
         self.source2.on_completed()
+        self.scheduler.advance_by(1)
 
         self.assertEqual([1, 'a', 2, 'b'], sink.received)
         self.assertTrue(sink.is_completed)
@@ -138,6 +146,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         self.source.on_next_single(self.source1)
         self.source.on_next_single(self.source2)
         self.source.on_next_single(self.source3)
+        self.scheduler.advance_by(1)
 
         self.source1.on_next_single(1)
         self.source2.on_next_single(2)

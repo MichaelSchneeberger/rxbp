@@ -92,9 +92,17 @@ class CollectFlowablesMultiCast(MultiCastBase):
                                 return flowable
 
                             if self.maintain_order:
-                                flattened_flowable = FlatConcatNoBackpressureFlowable(shared_flowable, selector)
+                                flattened_flowable = FlatConcatNoBackpressureFlowable(
+                                    source=shared_flowable,
+                                    selector=selector,
+                                    subscribe_scheduler=info.source_scheduler,
+                                )
                             else:
-                                flattened_flowable = FlatMergeNoBackpressureFlowable(shared_flowable, selector)
+                                flattened_flowable = FlatMergeNoBackpressureFlowable(
+                                    source=shared_flowable,
+                                    selector=selector,
+                                    subscribe_scheduler=info.source_scheduler,
+                                )
 
                             result = RefCountFlowable(flattened_flowable)
                             flowable = MultiCastFlowable(result)
