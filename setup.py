@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='rxbp',
-    version='3.0.0a8',
+    version='3.0.0a9',
     install_requires=['rx'],
     description='An RxPY extension with back-pressure',
     long_description=long_description,
@@ -24,6 +24,6 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     keywords=['rx reactive extension back-pressure backpressure flowable multicast'],
-    packages=['rxbp'],
+    packages=find_packages(include=['rxbp', 'rxbp.*']),
     python_requires='>=3.7',
 )

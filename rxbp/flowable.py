@@ -42,21 +42,9 @@ from rxbp.typing import ValueType
 
 
 class Flowable(FlowableOpMixin, FlowableBase, Generic[ValueType]):
-    """ A `Flowable` implements a `subscribe` method allowing to describe a
-    data flow from source to sink. The "description" is
-    done with *rxbp* operators exposed by `rxbp.op`.
-
-    Like in functional programming, usings *rxbackpressure* operators does not create
-    any mutable states but rather concatenates functions without calling them
-    yet. Or in other words, we first describe what we want to do, and then
-    we execute the plan. A `Flowable` is executed by calling its `subscribe`
-    method. This will start a chain reaction, where downsream `Flowables`
-    call the `subscribe` method of their linked upstream `Flowable` until
-    the sources start emitting data. Once a `Flowable` is subscribed, we
-    allow it to have mutable states where it make sense.
-
-    Compared to RxPY Observables, a `Flowable` uses `Observers` that are
-    able to back-pressure an `on_next` method call.
+    """
+    A `Flowable` implements a `subscribe` method, which is a mechanism that
+    allows to describe a data flow from source to a sink.
     """
 
     def __init__(self, underlying: FlowableBase):
