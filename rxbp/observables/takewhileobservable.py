@@ -1,5 +1,6 @@
 from typing import Callable, Any
 
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -37,7 +38,7 @@ class TakeWhileObservable(Observable):
             def on_next(self, elem: ElementType):
                 process = []
                 try:
-                    ack = stop_ack
+                    ack: AckMixin = stop_ack
                     will_stop = False
                     for v in elem:
                         if not predicate(v):

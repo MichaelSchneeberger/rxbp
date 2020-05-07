@@ -98,7 +98,7 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
         if duetime > self.now:
             log.warning("Do not schedule imperative work!")
 
-        si: ScheduledItem[typing.TState] = ScheduledItem(self, state, action, duetime)
+        si = ScheduledItem(self, state, action, duetime)
 
         with self.lock:
             self.queue.enqueue(si)

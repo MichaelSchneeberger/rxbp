@@ -181,6 +181,8 @@ class PublishOSubject(OSubjectBase):
         state = self.state
         sub_set = state.subscribers
 
+        subscribers: Union[Set, PublishOSubject.Empty]
+
         if state.cache is not None:
             subscribers = set(state.cache)
         else:

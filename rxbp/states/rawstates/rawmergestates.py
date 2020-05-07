@@ -1,6 +1,8 @@
 from abc import ABC
+from typing import Optional, Union
 
 from rxbp.ack.acksubject import AckSubject
+from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.states.measuredstates.mergestates import MergeStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.states.rawstates.rawstateterminationarg import RawStateTerminationArg
@@ -97,15 +99,22 @@ class RawMergeStates:
             self.elem = elem
             self.ack = ack
 
-            self.prev_raw_termination_state: RawTerminationStates.TerminationState = None
-            self.prev_raw_state: 'RawMergeStates.MergeState' = None
+            self.prev_raw_termination_state: Optional[RawTerminationStates.TerminationState] = None
+            self.prev_raw_state: Optional['RawMergeStates.MergeState'] = None
 
-            self.raw_state: MergeStates.MergeState = None
+            self.raw_state: Optional[RawMergeStates.MergeState] = None
 
     class OnLeftReceived(ElementReceivedBase):
         def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
             if self.raw_state is None:
+                # for mypy to type check correctly
+                assert isinstance(self.prev_raw_state, RawMergeStates.MergeState)
+                assert isinstance(self.prev_raw_termination_state, RawTerminationStates.TerminationState)
+
                 meas_prev_state = self.prev_raw_state.get_measured_state(self.prev_raw_termination_state)
+
+                # for mypy to type check correctly
+                raw_state: RawMergeStates.MergeState
 
                 if isinstance(meas_prev_state, MergeStates.NoneReceived):
                     raw_state = RawMergeStates.NoneReceivedWaitAck()
@@ -125,7 +134,7 @@ class RawMergeStates:
                     )
 
                 elif isinstance(meas_prev_state, MergeStates.Stopped):
-                    raw_state = meas_prev_state
+                    raw_state = RawMergeStates.Stopped()
 
                 else:
                     raise Exception(f'illegal state "{meas_prev_state}"')
@@ -139,7 +148,14 @@ class RawMergeStates:
     class OnRightReceived(ElementReceivedBase):
         def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
             if self.raw_state is None:
+                # for mypy to type check correctly
+                assert isinstance(self.prev_raw_state, RawMergeStates.MergeState)
+                assert isinstance(self.prev_raw_termination_state, RawTerminationStates.TerminationState)
+
                 meas_prev_state = self.prev_raw_state.get_measured_state(self.prev_raw_termination_state)
+
+                # for mypy to type check correctly
+                raw_state: RawMergeStates.MergeState
 
                 if isinstance(meas_prev_state, MergeStates.NoneReceived):
                     raw_state = RawMergeStates.NoneReceivedWaitAck()
@@ -159,7 +175,7 @@ class RawMergeStates:
                     )
 
                 elif isinstance(meas_prev_state, MergeStates.Stopped):
-                    raw_state = self.prev_raw_state
+                    raw_state = RawMergeStates.Stopped()
 
                 else:
                     raise Exception(f'illegal state "{meas_prev_state}"')
@@ -173,14 +189,21 @@ class RawMergeStates:
     class OnAckReceived(MergeState):
         def __init__(self):
 
-            self.prev_raw_termination_state: RawTerminationStates.TerminationState = None
-            self.prev_raw_state: 'RawMergeStates.MergeState' = None
+            self.prev_raw_termination_state: Optional[RawTerminationStates.TerminationState] = None
+            self.prev_raw_state: Optional['RawMergeStates.MergeState'] = None
 
-            self.raw_state: RawMergeStates.MergeState = None
+            self.raw_state: Optional[RawMergeStates.MergeState] = None
 
         def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
             if self.raw_state is None:
+                # for mypy to type check correctly
+                assert isinstance(self.prev_raw_state, RawMergeStates.MergeState)
+                assert isinstance(self.prev_raw_termination_state, RawTerminationStates.TerminationState)
+
                 meas_prev_state = self.prev_raw_state.get_measured_state(self.prev_raw_termination_state)
+
+                # for mypy to type check correctly
+                raw_state: RawMergeStates.MergeState
 
                 if isinstance(meas_prev_state, MergeStates.NoneReceivedWaitAck):
                     raw_state = RawMergeStates.NoneReceived()
@@ -211,3 +234,7 @@ class RawMergeStates:
                 raw_state = self.raw_state
 
             return raw_state.get_measured_state(raw_termination_state)
+
+    class Stopped(MergeState):
+        def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState) -> MeasuredState:
+            return MergeStates.Stopped()

@@ -31,12 +31,12 @@ class BackpressureBufferedObserver(Observer):
             self.buffer_size = buffer_size
 
         # states of buffered subscriber
-        self.queue = Queue()
-        self.last_iteration_ack = None
+        self.queue: Queue = Queue()
+        self.last_iteration_ack: Optional[AckSubject] = None
         self.upstream_is_complete = False
         self.downstream_is_complete = False
         self.items_to_push = 0
-        self.back_pressured = None
+        self.back_pressured: Optional[AckSubject] = None
         self.error_thrown = None
 
         self.lock = threading.RLock()

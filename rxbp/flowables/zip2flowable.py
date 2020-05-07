@@ -36,7 +36,7 @@ class Zip2Flowable(FlowableBase):
 
         result = left_subscription.info.get_selectors(right_subscription.info, subscriber=subscriber)
 
-        # The resulting join_flowables Flowable propagates selectors from left and right downstream if the bases of
+        # The resulting zip Flowable propagates selectors from left and right downstream if the bases of
         # left and right Flowable match
         if isinstance(result, BaseSelectorsAndSelectorMaps):
             if isinstance(result.left, IdentitySelectorMap) and isinstance(result.right, IdentitySelectorMap):

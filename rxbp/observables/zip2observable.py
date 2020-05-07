@@ -1,6 +1,6 @@
 import itertools
 import threading
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 from rx.disposable import CompositeDisposable
 
@@ -18,27 +18,33 @@ from rxbp.typing import ElementType
 
 
 class Zip2Observable(Observable):
-    """ An observable that zips the elements of a left and right observable.
+    """
+    An observable that zips the elements of a left and right observable.
 
-    Common scenario with synchronous acknowledgment (if possible):
+    The following illustrates the function call stack of the following subscription:
 
-        s1.join_flowables(s2).subscribe(o, scheduler=s)
+        disposable = s1.zip(s2).subscribe(o, scheduler=s)
 
-    ^ callstack         join_flowables          join_flowables
+    ^ callstack         zip          zip
     |                   /            /
     |             o   s1       o   s1
     |            /   / ack1   /   / ack1
-    |    join_flowables   join_flowables --       join_flowables --
+    |    zip   zip --       zip --
     |    /     /            /
     |   s1    s2----------- -----------     ...
     |  /     /
     | s     s                                 time
     --------------------------------------------->
 
-    ack1: asynchronous acknowledgment returned by join_flowables.on_next called by s1
+    ack1: asynchronous acknowledgment returned by zip.on_next called by s1
     """
 
-    def __init__(self, left: Observable, right: Observable, selector: Callable[[Any, Any], Any] = None):
+    def __init__(
+            self,
+            left: Observable,
+            right: Observable,
+            selector: Callable[[Any, Any], Any] = None,
+    ):
         """
         :param left: left observable
         :param right: right observable
@@ -54,9 +60,9 @@ class Zip2Observable(Observable):
         self.lock = threading.RLock()
 
         # Zip2Observable states
-        self.observer = None
+        self.observer: Optional[Observer] = None
         self.termination_state = RawTerminationStates.InitState()
-        self.state = RawZipStates.WaitOnLeftRight()
+        self.state: RawZipStates.ZipState = RawZipStates.WaitOnLeftRight()
 
     def _iterate_over_batch(self, elem: ElementType, is_left: bool):
 
@@ -168,7 +174,7 @@ class Zip2Observable(Observable):
             )
 
         else:
-            raise Exception('after the join_flowables operation, a new element needs '
+            raise Exception('after the zip operation, a new element needs '
                             'to be requested from at least one source')
 
         with self.lock:

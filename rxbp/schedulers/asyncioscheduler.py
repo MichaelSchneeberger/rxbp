@@ -1,8 +1,9 @@
 import asyncio
 import datetime
 from threading import Thread
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, Optional
 
+from rx.core.typing import ScheduledAction, RelativeTime, AbsoluteTime
 from rx.disposable import Disposable
 
 from rxbp.scheduler import SchedulerBase
@@ -33,7 +34,7 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
         return datetime.datetime.now()
 
     def schedule(self,
-                 action: Callable[[SchedulerBase, Any], None],
+                 action: ScheduledAction,
                  state=None):
         def func():
             action(self, state)
@@ -46,15 +47,15 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
         return Disposable(dispose)
 
     def schedule_relative(self,
-                          duetime: Union[int, float],
-                          action: Callable[[SchedulerBase, Any], None],
+                          duetime: RelativeTime,
+                          action: ScheduledAction,
                           state=None):
 
         if isinstance(duetime, datetime.datetime):
-            timespan = duetime - datetime.datetime.fromtimestamp(0)
-            timespan = int(timespan.total_seconds())
+            timedelta = duetime - datetime.datetime.fromtimestamp(0)
+            timespan = float(timedelta.total_seconds())
         elif isinstance(duetime, datetime.timedelta):
-            timespan = int(duetime.total_seconds())
+            timespan = float(duetime.total_seconds())
         else:
             timespan = duetime
 
@@ -72,10 +73,14 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
         return Disposable(dispose)
 
     def schedule_absolute(self,
-                          duetime: datetime.datetime,
-                          func: Callable[[SchedulerBase, Any], None],
+                          duetime: AbsoluteTime,
+                          func: ScheduledAction,
                           state=None):
-        timedelta = (duetime - datetime.datetime.now()).total_seconds()
+        if isinstance(duetime, datetime.datetime):
+            timedelta = (duetime - datetime.datetime.now()).total_seconds()
+        else:
+            timedelta = duetime
+
         return self.schedule_relative(timedelta, func)
 
     def dispose(self):

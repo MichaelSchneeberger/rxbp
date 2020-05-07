@@ -34,7 +34,7 @@ class FlatMapObservable(Observable):
         self._delay_errors = delay_errors
 
         self.lock = threading.RLock()
-        self.state = RawFlatMapStates.InitialState()
+        self.state: RawFlatMapStates.State = RawFlatMapStates.InitialState()
         self.composite_disposable = CompositeDisposable()
 
         self.observer_info: Optional[ObserverInfo] = None
@@ -51,6 +51,9 @@ class FlatMapObservable(Observable):
             self.outer_upstream_ack = outer_upstream_ack
 
         def on_next(self, elem: ElementType):
+
+            # for mypy to type check correctly
+            assert isinstance(self.outer.observer_info, ObserverInfo)
 
             # on_next, on_completed, on_error are called ordered/non-concurrently
             ack = self.outer.observer_info.observer.on_next(elem)
@@ -183,6 +186,10 @@ class FlatMapObservable(Observable):
                 scheduler=self._scheduler,
                 subscribe_scheduler=self._subscribe_scheduler,
             )
+
+            # for mypy to type check correctly
+            assert isinstance(self.observer_info, ObserverInfo)
+
             conn_subscription = self.observer_info.copy(conn_observer)
 
             # apply selector to get inner observable (per element received)
@@ -202,6 +209,10 @@ class FlatMapObservable(Observable):
             next_conn_observer=conn_observer,
             outer_upstream_ack=async_upstream_ack,
         )
+
+        # for mypy to type check correctly
+        assert isinstance(self.observer_info, ObserverInfo)
+
         observer_info = self.observer_info.copy(inner_observer)
 
         # apply selector to get inner observable (per element received)

@@ -26,7 +26,7 @@ class PairwiseObserver(Observer):
 
             ack = self.observer.on_next(pairwise_gen())
             return ack
-        self.on_next = types.MethodType(on_next_after_first, self)
+        self.on_next = types.MethodType(on_next_after_first, self)      # type: ignore
 
         # catches exceptions raised when consuming next element from iterator
         try:

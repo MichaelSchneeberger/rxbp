@@ -1,5 +1,7 @@
 import threading
+from typing import List, Optional
 
+import rx
 from rx.disposable import Disposable
 
 from rxbp.observable import Observable
@@ -14,8 +16,8 @@ class RefCountObservable(Observable):
         self.source = source
         self.subject = subject
         self.count = 0
-        self.volatile_disposables = []
-        self.first_disposable = None
+        self.volatile_disposables: List[rx.typing.Disposable] = []
+        self.first_disposable: Optional[rx.typing.Disposable] = None
         self.lock = threading.RLock()
 
     def observe(self, observer_info: ObserverInfo):

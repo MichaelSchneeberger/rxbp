@@ -1,11 +1,12 @@
 from abc import ABC
 
 from rxbp.ack.acksubject import AckSubject
+from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.typing import ElementType
 
 
 class MergeStates:
-    class MergeState(ABC):
+    class MergeState(MeasuredState, ABC):
         pass
 
     class NoneReceived(MergeState):

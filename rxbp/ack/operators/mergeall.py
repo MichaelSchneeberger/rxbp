@@ -20,7 +20,7 @@ def _merge_all(source: AckMixin):
                 def on_error(self, exc: Exception):
                     single.on_error(exc)
 
-                def on_next(_, inner_source: Single):
+                def on_next(_, inner_source: AckMixin):
                     inner_subscription = SingleAssignmentDisposable()
                     group.add(inner_subscription)
 

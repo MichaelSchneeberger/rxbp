@@ -1,4 +1,4 @@
-from typing import Iterator, Any
+from typing import Iterator, Any, Optional
 
 from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
 
@@ -52,13 +52,13 @@ class IteratorAsObservable(Observable):
         d2 = self.subscribe_scheduler.schedule(action)
         return CompositeDisposable(d1, d2)
 
-    def trigger_cancel(self, scheduler: SchedulerBase):
+    def trigger_cancel(self, scheduler: Scheduler):
         try:
             self.on_finish.dispose()
         except Exception as e:
             scheduler.report_failure(e)
 
-    def reschedule(self, ack, next_item, observer, scheduler: SchedulerBase, disposable, em: ExecutionModel):
+    def reschedule(self, ack, next_item, observer, scheduler: Scheduler, disposable, em: ExecutionModel):
         class ResultSingle(Single):
             def on_next(_, next):
                 if isinstance(next, ContinueAck):
@@ -82,6 +82,9 @@ class IteratorAsObservable(Observable):
         while True:
             try:
                 ack = observer.on_next(current_item)
+
+                # for mypy to type check correctly
+                next_item: Optional[Any]
 
                 try:
                     next_item = next(self.iterator)

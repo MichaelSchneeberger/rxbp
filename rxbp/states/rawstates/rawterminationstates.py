@@ -20,6 +20,9 @@ class RawTerminationStates:
             self.raw_prev_state: Optional['RawTerminationStates.TerminationState'] = None
 
         def get_measured_state(self) -> TerminationStates.TerminationState:
+            # for mypy to type check correctly
+            assert isinstance(self.raw_prev_state, RawTerminationStates.TerminationState)
+
             prev_state = self.raw_prev_state.get_measured_state()
 
             if isinstance(prev_state, TerminationStates.InitState):
@@ -34,6 +37,9 @@ class RawTerminationStates:
             self.raw_prev_state: Optional['RawTerminationStates.TerminationState'] = None
 
         def get_measured_state(self) -> TerminationStates.TerminationState:
+            # for mypy to type check correctly
+            assert isinstance(self.raw_prev_state, RawTerminationStates.TerminationState)
+
             prev_state = self.raw_prev_state.get_measured_state()
 
             if isinstance(prev_state, TerminationStates.InitState):

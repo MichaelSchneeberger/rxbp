@@ -1,6 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterator, Optional
 
 from rxbp.ack.acksubject import AckSubject
 from rxbp.states.measuredstates.terminationstates import TerminationStates
@@ -62,13 +62,17 @@ class RawZipStates:
             self.iter = iter
 
             # to be overwritten synchronously right after initializing the object
-            self.prev_raw_state: RawZipStates.ZipState = None
-            self.prev_raw_termination_state: RawTerminationStates.TerminationState = None
+            self.prev_raw_state: Optional[RawZipStates.ZipState] = None
+            self.prev_raw_termination_state: Optional[RawTerminationStates.TerminationState] = None
 
-            self.raw_state: RawZipStates.ZipState = None
+            self.raw_state: Optional[RawZipStates.ZipState] = None
 
         def get_measured_state(self, raw_termination_state: RawTerminationStates.TerminationState):
             if self.raw_state is None:
+                # for mypy to type check correctly
+                assert isinstance(self.prev_raw_state, RawZipStates.ZipState)
+                assert isinstance(self.prev_raw_termination_state, RawTerminationStates.TerminationState)
+
                 prev_state = self.prev_raw_state.get_measured_state(
                     raw_termination_state=self.prev_raw_termination_state)
 

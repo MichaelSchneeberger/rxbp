@@ -1,5 +1,5 @@
 import threading
-from typing import List, Any
+from typing import List, Any, Optional
 
 from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.mixins.ackmixin import AckMixin
@@ -53,7 +53,7 @@ class EvictingBufferedObserver(Observer):
         self.em = scheduler.get_execution_model()
         # self.buffer_size = strategy
 
-        self.last_iteration_ack = None
+        self.last_iteration_ack: Optional[AckMixin] = None
 
         self.upstream_is_complete = False
         self.downstream_is_complete = False

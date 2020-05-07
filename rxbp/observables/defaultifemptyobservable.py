@@ -32,7 +32,7 @@ class DefaultIfEmptyObservable(Observable):
             def on_next(self, elem: ElementType):
                 outer_self.is_first = False
 
-                self.on_next = types.MethodType(observer.on_next, self)
+                self.on_next = types.MethodType(observer.on_next, self)  # type: ignore
 
                 return observer.on_next(elem)
 

@@ -1,8 +1,10 @@
 from abc import ABC
 
+from rxbp.states.measuredstates.measuredstate import MeasuredState
+
 
 class FlatMapStates:
-    class State(ABC):
+    class State(MeasuredState, ABC):
         pass
 
     class InitialState(State):

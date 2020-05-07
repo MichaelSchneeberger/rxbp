@@ -57,7 +57,7 @@ class FlatMergeNoBackpressureObserver(Observer):
                 return merge_obs.observe(ObserverInfo(observer=parent.observer))
 
             # make sure that Trampoline Scheduler is active
-            self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
+            disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
 
             self.place_holders = (self.place_holders[1], place_holder)
 

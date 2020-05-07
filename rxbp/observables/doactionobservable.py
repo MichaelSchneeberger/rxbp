@@ -53,21 +53,21 @@ class DoActionObservable(Observable):
                     self.on_next(item)
                 return observer.on_next(val)
 
-            do_action_observer.on_next = types.MethodType(on_next, do_action_observer)
+            do_action_observer.on_next = types.MethodType(on_next, do_action_observer)  # type: ignore
 
         if self.on_completed is not None:
             def on_completed(_):
                 self.on_completed()
                 return observer.on_completed()
 
-            do_action_observer.on_completed = types.MethodType(on_completed, do_action_observer)
+            do_action_observer.on_completed = types.MethodType(on_completed, do_action_observer)  # type: ignore
 
         if self.on_error is not None:
             def on_error(_, exc):
                 self.on_error(exc)
                 return observer.on_error(exc)
 
-            do_action_observer.on_error = types.MethodType(on_error, do_action_observer)
+            do_action_observer.on_error = types.MethodType(on_error, do_action_observer)  # type: ignore
 
         observer_info = ObserverInfo(do_action_observer, is_volatile=observer_info.is_volatile)
         disposable = self.source.observe(observer_info)

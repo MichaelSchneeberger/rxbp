@@ -108,6 +108,9 @@ class CacheServeFirstOSubject(OSubjectBase):
             else:
                 self.inactive_subscriptions.append(subscription)
 
+                # for mypy to type check correctly
+                assert isinstance(self.current_ack, Single)
+
                 if ack is not None:
                     self.current_ack.on_next(ack)
 
@@ -207,7 +210,7 @@ class CacheServeFirstOSubject(OSubjectBase):
         class AsyncAckSingle(Single):
             current_index: int
             inner_subscription: 'CacheServeFirstOSubject.InnerSubscription'
-            ack_update: AckMixin = None
+            ack_update: Optional[AckMixin] = None
 
             def on_next(self, ack: AckMixin):
                 # start fast_loop
@@ -234,14 +237,14 @@ class CacheServeFirstOSubject(OSubjectBase):
             def on_error(self, exc: Exception):
                 raise NotImplementedError
 
-        def notify_on_next(self, notification: Notification, current_index: int) -> Optional[AckMixin]:
+        def notify_on_next(self, values: List, current_index: int) -> Optional[AckMixin]:
             """ inner subscription gets only notified if all items from buffer are sent, and
             last ack received """
 
             # state is written without lock, because current_index is only used for dequeueing
             self.shared_state.current_index[self] = current_index
 
-            ack = self.observer.on_next(notification)
+            ack = self.observer.on_next(values)
 
             if isinstance(ack, ContinueAck):
                 # append right away again to inactive subscription list
@@ -291,6 +294,9 @@ class CacheServeFirstOSubject(OSubjectBase):
                         break
 
                     else:
+                        # for mypy to type check correctly
+                        assert isinstance(notification.value, list)
+
                         ack = self.observer.on_next(notification.value)
 
                     # synchronous or asynchronous acknowledgment
