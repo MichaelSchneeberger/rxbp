@@ -16,4 +16,4 @@ class ObserveOnFlowable(FlowableMixin):
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
         observable = ObserveOnObservable(source=subscription.observable, scheduler=self._scheduler)
 
-        return Subscription(subscription.info, observable=observable)
+        return init_subscription(subscription.info, observable=observable)

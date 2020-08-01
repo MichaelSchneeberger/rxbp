@@ -1,5 +1,6 @@
 from typing import Callable, Any
 
+from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.doactionobservable import DoActionObservable
 from rxbp.subscriber import Subscriber
@@ -34,4 +35,4 @@ class DoActionFlowable(FlowableMixin):
             on_disposed=self.on_disposed,
         )
 
-        return Subscription(info=subscription.info, observable=observable)
+        return init_subscription(observable=observable)

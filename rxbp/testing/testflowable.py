@@ -27,7 +27,7 @@ class TestFlowable(FlowableMixin):
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         self.subscriber = subscriber
 
-        return Subscription(
+        return init_subscription(
             info=BaseAndSelectors(base=self.base, selectors=self.selectors),
             observable=self.observable,
         )

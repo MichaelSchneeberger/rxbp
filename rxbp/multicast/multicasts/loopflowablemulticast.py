@@ -48,7 +48,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
                 subscription = self.flowable.unsafe_subscribe(subscriber)
 
-                return Subscription(
+                return init_subscription(
                     info=subscription.info,
                     observable=subscription.observable,
                 )
@@ -221,7 +221,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
 
                                         return CompositeDisposable(self.disposable, d2)
 
-                                return Subscription(
+                                return init_subscription(
                                     info=BaseAndSelectors(None),
                                     observable=BreakingTheLoopObservable(),
                                 )
@@ -239,7 +239,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
 
                     defer_observable = DeferObservable()
 
-                    return Subscription(info=BaseAndSelectors(None), observable=defer_observable)
+                    return init_subscription(info=BaseAndSelectors(None), observable=defer_observable)
 
             # create a flowable for all deferred values
             new_states = {

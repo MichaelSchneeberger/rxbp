@@ -33,7 +33,7 @@ class ConcatFlowable(FlowableMixin):
             sources=observable.selectors,
         )
 
-        return Subscription(
+        return init_subscription(
             info=BaseAndSelectors(base=base),
             observable=observable,
         )

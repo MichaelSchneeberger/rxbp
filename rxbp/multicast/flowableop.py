@@ -21,7 +21,7 @@ class FlowableOp:
                     subscribe_scheduler=subscriber.subscribe_scheduler,
                 )
 
-                return Subscription(
+                return init_subscription(
                     info=BaseAndSelectors(
                         base=base,
                     ),

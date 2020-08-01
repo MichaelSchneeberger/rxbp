@@ -19,4 +19,4 @@ class ToListFlowable(FlowableMixin):
         # to_list emits exactly one element
         base = NumericalBase(1)
 
-        return Subscription(BaseAndSelectors(base=base), observable=observable)
+        return init_subscription(BaseAndSelectors(base=base), observable=observable)

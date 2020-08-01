@@ -24,4 +24,4 @@ class DefaultIfEmptyFlowable(FlowableMixin):
 
         base = None
 
-        return Subscription(BaseAndSelectors(base=base), observable=observable)
+        return init_subscription(BaseAndSelectors(base=base), observable=observable)

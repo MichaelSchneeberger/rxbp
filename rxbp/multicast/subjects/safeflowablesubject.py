@@ -45,7 +45,7 @@ class SafeFlowableSubject(MultiCastFlowable[ValueType], Observer, Generic[ValueT
 
         if self._observable_subject is None:
             self._observable_subject = CacheServeFirstOSubject(scheduler=subscriber.scheduler)
-        return Subscription(BaseAndSelectors(base=None), self._observable_subject)
+        return init_subscription(BaseAndSelectors(base=None), self._observable_subject)
 
     def subscribe_to(self, source: Flowable, scheduler: Scheduler = None):
         scheduler = scheduler or self.scheduler

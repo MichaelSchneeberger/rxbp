@@ -39,4 +39,4 @@ class FlatConcatNoBackpressureFlowable(FlowableMixin):
         # base becomes undefined after flat mapping
         base = None
 
-        return Subscription(BaseAndSelectors(base=base), observable=observable)
+        return init_subscription(BaseAndSelectors(base=base), observable=observable)

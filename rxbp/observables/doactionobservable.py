@@ -1,13 +1,10 @@
-import types
 from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable, Disposable
 
 from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.typing import ElementType
 
 
 class DoActionObservable(Observable):
@@ -26,51 +23,48 @@ class DoActionObservable(Observable):
         self.on_disposed = on_disposed
 
     def observe(self, observer_info: ObserverInfo):
-        observer_info = observer_info.observer
+        if self.on_error is not None:
+            def on_error(exc):
+                self.on_error(exc)
+                return observer_info.observer.on_error(exc)
 
-        class DoActionObserver(Observer):
-            def on_next(self, elem: ElementType):
-                return observer_info.on_next(elem)
+        else:
+            on_error = observer_info.observer.on_error
 
-            def on_error(self, exc):
-                observer_info.on_error(exc)
+        if self.on_completed is not None:
+            def on_completed():
+                self.on_completed()
+                return observer_info.observer.on_completed()
 
-            def on_completed(self):
-                observer_info.on_completed()
-
-        do_action_observer = DoActionObserver()
+        else:
+            on_completed = observer_info.observer.on_completed
 
         if self.on_next is not None:
-            def on_next(_, val):
+            def on_next(val):
                 if not isinstance(val, list):
                     try:
                         val = list(val)
                     except Exception as exc:
-                        self.on_error(exc)
+                        on_error(exc)
                         return stop_ack
 
                 for item in val:
                     self.on_next(item)
-                return observer_info.on_next(val)
 
-            do_action_observer.on_next = types.MethodType(on_next, do_action_observer)  # type: ignore
+                return observer_info.observer.on_next(val)
 
-        if self.on_completed is not None:
-            def on_completed(_):
-                self.on_completed()
-                return observer_info.on_completed()
+        else:
+            on_next = observer_info.observer.on_next
 
-            do_action_observer.on_completed = types.MethodType(on_completed, do_action_observer)  # type: ignore
+        observer = type(
+            'DoActionObserver',
+            (object,),
+            {'on_next': on_next, 'on_completed': on_completed, 'on_error': on_error},
+        )
 
-        if self.on_error is not None:
-            def on_error(_, exc):
-                self.on_error(exc)
-                return observer_info.on_error(exc)
-
-            do_action_observer.on_error = types.MethodType(on_error, do_action_observer)  # type: ignore
-
-        observer_info = init_observer_info(do_action_observer, is_volatile=observer_info.is_volatile)
-        disposable = self.source.observe(observer_info)
+        disposable = self.source.observe(
+            observer_info=observer_info.copy(observer=observer),
+        )
 
         if self.on_disposed is None:
             return disposable

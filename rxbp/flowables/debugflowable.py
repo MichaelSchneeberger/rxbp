@@ -48,4 +48,4 @@ class DebugFlowable(FlowableMixin):
             on_raw_ack=self._on_raw_ack,
         )
 
-        return Subscription(info=subscription.info, observable=observable)
+        return init_subscription(info=subscription.info, observable=observable)

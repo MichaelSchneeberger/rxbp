@@ -22,4 +22,4 @@ class ConnectableFlowable(FlowableMixin):
             conn_observer=self._conn_observer,
             disposable=self._disposable,
         )
-        return Subscription(info=BaseAndSelectors(base=None), observable=observable)
+        return init_subscription(info=BaseAndSelectors(base=None), observable=observable)
