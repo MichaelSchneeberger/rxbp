@@ -3,6 +3,7 @@ from typing import List
 from rx.disposable import CompositeDisposable
 
 from rxbp.ack.single import Single
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
