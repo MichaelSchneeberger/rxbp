@@ -271,18 +271,12 @@ class FlatMapObservable(Observable):
     def observe(self, observer_info: ObserverInfo):
         self.observer_info = observer_info
 
-        class FlatMapOuterObserver(Observer):
+        observer = type(
+            'FlatMapOuterObserver',
+            (Observer, object),
+            {'on_next': self._on_next, 'on_completed': self._on_completed, 'on_error': self._on_error},
+        )
 
-            def on_next(_, elem: ElementType) -> AckMixin:
-                return self._on_next(elem)
-
-            def on_error(_, exc: Exception):
-                self._on_error(exc)
-
-            def on_completed(_):
-                self._on_completed()
-
-        observer = FlatMapOuterObserver()
         disposable = self._source.observe(
             observer_info.copy(observer=observer),
         )

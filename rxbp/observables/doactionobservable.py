@@ -4,6 +4,7 @@ from rx.disposable import CompositeDisposable, Disposable
 
 from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
+from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 
 
@@ -58,7 +59,7 @@ class DoActionObservable(Observable):
 
         observer = type(
             'DoActionObserver',
-            (object,),
+            (Observer, object),
             {'on_next': on_next, 'on_completed': on_completed, 'on_error': on_error},
         )
 

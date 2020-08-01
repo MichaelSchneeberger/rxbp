@@ -30,18 +30,18 @@ class ConcatObservable(Observable):
         return [MapToIteratorObservable(subject, lambda v: [select_next, select_completed]) for subject in self._subjects]
 
     def observe(self, observer_info: ObserverInfo):
-        observer_info = observer_info.observer
+        observer = observer_info.observer
 
         class ConcatObserver(Observer):
             def __init__(self):
                 self.ack = None
 
             def on_next(self, elem: ElementType):
-                self.ack = observer_info.on_next(elem)
+                self.ack = observer.on_next(elem)
                 return self.ack
 
             def on_error(self, exc):
-                observer_info.on_error(exc)
+                observer.on_error(exc)
 
                 for conn_obs in iter_conn_obs:
                     conn_obs.dispose()
@@ -63,7 +63,7 @@ class ConcatObservable(Observable):
                         self.ack.subscribe(_())
                         
                 except StopIteration:
-                    observer_info.on_completed()
+                    observer.on_completed()
 
         """
         sources[0] ------------------------> Subject --
