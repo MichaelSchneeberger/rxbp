@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional
 
 from rxbp.selectors.matchopresult import SelectorMaps
 from rxbp.subscriber import Subscriber

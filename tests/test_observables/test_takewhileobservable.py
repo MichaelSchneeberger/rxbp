@@ -21,7 +21,7 @@ class TestControlledZipObservable(TestCaseBase):
     def test_empty_observable(self):
         sink = TestObserver()
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         self.source.on_completed()
         self.assertTrue(sink.is_completed)
@@ -32,7 +32,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.source.on_next_list([0])
         self.assertIsInstance(ack, StopAck)
@@ -43,7 +43,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.source.on_next_list([1])
         self.assertIsInstance(ack, ContinueAck)
@@ -61,7 +61,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.source.on_next_list([1, 1, 1])
         self.assertIsInstance(ack, ContinueAck)
@@ -76,7 +76,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.source.on_next_list([1, 1, 1])
         self.assertIsInstance(ack, ContinueAck)
@@ -93,7 +93,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.source.on_next_iter([1, 1, 1])
         self.assertIsInstance(ack, ContinueAck)
@@ -112,7 +112,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         def gen_iterable():
             for i in range(10):
@@ -132,7 +132,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=None)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         def gen_iterable():
             for i in range(10):
@@ -154,7 +154,7 @@ class TestControlledZipObservable(TestCaseBase):
         sink = TestObserver(immediate_continue=0)
 
         obs = TakeWhileObservable(source=self.source, predicate=lambda v: v)
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.source.on_next_list([1, 1, 1])
 

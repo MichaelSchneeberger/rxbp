@@ -1,15 +1,16 @@
 from typing import Any, Callable
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.scanobservable import ScanObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ScanFlowable(FlowableBase):
+class ScanFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             func: Callable[[Any, Any], Any],
             initial: Any,
     ):
@@ -22,4 +23,4 @@ class ScanFlowable(FlowableBase):
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
         observable = ScanObservable(source=subscription.observable, func=self._func, initial=self._initial)
-        return Subscription(info=subscription.info, observable=observable)
+        return init_subscription(observable=observable)

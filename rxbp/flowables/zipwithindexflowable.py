@@ -1,14 +1,14 @@
 from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.zipwithindexobservable import ZipWithIndexObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
 
 
-class ZipWithIndexFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, selector: Callable[[ValueType], Any]):
+class ZipWithIndexFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, selector: Callable[[ValueType], Any]):
         super().__init__()
 
         self._source = source

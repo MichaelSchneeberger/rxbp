@@ -8,8 +8,8 @@ from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
 from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
     FlatConcatNoBackpressureFlowable
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.observerinfo import ObserverInfo
@@ -18,10 +18,10 @@ from rxbp.source import from_rx
 from rxbp.subscriber import Subscriber
 
 
-class JoinFlowablesMultiCast(MultiCastBase):
+class JoinFlowablesMultiCast(MultiCastMixin):
     def __init__(
             self,
-            sources: List[MultiCastBase],
+            sources: List[MultiCastMixin],
     ):
         self._sources = sources
 
@@ -56,7 +56,7 @@ class JoinFlowablesMultiCast(MultiCastBase):
                             subscribe_scheduler=info.multicast_scheduler,
                         )
                         subscription = source_flowable.unsafe_subscribe(subscriber=subscriber)
-                        subscription.observable.observe(ObserverInfo(conn_observer))
+                        subscription.observable.observe(init_observer_info(conn_observer))
 
                         conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 

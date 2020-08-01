@@ -8,7 +8,7 @@ from rx.subject import Subject
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.scheduler import Scheduler
 
@@ -30,7 +30,7 @@ class SafeMultiCastSubject(LiftedMultiCast[MultiCastValue], Generic[MultiCastVal
         self.subject = Subject()
 
     @classmethod
-    def _copy(cls, multi_cast: MultiCastBase):
+    def _copy(cls, multi_cast: MultiCastMixin):
         return LiftedMultiCast(multi_cast)
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:

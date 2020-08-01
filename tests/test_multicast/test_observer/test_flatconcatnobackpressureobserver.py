@@ -26,7 +26,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
 
     def test_on_next_does_not_backpressure(self):
         sink = TestObserver()
@@ -37,7 +37,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
 
         ack1 = self.source.on_next_single(self.source1)
         ack2 = self.source.on_next_single(self.source2)
@@ -54,7 +54,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
         self.scheduler.advance_by(1)
 
@@ -71,7 +71,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
         self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
@@ -91,7 +91,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
         self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
@@ -114,7 +114,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
         self.scheduler.advance_by(1)
         self.source1.on_next_single(1)
@@ -140,7 +140,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
             subscribe_scheduler=self.scheduler,
             is_volatile=False,
         )
-        self.source.observe(ObserverInfo(observer=observer))
+        self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
         self.source.on_next_single(self.source2)
         self.source.on_next_single(self.source3)

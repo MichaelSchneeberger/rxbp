@@ -15,7 +15,7 @@ class FastFilterObservable(Observable):
         self.predicate = predicate
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
         predicate = self.predicate
 
         class FilterObserver(Observer):
@@ -25,14 +25,14 @@ class FastFilterObservable(Observable):
                         if predicate(e):
                             yield e
 
-                ack = observer.on_next(gen_filtered_iterable())
+                ack = observer_info.on_next(gen_filtered_iterable())
                 return ack
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                return observer_info.on_error(exc)
 
             def on_completed(self):
-                return observer.on_completed()
+                return observer_info.on_completed()
 
         filter_subscription = observer_info.copy(FilterObserver())
         return self.source.observe(filter_subscription)

@@ -7,13 +7,19 @@ import rxbp
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+from rxbp.multicast.init.initmulticast import init_multicast
+from rxbp.multicast.init.initmulticastflowable import init_multicast_flowable
+from rxbp.multicast.init.initmulticastsubscription import init_multicast_subscription
+from rxbp.multicast.mixins.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
 from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastflowable import MultiCastFlowable
+from rxbp.multicast.multicastobservables.returnvaluemulticastobservable import ReturnValueMultiCastObservable
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.op import merge as merge_op
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.torx import to_rx
@@ -24,7 +30,7 @@ def empty():
     create a MultiCast emitting no elements
     """
 
-    class EmptyMultiCast(MultiCastBase):
+    class EmptyMultiCast(MultiCastMixin):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
             return rx.empty(scheduler=info.multicast_scheduler)
 
@@ -36,7 +42,7 @@ def build_imperative_multicast(
     composite_disposable: CompositeDisposable = None,
 ):
 
-    class BuildBlockingFlowableMultiCast(MultiCastBase):
+    class BuildBlockingFlowableMultiCast(MultiCastMixin):
         def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
 
             def on_completed():
@@ -92,7 +98,7 @@ def return_flowable(
             assert not isinstance(inner_val, MultiCastFlowable), \
                 "it's not allowed to multicast a multi-casted Flowable"
 
-            return MultiCastFlowable(RefCountFlowable(inner_val))
+            return init_multicast_flowable(RefCountFlowable(inner_val))
         else:
             return inner_val
 
@@ -123,15 +129,21 @@ def return_value(val: Any):
     :param val: The single element emitted by the MultiCast
     """
 
-    class ReturnValueMultiCast(MultiCastBase):
-        def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+    class ReturnValueMultiCast(MultiCastMixin):
+        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+
             # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
             # this "subscribe scheduler" is not automatically provided in rx, that is
             # why it must be provided as the `scheduler` argument of the `return_flowable`
             # operator.
-            return rx.return_value(val, scheduler=info.multicast_scheduler)
+            return init_multicast_subscription(
+                observable=ReturnValueMultiCastObservable(
+                    val=val,
+                    scheduler=subscriber.multicast_scheduler,
+                ),
+            )
 
-    return MultiCast(ReturnValueMultiCast())
+    return init_multicast(ReturnValueMultiCast())
 
 
 def from_iterable(vals: Iterable[Any]):
@@ -141,7 +153,7 @@ def from_iterable(vals: Iterable[Any]):
     :param vals: the iterable whose elements are sent
     """
 
-    class FromIterableMultiCast(MultiCastBase):
+    class FromIterableMultiCast(MultiCastMixin):
         def get_source(self, info: MultiCastInfo) -> Flowable:
             return rx.from_(vals, scheduler=info.multicast_scheduler)
 
@@ -153,7 +165,7 @@ def from_rx_observable(val: rx.typing.Observable):
     Create a *MultiCast* from an *rx.Observable*.
     """
 
-    class FromObservableMultiCast(MultiCastBase):
+    class FromObservableMultiCast(MultiCastMixin):
         def get_source(self, info: MultiCastInfo) -> Flowable:
             return val
 
@@ -167,7 +179,7 @@ def from_flowable(
     Create a MultiCast that emit each element received by the Flowable.
     """
 
-    class FromEventMultiCast(MultiCastBase):
+    class FromEventMultiCast(MultiCastMixin):
         def get_source(self, info: MultiCastInfo) -> Flowable:
             result = Flowable(SubscribeOnFlowable(source, scheduler=info.multicast_scheduler))
 

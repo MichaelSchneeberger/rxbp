@@ -44,7 +44,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.InitState)
         self.assertIsInstance(self.measure_state(obs), ControlledZipStates.WaitOnLeftRight)
@@ -63,7 +63,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         self.left.on_completed()
 
@@ -85,7 +85,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack1 = self.left.on_next_single(1)
 
@@ -107,7 +107,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_single(1)
 
         ack2 = self.right.on_next_single(1)
@@ -130,7 +130,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_single(2)
 
         ack2 = self.right.on_next_single(1)
@@ -153,7 +153,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_single(1)
 
         ack2 = self.right.on_next_single(2)
@@ -176,7 +176,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_list([1, 1, 2])
 
         ack2 = self.right.on_next_list([1, 2])
@@ -199,7 +199,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack1 = self.left.on_next_list([1])
         ack2 = self.right.on_next_list([1])
@@ -224,7 +224,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         self.left.on_next_list([1])
         self.left.on_completed()
 
@@ -247,7 +247,7 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack1 = self.left.on_next_list([1])
         self.right.on_error(self.exception)
@@ -270,9 +270,9 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
-        obs.left_selector.observe(ObserverInfo(left_sel_sink))
-        obs.right_selector.observe(ObserverInfo(right_sel_sink))
+        obs.observe(init_observer_info(sink))
+        obs.left_selector.observe(init_observer_info(left_sel_sink))
+        obs.right_selector.observe(init_observer_info(right_sel_sink))
         ack1 = AckSubject()
         ack2 = AckSubject()
         self.left.on_next_single(1).subscribe(ack1)
@@ -308,9 +308,9 @@ class TestControlledZipObservable(TestCaseBase):
             request_right=lambda left, right: right <= left,
             match_func=lambda left, right: left == right,
         )
-        obs.observe(ObserverInfo(sink))
-        obs.left_selector.observe(ObserverInfo(left_sel_sink))
-        obs.right_selector.observe(ObserverInfo(right_sel_sink))
+        obs.observe(init_observer_info(sink))
+        obs.left_selector.observe(init_observer_info(left_sel_sink))
+        obs.right_selector.observe(init_observer_info(right_sel_sink))
 
         self.left.on_next_single(1).subscribe(ack1)
         self.right.on_next_single(2).subscribe(ack2)

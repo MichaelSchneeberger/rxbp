@@ -15,7 +15,7 @@ class IdentitySelectorObservable(Observable):
         self._source = source
 
     def observe(self, observer_info: ObserverInfo) -> Disposable:
-        observer = observer_info.observer
+        observer_info = observer_info.observer
 
         class IdentityObserver(Observer):
             def on_next(self, elem: ElementType):
@@ -26,14 +26,14 @@ class IdentitySelectorObservable(Observable):
 
                 # val = list(gen_select_msg())
 
-                ack = observer.on_next(gen_select_msg())
+                ack = observer_info.on_next(gen_select_msg())
                 return ack
 
             def on_error(self, exc: Exception):
-                observer.on_next(exc)
+                observer_info.on_next(exc)
 
             def on_completed(self):
-                observer.on_completed()
+                observer_info.on_completed()
 
         self._source.observe(observer_info.copy(observer=IdentityObserver()))
 

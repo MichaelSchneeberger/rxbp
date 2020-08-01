@@ -4,15 +4,15 @@ import rx
 from rx import operators as rxop
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 
 
-class FlatMapMultiCast(MultiCastBase):
+class FlatMapMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
-            func: Callable[[MultiCastValue], MultiCastBase[MultiCastValue]],
+            source: MultiCastMixin,
+            func: Callable[[MultiCastValue], MultiCastMixin[MultiCastValue]],
     ):
         self.source = source
         self.func = func
@@ -21,7 +21,7 @@ class FlatMapMultiCast(MultiCastBase):
         def check_return_value_of_func(value):
             multi_cast = self.func(value)
 
-            if not isinstance(multi_cast, MultiCastBase):
+            if not isinstance(multi_cast, MultiCastMixin):
                 raise Exception(f'"{self.func}" should return a "MultiCast", but returned "{multi_cast}"')
 
             return multi_cast.get_source(info=info)

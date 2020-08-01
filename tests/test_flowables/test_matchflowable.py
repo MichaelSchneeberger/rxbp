@@ -1,4 +1,4 @@
-from rxbp.flowables.matchflowable import MatchFlowable
+from rxbp.indexed.flowables.matchflowable import IndexedMatchFlowable
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testcasebase import TestCaseBase
@@ -23,7 +23,7 @@ class TestMatchFlowable(TestCaseBase):
         s1 = TestFlowable(base=b1, selectors={b3: None})
         s2 = TestFlowable(base=b2, selectors={b4: None})
 
-        flowable = MatchFlowable(
+        flowable = IndexedMatchFlowable(
             left=s1,
             right=s2,
         )
@@ -44,7 +44,7 @@ class TestMatchFlowable(TestCaseBase):
         s1 = TestFlowable(base=b1, selectors={b3: 'sel3'})
         s2 = TestFlowable(base=b2, selectors={b1: 'sel1', b4: 'sel4'})
 
-        flowable = MatchFlowable(
+        flowable = IndexedMatchFlowable(
             left=s1,
             right=s2,
         )

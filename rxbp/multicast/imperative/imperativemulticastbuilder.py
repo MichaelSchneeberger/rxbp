@@ -2,7 +2,6 @@ from typing import Callable
 
 from rx.disposable import CompositeDisposable
 
-import rxbp
 from rxbp.flowable import Flowable
 from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
 from rxbp.multicast.multicast import MultiCast

@@ -397,7 +397,7 @@ class ControlledZipObservable(Observable):
     def observe(self, observer_info: ObserverInfo):
         """ This function ought be called at most once.
 
-        :param observer: downstream obseNonerver
+        :param observer_info: downstream obseNonerver
         :return: Disposable
         """
 
@@ -425,11 +425,15 @@ class ControlledZipObservable(Observable):
                 source._on_completed_right()
 
         left_observer = LeftControlledZipObserver()
-        left_subscription = observer_info.copy(left_observer)
+        left_subscription = observer_info.copy(
+            observer=left_observer,
+        )
         d1 = self.left_observable.observe(left_subscription)
 
         right_observer = RightControlledZipObserver()
-        left_subscription = observer_info.copy(right_observer)
+        left_subscription = observer_info.copy(
+            observer=right_observer,
+        )
         d2 = self.right_observable.observe(left_subscription)
 
         return CompositeDisposable(d1, d2)

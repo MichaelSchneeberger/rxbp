@@ -1,7 +1,6 @@
 import unittest
 
 import rxbp
-from rxbp.ack.continueack import continue_ack
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
@@ -23,7 +22,7 @@ class TestReturnValue(unittest.TestCase):
         sink = TestObserver(immediate_continue=0)
         subscription = rxbp.return_value(1).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         self.scheduler.advance_by(1)
 

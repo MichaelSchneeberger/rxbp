@@ -3,14 +3,14 @@ from typing import Iterator
 import rx
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.rxextensions.merge_ import merge
 
 
-class MergeMultiCast(MultiCastBase):
+class MergeMultiCast(MultiCastMixin):
     def __init__(
             self,
-            sources: Iterator[MultiCastBase],
+            sources: Iterator[MultiCastMixin],
     ):
         self.sources = sources
 

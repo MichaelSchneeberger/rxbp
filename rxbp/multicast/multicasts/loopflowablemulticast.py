@@ -8,14 +8,14 @@ from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 
 import rxbp
 from rxbp.flowable import Flowable
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.flowables.bufferflowable import BufferFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowabledict import FlowableDict
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+from rxbp.multicast.mixins.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
 from rxbp.multicast.typing import MultiCastValue
@@ -26,11 +26,11 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class LoopFlowableMultiCast(MultiCastBase):
+class LoopFlowableMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
-            func: Callable[[MultiCastBase], MultiCastBase],
+            source: MultiCastMixin,
+            func: Callable[[MultiCastMixin], MultiCastMixin],
             initial: Union[List[Any], Dict[Any, Any]],
     ):
         self.source = source
@@ -40,7 +40,7 @@ class LoopFlowableMultiCast(MultiCastBase):
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
         initial = self.initial
 
-        class StartWithInitialValueFlowable(FlowableBase):
+        class StartWithInitialValueFlowable(FlowableMixin):
             def __init__(self):
                 # mutable state, that will be set as soon as the first Flowable is subscribed
                 self.flowable = None
@@ -83,7 +83,7 @@ class LoopFlowableMultiCast(MultiCastBase):
 
         deferred = dict(gen_deferred())
 
-        def map_to_flowable_dict(base: MultiCastBase):
+        def map_to_flowable_dict(base: MultiCastMixin):
             if isinstance(base, Flowable):
                 states = {curr_index: base}
 
@@ -162,8 +162,8 @@ class LoopFlowableMultiCast(MultiCastBase):
             lock = threading.RLock()
             is_first = [True]
 
-            class DeferFlowable(FlowableBase):
-                def __init__(self, source: FlowableBase, key: Any):
+            class DeferFlowable(FlowableMixin):
+                def __init__(self, source: FlowableMixin, key: Any):
                     self.source = source
                     self.key = key
 
@@ -192,7 +192,7 @@ class LoopFlowableMultiCast(MultiCastBase):
 
                         buffered = BufferFlowable(source=zipped, buffer_size=1)
 
-                        class BreakingTheLoopFlowable(FlowableBase):
+                        class BreakingTheLoopFlowable(FlowableMixin):
                             def __init__(self):
                                 self.disposable = SingleAssignmentDisposable()
 
@@ -205,17 +205,17 @@ class LoopFlowableMultiCast(MultiCastBase):
                                         stop calling another observe method here
                                         """
 
-                                        observer = observer_info.observer
+                                        observer_info = observer_info.observer
 
                                         subscription = buffered.unsafe_subscribe(subscriber)
 
-                                        observer_info = ObserverInfo(observer=observer, is_volatile=True)
+                                        observer_info = init_observer_info(observer=observer_info, is_volatile=True)
                                         disposable = subscription.observable.observe(observer_info)
 
                                         self.disposable.set_disposable(disposable)
 
                                         def action(_, __):
-                                            observer.on_next([initial])
+                                            observer_info.on_next([initial])
 
                                         d2 = subscriber.subscribe_scheduler.schedule(action)
 

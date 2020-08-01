@@ -1,4 +1,3 @@
-import traceback
 from datetime import datetime
 from typing import Optional
 
@@ -7,16 +6,19 @@ from rx.core import typing
 from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime, ScheduledAction, ScheduledPeriodicAction
 
 from rxbp.ack.continueack import continue_ack
-from rxbp.flowablebase import FlowableBase
+from rxbp.init.initobserverinfo import init_observer_info
+from rxbp.init.initsubscriber import init_subscriber
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import SchedulerBase, Scheduler
+from rxbp.scheduler import SchedulerBase
+from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
 from rxbp.typing import ElementType
 
 
-def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Scheduler = None):
+def to_rx(source: FlowableMixin, batched: bool = None, subscribe_schduler: Scheduler = None):
     """ Converts this observable to an rx.Observable
 
     :param scheduler:
@@ -86,8 +88,12 @@ def to_rx(source: FlowableBase, batched: bool = None, subscribe_schduler: Schedu
 
             trampoline_scheduler = subscribe_schduler or TrampolineScheduler()
             scheduler_ = RxBPScheduler(underlying=scheduler) if scheduler is not None else trampoline_scheduler
-            subscriber = Subscriber(scheduler=scheduler_, subscribe_scheduler=trampoline_scheduler)
-            subscription = ObserverInfo(observer=to_rx_observer)
-            return source.subscribe_(subscriber=subscriber, observer_info=subscription)
+            subscriber = init_subscriber(scheduler=scheduler_, subscribe_scheduler=trampoline_scheduler)
+            # observer_info = init_observer_info(observer=to_rx_observer)
+            return source.subscribe(
+                observer=to_rx_observer,
+                subscribe_scheduler=subscriber.multicast_subscribe_scheduler,
+                scheduler=subscriber.scheduler,
+            )
 
     return FromFlowableObservable()

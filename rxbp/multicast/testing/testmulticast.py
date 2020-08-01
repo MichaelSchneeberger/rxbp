@@ -1,12 +1,12 @@
 import rx
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.testing.testrxobservable import TestRxObservable
 from rxbp.multicast.typing import MultiCastValue
 
 
-class TestMultiCast(MultiCastBase):
+class TestMultiCast(MultiCastMixin):
     def __init__(self):
         self.observable = TestRxObservable()
 

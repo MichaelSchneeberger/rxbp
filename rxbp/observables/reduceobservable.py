@@ -1,4 +1,3 @@
-import sys
 from typing import Callable, Any
 
 from rxbp.ack.continueack import continue_ack
@@ -23,7 +22,7 @@ class ReduceObservable(Observable):
         self.initial = initial
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
 
         class ToListObserver(Observer):
             def __init__(
@@ -51,11 +50,11 @@ class ReduceObservable(Observable):
                 return continue_ack
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                return observer_info.on_error(exc)
 
             def on_completed(self):
-                _ = observer.on_next([self.acc])
-                observer.on_completed()
+                _ = observer_info.on_next([self.acc])
+                observer_info.on_completed()
 
         to_list_observer = ToListObserver(func=self.func, initial=self.initial)
         return self.source.observe(observer_info.copy(observer=to_list_observer))

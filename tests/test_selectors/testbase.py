@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from rxbp.selectors.base import Base, BaseAndSelectorMaps
 from rxbp.selectors.baseandselectors import BaseAndSelectors
-from rxbp.selectors.selectormap import IdentitySelectorMap
 from rxbp.subscriber import Subscriber
 
 

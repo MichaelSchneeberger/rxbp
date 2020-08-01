@@ -1,13 +1,9 @@
 import unittest
 
-import rxbp
 from rxbp.ack.continueack import ContinueAck
 from rxbp.ack.stopack import StopAck
 from rxbp.flowable import Flowable
 from rxbp.imperative import to_cache
-from rxbp.selectors.bases.numericalbase import NumericalBase
-from rxbp.selectors.bases.objectrefbase import ObjectRefBase
-from rxbp.subscriber import Subscriber
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 

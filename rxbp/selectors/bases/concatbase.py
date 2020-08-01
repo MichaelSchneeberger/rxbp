@@ -1,4 +1,4 @@
-from typing import Iterable, List
+from typing import List
 
 from rxbp.observable import Observable
 from rxbp.observables.concatobservable import ConcatObservable

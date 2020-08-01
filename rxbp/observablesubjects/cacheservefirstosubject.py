@@ -1,4 +1,3 @@
-import sys
 import threading
 import types
 from abc import abstractmethod, ABC
@@ -7,7 +6,7 @@ from typing import List, Dict, Optional, Any, Tuple
 
 import rx
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
-from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable, SingleAssignmentDisposable
+from rx.disposable import Disposable, SingleAssignmentDisposable
 
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import ContinueAck, continue_ack
@@ -18,7 +17,8 @@ from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import ExecutionModel, Scheduler
+from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
+from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
@@ -34,7 +34,6 @@ class CacheServeFirstOSubject(OSubjectBase):
         self.scheduler = scheduler
 
         # mutable state
-        # self.state = self.NormalState()
         self.shared_state = self.SharedState()
 
         self.lock = threading.RLock()
@@ -196,7 +195,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                 lock: threading.RLock,
                 observer: Observer,
                 scheduler: Scheduler,
-                em: ExecutionModel,
+                em: ExecutionModelMixin,
                 disposable: SingleAssignmentDisposable,
         ):
             self.shared_state = shared_state
@@ -349,13 +348,13 @@ class CacheServeFirstOSubject(OSubjectBase):
         are no elements to be send yet)
         """
 
-        observer = observer_info.observer
+        observer_info = observer_info.observer
         em = self.scheduler.get_execution_model()
         disposable = SingleAssignmentDisposable()
         inner_subscription = self.InnerSubscription(
             shared_state=self.shared_state,
             lock=self.lock,
-            observer=observer,
+            observer=observer_info,
             scheduler=self.scheduler,
             em=em,
             disposable=disposable,
@@ -373,11 +372,11 @@ class CacheServeFirstOSubject(OSubjectBase):
         meas_state = prev_state.get_measured_state()
 
         if isinstance(meas_state, self.ExceptionState):
-            observer.on_error(meas_state.exc)
+            observer_info.on_error(meas_state.exc)
             return Disposable()
 
         elif isinstance(meas_state, self.CompletedState):
-            observer.on_completed()
+            observer_info.on_completed()
             return Disposable()
 
         else:

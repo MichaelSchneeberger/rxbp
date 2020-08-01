@@ -1,6 +1,6 @@
 from typing import Dict
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observable import Observable
 from rxbp.selectors.base import Base
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -9,7 +9,7 @@ from rxbp.subscription import Subscription
 from rxbp.testing.testobservable import TestObservable
 
 
-class TestFlowable(FlowableBase):
+class TestFlowable(FlowableMixin):
     def __init__(
             self,
             base: Base = None,

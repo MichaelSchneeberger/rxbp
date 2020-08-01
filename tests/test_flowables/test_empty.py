@@ -1,7 +1,6 @@
 import unittest
 
 import rxbp
-from rxbp.ack.continueack import continue_ack
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testobserver import TestObserver
@@ -18,7 +17,7 @@ class TestFromRange(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
         ))
-        disposable = subscription.observable.observe(ObserverInfo(
+        disposable = subscription.observable.observe(init_observer_info(
             observer=sink
         ))
 

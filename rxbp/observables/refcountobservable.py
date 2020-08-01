@@ -4,6 +4,7 @@ from typing import List, Optional
 import rx
 from rx.disposable import Disposable
 
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observerinfo import ObserverInfo
@@ -32,7 +33,7 @@ class RefCountObservable(Observable):
             current_cound = self.count
 
         if current_cound == 1:
-            subject_subscription = ObserverInfo(self.subject, is_volatile=observer_info.is_volatile)
+            subject_subscription = init_observer_info(self.subject, is_volatile=observer_info.is_volatile)
             self.first_disposable = self.source.observe(subject_subscription)
 
         def dispose():

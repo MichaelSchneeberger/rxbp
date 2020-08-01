@@ -2,7 +2,7 @@ import collections
 from typing import Dict, Any, Union
 
 from rxbp.flowable import Flowable
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+from rxbp.multicast.mixins.flowablestatemixin import FlowableStateMixin
 
 
 class FlowableDict(FlowableStateMixin, collections.MutableMapping):

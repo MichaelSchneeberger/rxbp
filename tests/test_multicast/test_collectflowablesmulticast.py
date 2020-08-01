@@ -58,7 +58,7 @@ class TestCollectFlowablesMultiCast(unittest.TestCase):
             scheduler=self.source_scheduler,
             subscribe_scheduler=self.source_scheduler
         ))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         # sending the lifted flowable is scheduled on the multicast_scheduler
         self.multicast_scheduler.advance_by(1)
@@ -89,7 +89,7 @@ class TestCollectFlowablesMultiCast(unittest.TestCase):
             scheduler=self.source_scheduler,
             subscribe_scheduler=self.source_scheduler
         ))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         # sending the lifted flowable is scheduled on the multicast_scheduler
         self.multicast_scheduler.advance_by(1)

@@ -1,16 +1,16 @@
 from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.fastfilterobservable import FastFilterObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class FastFilterFlowable(FlowableBase):
+class FastFilterFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             predicate: Callable[[Any], bool],
     ):
         super().__init__()

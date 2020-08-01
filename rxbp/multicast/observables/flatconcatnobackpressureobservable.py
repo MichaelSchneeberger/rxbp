@@ -22,12 +22,12 @@ class FlatConcatNoBackpressureObservable(Observable):
         self.subscribe_scheduler = subscribe_scheduler
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
         scheduler = self.scheduler
         subscribe_scheduler = self.subscribe_scheduler
 
         concat_observer = FlatConcatNoBackpressureObserver(
-            observer=observer,
+            observer=observer_info,
             selector=self.selector,
             scheduler=scheduler,
             subscribe_scheduler=subscribe_scheduler,

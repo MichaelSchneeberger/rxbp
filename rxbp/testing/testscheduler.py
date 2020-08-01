@@ -1,6 +1,7 @@
 from rx.scheduler.virtualtimescheduler import VirtualTimeScheduler
 
-from rxbp.scheduler import SchedulerBase, ExecutionModel, UncaughtExceptionReport, BatchedExecution
+from rxbp.scheduler import SchedulerBase, UncaughtExceptionReport, BatchedExecution
+from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
 
 
 class TestScheduler(VirtualTimeScheduler, SchedulerBase):
@@ -16,7 +17,7 @@ class TestScheduler(VirtualTimeScheduler, SchedulerBase):
     def report_failure(self, exc: Exception):
         return self.r.report_failure(exc)
 
-    def get_execution_model(self) -> ExecutionModel:
+    def get_execution_model(self) -> ExecutionModelMixin:
         return self.execution_model
 
     @staticmethod

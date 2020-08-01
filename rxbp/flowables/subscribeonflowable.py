@@ -1,4 +1,6 @@
-from rxbp.flowablebase import FlowableBase
+from rxbp.init.initsubscriber import init_subscriber
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
@@ -7,8 +9,8 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class SubscribeOnFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, scheduler: Scheduler = None):
+class SubscribeOnFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, scheduler: Scheduler = None):
         super().__init__()
 
         self._source = source
@@ -17,8 +19,10 @@ class SubscribeOnFlowable(FlowableBase):
     def unsafe_subscribe(self, subscriber: Subscriber):
         scheduler = self._scheduler or TrampolineScheduler()
 
-        updated_subscriber = Subscriber(scheduler=subscriber.scheduler,
-                                        subscribe_scheduler=scheduler)
+        updated_subscriber = init_subscriber(
+            scheduler=subscriber.scheduler,
+            subscribe_scheduler=scheduler,
+        )
 
         subscription = self._source.unsafe_subscribe(updated_subscriber)
 
@@ -33,4 +37,4 @@ class SubscribeOnFlowable(FlowableBase):
 
         observable = SubscribeOnObservable()
 
-        return Subscription(info=subscription.info, observable=observable)
+        return init_subscription(observable=observable)

@@ -2,12 +2,8 @@ from typing import List
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.operators.merge import _merge
 from rxbp.ack.single import Single
-from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
-from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observer import Observer
@@ -33,18 +29,18 @@ class ConcatObservable(Observable):
         return [MapToIteratorObservable(subject, lambda v: [select_next, select_completed]) for subject in self._subjects]
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
 
         class ConcatObserver(Observer):
             def __init__(self):
                 self.ack = None
 
             def on_next(self, elem: ElementType):
-                self.ack = observer.on_next(elem)
+                self.ack = observer_info.on_next(elem)
                 return self.ack
 
             def on_error(self, exc):
-                observer.on_error(exc)
+                observer_info.on_error(exc)
 
                 for conn_obs in iter_conn_obs:
                     conn_obs.dispose()
@@ -66,7 +62,7 @@ class ConcatObservable(Observable):
                         self.ack.subscribe(_())
                         
                 except StopIteration:
-                    observer.on_completed()
+                    observer_info.on_completed()
 
         """
         sources[0] ------------------------> Subject --
@@ -77,7 +73,7 @@ class ConcatObservable(Observable):
         """
 
         concat_observer = ConcatObserver()
-        concat_observer_info = ObserverInfo(concat_observer)
+        concat_observer_info = init_observer_info(concat_observer)
 
         for subject in self._subjects:
             subject.observe(concat_observer_info)
@@ -93,13 +89,13 @@ class ConcatObservable(Observable):
 
         def gen_disposable_from_observer():
             for source, conn_observer in zip(self._sources[1:], conn_observers):
-                yield source.observe(ObserverInfo(
+                yield source.observe(init_observer_info(
                     observer=conn_observer,
                     is_volatile=observer_info.is_volatile,
                 ))
 
         others_disposables = gen_disposable_from_observer()
 
-        first_disposable = self._sources[0].observe(ObserverInfo(self._subjects[0]))
+        first_disposable = self._sources[0].observe(init_observer_info(self._subjects[0]))
 
         return CompositeDisposable(first_disposable, *others_disposables)

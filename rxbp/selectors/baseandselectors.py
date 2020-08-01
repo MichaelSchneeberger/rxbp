@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable

@@ -1,6 +1,6 @@
 from typing import Any, Callable
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.observables.flatconcatnobackpressureobservable import FlatConcatNoBackpressureObservable
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -8,11 +8,11 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class FlatConcatNoBackpressureFlowable(FlowableBase):
+class FlatConcatNoBackpressureFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
-            selector: Callable[[Any], FlowableBase],
+            source: FlowableMixin,
+            selector: Callable[[Any], FlowableMixin],
             subscribe_scheduler: Scheduler,
     ):
         super().__init__()

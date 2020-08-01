@@ -19,7 +19,7 @@ class MapToIteratorObservable(Observable):
         self.func = func
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
         func = self.func
 
         class MapToIteratorObserver(Observer):
@@ -31,16 +31,16 @@ class MapToIteratorObservable(Observable):
                 try:
                     buffer = list(map_gen())
                 except Exception as exc:
-                    observer.on_error(exc)
+                    observer_info.on_error(exc)
                     return stop_ack
 
-                return observer.on_next(buffer)
+                return observer_info.on_next(buffer)
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                return observer_info.on_error(exc)
 
             def on_completed(self):
-                return observer.on_completed()
+                return observer_info.on_completed()
 
         map_subscription = observer_info.copy(MapToIteratorObserver())
         return self.source.observe(map_subscription)

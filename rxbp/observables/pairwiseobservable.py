@@ -9,5 +9,5 @@ class PairwiseObservable(Observable):
 
     def observe(self, observer_info: ObserverInfo):
         pairwise_observer = PairwiseObserver(observer_info.observer)
-        pairwise_subscription = observer_info.copy(pairwise_observer)
+        pairwise_subscription = observer_info.copy(observer=pairwise_observer)
         return self.source.observe(pairwise_subscription)

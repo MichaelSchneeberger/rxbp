@@ -1,6 +1,7 @@
 from typing import Callable
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.firstobservable import FirstObservable
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -8,10 +9,10 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class FirstFlowable(FlowableBase):
+class FirstFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             raise_exception: Callable[[Callable[[], None]], None],
     ):
         super().__init__()
@@ -23,7 +24,4 @@ class FirstFlowable(FlowableBase):
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
         observable = FirstObservable(source=subscription.observable, raise_exception=self.raise_exception)
 
-        # first emits exactly one element
-        base = NumericalBase(1)
-
-        return Subscription(BaseAndSelectors(base=base), observable=observable)
+        return init_subscription(observable=observable)

@@ -16,8 +16,8 @@ has a mapping from that same base (because it got created by a
 import rxbp
 
 
-rxbp.range(10).pipe(
-    rxbp.op.match(rxbp.range(10).pipe(
+rxbp.indexed.range(10).pipe(
+    rxbp.op.match(rxbp.indexed.range(10).pipe(
         rxbp.op.filter(lambda v: v % 2 == 0)),
     )
 ).subscribe(print)

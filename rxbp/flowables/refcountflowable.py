@@ -1,7 +1,7 @@
 import threading
 from typing import Callable
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
@@ -11,13 +11,13 @@ from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 
 
-class RefCountFlowable(FlowableBase):
+class RefCountFlowable(FlowableMixin):
     """ for internal use
     """
 
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             subject_gen: Callable[[Scheduler], OSubjectBase] = None,
     ):
         # base_ = base or source.base or ObjectRefBase(self)  # take over base or create new one
@@ -46,15 +46,9 @@ class RefCountFlowable(FlowableBase):
                 subscription = self.source.unsafe_subscribe(subscriber)
                 subject = self._subject_gen(subscriber.scheduler)
 
-                if subscription.info.base is None:
-                    subscription_info = BaseAndSelectors(base=ObjectRefBase(), selectors=subscription.info.selectors)
-                else:
-                    subscription_info = subscription.info
-
                 shared_observable = RefCountObservable(source=subscription.observable, subject=subject)
 
                 self.subscription = subscription.copy(
-                    info=subscription_info,
                     observable=shared_observable,
                 )
 

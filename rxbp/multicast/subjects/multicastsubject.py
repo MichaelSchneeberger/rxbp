@@ -5,12 +5,12 @@ import rx
 from rx.subject import Subject
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 
 
 @dataclass
-class MultiCastSubject(MultiCastBase[MultiCastValue], Generic[MultiCastValue]):
+class MultiCastSubject(MultiCastMixin[MultiCastValue], Generic[MultiCastValue]):
     subject = Subject()
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:

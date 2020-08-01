@@ -1,11 +1,11 @@
 from typing import Callable
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class AnonymousFlowableBase(FlowableBase):
+class AnonymousFlowableBase(FlowableMixin):
     def __init__(
             self,
             unsafe_subscribe_func: Callable[[Subscriber], Subscription],
@@ -13,7 +13,7 @@ class AnonymousFlowableBase(FlowableBase):
 
         super().__init__()
 
-        class InnerSubscriptable(FlowableBase):
+        class InnerSubscriptable(FlowableMixin):
             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
                 return unsafe_subscribe_func(subscriber)
 

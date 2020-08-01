@@ -4,14 +4,14 @@ import rx
 from rx import Observable
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 
 
-class MapToIteratorMultiCast(MultiCastBase):
+class MapToIteratorMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
+            source: MultiCastMixin,
             func: Callable[[MultiCastValue], Iterator[MultiCastValue]],
     ):
         self.source = source

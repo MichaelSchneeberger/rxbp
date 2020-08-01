@@ -1,14 +1,15 @@
 from typing import Any, Callable
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class FlatMapFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, func: Callable[[Any], FlowableBase]):
+class FlatMapFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, func: Callable[[Any], FlowableMixin]):
         super().__init__()
 
         self._source = source
@@ -25,7 +26,4 @@ class FlatMapFlowable(FlowableBase):
         observable = FlatMapObservable(source=subscription.observable, func=observable_selector,
                                        scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
 
-        # base becomes undefined after flat mapping
-        base = None
-
-        return Subscription(BaseAndSelectors(base=base), observable=observable)
+        return init_subscription(observable=observable)

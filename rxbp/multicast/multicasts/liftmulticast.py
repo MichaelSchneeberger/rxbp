@@ -4,16 +4,16 @@ import rx
 from rx import operators as rxop
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.rxextensions.liftobservable import LiftObservable
 from rxbp.multicast.typing import MultiCastValue
 
 
-class LiftMultiCast(MultiCastBase):
+class LiftMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
-            func: Callable[[MultiCastBase, MultiCastValue], MultiCastValue],
+            source: MultiCastMixin,
+            func: Callable[[MultiCastMixin, MultiCastValue], MultiCastValue],
     ):
         self.source = source
         self.func = func
@@ -22,7 +22,7 @@ class LiftMultiCast(MultiCastBase):
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
         if self.shared_observable is None:
-            class InnerLiftMultiCast(MultiCastBase):
+            class InnerLiftMultiCast(MultiCastMixin):
                 def __init__(self, source: rx.typing.Observable[MultiCastValue]):
                     self._source = source
 

@@ -1,10 +1,8 @@
 import unittest
 
 import rxbp
-from rxbp.ack.continueack import continue_ack
 from rxbp.flowable import Flowable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.bases.objectrefbase import ObjectRefBase
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testobserver import TestObserver
@@ -20,7 +18,7 @@ class TestZip(unittest.TestCase):
         sink = TestObserver()
         subscription = rxbp.zip(*[Flowable(e) for e in self.sources]).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         self.sources[0].observable.on_next_single(1)
         self.sources[1].observable.on_next_single(2)

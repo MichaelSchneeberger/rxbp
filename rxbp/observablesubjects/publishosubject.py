@@ -36,7 +36,7 @@ class PublishOSubject(OSubjectBase):
         pass
 
     class State:
-        def __init__(self, subscribers: Union[Set['PublishOSubject.Subscriber'], 'PublishOSubject.Empty'] = None,
+        def __init__(self, subscribers: Union[Set['PublishOSubject.SubscriberMixin'], 'PublishOSubject.Empty'] = None,
                      cache: List = None, error_thrown=None):
             self.subscribers = subscribers or set()
             self.cache = cache
@@ -68,13 +68,14 @@ class PublishOSubject(OSubjectBase):
         return Disposable()
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
         state = self.state
         subscribers = state.subscribers
 
-        subscriber = self.Subscriber(observer, scheduler=TrampolineScheduler())  # todo: remove scheduler
+        subscriber = self.Subscriber(observer_info, scheduler=TrampolineScheduler())  # todo: remove scheduler
         if isinstance(subscribers, self.Empty):
             self.on_subscribe_completed(subscriber, state.error_thrown)
+
         else:
             update_set = subscribers | {subscriber}
             update = self.State(subscribers=update_set)
@@ -100,8 +101,10 @@ class PublishOSubject(OSubjectBase):
 
         if subscribers is None: # or len(subscribers) < self._min_num_of_subscriber:
             sub_set = state.subscribers
+
             if isinstance(sub_set, self.Empty): # or len(sub_set) < self._min_num_of_subscriber:
                 return stop_ack
+
             else:
                 update = state.refresh()
                 self.state = update
@@ -122,9 +125,6 @@ class PublishOSubject(OSubjectBase):
             materialized_values = elem
         else:
             materialized_values = list(elem)
-        # def gen():
-        #     yield from materialized_values
-
         index = 0
         while index < len(subscribers):
             subscriber = subscribers[index]

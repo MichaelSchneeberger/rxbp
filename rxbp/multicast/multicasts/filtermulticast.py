@@ -4,14 +4,14 @@ import rx
 from rx import operators as rxop
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 
 
-class FilterMultiCast(MultiCastBase):
+class FilterMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
+            source: MultiCastMixin,
             predicate: Callable[[MultiCastValue], bool],
     ):
         self.source = source

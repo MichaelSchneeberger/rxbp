@@ -12,9 +12,9 @@ from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
     FlatConcatNoBackpressureFlowable
 from rxbp.multicast.flowables.flatmergenobackpressureflowable import \
     FlatMergeNoBackpressureFlowable
-from rxbp.multicast.flowablestatemixin import FlowableStateMixin
+from rxbp.multicast.mixins.flowablestatemixin import FlowableStateMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.rxextensions.liftobservable import LiftObservable
 from rxbp.observerinfo import ObserverInfo
@@ -22,10 +22,10 @@ from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.subscriber import Subscriber
 
 
-class CollectFlowablesMultiCast(MultiCastBase):
+class CollectFlowablesMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
+            source: MultiCastMixin,
             maintain_order: bool = None,
     ):
         self.source = source
@@ -75,7 +75,7 @@ class CollectFlowablesMultiCast(MultiCastBase):
                     subscribe_scheduler=info.multicast_scheduler,
                 )
                 subscription = source_flowable.unsafe_subscribe(subscriber=subscriber)
-                subscription.observable.observe(ObserverInfo(conn_observer))
+                subscription.observable.observe(init_observer_info(conn_observer))
 
                 conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 

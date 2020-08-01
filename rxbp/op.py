@@ -1,9 +1,8 @@
 from typing import Any, Callable, Iterator
 
 from rxbp.flowable import Flowable
-from rxbp.flowablebase import FlowableBase
-from rxbp.flowableoperator import FlowableOperator
-from rxbp.flowableopmixin import FlowableOpMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ValueType
 
@@ -16,10 +15,10 @@ def buffer(buffer_size: int = None):
     def op_func(source: Flowable):
         return source.buffer(buffer_size=buffer_size)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
-def concat(*sources: FlowableBase):
+def concat(*sources: FlowableMixin):
     """
     Concatentates Flowables sequences together by back-pressuring the tail Flowables until
     the current Flowable has completed.
@@ -30,11 +29,11 @@ def concat(*sources: FlowableBase):
     def op_func(left: Flowable):
         return left.concat(*sources)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def controlled_zip(
-        right: FlowableBase,
+        right: FlowableMixin,
         request_left: Callable[[Any, Any], bool] = None,
         request_right: Callable[[Any, Any], bool] = None,
         match_func: Callable[[Any, Any], bool] = None,
@@ -62,7 +61,7 @@ def controlled_zip(
             match_func=match_func,
         )
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
@@ -82,7 +81,7 @@ def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=No
             on_ack_msg=on_ack_msg,
         )
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def default_if_empty(lazy_val: Callable[[], Any]):
@@ -95,7 +94,7 @@ def default_if_empty(lazy_val: Callable[[], Any]):
     def op_func(left: Flowable):
         return left.default_if_empty(lazy_val=lazy_val)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def do_action(
@@ -112,7 +111,7 @@ def do_action(
             on_disposed=on_disposed,
         )
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def execute_on(scheduler: Scheduler):
@@ -123,7 +122,7 @@ def execute_on(scheduler: Scheduler):
     def op_func(left: Flowable):
         return left.execute_on(scheduler=scheduler)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def fast_filter(predicate: Callable[[Any], bool]):
@@ -137,7 +136,7 @@ def fast_filter(predicate: Callable[[Any], bool]):
     def op_func(left: Flowable):
         return left.fast_filter(predicate=predicate)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def filter(predicate: Callable[[Any], bool]):
@@ -151,7 +150,7 @@ def filter(predicate: Callable[[Any], bool]):
     def op_func(left: Flowable):
         return left.filter(predicate=predicate)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def first(raise_exception: Callable[[Callable[[], None]], None]):
@@ -173,7 +172,7 @@ def first(raise_exception: Callable[[Callable[[], None]], None]):
     def op_func(source: Flowable):
         return source.first(raise_exception=raise_exception)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def first_or_default(lazy_val: Callable[[], Any]):
@@ -184,7 +183,7 @@ def first_or_default(lazy_val: Callable[[], Any]):
     def op_func(source: Flowable):
         return source.first_or_default(lazy_val=lazy_val)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def flat_map(func: Callable[[Any], Flowable]):
@@ -199,7 +198,29 @@ def flat_map(func: Callable[[Any], Flowable]):
     def op_func(source: Flowable):
         return source.flat_map(func=func)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
+
+
+def last(raise_exception: Callable[[Callable[[], None]], None]):
+    """
+    Emit the last element of the Flowable sequence
+
+    The `raise_exception` argument needs to be given as follows:
+
+    ::
+
+        rxbp.op.last(raise_exception=lambda f: f())
+
+    The `raise_exception` argument is called in case there is no element.
+    Like RxPY, a SequenceContainsNoElementsError is risen. But on top of that
+    the place where the `last` argument is used is added to the traceback by
+    providing the `raise_exception` argument.
+    """
+
+    def op_func(source: Flowable):
+        return source.last(raise_exception=raise_exception)
+
+    return PipeOperation(op_func)
 
 
 def map(func: Callable[[Any], Any]):
@@ -212,7 +233,7 @@ def map(func: Callable[[Any], Any]):
     def op_func(source: Flowable):
         return source.map(func=func)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def map_to_iterator(
@@ -228,7 +249,7 @@ def map_to_iterator(
     def op_func(source: Flowable):
         return source.map_to_iterator(func=func)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def match(*others: Flowable):
@@ -242,7 +263,7 @@ def match(*others: Flowable):
     def op_func(left: Flowable):
         return left.match(*others)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def merge(*others: Flowable):
@@ -255,7 +276,7 @@ def merge(*others: Flowable):
     def op_func(left: Flowable):
         return left.merge(*others)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def observe_on(scheduler: Scheduler):
@@ -269,7 +290,7 @@ def observe_on(scheduler: Scheduler):
     def op_func(source: Flowable):
         return source.observe_on(scheduler=scheduler)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def pairwise():
@@ -281,7 +302,7 @@ def pairwise():
     def op_func(source: Flowable):
         return source.pairwise()
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def reduce(
@@ -299,7 +320,7 @@ def reduce(
     def op_func(source: Flowable):
         return source.reduce(func=func, initial=initial)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def repeat_first():
@@ -311,7 +332,7 @@ def repeat_first():
     def op_func(source: Flowable):
         return source.repeat_first()
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def scan(func: Callable[[Any, Any], Any], initial: Any):
@@ -328,7 +349,7 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     def op_func(source: Flowable):
         return source.scan(func=func, initial=initial)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def share():
@@ -342,7 +363,7 @@ def share():
     def inner_func(source: Flowable):
         return source.share()#bind_to=ability)
 
-    return FlowableOperator(inner_func)
+    return PipeOperation(inner_func)
 
 
 def set_base(val: Any):
@@ -353,7 +374,7 @@ def set_base(val: Any):
     def op_func(source: Flowable):
         return source.set_base(val=val)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def to_list():
@@ -365,7 +386,7 @@ def to_list():
     def op_func(source: Flowable):
         return source.to_list()
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def zip(*others: Flowable):
@@ -378,7 +399,7 @@ def zip(*others: Flowable):
     def op_func(left: Flowable):
         return left.zip(*others)
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)
 
 
 def zip_with_index():
@@ -389,4 +410,4 @@ def zip_with_index():
     def op_func(left: Flowable):
         return left.zip_with_index()
 
-    return FlowableOperator(op_func)
+    return PipeOperation(op_func)

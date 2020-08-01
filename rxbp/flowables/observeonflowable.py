@@ -1,12 +1,12 @@
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.observeonobservable import ObserveOnObservable
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ObserveOnFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, scheduler: Scheduler):
+class ObserveOnFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, scheduler: Scheduler):
         super().__init__()
 
         self._source = source

@@ -1,4 +1,4 @@
-from rxbp.flowables.zip2flowable import Zip2Flowable
+from rxbp.flowables.zipflowable import ZipFlowable
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testcasebase import TestCaseBase
@@ -27,7 +27,7 @@ class TestZipFlowable(TestCaseBase):
         s1 = TestFlowable(base=b1, selectors={b3: None})
         s2 = TestFlowable(base=b2, selectors={b4: None})
 
-        flowable = Zip2Flowable(
+        flowable = ZipFlowable(
             left=s1,
             right=s2,
         )
@@ -48,7 +48,7 @@ class TestZipFlowable(TestCaseBase):
         s1 = TestFlowable(base=b1, selectors={b3: None})
         s2 = TestFlowable(base=b2, selectors={b4: None, b5: None})
 
-        flowable = Zip2Flowable(
+        flowable = ZipFlowable(
             left=s1,
             right=s2,
         )

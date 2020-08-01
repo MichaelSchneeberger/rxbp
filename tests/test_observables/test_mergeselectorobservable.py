@@ -52,7 +52,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
             right=self.right,
             scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.left.on_next_list([select_completed])
 

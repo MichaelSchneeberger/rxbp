@@ -6,12 +6,12 @@ from rx import Observable
 from rx.internal import SequenceContainsNoElementsError
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 
 
 @dataclass
-class FirstOrDefaultMultiCast(MultiCastBase):
-    source: MultiCastBase
+class FirstOrDefaultMultiCast(MultiCastMixin):
+    source: MultiCastMixin
     lazy_val: Callable[[], Any]
 
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:

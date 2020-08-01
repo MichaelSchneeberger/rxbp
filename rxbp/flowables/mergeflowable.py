@@ -1,12 +1,13 @@
-from rxbp.flowablebase import FlowableBase
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class MergeFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, other: FlowableBase):
+class MergeFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, other: FlowableMixin):
         super().__init__()
 
         self._source = source
@@ -17,14 +18,14 @@ class MergeFlowable(FlowableBase):
         right_subscription = self._other.unsafe_subscribe(subscriber=subscriber)
         observable = MergeObservable(left=left_subscription.observable, right=right_subscription.observable)
 
-        # the base becomes anonymous after merging
-        base = None
+        # # the base becomes anonymous after merging
+        # base = None
 
-        info = BaseAndSelectors(
-            base=base,
-        )
+        # info = BaseAndSelectors(
+        #     base=base,
+        # )
 
-        return Subscription(
-            info=info,
+        return init_subscription(
+            # info=info,
             observable=observable,
         )

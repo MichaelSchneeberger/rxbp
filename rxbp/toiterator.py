@@ -1,11 +1,9 @@
-import threading
-
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
 
-def to_iterator(source: FlowableBase, scheduler: Scheduler = None):
+def to_iterator(source: FlowableMixin, scheduler: Scheduler = None):
     notifications = []
 
     def send_notification(n):

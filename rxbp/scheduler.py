@@ -1,14 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
-from rx.scheduler.scheduler import Scheduler as RxScheduler
-
-
-class ExecutionModel:
-    def next_frame_index(self, current: int) -> int:
-        raise NotImplementedError
+from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
+from rxbp.mixins.schedulermixin import SchedulerMixin
 
 
-class BatchedExecution(ExecutionModel):
+class BatchedExecution(ExecutionModelMixin):
     def __init__(self, batch_size: int):
         self.recommended_batch_size = batch_size
         self.batched_execution_modulus = self.recommended_batch_size - 1
@@ -22,27 +18,12 @@ class UncaughtExceptionReport:
         raise exc
 
 
-class Scheduler(RxScheduler, ABC):
-    @abstractmethod
-    def report_failure(self, exc: Exception):
-        ...
-
-    @abstractmethod
-    def get_execution_model(self) -> ExecutionModel:
-        ...
-
-    @property
-    @abstractmethod
-    def is_order_guaranteed(self) -> bool:
-        ...
-
-    @abstractmethod
-    def sleep(self, seconds: float) -> None:
-        ...
+class Scheduler(SchedulerMixin, ABC):
+    pass
 
 
 class SchedulerBase(Scheduler, ABC):
-    def __init__(self, r: UncaughtExceptionReport = None, execution_model: ExecutionModel = None):
+    def __init__(self, r: UncaughtExceptionReport = None, execution_model: ExecutionModelMixin = None):
         super().__init__()
 
         self.r = r or UncaughtExceptionReport()
@@ -51,7 +32,7 @@ class SchedulerBase(Scheduler, ABC):
     def report_failure(self, exc: Exception):
         return self.r.report_failure(exc)
 
-    def get_execution_model(self) -> ExecutionModel:
+    def get_execution_model(self) -> ExecutionModelMixin:
         return self.execution_model
 
 

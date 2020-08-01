@@ -1,18 +1,16 @@
 from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.defaultifemptyobservable import DefaultIfEmptyObservable
-from rxbp.observables.firstordefaultobservable import FirstOrDefaultObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
-from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class DefaultIfEmptyFlowable(FlowableBase):
+class DefaultIfEmptyFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             lazy_val: Callable[[], Any],
     ):
         super().__init__()

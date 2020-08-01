@@ -56,7 +56,7 @@ class TestLoopFlowablesMultiCast(unittest.TestCase):
         subscription = self.rx_sink.received[0].unsafe_subscribe(Subscriber(
             scheduler=self.source_scheduler, subscribe_scheduler=self.source_scheduler,
         ))
-        subscription.observable.observe(ObserverInfo(sink))
+        subscription.observable.observe(init_observer_info(sink))
 
         self.multicast_scheduler.advance_by(1)
         self.source_scheduler.advance_by(1)
@@ -87,7 +87,7 @@ class TestLoopFlowablesMultiCast(unittest.TestCase):
     #         scheduler=self.source_scheduler,
     #         subscribe_scheduler=self.source_scheduler
     #     ))
-    #     subscription.observable.observe(ObserverInfo(observer=sink))
+    #     subscription.observable.observe(init_observer_info(observer=sink))
     #
     #     # sending the lifted flowable is scheduled on the multicast_scheduler
     #     self.multicast_scheduler.advance_by(1)
@@ -117,7 +117,7 @@ class TestLoopFlowablesMultiCast(unittest.TestCase):
     #         scheduler=self.source_scheduler,
     #         subscribe_scheduler=self.source_scheduler
     #     ))
-    #     subscription.observable.observe(ObserverInfo(observer=sink))
+    #     subscription.observable.observe(init_observer_info(observer=sink))
     #
     #     # sending the lifted flowable is scheduled on the multicast_scheduler
     #     self.multicast_scheduler.advance_by(1)

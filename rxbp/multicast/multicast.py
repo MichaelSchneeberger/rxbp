@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from functools import reduce
 from typing import Generic, Callable, Any
 
@@ -7,8 +8,8 @@ from rx.subject import Subject
 
 import rxbp
 from rxbp.multicast.flowableop import FlowableOp
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicasts.joinflowablesmulticast import JoinFlowablesMultiCast
@@ -25,26 +26,36 @@ from rxbp.multicast.multicasts.mergemulticast import MergeMultiCast
 from rxbp.multicast.multicasts.observeonmulticast import ObserveOnMultiCast
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.rxextensions.merge_ import merge_op
 from rxbp.multicast.typing import MultiCastValue
 from rxbp.typing import ValueType
 
 
-class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
+class MultiCast(MultiCastOpMixin, MultiCastMixin, Generic[MultiCastValue]):
     """
     A `MultiCast` represents a collection of *Flowable* and can
      be though of as `Flowable[T[Flowable]]` where T is defined by the user.
     """
 
-    def __init__(self, underlying: MultiCastBase):
-        self.underlying = underlying
+    @property
+    @abstractmethod
+    def underlying(self) -> MultiCastMixin:
+        ...
 
-    @classmethod
-    def _copy(cls, multi_cast: MultiCastBase):
-        return cls(multi_cast)
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+        return self.underlying.unsafe_subscribe(subscriber=subscriber)
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
-        return self.underlying.get_source(info=info)
+    # def __init__(self, underlying: MultiCastMixin):
+    #     self.underlying = underlying
+
+    # @classmethod
+    # def _copy(cls, multi_cast: MultiCastMixin):
+    #     return cls(multi_cast)
+
+    # def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
+    #     return self.underlying.get_source(info=info)
 
     def join_flowables(self, *others: 'MultiCast'):
         if len(others) == 0:
@@ -102,7 +113,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
             self,
             func: Callable[['MultiCast', MultiCastValue], MultiCastValue],
     ):
-        def lifted_func(base: MultiCastBase, first: MultiCastValue):
+        def lifted_func(base: MultiCastMixin, first: MultiCastValue):
             return func(MultiCast(base), first)
 
         return self._copy(LiftMultiCast(
@@ -120,7 +131,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
                      *------------------*
         """
 
-        class LoopMultiCast(MultiCastBase):
+        class LoopMultiCast(MultiCastMixin):
             def get_source(
                     self,
                     info: MultiCastInfo,
@@ -141,7 +152,7 @@ class MultiCast(MultiCastOpMixin, MultiCastBase, Generic[MultiCastValue]):
             self,
             func: Callable[[MultiCastValue], MultiCastValue], initial: ValueType,
     ):
-        def lifted_func(multicast: MultiCastBase):
+        def lifted_func(multicast: MultiCastMixin):
             return func(MultiCast(multicast))
 
         return self._copy(LoopFlowableMultiCast(source=self, func=lifted_func, initial=initial))

@@ -1,10 +1,10 @@
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 
 
-class ExecuteOnFlowable(FlowableBase):
-    def __init__(self, source: FlowableBase, scheduler: Scheduler):
+class ExecuteOnFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, scheduler: Scheduler):
         super().__init__()
 
         self._source = source

@@ -1,5 +1,3 @@
-import sys
-
 from rxbp.ack.continueack import ContinueAck, continue_ack
 from rxbp.ack.single import Single
 from rxbp.ack.stopack import StopAck, stop_ack
@@ -16,7 +14,7 @@ class RepeatFirstObservable(Observable):
         self.scheduler = scheduler
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
         source = self
 
         class RepeatFirstObserver(Observer):
@@ -30,7 +28,7 @@ class RepeatFirstObservable(Observable):
                         # empty element, wait for next
                         return continue_ack
                     except Exception as exc:
-                        observer.on_error(exc)
+                        observer_info.on_error(exc)
                         return stop_ack
 
                 def gen_batch():
@@ -41,7 +39,7 @@ class RepeatFirstObservable(Observable):
 
                 def action(_, __):
                     while True:
-                        ack = observer.on_next(batch)
+                        ack = observer_info.on_next(batch)
 
                         if isinstance(ack, ContinueAck):
                             pass
@@ -63,7 +61,7 @@ class RepeatFirstObservable(Observable):
                 return stop_ack
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                return observer_info.on_error(exc)
 
             def on_completed(self):
                 # return observer.on_completed()

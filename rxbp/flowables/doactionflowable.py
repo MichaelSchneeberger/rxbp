@@ -1,15 +1,15 @@
 from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.doactionobservable import DoActionObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class DoActionFlowable(FlowableBase):
+class DoActionFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             on_next: Callable[[Any], None] = None,
             on_completed: Callable[[], None] = None,
             on_error: Callable[[Exception], None] = None,

@@ -1,6 +1,6 @@
 from typing import Callable, Any
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.reduceobservable import ReduceObservable
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -8,10 +8,10 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ReduceFlowable(FlowableBase):
+class ReduceFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBase,
+            source: FlowableMixin,
             func: Callable[[Any, Any], Any],
             initial: Any,
     ):

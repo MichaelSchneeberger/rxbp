@@ -5,14 +5,14 @@ from rx import operators as rxop, Observable
 from rx.disposable import Disposable
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 
 
-class DefaultIfEmptyMultiCast(MultiCastBase):
+class DefaultIfEmptyMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
+            source: MultiCastMixin,
             lazy_val: Callable[[], Any],
     ):
         self.source = source

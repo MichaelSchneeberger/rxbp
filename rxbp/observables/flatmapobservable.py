@@ -154,23 +154,45 @@ class FlatMapObservable(Observable):
                 self._on_error(exc)
                 return stop_ack
 
-        # next_state = RawFlatMapStates.Active()
-        #
-        # with self.lock:
-        #     next_state.raw_prev_state = self.state
-        #     self.state = next_state
-        #
-        # meas_state = next_state.raw_prev_state.get_measured_state()
-        #
-        # if isinstance(meas_state, FlatMapStates.Stopped):
-        #     return stop_ack
-
         # the ack that might be returned by this `on_next`
         async_upstream_ack = AckSubject()
 
-        conn_observer = None
+        def subscribe_action(_, __):
 
-        for val in reversed(outer_vals[1:]):
+            conn_observer = None
+
+            for val in reversed(outer_vals[1:]):
+
+                # create a new `InnerObserver` for each inner observable
+                inner_observer = FlatMapObservable.InnerObserver(
+                    outer=self,
+                    next_conn_observer=conn_observer,
+                    outer_upstream_ack=async_upstream_ack,
+                )
+
+                # add ConnectableObserver to observe all inner observables simultaneously, and
+                # to get control of activating one after the other
+                conn_observer = ConnectableObserver(
+                    underlying=inner_observer,
+                    scheduler=self._scheduler,
+                    subscribe_scheduler=self._subscribe_scheduler,
+                )
+
+                # for mypy to type check correctly
+                assert isinstance(self.observer_info, ObserverInfo)
+
+                conn_subscription = self.observer_info.copy(conn_observer)
+
+                # apply selector to get inner observable (per element received)
+                try:
+                    inner_observable = self._func(val)
+                except Exception as exc:
+                    self._on_error(exc)
+                    return stop_ack
+
+                # observe inner observable
+                disposable = inner_observable.observe(conn_subscription)
+                self.composite_disposable.add(disposable)
 
             # create a new `InnerObserver` for each inner observable
             inner_observer = FlatMapObservable.InnerObserver(
@@ -179,62 +201,34 @@ class FlatMapObservable(Observable):
                 outer_upstream_ack=async_upstream_ack,
             )
 
-            # add ConnectableObserver to observe all inner observables simultaneously, and
-            # to get control of activating one after the other
-            conn_observer = ConnectableObserver(
-                underlying=inner_observer,
-                scheduler=self._scheduler,
-                subscribe_scheduler=self._subscribe_scheduler,
-            )
-
             # for mypy to type check correctly
             assert isinstance(self.observer_info, ObserverInfo)
 
-            conn_subscription = self.observer_info.copy(conn_observer)
+            observer_info = self.observer_info.copy(observer=inner_observer)
 
             # apply selector to get inner observable (per element received)
             try:
-                inner_observable = self._func(val)
+                inner_observable = self._func(outer_vals[0])
             except Exception as exc:
-                self._on_error(exc)  # todo: check this
+                self._on_error(exc)
+                return stop_ack
+
+            next_state = RawFlatMapStates.Active()
+
+            with self.lock:
+                next_state.raw_prev_state = self.state
+                self.state = next_state
+
+            meas_state = next_state.raw_prev_state.get_measured_state()
+
+            if isinstance(meas_state, FlatMapStates.Stopped):
                 return stop_ack
 
             # observe inner observable
-            disposable = inner_observable.observe(conn_subscription)
+            disposable = inner_observable.observe(observer_info)
             self.composite_disposable.add(disposable)
 
-        # create a new `InnerObserver` for each inner observable
-        inner_observer = FlatMapObservable.InnerObserver(
-            outer=self,
-            next_conn_observer=conn_observer,
-            outer_upstream_ack=async_upstream_ack,
-        )
-
-        # for mypy to type check correctly
-        assert isinstance(self.observer_info, ObserverInfo)
-
-        observer_info = self.observer_info.copy(inner_observer)
-
-        # apply selector to get inner observable (per element received)
-        try:
-            inner_observable = self._func(outer_vals[0])
-        except Exception as exc:
-            self._on_error(exc)                       # todo: check this
-            return stop_ack
-
-        next_state = RawFlatMapStates.Active()
-
-        with self.lock:
-            next_state.raw_prev_state = self.state
-            self.state = next_state
-
-        meas_state = next_state.raw_prev_state.get_measured_state()
-
-        if isinstance(meas_state, FlatMapStates.Stopped):
-            return stop_ack
-
-        # observe inner observable
-        disposable = inner_observable.observe(observer_info)
+        disposable = self._subscribe_scheduler.schedule(subscribe_action)
         self.composite_disposable.add(disposable)
 
         return async_upstream_ack
@@ -289,7 +283,9 @@ class FlatMapObservable(Observable):
                 self._on_completed()
 
         observer = FlatMapOuterObserver()
-        disposable = self._source.observe(observer_info.copy(observer))
+        disposable = self._source.observe(
+            observer_info.copy(observer=observer),
+        )
         self.composite_disposable.add(disposable)
 
         return self.composite_disposable

@@ -1,5 +1,6 @@
 import unittest
 
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.pairwiseobserver import PairwiseObserver
 from rxbp.testing.testobservable import TestObservable
@@ -16,7 +17,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_first_single_elem(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
 
         self.source.on_next_single(1)
 
@@ -25,7 +26,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_first_multiple_elem(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
 
         self.source.on_next_list([1, 2, 3])
 
@@ -33,7 +34,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_second_single_elem(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
         self.source.on_next_single(1)
 
         self.source.on_next_single(2)
@@ -42,7 +43,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_second_multiple_elem(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
         self.source.on_next_list([1, 2])
 
         self.source.on_next_list([3, 4])
@@ -51,7 +52,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_on_error(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
         exc = Exception()
 
         self.source.on_error(exc)
@@ -60,7 +61,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_exception_during_on_next(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
         exc = Exception()
 
         def gen_iter():
@@ -73,7 +74,7 @@ class TestPairwiseObserver(unittest.TestCase):
 
     def test_on_completed(self):
         obs = PairwiseObserver(self.sink)
-        self.source.observe(ObserverInfo(observer=obs))
+        self.source.observe(init_observer_info(observer=obs))
 
         self.source.on_completed()
 

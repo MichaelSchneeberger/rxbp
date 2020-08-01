@@ -26,18 +26,18 @@ The second map composed with the first map look like this:
 
 import rxbp
 
-f1 = rxbp.range(10)
+f1 = rxbp.indexed.range(10)
 
-f2 = rxbp.range(10).pipe(
+f2 = rxbp.indexed.range(10).pipe(
     rxbp.op.filter(lambda v: v%2),          # first mapping is defined in f2
 )
 
-f3 = rxbp.match(f1, f2).pipe(               # apply first mapping to f1
-    rxbp.op.filter(lambda v: v[0]%5),       # second mapping composed with first mapping is defined in f3
+f3 = rxbp.indexed.match(f1, f2).pipe(               # apply first mapping to f1
+    # rxbp.op.filter(lambda v: v[0]%5),       # second mapping composed with first mapping is defined in f3
 )
 
-f4 = rxbp.range(10)
+f4 = rxbp.indexed.range(10)
 
-result = rxbp.match(f3, f4).run()           # apply composed mapping to f4
+result = rxbp.indexed.match(f3, f4).run()           # apply composed mapping to f4
 
 print(result)

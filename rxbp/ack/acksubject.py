@@ -41,12 +41,12 @@ class AckSubject(AckMergeMixin, AckMixin, Single):
             self.check_disposed()
             self.singles.append(single)
 
-            ex = self.exception
+            # ex = self.exception
             has_value, value = self._value
 
-        if ex:
-            single.on_error(ex)
-        elif has_value:
+        # if ex:
+        #     single.on_error(ex)
+        if has_value:
             single.on_next(value)
 
         return Disposable()
@@ -61,16 +61,16 @@ class AckSubject(AckMergeMixin, AckMixin, Single):
         for single in singles:
             single.on_next(value)
 
-    def on_error(self, error: Exception) -> None:
-
-        with self._lock:
-            self.check_disposed()
-            singles = self.singles.copy()
-            self.singles.clear()
-            self.exception = error
-
-        for single in singles:
-            single.on_error(error)
+    # def on_error(self, error: Exception) -> None:
+    #
+    #     with self._lock:
+    #         self.check_disposed()
+    #         singles = self.singles.copy()
+    #         self.singles.clear()
+    #         self.exception = error
+    #
+    #     for single in singles:
+    #         single.on_error(error)
 
     def merge(self, other: AckMixin):
         return _merge(self, other)

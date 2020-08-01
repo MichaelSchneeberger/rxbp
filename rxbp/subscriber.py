@@ -1,7 +1,15 @@
-from rxbp.scheduler import Scheduler
+from abc import ABC
+
+from rxbp.mixins.subscribermixin import SubscriberMixin
 
 
-class Subscriber:
-    def __init__(self, scheduler: Scheduler, subscribe_scheduler: Scheduler):
-        self.scheduler = scheduler
-        self.subscribe_scheduler = subscribe_scheduler
+class Subscriber(SubscriberMixin, ABC):
+    pass
+
+    # def return_value(self, val: ValueType) -> SubscriptionMixin:
+    #     return init_subscription(
+    #         observable=ReturnValueObservable(
+    #             val=val,
+    #             subscribe_scheduler=self.subscribe_scheduler,
+    #         ),
+    #     )

@@ -1,6 +1,6 @@
-from typing import Iterable, List
+from typing import List
 
-from rxbp.flowablebase import FlowableBase
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.selectors.bases.concatbase import ConcatBase
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -8,8 +8,8 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ConcatFlowable(FlowableBase):
-    def __init__(self, sources: List[FlowableBase]):
+class ConcatFlowable(FlowableMixin):
+    def __init__(self, sources: List[FlowableMixin]):
         super().__init__()
 
         self._sources = sources
@@ -29,7 +29,7 @@ class ConcatFlowable(FlowableBase):
         )
 
         base = ConcatBase(
-            underlying=[s.info for s in subscriptions],
+            underlying=[s.index for s in subscriptions],
             sources=observable.selectors,
         )
 

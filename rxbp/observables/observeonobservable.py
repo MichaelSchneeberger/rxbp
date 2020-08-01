@@ -15,7 +15,7 @@ class ObserveOnObservable(Observable):
         self.scheduler = scheduler
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
 
         class ObserveOnObserver(Observer):
             def __init__(self, scheduler: Scheduler):
@@ -46,18 +46,18 @@ class ObserveOnObservable(Observable):
                     try:
                         elem = list(elem)
                     except Exception as exc:
-                        observer.on_error(exc)
+                        observer_info.on_error(exc)
                         return stop_ack
 
                 def action(_, __):
-                    inner_ack = observer.on_next(elem)
+                    inner_ack = observer_info.on_next(elem)
 
                     if isinstance(inner_ack, ContinueAck):
                         ack_subject.on_next(inner_ack)
                     elif isinstance(inner_ack, StopAck):
                         ack_subject.on_next(inner_ack)
                     elif inner_ack is None:
-                        raise Exception(f'observer {observer} returned None instead of an Ack')
+                        raise Exception(f'observer {observer_info} returned None instead of an Ack')
                     else:
                         inner_ack.subscribe(ack_subject)
 
@@ -66,16 +66,16 @@ class ObserveOnObservable(Observable):
 
             def on_error(self, exc):
                 # def action(_, __):
-                observer.on_error(exc)
+                observer_info.on_error(exc)
 
                 # self.schedule_func(action)
 
             def on_completed(self):
                 def action(_, __):
-                    observer.on_completed()
+                    observer_info.on_completed()
 
                 self.schedule_func(action)
 
         observe_on_observer = ObserveOnObserver(scheduler=self.scheduler)
-        observer_on_subscription = ObserverInfo(observe_on_observer, is_volatile=observer_info.is_volatile)
+        observer_on_subscription = init_observer_info(observe_on_observer, is_volatile=observer_info.is_volatile)
         return self.source.observe(observer_on_subscription)

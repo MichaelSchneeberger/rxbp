@@ -1,9 +1,6 @@
 import types
 from typing import Callable, Any
 
-from rx.internal import SequenceContainsNoElementsError
-
-from rxbp.ack.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -24,7 +21,7 @@ class DefaultIfEmptyObservable(Observable):
         self.is_first = True
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
+        observer_info = observer_info.observer
 
         outer_self = self
 
@@ -32,23 +29,23 @@ class DefaultIfEmptyObservable(Observable):
             def on_next(self, elem: ElementType):
                 outer_self.is_first = False
 
-                self.on_next = types.MethodType(observer.on_next, self)  # type: ignore
+                self.on_next = types.MethodType(observer_info.on_next, self)  # type: ignore
 
-                return observer.on_next(elem)
+                return observer_info.on_next(elem)
 
             def on_error(self, exc):
-                return observer.on_error(exc)
+                return observer_info.on_error(exc)
 
             def on_completed(self):
                 if outer_self.is_first:
                     try:
-                        observer.on_next(outer_self.lazy_val())
-                        observer.on_completed()
+                        observer_info.on_next([outer_self.lazy_val()])
+                        observer_info.on_completed()
                     except Exception as exc:
-                        observer.on_error(exc)
+                        observer_info.on_error(exc)
                 else:
-                    observer.on_completed()
+                    observer_info.on_completed()
 
         first_observer = DefaultIfEmptyObserver()
-        map_subscription = ObserverInfo(first_observer, is_volatile=observer_info.is_volatile)
+        map_subscription = init_observer_info(first_observer, is_volatile=observer_info.is_volatile)
         return self.source.observe(map_subscription)

@@ -18,7 +18,7 @@ subject = Subject()
 
 
 fdict = {
-    't_main': rxbp.from_rx(subject, base='t_main'),
+    't_main': rxbp.indexed.from_rx(subject, base='t_main'),
     't_1': rxbp.range(0, 100, base='t_1').map(lambda i: 10 * i/100 * 0.9 + 2.1),
     't_2': rxbp.range(0, 100, base='t_2').map(lambda i: 10 * i/100 * 1.05 + 0.9),
 }

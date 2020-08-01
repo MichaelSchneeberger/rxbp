@@ -2,14 +2,14 @@ import rx
 from rx import operators as rxop
 
 from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastbase import MultiCastBase
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.typing import MultiCastValue
 
 
-class ObserveOnMultiCast(MultiCastBase):
+class ObserveOnMultiCast(MultiCastMixin):
     def __init__(
             self,
-            source: MultiCastBase,
+            source: MultiCastMixin,
             scheduler: rx.typing.Scheduler,
     ):
         self.source = source
