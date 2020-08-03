@@ -241,11 +241,11 @@ class MergeObservable(Observable):
                 source._on_completed_right()
 
         left_observer = LeftObserver()
-        left_subscription = observer_info.copy(left_observer)
+        left_subscription = observer_info.copy(observer=left_observer)
         d1 = self.left.observe(left_subscription)
 
         right_observer = RightObserver()
-        right_subscription = observer_info.copy(right_observer)
+        right_subscription = observer_info.copy(observer=right_observer)
         d2 = self.right.observe(right_subscription)
 
         return CompositeDisposable(d1, d2)

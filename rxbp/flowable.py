@@ -13,7 +13,6 @@ from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.defaultifemptyflowable import DefaultIfEmptyFlowable
 from rxbp.flowables.doactionflowable import DoActionFlowable
-from rxbp.flowables.executeonflowable import ExecuteOnFlowable
 from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.firstordefaultflowable import FirstOrDefaultFlowable
@@ -137,8 +136,8 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
             on_disposed=on_disposed,
         ))
 
-    def execute_on(self, scheduler: Scheduler):
-        return self._copy(ExecuteOnFlowable(source=self, scheduler=scheduler))
+    # def execute_on(self, scheduler: Scheduler):
+    #     return self._copy(ExecuteOnFlowable(source=self, scheduler=scheduler))
 
     def filter(self, predicate: Callable[[Any], bool]) -> 'Flowable':
 

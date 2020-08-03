@@ -114,15 +114,15 @@ def do_action(
     return PipeOperation(op_func)
 
 
-def execute_on(scheduler: Scheduler):
-    """
-    Inject new scheduler that is used to subscribe the Flowable.
-    """
-
-    def op_func(left: Flowable):
-        return left.execute_on(scheduler=scheduler)
-
-    return PipeOperation(op_func)
+# def execute_on(scheduler: Scheduler):
+#     """
+#     Inject new scheduler that is used to subscribe the Flowable.
+#     """
+#
+#     def op_func(left: Flowable):
+#         return left.execute_on(scheduler=scheduler)
+#
+#     return PipeOperation(op_func)
 
 
 def fast_filter(predicate: Callable[[Any], bool]):

@@ -14,7 +14,6 @@ from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.flowables.defaultifemptyflowable import DefaultIfEmptyFlowable
 from rxbp.flowables.doactionflowable import DoActionFlowable
-from rxbp.flowables.executeonflowable import ExecuteOnFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.firstordefaultflowable import FirstOrDefaultFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable

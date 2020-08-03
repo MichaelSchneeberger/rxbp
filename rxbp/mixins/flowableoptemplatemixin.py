@@ -92,13 +92,13 @@ class FlowableOpTemplateMixin(FlowableTemplateMixin, ABC):
     ):
         ...
 
-    @abstractmethod
-    def execute_on(self, scheduler: Scheduler):
-        """
-        Inject new scheduler that is used to subscribe the Flowable.
-        """
-
-        ...
+    # @abstractmethod
+    # def execute_on(self, scheduler: Scheduler):
+    #     """
+    #     Inject new scheduler that is used to subscribe the Flowable.
+    #     """
+    #
+    #     ...
 
     @abstractmethod
     def filter(self, predicate: Callable[[Any], bool]) -> FlowableTemplateMixin:
