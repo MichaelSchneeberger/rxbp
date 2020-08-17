@@ -1,5 +1,6 @@
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import continue_ack
+from rxbp.ack.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
@@ -21,7 +22,13 @@ class TestObserver(Observer):
 
     def on_next(self, elem: ElementType):
         self.on_next_counter += 1
-        values = list(elem)
+
+        try:
+            values = list(elem)
+        except Exception as exc:
+            self.exception = exc
+            return stop_ack
+
         self.received += values
         if self.immediate_continue is None:
             return continue_ack

@@ -8,7 +8,7 @@ from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime, Sched
 from rxbp.ack.continueack import continue_ack
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.init.initsubscriber import init_subscriber
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import SchedulerBase
@@ -18,7 +18,7 @@ from rxbp.subscriber import Subscriber
 from rxbp.typing import ElementType
 
 
-def to_rx(source: FlowableMixin, batched: bool = None, subscribe_schduler: Scheduler = None):
+def to_rx(source: FlowableBaseMixin, batched: bool = None, subscribe_schduler: Scheduler = None):
     """ Converts this observable to an rx.Observable
 
     :param scheduler:

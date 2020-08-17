@@ -1,27 +1,30 @@
-from typing import Callable
+from dataclasses import dataclass
+from traceback import FrameSummary
+from typing import List
 
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.firstobservable import FirstObservable
-from rxbp.selectors.bases.numericalbase import NumericalBase
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
-class FirstFlowable(FlowableMixin):
-    def __init__(
-            self,
-            source: FlowableMixin,
-            raise_exception: Callable[[Callable[[], None]], None],
-    ):
-        super().__init__()
-
-        self._source = source
-        self.raise_exception = raise_exception
+@dataclass
+class FirstFlowable(FlowableBaseMixin):
+    source: FlowableBaseMixin
+    stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-        subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = FirstObservable(source=subscription.observable, raise_exception=self.raise_exception)
+        try:
+            subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+            return subscription.copy(observable=FirstObservable(
+                source=subscription.observable,
+                stack=self.stack,
+            ))
 
-        return init_subscription(observable=observable)
+        except Exception:
+            raise Exception(to_operator_exception(
+                message=f'something went wrong when subscribing to {self.source}',
+                stack=self.stack,
+            ))

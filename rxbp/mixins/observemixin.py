@@ -7,13 +7,12 @@ from rx.disposable import Disposable
 from rxbp.ack.continueack import continue_ack
 from rxbp.ack.stopack import stop_ack
 from rxbp.init.initobserverinfo import init_observer_info
-from rxbp.mixins.flowabletemplatemixin import FlowableTemplateMixin
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 
 
-class ObserveMixin(FlowableTemplateMixin, ABC):
+class ObserveMixin(ABC):
     def _observe(
             self,
             observable: Observable = None,

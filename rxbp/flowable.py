@@ -2,7 +2,8 @@ import functools
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Any, Tuple, Iterator, Generic
+from traceback import FrameSummary
+from typing import Callable, Any, Tuple, Iterator, Generic, List
 
 import rx
 
@@ -30,8 +31,8 @@ from rxbp.flowables.scanflowable import ScanFlowable
 from rxbp.flowables.tolistflowable import ToListFlowable
 from rxbp.flowables.zipflowable import ZipFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
-from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.mixins.flowableoptemplatemixin import FlowableOpTemplateMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowableoperatorsmixin import FlowableOperatorsMixin
 from rxbp.observerinfo import ObserverInfo
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
@@ -43,10 +44,10 @@ from rxbp.typing import ValueType
 
 
 @dataclass
-class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
+class Flowable(FlowableOperatorsMixin, FlowableBaseMixin, Generic[ValueType], ABC):
     @property
     @abstractmethod
-    def underlying(self) -> FlowableMixin:
+    def underlying(self) -> FlowableBaseMixin:
         ...
 
     # @property
@@ -58,7 +59,7 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
         return self.underlying.unsafe_subscribe(subscriber=subscriber)
 
     @abstractmethod
-    def _copy(self, flowable: FlowableMixin, sharable: bool = None) -> 'Flowable':
+    def _copy(self, flowable: FlowableBaseMixin, sharable: bool = None) -> 'Flowable':
         ...
 
     def pipe(self, *operators: PipeOperation['Flowable']) -> 'Flowable':
@@ -69,7 +70,7 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return self._copy(flowable)
 
-    def concat(self, *others: FlowableMixin) -> 'Flowable':
+    def concat(self, *others: FlowableBaseMixin) -> 'Flowable':
         if len(others) == 0:
             return self
 
@@ -79,13 +80,13 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
 
     def controlled_zip(
             self,
-            right: FlowableMixin,
+            right: FlowableBaseMixin,
             request_left: Callable[[Any, Any], bool] = None,
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
     ) -> 'Flowable':
 
-        assert isinstance(right, FlowableMixin), f'"{right}" must be of type FlowableMixin'
+        assert isinstance(right, FlowableBaseMixin), f'"{right}" must be of type FlowableMixin'
 
         flowable = ControlledZipFlowable(
             left=self,
@@ -99,14 +100,15 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
     def debug(
             self,
             name: str,
-            on_next: Callable[[Any], AckMixin] = None,
-            on_completed: Callable[[], None] = None,
-            on_error: Callable[[Exception], None] = None,
-            on_ack: Callable[[AckMixin], None] = None,
-            on_subscribe: Callable[[ObserverInfo], None] = None,
-            on_raw_ack: Callable[[AckMixin], None] = None,
+            on_next: Callable[[Any], AckMixin],
+            on_completed: Callable[[], None],
+            on_error: Callable[[Exception], None],
+            on_sync_ack: Callable[[AckMixin], None],
+            on_async_ack: Callable[[AckMixin], None],
+            on_subscribe: Callable[[ObserverInfo], None],
+            on_raw_ack: Callable[[AckMixin], None],
+            stack: List[FrameSummary],
     ) -> 'Flowable':
-
         return self._copy(DebugFlowable(
             source=self,
             name=name,
@@ -114,8 +116,10 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
             on_completed=on_completed,
             on_error=on_error,
             on_subscribe=on_subscribe,
-            on_ack=on_ack,
+            on_sync_ack=on_sync_ack,
+            on_async_ack=on_async_ack,
             on_raw_ack=on_raw_ack,
+            stack=stack,
         ))
 
     def default_if_empty(self, lazy_val: Callable[[], Any]) -> 'Flowable':
@@ -144,15 +148,15 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
         flowable = FilterFlowable(source=self, predicate=predicate)
         return self._copy(flowable)
 
-    def first(self, raise_exception: Callable[[Callable[[], None]], None]):
-        flowable = FirstFlowable(source=self, raise_exception=raise_exception)
+    def first(self, stack: List[FrameSummary]):
+        flowable = FirstFlowable(source=self, stack=stack)
         return self._copy(flowable)
 
-    def first_or_default(self, lazy_val: Callable[[], Any]):
-        flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
-        return self._copy(flowable)
+    # def first_or_default(self, lazy_val: Callable[[], Any]):
+    #     flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
+    #     return self._copy(flowable)
 
-    def flat_map(self, func: Callable[[Any], FlowableMixin]):
+    def flat_map(self, func: Callable[[Any], FlowableBaseMixin]):
         flowable = FlatMapFlowable(source=self, func=func)
         return self._copy(flowable)
 
@@ -160,9 +164,8 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
         flowable = LastFlowable(source=self, raise_exception=raise_exception)
         return self._copy(flowable)
 
-    def map(self, func: Callable[[ValueType], Any]):
-
-        flowable = MapFlowable(source=self, func=func)
+    def map(self, func: Callable[[ValueType], Any], stack: List[FrameSummary]):
+        flowable = MapFlowable(source=self, func=func, stack=stack)
         return self._copy(flowable)
 
     def map_to_iterator(
@@ -172,9 +175,9 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
         flowable = MapToIteratorFlowable(source=self, func=func)
         return self._copy(flowable)
 
-    def merge(self, *others: FlowableMixin):
+    def merge(self, *others: FlowableBaseMixin):
 
-        assert all(isinstance(source, FlowableMixin) for source in others), \
+        assert all(isinstance(source, FlowableBaseMixin) for source in others), \
             f'"{others}" must all be of type FlowableMixin'
 
         if len(others) == 0:
@@ -193,7 +196,7 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
 
                     yield _
 
-            obs: FlowableMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            obs: FlowableBaseMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
             return self._copy(obs)
 
     def observe_on(self, scheduler: Scheduler):
@@ -268,7 +271,7 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
 
     def zip(self, *others: 'Flowable'):
 
-        assert all(isinstance(source, FlowableMixin) for source in others), \
+        assert all(isinstance(source, FlowableBaseMixin) for source in others), \
             f'"{others}" must all be of type FlowableMixin'
 
         if len(others) == 0:
@@ -290,7 +293,7 @@ class Flowable(FlowableOpTemplateMixin, FlowableMixin, Generic[ValueType], ABC):
 
                     yield _
 
-            obs: FlowableMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            obs: FlowableBaseMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
             return self._copy(obs)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):

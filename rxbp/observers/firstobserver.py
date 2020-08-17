@@ -1,21 +1,21 @@
-from typing import Callable
-
-from rx.internal import SequenceContainsNoElementsError
+from traceback import FrameSummary
+from typing import List
 
 from rxbp.ack.continueack import continue_ack
 from rxbp.ack.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 class FirstObserver(Observer):
     def __init__(
             self,
             observer: Observer,
-            raise_exception: Callable[[Callable[[], None]], None],
+            stack: List[FrameSummary],
     ):
         self.observer = observer
-        self.raise_exception = raise_exception
+        self.stack = stack
 
         self.is_first = True
 
@@ -44,10 +44,12 @@ class FirstObserver(Observer):
 
     def on_completed(self):
         if self.is_first:
-            def func():
-                raise SequenceContainsNoElementsError()
-
             try:
-                self.raise_exception(func)
+                # self.raise_exception(func)
+                raise Exception(to_operator_exception(
+                    message=f'no elements received',
+                    stack=self.stack,
+                ))
+
             except Exception as exc:
                 self.observer.on_error(exc)

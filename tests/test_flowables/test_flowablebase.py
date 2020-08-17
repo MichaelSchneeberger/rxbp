@@ -1,7 +1,7 @@
 import unittest
 from dataclasses import dataclass
 
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
@@ -16,7 +16,7 @@ class TestFlowableBase(unittest.TestCase):
         self.source = source
 
         @dataclass
-        class TestFlowableBase(FlowableMixin):
+        class TestFlowableBase(FlowableBaseMixin):
             subscriber = None
 
             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:

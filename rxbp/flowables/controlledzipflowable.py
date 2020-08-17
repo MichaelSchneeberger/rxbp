@@ -1,7 +1,7 @@
 from typing import Callable, Any
 
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -10,11 +10,11 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ControlledZipFlowable(FlowableMixin):
+class ControlledZipFlowable(FlowableBaseMixin):
     def __init__(
             self,
-            left: FlowableMixin,
-            right: FlowableMixin,
+            left: FlowableBaseMixin,
+            right: FlowableBaseMixin,
             request_left: Callable[[Any, Any], bool] = None,
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,

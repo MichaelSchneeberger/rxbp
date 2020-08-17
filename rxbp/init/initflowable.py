@@ -1,9 +1,9 @@
 from rxbp.impl.flowableimpl import FlowableImpl
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 
 
 def init_flowable(
-        underlying: FlowableMixin,
+        underlying: FlowableBaseMixin,
 ):
     return FlowableImpl(
         underlying=underlying

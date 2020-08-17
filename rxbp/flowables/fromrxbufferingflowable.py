@@ -4,7 +4,7 @@ from typing import Optional
 import rx
 
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.fromrxbufferingobservable import FromRxBufferingObservable
 from rxbp.overflowstrategy import OverflowStrategy
 from rxbp.subscriber import Subscriber
@@ -12,7 +12,7 @@ from rxbp.subscription import Subscription
 
 
 @dataclass
-class FromRxBufferingFlowable(FlowableMixin):
+class FromRxBufferingFlowable(FlowableBaseMixin):
     batched_source: rx.typing.Observable
     overflow_strategy: OverflowStrategy
     buffer_size: int

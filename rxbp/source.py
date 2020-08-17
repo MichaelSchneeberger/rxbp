@@ -68,26 +68,29 @@ def from_list(val: List, batch_size: int = None, base: Any = None):
         ))
 
     else:
-        if batch_size is None or batch_size == 1:
-            class FromListSingleValBatchIterable():
+        if batch_size == 1:
+            class EachElementIterable():
                 def __iter__(self):
                     return ([e] for e in buffer)
 
-            iterable = FromListSingleValBatchIterable()
+            iterable = EachElementIterable()
 
         else:
             n_full_slices = int(len(buffer) / batch_size)
 
-            class FromListIterable():
+            class BatchIterable():
                 def __iter__(self):
                     idx = 0
                     for _ in range(n_full_slices):
                         next_idx = idx + batch_size
                         yield buffer[idx:next_idx]
                         idx = next_idx
-                    yield buffer[idx:]
 
-            iterable = FromListIterable()
+                    # if there are any elements left
+                    if idx < len(buffer):
+                        yield buffer[idx:]
+
+            iterable = BatchIterable()
 
         return init_flowable(FromIterableFlowable(
             iterable=iterable,

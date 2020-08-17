@@ -33,8 +33,8 @@ from rxbp.indexed.flowables.indexedmatchflowable import IndexedMatchFlowable
 from rxbp.indexed.flowables.indexedzipflowable import IndexedZipFlowable
 from rxbp.indexed.indexedsubscription import IndexedSubscription
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
-from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.mixins.flowableoptemplatemixin import FlowableOpTemplateMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowableoperatorsmixin import FlowableOperatorsMixin
 from rxbp.observerinfo import ObserverInfo
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
@@ -46,7 +46,7 @@ from rxbp.torx import to_rx
 from rxbp.typing import ValueType
 
 
-class IndexedFlowable(FlowableOpTemplateMixin, IndexedFlowableMixin, Generic[ValueType], ABC):
+class IndexedFlowable(FlowableOperatorsMixin, IndexedFlowableMixin, Generic[ValueType], ABC):
     @property
     @abstractmethod
     def underlying(self) -> IndexedFlowableMixin:
@@ -63,7 +63,7 @@ class IndexedFlowable(FlowableOpTemplateMixin, IndexedFlowableMixin, Generic[Val
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
         return self._copy(flowable)
 
-    def concat(self, *others: FlowableMixin) -> IndexedFlowableMixin:
+    def concat(self, *others: FlowableBaseMixin) -> IndexedFlowableMixin:
         if len(others) == 0:
             return self
 
@@ -73,7 +73,7 @@ class IndexedFlowable(FlowableOpTemplateMixin, IndexedFlowableMixin, Generic[Val
 
     def controlled_zip(
             self,
-            right: FlowableMixin,
+            right: FlowableBaseMixin,
             request_left: Callable[[Any, Any], bool] = None,
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
@@ -143,7 +143,7 @@ class IndexedFlowable(FlowableOpTemplateMixin, IndexedFlowableMixin, Generic[Val
         flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
         return self._copy(flowable)
 
-    def flat_map(self, func: Callable[[Any], FlowableMixin]):
+    def flat_map(self, func: Callable[[Any], FlowableBaseMixin]):
         flowable = FlatMapFlowable(source=self, func=func)
         return self._copy(flowable)
 
@@ -212,7 +212,7 @@ class IndexedFlowable(FlowableOpTemplateMixin, IndexedFlowableMixin, Generic[Val
 
         return self._copy(PairwiseFlowable(source=self))
 
-    def pipe(self, *operators: PipeOperation[FlowableOpTemplateMixin]) -> IndexedFlowableMixin:
+    def pipe(self, *operators: PipeOperation[FlowableOperatorsMixin]) -> IndexedFlowableMixin:
         raw = functools.reduce(lambda obs, op: op(obs), operators, self)
         # return self._copy(raw)
         return raw

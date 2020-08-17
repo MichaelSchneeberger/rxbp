@@ -1,11 +1,11 @@
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.repeatfirstobservable import RepeatFirstObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class RepeatFirstFlowable(FlowableMixin):
-    def __init__(self, source: FlowableMixin):
+class RepeatFirstFlowable(FlowableBaseMixin):
+    def __init__(self, source: FlowableBaseMixin):
         # unknown base, depends on the back-pressure
         base = None
 

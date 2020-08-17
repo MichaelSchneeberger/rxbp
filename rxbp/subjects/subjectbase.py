@@ -1,8 +1,8 @@
 from abc import ABC
 
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observer import Observer
 
 
-class SubjectBase(FlowableMixin, Observer, ABC):
+class SubjectBase(FlowableBaseMixin, Observer, ABC):
     pass

@@ -8,7 +8,7 @@ from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 
 import rxbp
 from rxbp.flowable import Flowable
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.flowables.bufferflowable import BufferFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
@@ -40,7 +40,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
     def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
         initial = self.initial
 
-        class StartWithInitialValueFlowable(FlowableMixin):
+        class StartWithInitialValueFlowable(FlowableBaseMixin):
             def __init__(self):
                 # mutable state, that will be set as soon as the first Flowable is subscribed
                 self.flowable = None
@@ -162,8 +162,8 @@ class LoopFlowableMultiCast(MultiCastMixin):
             lock = threading.RLock()
             is_first = [True]
 
-            class DeferFlowable(FlowableMixin):
-                def __init__(self, source: FlowableMixin, key: Any):
+            class DeferFlowable(FlowableBaseMixin):
+                def __init__(self, source: FlowableBaseMixin, key: Any):
                     self.source = source
                     self.key = key
 
@@ -192,7 +192,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
 
                         buffered = BufferFlowable(source=zipped, buffer_size=1)
 
-                        class BreakingTheLoopFlowable(FlowableMixin):
+                        class BreakingTheLoopFlowable(FlowableBaseMixin):
                             def __init__(self):
                                 self.disposable = SingleAssignmentDisposable()
 

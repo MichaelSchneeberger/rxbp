@@ -1,17 +1,17 @@
 from typing import Callable
 
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.firstobservable import FirstObservable
 from rxbp.observables.lastobservable import LastObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class LastFlowable(FlowableMixin):
+class LastFlowable(FlowableBaseMixin):
     def __init__(
             self,
-            source: FlowableMixin,
+            source: FlowableBaseMixin,
             raise_exception: Callable[[Callable[[], None]], None],
     ):
         super().__init__()

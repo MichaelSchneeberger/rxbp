@@ -12,7 +12,7 @@ from rxbp.flowable import Flowable
 from rxbp.init.initflowable import init_flowable
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
@@ -116,7 +116,7 @@ class MultiCastMixin(Generic[MultiCastValue], ABC):
                 return self.multicast_subscribe_scheduler.schedule(subscribe_action)
 
         @dataclass
-        class FromMultiCastFlowable(FlowableMixin):
+        class FromMultiCastFlowable(FlowableBaseMixin):
             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
                 multicast_subscribe_scheduler = TrampolineScheduler()
 

@@ -1,13 +1,13 @@
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class MergeFlowable(FlowableMixin):
-    def __init__(self, source: FlowableMixin, other: FlowableMixin):
+class MergeFlowable(FlowableBaseMixin):
+    def __init__(self, source: FlowableBaseMixin, other: FlowableBaseMixin):
         super().__init__()
 
         self._source = source

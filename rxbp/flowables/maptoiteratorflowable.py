@@ -1,16 +1,16 @@
 from typing import Callable, Iterator
 
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
 
 
-class MapToIteratorFlowable(FlowableMixin):
+class MapToIteratorFlowable(FlowableBaseMixin):
     def __init__(
             self,
-            source: FlowableMixin,
+            source: FlowableBaseMixin,
             func: Callable[[ValueType], Iterator[ValueType]],
     ):
         super().__init__()

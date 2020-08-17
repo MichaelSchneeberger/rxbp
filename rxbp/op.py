@@ -1,10 +1,13 @@
 from typing import Any, Callable, Iterator
 
+from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.flowable import Flowable
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.observerinfo import ObserverInfo
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ValueType
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 def buffer(buffer_size: int = None):
@@ -18,7 +21,7 @@ def buffer(buffer_size: int = None):
     return PipeOperation(op_func)
 
 
-def concat(*sources: FlowableMixin):
+def concat(*sources: FlowableBaseMixin):
     """
     Concatentates Flowables sequences together by back-pressuring the tail Flowables until
     the current Flowable has completed.
@@ -33,7 +36,7 @@ def concat(*sources: FlowableMixin):
 
 
 def controlled_zip(
-        right: FlowableMixin,
+        right: FlowableBaseMixin,
         request_left: Callable[[Any, Any], bool] = None,
         request_right: Callable[[Any, Any], bool] = None,
         match_func: Callable[[Any, Any], bool] = None,
@@ -64,21 +67,63 @@ def controlled_zip(
     return PipeOperation(op_func)
 
 
-def debug(name=None, on_next=None, on_subscribe=None, on_ack=None, on_raw_ack=None, on_ack_msg=None):
+def debug(
+        name: str,
+        on_next: Callable[[Any], AckMixin] = None,
+        on_completed: Callable[[], None] = None,
+        on_error: Callable[[Exception], None] = None,
+        on_sync_ack: Callable[[AckMixin], None] = None,
+        on_async_ack: Callable[[AckMixin], None] = None,
+        on_subscribe: Callable[[ObserverInfo], None] = None,
+        on_raw_ack: Callable[[AckMixin], None] = None,
+        verbose: bool = None
+):
     """
     Print debug messages to the console when providing the `name` argument
 
     :on_next: customize the on next debug console print
     """
 
+    if verbose is None:
+        verbose = True
+
+    if verbose:
+        on_next_func = on_next or (lambda v: print(f'{name}.on_next {v}'))
+        on_error_func = on_error or (lambda exc: print(f'{name}.on_error {exc}'))
+        on_completed_func = on_completed or (lambda: print(f'{name}.on_completed'))
+        on_subscribe_func = on_subscribe or (lambda v: print(f'{name}.on_observe {v.observer}'))
+        on_sync_ack_func = on_sync_ack or (lambda v: print(f'{name}.on_sync_ack {v}'))
+        on_async_ack_func = on_async_ack or (lambda v: print(f'{name}.on_async_ack {v}'))
+        on_raw_ack_func = on_raw_ack or (lambda v: print(f'{name}.on_raw_ack {v}'))
+
+    else:
+        def empty_func0():
+            return None
+
+        def empty_func1(v):
+            return None
+
+        on_next_func = on_next or empty_func1
+        on_error_func = on_error or empty_func1
+        on_completed_func = on_completed or empty_func0
+        on_subscribe_func = on_subscribe or empty_func1
+        on_sync_ack_func = on_sync_ack or empty_func1
+        on_async_ack_func = on_async_ack or empty_func1
+        on_raw_ack_func = on_raw_ack or empty_func1
+
+    stack = get_stack_lines()
+
     def op_func(source: Flowable):
         return source.debug(
             name=name,
-            on_next=on_next,
-            on_subscribe=on_subscribe,
-            on_ack=on_ack,
-            on_raw_ack=on_raw_ack,
-            on_ack_msg=on_ack_msg,
+            on_next=on_next_func,
+            on_error=on_error_func,
+            on_completed=on_completed_func,
+            on_subscribe=on_subscribe_func,
+            on_sync_ack=on_sync_ack_func,
+            on_async_ack=on_async_ack_func,
+            on_raw_ack=on_raw_ack_func,
+            stack=stack,
         )
 
     return PipeOperation(op_func)
@@ -153,7 +198,7 @@ def filter(predicate: Callable[[Any], bool]):
     return PipeOperation(op_func)
 
 
-def first(raise_exception: Callable[[Callable[[], None]], None]):
+def first():
     """
     Emit the first element only and stop the Flowable sequence thereafter.
 
@@ -169,8 +214,10 @@ def first(raise_exception: Callable[[Callable[[], None]], None]):
     providing the `raise_exception` argument.
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: Flowable):
-        return source.first(raise_exception=raise_exception)
+        return source.first(stack=stack)
 
     return PipeOperation(op_func)
 
@@ -230,8 +277,10 @@ def map(func: Callable[[Any], Any]):
     Flowable sequence.
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: Flowable):
-        return source.map(func=func)
+        return source.map(func=func, stack=stack)
 
     return PipeOperation(op_func)
 

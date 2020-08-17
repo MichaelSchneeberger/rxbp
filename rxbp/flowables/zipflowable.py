@@ -1,16 +1,16 @@
 from typing import Callable, Any
 
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.observables.zipobservable import ZipObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ZipFlowable(FlowableMixin):
+class ZipFlowable(FlowableBaseMixin):
     def __init__(
             self,
-            left: FlowableMixin,
-            right: FlowableMixin,
+            left: FlowableBaseMixin,
+            right: FlowableBaseMixin,
             func: Callable[[Any, Any], Any] = None,
     ):
         super().__init__()

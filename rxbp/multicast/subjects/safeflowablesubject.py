@@ -4,7 +4,7 @@ from rx.disposable import CompositeDisposable
 
 from rxbp.ack.continueack import continue_ack
 from rxbp.flowable import Flowable
-from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
 from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observer import Observer
@@ -34,7 +34,7 @@ class SafeFlowableSubject(MultiCastFlowable[ValueType], Observer, Generic[ValueT
 
         self._observable_subject = None
 
-    def _copy(cls, flowable: FlowableMixin):
+    def _copy(cls, flowable: FlowableBaseMixin):
         return MultiCastFlowable(flowable)
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
