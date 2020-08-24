@@ -5,4 +5,8 @@ from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 def init_multicast(
         underlying: MultiCastMixin,
 ):
-    return MultiCastImpl(underlying=underlying)
+    return MultiCastImpl(
+        underlying=underlying,
+        is_hot=False,
+        nested_layer=0,
+    )

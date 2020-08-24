@@ -1,4 +1,5 @@
 from rxbp.ack.continueack import ContinueAck
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.flatmapstates import FlatMapStates
@@ -28,9 +29,11 @@ class TestFlatMapObservable(TestCaseBase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack1 = self.s1.on_next_single(self.s2)
+        self.scheduler.advance_by(1)
+
         self.assertFalse(ack1.has_value)
 
         ack2 = self.s2.on_next_iter([1, 2])
@@ -43,6 +46,8 @@ class TestFlatMapObservable(TestCaseBase):
         self.assertIsInstance(obs.state.get_measured_state(), FlatMapStates.WaitOnOuter)
 
         ack1 = self.s1.on_next_single(self.s3)
+        self.scheduler.advance_by(1)
+
         ack2 = self.s3.on_next_iter([3, 4])
         self.assertIsInstance(ack2, ContinueAck)
         self.assertListEqual(sink.received, [1, 2, 3, 4])
@@ -65,9 +70,10 @@ class TestFlatMapObservable(TestCaseBase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         self.s1.on_next_single(self.s2)
+        self.scheduler.advance_by(1)
         self.s1.on_completed()
 
         self.s2.on_completed()
@@ -84,9 +90,10 @@ class TestFlatMapObservable(TestCaseBase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         self.s1.on_next_single(self.s2)
+        self.scheduler.advance_by(1)
 
         self.assertEqual(self.exception, sink.exception)
 
@@ -101,9 +108,10 @@ class TestFlatMapObservable(TestCaseBase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack1 = self.s1.on_next_list([self.s2, self.s3])
+        self.scheduler.advance_by(1)
         self.assertFalse(ack1.has_value)
 
         self.s1.on_completed()

@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from rxbp.multicast.mixins.multicastobservermixin import MultiCastObserverMixin
+from rxbp.multicast.multicastobserver import MultiCastObserver
 
 
 @dataclass
 class MultiCastObserverInfo:
-    observer: MultiCastObserverMixin
+    observer: MultiCastObserver
 
-    def copy(self, observer: MultiCastObserverMixin):
+    def copy(self, observer: MultiCastObserver):
         return MultiCastObserverInfo(observer=observer)

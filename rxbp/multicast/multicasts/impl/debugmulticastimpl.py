@@ -3,6 +3,7 @@ from typing import Callable, Any
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.debugmulticastobservable import DebugMultiCastObservable
+from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 
@@ -14,6 +15,7 @@ class DebugMultiCastImpl(MultiCastMixin):
     on_next: Callable[[Any], None]
     on_completed: Callable[[], None]
     on_error: Callable[[Exception], None]
+    on_subscribe: Callable[[MultiCastObserverInfo, MultiCastSubscriber], None]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
@@ -24,6 +26,8 @@ class DebugMultiCastImpl(MultiCastMixin):
             on_next=self.on_next,
             on_error=self.on_error,
             on_completed=self.on_completed,
+            on_subscribe=self.on_subscribe,
+            subscriber=subscriber,
         )
 
         return subscription.copy(observable=observable)

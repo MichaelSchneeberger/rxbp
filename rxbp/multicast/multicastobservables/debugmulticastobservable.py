@@ -3,45 +3,50 @@ from typing import Callable, Any
 
 from rx.disposable import Disposable
 
-from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
-from rxbp.multicast.mixins.multicastobservermixin import MultiCastObserverMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.typing import MultiCastItem
 
 
 @dataclass
-class DebugMultiCastObservable(MultiCastObservableMixin):
-    source: MultiCastObservableMixin
+class DebugMultiCastObservable(MultiCastObservable):
+    source: MultiCastObservable
     name: str
     on_next: Callable[[Any], None]
     on_completed: Callable[[], None]
     on_error: Callable[[Exception], None]
+    on_subscribe: Callable[[MultiCastObserverInfo, MultiCastSubscriber], None]
+    subscriber: MultiCastSubscriber
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
-        @dataclass
-        class DebugMultiCastObserver(MultiCastObserverMixin):
-            source: MultiCastObserverMixin
-            on_next_debug: Callable[[Any], None]
-            on_completed_debug: Callable[[], None]
-            on_error_debug: Callable[[Exception], None]
+        self.on_subscribe(observer_info, self.subscriber)
 
-            def on_next(self, elem: MultiCastValue) -> None:
-                self.on_next_debug(elem)
+        @dataclass
+        class DebugMultiCastObserver(MultiCastObserver):
+            source: MultiCastObserver
+            on_next_func: Callable[[Any], None]
+            on_completed_func: Callable[[], None]
+            on_error_func: Callable[[Exception], None]
+
+            def on_next(self, elem: MultiCastItem) -> None:
+                self.on_next_func(elem)
                 self.source.on_next(elem)
 
             def on_error(self, exc: Exception) -> None:
-                self.on_error_debug(exc)
+                self.on_error_func(exc)
                 self.source.on_error(exc)
 
             def on_completed(self) -> None:
-                self.on_completed_debug()
+                self.on_completed_func()
                 self.source.on_completed()
 
         observer = DebugMultiCastObserver(
             source=observer_info.observer,
-            on_next_debug=self.on_next,
-            on_completed_debug=self.on_completed,
-            on_error_debug=self.on_error,
+            on_next_func=self.on_next,
+            on_completed_func=self.on_completed,
+            on_error_func=self.on_error,
         )
 
         return self.source.observe(observer_info.copy(observer))

@@ -1,9 +1,12 @@
-from typing import Generic
+from abc import ABC
 
 from rxbp.multicast.multicast import MultiCast
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
 
 
-class LiftedMultiCast(MultiCast[MultiCastValue], Generic[MultiCastValue]):
+class LiftedMultiCast(
+    MultiCast,
+    ABC,
+):
     def share(self):
-        return self._share()
+        return self._copy(SharedMultiCast(source=self))

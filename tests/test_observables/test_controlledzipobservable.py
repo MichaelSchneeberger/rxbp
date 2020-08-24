@@ -1,5 +1,6 @@
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.selectionmsg import SelectCompleted, SelectNext

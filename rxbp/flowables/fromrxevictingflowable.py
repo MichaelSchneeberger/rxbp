@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import rx
 
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.fromrxevictingobservable import FromRxEvictingObservable
 from rxbp.overflowstrategy import OverflowStrategy
 from rxbp.subscriber import Subscriber
@@ -11,7 +11,7 @@ from rxbp.subscription import Subscription
 
 
 @dataclass
-class FromRxEvictingFlowable(FlowableBaseMixin):
+class FromRxEvictingFlowable(FlowableMixin):
     batched_source: rx.typing.Observable
     overflow_strategy: OverflowStrategy
 

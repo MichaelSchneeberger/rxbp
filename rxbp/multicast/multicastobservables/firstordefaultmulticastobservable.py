@@ -3,24 +3,24 @@ from typing import Callable, Any
 
 from rx.disposable import Disposable
 
-from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
-from rxbp.multicast.mixins.multicastobservermixin import MultiCastObserverMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.typing import MultiCastItem
 
 
 @dataclass
-class FilterOrDefaultMultiCastObservable(MultiCastObservableMixin):
-    source: MultiCastObservableMixin
+class FilterOrDefaultMultiCastObservable(MultiCastObservable):
+    source: MultiCastObservable
     lazy_val: Callable[[], Any]
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         @dataclass
-        class FirstOrDefaultMultiCastObserver(MultiCastObserverMixin):
-            source: MultiCastObserverMixin
+        class FirstOrDefaultMultiCastObserver(MultiCastObserver):
+            source: MultiCastObserver
             lazy_val: Callable[[], Any]
 
-            def on_next(self, elem: MultiCastValue) -> None:
+            def on_next(self, elem: MultiCastItem) -> None:
                 observer.on_next(x)
                 observer.on_completed()
 

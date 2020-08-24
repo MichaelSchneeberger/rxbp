@@ -4,7 +4,7 @@ from typing import Callable, Any
 from rxbp.indexed.init.initindexedsubscription import init_indexed_subscription
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
 from rxbp.indexed.observables.indexedfilterobservable import IndexedFilterObservable
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.selectors.baseandselectors import BaseAndSelectors

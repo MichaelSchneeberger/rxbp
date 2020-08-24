@@ -5,7 +5,7 @@ from rx.disposable import CompositeDisposable
 import rxbp
 from rxbp.flowable import Flowable
 from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler

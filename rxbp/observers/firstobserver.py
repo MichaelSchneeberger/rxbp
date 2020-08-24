@@ -1,6 +1,8 @@
 from traceback import FrameSummary
 from typing import List
 
+from rx.internal import SequenceContainsNoElementsError
+
 from rxbp.ack.continueack import continue_ack
 from rxbp.ack.stopack import stop_ack
 from rxbp.observer import Observer
@@ -45,9 +47,8 @@ class FirstObserver(Observer):
     def on_completed(self):
         if self.is_first:
             try:
-                # self.raise_exception(func)
-                raise Exception(to_operator_exception(
-                    message=f'no elements received',
+                raise SequenceContainsNoElementsError(to_operator_exception(
+                    message='',
                     stack=self.stack,
                 ))
 

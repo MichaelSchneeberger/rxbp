@@ -1,8 +1,7 @@
-from typing import TypeVar, Union, Tuple
+from typing import TypeVar, Union, Tuple, Iterator, List
 
 from rxbp.flowable import Flowable
 
-DeferType = TypeVar('DeferType', bound=Union[Flowable, Tuple])
+MultiCastElemType = TypeVar('MultiCastElemType')
 
-
-MultiCastValue = TypeVar('MultiCastValue')
+MultiCastItem = Union[Iterator[MultiCastElemType], List[MultiCastElemType]]

@@ -1,45 +1,63 @@
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from dataclasses import dataclass
+from typing import List, Optional
+
+from rxbp.ack.continueack import continue_ack
+from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.mixins.flowablesubscribemixin import FlowableSubscribeMixin
+from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
+from rxbp.typing import ElementType
 
 
-def to_iterator(source: FlowableBaseMixin, scheduler: Scheduler = None):
-    notifications = []
+def to_iterator(source: FlowableSubscribeMixin, scheduler: Scheduler = None):
+    @dataclass
+    class ToIteratorObserver(Observer):
+        received: List[ElementType]
+        is_completed: bool
+        exception: Optional[Exception]
 
-    def send_notification(n):
-        notifications.append(n)
+        def on_next(self, elem: ElementType) -> AckMixin:
+            if not isinstance(elem, list):
+                elem = list(elem)
 
-    def on_next(v):
-        send_notification(('N', v))
+            self.received.append(elem)
+            return continue_ack
 
-    def on_error(exc):
-        send_notification(('E', exc))
+        def on_error(self, exc: Exception):
+            self.exception = exc
 
-    def on_completed():
-        send_notification(('C', None))
+        def on_completed(self):
+            self.is_completed = True
 
+    observer = ToIteratorObserver(
+        received=[],
+        is_completed=False,
+        exception=None,
+    )
     subscribe_scheduler = TrampolineScheduler()
     scheduler = scheduler or subscribe_scheduler
 
-    source.subscribe(on_next=on_next, on_error=on_error, on_completed=on_completed, scheduler=scheduler,
-                     subscribe_scheduler=subscribe_scheduler)
+    source.subscribe(
+        observer=observer,
+        scheduler=scheduler,
+        subscribe_scheduler=subscribe_scheduler,
+    )
 
     def gen():
         while True:
             while True:
-                if len(notifications):
+                if len(observer.received):
                     break
+
+                if observer.is_completed:
+                    return  # StopIteration
+
+                if observer.exception is not None:
+                    raise observer.exception
 
                 scheduler.sleep(0.1)
 
-            kind, value = notifications.pop(0)
-
-            if kind == "E":
-                raise value
-
-            if kind == "C":
-                return  # StopIteration
-
-            yield value
+            yield from observer.received.pop(0)
 
     return gen()

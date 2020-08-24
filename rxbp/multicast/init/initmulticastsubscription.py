@@ -1,9 +1,9 @@
 from rxbp.multicast.impl.multicastsubscriptionimpl import MultiCastSubscriptionImpl
-from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
 
 
 def init_multicast_subscription(
-        observable: MultiCastObservableMixin,
+        observable: MultiCastObservable,
 ):
     return MultiCastSubscriptionImpl(observable=observable)
 

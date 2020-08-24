@@ -4,16 +4,16 @@ from typing import Generic
 import rx
 from rx.subject import Subject
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.typing import MultiCastItem
 
 
 @dataclass
-class MultiCastSubject(MultiCastMixin[MultiCastValue], Generic[MultiCastValue]):
+class MultiCastSubject(MultiCastMixin[MultiCastItem], Generic[MultiCastItem]):
     subject = Subject()
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable[MultiCastItem]:
         return self.subject
 
     def on_next(self, val):

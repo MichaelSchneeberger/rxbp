@@ -1,13 +1,13 @@
 import dataclasses
 from abc import ABC, abstractmethod
 
-from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
 
 
 class MultiCastSubscription(ABC):
     @property
     @abstractmethod
-    def observable(self) -> MultiCastObservableMixin:
+    def observable(self) -> MultiCastObservable:
         pass
 
     def copy(self, **kwargs):

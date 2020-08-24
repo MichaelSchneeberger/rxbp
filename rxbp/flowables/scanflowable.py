@@ -1,16 +1,16 @@
 from typing import Any, Callable
 
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.scanobservable import ScanObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ScanFlowable(FlowableBaseMixin):
+class ScanFlowable(FlowableMixin):
     def __init__(
             self,
-            source: FlowableBaseMixin,
+            source: FlowableMixin,
             func: Callable[[Any, Any], Any],
             initial: Any,
     ):

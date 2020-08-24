@@ -1,9 +1,6 @@
-import math
 import threading
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from queue import Queue
-from typing import Optional, List
+from typing import Optional
 
 from rxbp.ack.acksubject import AckSubject
 from rxbp.ack.continueack import ContinueAck, continue_ack
@@ -13,71 +10,9 @@ from rxbp.ack.single import Single
 from rxbp.ack.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
-from rxbp.states.measuredstates.measuredstate import MeasuredState
-from rxbp.states.rawstates.rawstatenoargs import RawStateNoArgs
-from rxbp.states.rawstates.rawterminationstates import RawTerminationStates
+from rxbp.states.measuredstates.bufferedstates import BufferedStates
+from rxbp.states.rawstates.rawbufferedstates import RawBufferedStates
 from rxbp.typing import ElementType
-
-
-class BufferedStates:
-    class State(MeasuredState):
-        pass
-
-    @dataclass
-    class WaitingState(State):
-        last_ack: Optional[AckSubject]
-
-    class RunningState(State):
-        pass
-
-    # class RunningButCompleted(State):
-    #     pass
-
-    class Completed(State):
-        pass
-
-
-class RawBufferedStates:
-    class State(ABC):
-        @abstractmethod
-        def get_measured_state(self, has_elements: bool) -> MeasuredState:
-            ...
-
-    @dataclass
-    class InitialState(State):
-        last_ack: AckMixin
-        meas_state: Optional[BufferedStates.State]
-
-        def get_measured_state(self, has_elements: bool) -> MeasuredState:
-            if self.meas_state is None:
-                if has_elements:
-                    return BufferedStates.RunningState()
-
-                else:
-                    return BufferedStates.WaitingState(self.last_ack)
-
-            return self.meas_state
-
-    @dataclass
-    class OnCompleted(State):
-        prev_state: Optional['RawBufferedStates.State']
-        meas_state: Optional[BufferedStates.State]
-
-        def get_measured_state(self, has_elements: bool) -> MeasuredState:
-            if self.meas_state is None:
-                prev_meas_state = self.prev_state.get_measured_state(has_elements=has_elements)
-
-                if isinstance(prev_meas_state, BufferedStates.RunningState):
-                    self.meas_state = prev_meas_state
-
-                else:
-                    self.meas_state = BufferedStates.Completed()
-
-            return self.meas_state
-
-    class OnErrorOrDownStreamStopped(State):
-        def get_measured_state(self, has_elements: bool) -> MeasuredState:
-            return BufferedStates.Completed()
 
 
 @dataclass
@@ -109,16 +44,20 @@ class BufferedObserver(Observer):
                             outer_self.queue.pop(0)
                             len_queue = len(outer_self.queue)
                             return_ack = outer_self.back_pressure
+                            curr_state = outer_self.state
 
                         if len_queue == 0:
-                            if isinstance(return_ack, AckSubject):
+                            is_completed = outer_self._complete(
+                                curr_state=curr_state.get_measured_state(False),
+                                prev_state=curr_state.get_measured_state(True),
+                            )
+
+                            if not is_completed and isinstance(return_ack, AckSubject):
                                 return_ack.on_next(continue_ack)
 
-                            return
-
-                        next_index = outer_self.em.next_frame_index(0)
-
-                        outer_self._start_loop(last_ack=last_ack, next_index=next_index)
+                        else:
+                            next_index = outer_self.em.next_frame_index(0)
+                            outer_self._start_loop(last_ack=last_ack, next_index=next_index)
 
                     else:
                         outer_self.state = RawBufferedStates.OnErrorOrDownStreamStopped()
@@ -126,10 +65,6 @@ class BufferedObserver(Observer):
             _observe_on(ack, self.scheduler).subscribe(ResultSingle())
 
         while True:
-
-            # has elements in the queue
-            # if 0 < len(self.queue):
-
             next = self.queue[0]
 
             if next_index == 0:
@@ -140,13 +75,23 @@ class BufferedObserver(Observer):
                     with self.lock:
                         self.queue.pop(0)
                         len_queue = len(self.queue)
-                        return_ack = self.back_pressure
+                        upstream_ack = self.back_pressure
+                        curr_state = self.state
 
                     if len_queue == 0:
-                        if isinstance(return_ack, AckSubject):
-                            return_ack.on_next(continue_ack)
+                        is_completed = self._complete(
+                            curr_state=curr_state.get_measured_state(False),
+                            prev_state=curr_state.get_measured_state(True),
+                        )
 
-                        return
+                        if is_completed:
+                            return
+
+                        elif isinstance(upstream_ack, AckSubject):
+                            upstream_ack.on_next(continue_ack)
+
+                        else:
+                            return
 
                     next_index = self.em.next_frame_index(next_index)
 
@@ -163,12 +108,7 @@ class BufferedObserver(Observer):
                 schedule_ack(last_ack, next=next)
                 return
 
-            # # no elements in queue
-            # else:
-            #     pass
-
     def on_next(self, elem: ElementType):
-
         if self.back_pressure is None:
             if len(self.queue) < self.buffer_size:
                 return_ack = continue_ack
@@ -183,17 +123,6 @@ class BufferedObserver(Observer):
         with self.lock:
             len_queue = len(self.queue)
             self.queue.append(elem)
-
-        # if meas_back_pressure is None:
-        #     if len_queue < self.buffer_size:
-        #         return_ack = continue_ack
-        #
-        #     else:
-        #         self.back_pressure = AckSubject()
-        #         return_ack = self.back_pressure
-        #
-        # else:
-        #     return_ack = self.back_pressure
 
         prev_meas_state = self.state.get_measured_state(bool(len_queue))
 
@@ -222,10 +151,23 @@ class BufferedObserver(Observer):
         if not isinstance(prev_meas_state, BufferedStates.Completed):
             self.underlying.on_error(exc)
 
+    def _complete(
+            self,
+            prev_state: BufferedStates.State,
+            curr_state: BufferedStates.State,
+    ):
+
+        if not isinstance(prev_state, BufferedStates.Completed) and \
+                isinstance(curr_state, BufferedStates.Completed):
+            self.underlying.on_completed()
+            return True
+
+        else:
+            return False
+
     def on_completed(self):
         next_raw_state = RawBufferedStates.OnCompleted(
             prev_state=None,
-            meas_state=None,
         )
 
         with self.lock:
@@ -233,9 +175,7 @@ class BufferedObserver(Observer):
             self.state = next_raw_state
             len_queue = len(self.queue)
 
-        prev_meas_state = next_raw_state.prev_state.get_measured_state(bool(len_queue))
-        curr_meas_state = next_raw_state.get_measured_state(bool(len_queue))
-
-        if not isinstance(prev_meas_state, BufferedStates.Completed) and \
-                isinstance(curr_meas_state, BufferedStates.Completed):
-            self.underlying.on_completed()
+        self._complete(
+            curr_state=next_raw_state.get_measured_state(bool(len_queue)),
+            prev_state=next_raw_state.prev_state.get_measured_state(bool(len_queue)),
+        )

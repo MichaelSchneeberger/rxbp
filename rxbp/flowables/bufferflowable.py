@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.bufferobservable import BufferObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
 @dataclass
-class BufferFlowable(FlowableBaseMixin):
-    source: FlowableBaseMixin
+class BufferFlowable(FlowableMixin):
+    source: FlowableMixin
     buffer_size: int
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:

@@ -1,7 +1,7 @@
 import unittest
 
 from rxbp.flowable import Flowable
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast
 from rxbp.multicast.testing.testrxobserver import TestRxObserver

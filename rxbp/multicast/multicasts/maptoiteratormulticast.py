@@ -3,21 +3,21 @@ from typing import Callable, Iterator
 import rx
 from rx import Observable
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.typing import MultiCastItem
 
 
 class MapToIteratorMultiCast(MultiCastMixin):
     def __init__(
             self,
             source: MultiCastMixin,
-            func: Callable[[MultiCastValue], Iterator[MultiCastValue]],
+            func: Callable[[MultiCastItem], Iterator[MultiCastItem]],
     ):
         self.source = source
         self.func = func
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable:
         source = self.source.get_source(info=info)
 
         def subscribe(observer, scheduler=None):
@@ -28,4 +28,4 @@ class MapToIteratorMultiCast(MultiCastMixin):
 
             return source.subscribe_(on_next, observer.on_error, observer.on_completed, scheduler)
 
-        return Observable(subscribe)
+        return Observable(subscriber)

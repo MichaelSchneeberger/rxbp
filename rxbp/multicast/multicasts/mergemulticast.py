@@ -1,24 +1,27 @@
-from typing import Iterator
+from dataclasses import dataclass
+from typing import Iterator, Iterable
 
 import rx
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastobservables.mergemulticastobservable import MergeMultiCastObservable
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.rxextensions.merge_ import merge
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
 
 
+@dataclass
 class MergeMultiCast(MultiCastMixin):
-    def __init__(
-            self,
-            sources: Iterator[MultiCastMixin],
-    ):
-        self.sources = sources
+    sources: Iterable[MultiCastMixin]
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+        subscriptions = [source.unsafe_subscribe(subscriber=subscriber) for source in self.sources]
 
-        sources = [e.get_source(info=info) for e in self.sources]
-
-        return merge(sources)
+        return subscriptions[0].copy(
+            observable=MergeMultiCastObservable(
+                sources=[s.observable for s in subscriptions],
+                scheduler=subscriber.multicast_scheduler,
+            ),
+        )
 
         # lock = threading.RLock()
         #

@@ -1,24 +1,26 @@
+from dataclasses import dataclass
 from typing import Callable
 
 import rx
 from rx import operators as rxop
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastobservables.filtermulticastobservable import FilterMultiCastObservable
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.typing import MultiCastItem
 
 
+@dataclass
 class FilterMultiCast(MultiCastMixin):
-    def __init__(
-            self,
-            source: MultiCastMixin,
-            predicate: Callable[[MultiCastValue], bool],
-    ):
-        self.source = source
-        self.predicate = predicate
+    source: MultiCastMixin
+    predicate: Callable[[MultiCastItem], bool]
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-        source = self.source.get_source(info=info).pipe(
-            rxop.filter(self.predicate)
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable:
+        subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+        return subscription.copy(
+            observable=FilterMultiCastObservable(
+                source=subscription.observable,
+                predicate=self.predicate,
+            )
         )
-        return source

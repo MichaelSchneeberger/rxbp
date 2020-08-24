@@ -1,6 +1,6 @@
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.init.initsubscription import init_subscription
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
@@ -9,8 +9,8 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class SubscribeOnFlowable(FlowableBaseMixin):
-    def __init__(self, source: FlowableBaseMixin, scheduler: Scheduler = None):
+class SubscribeOnFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin, scheduler: Scheduler = None):
         super().__init__()
 
         self._source = source

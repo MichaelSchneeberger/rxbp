@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from typing import Callable, Any
+
+from rx.disposable import CompositeDisposable
 
 from rxbp.multicast.observer.flatconcatnobackpressureobserver import FlatConcatNoBackpressureObserver
 from rxbp.observable import Observable
@@ -6,32 +9,26 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 
 
+@dataclass
 class FlatConcatNoBackpressureObservable(Observable):
-    def __init__(
-            self,
-            source: Observable,
-            selector: Callable[[Any], Observable],
-            scheduler: Scheduler,
-            subscribe_scheduler: Scheduler,
-    ):
-        super().__init__()
-
-        self.source = source
-        self.selector = selector
-        self.scheduler = scheduler
-        self.subscribe_scheduler = subscribe_scheduler
+    source: Observable
+    selector: Callable[[Any], Observable]
+    scheduler: Scheduler
+    subscribe_scheduler: Scheduler
 
     def observe(self, observer_info: ObserverInfo):
-        observer_info = observer_info.observer
-        scheduler = self.scheduler
-        subscribe_scheduler = self.subscribe_scheduler
+        composite_disposable = CompositeDisposable()
 
         concat_observer = FlatConcatNoBackpressureObserver(
-            observer=observer_info,
+            observer=observer_info.observer,
             selector=self.selector,
-            scheduler=scheduler,
-            subscribe_scheduler=subscribe_scheduler,
-            is_volatile=observer_info.is_volatile,
+            scheduler=self.scheduler,
+            subscribe_scheduler=self.subscribe_scheduler,
+            observer_info=observer_info,
+            composite_disposable=composite_disposable,
         )
+
         disposable = self.source.observe(observer_info.copy(observer=concat_observer))
-        return disposable
+        composite_disposable.add(disposable)
+
+        return composite_disposable

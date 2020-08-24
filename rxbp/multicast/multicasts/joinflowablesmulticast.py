@@ -1,21 +1,21 @@
 from typing import List
 
-import rx
-from rx import Observable
+from rx.disposable import Disposable
 
 from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
+from rxbp.init.initflowable import init_flowable
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
 from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
     FlatConcatNoBackpressureFlowable
+from rxbp.multicast.init.initmulticastsubscription import init_multicast_subscription
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.multicastflowable import MultiCastFlowable
-from rxbp.multicast.typing import MultiCastValue
-from rxbp.observerinfo import ObserverInfo
+from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
+from rxbp.observers.bufferedobserver import BufferedObserver
 from rxbp.observers.connectableobserver import ConnectableObserver
-from rxbp.source import from_rx
-from rxbp.subscriber import Subscriber
 
 
 class JoinFlowablesMultiCast(MultiCastMixin):
@@ -25,7 +25,10 @@ class JoinFlowablesMultiCast(MultiCastMixin):
     ):
         self._sources = sources
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable[MultiCastValue]:
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+        multicast_scheduler = subscriber.multicast_scheduler
+        source_scheduler = subscriber.source_scheduler
+
         def to_flowable(value):
             if isinstance(value, Flowable):
                 flowable = value
@@ -38,46 +41,59 @@ class JoinFlowablesMultiCast(MultiCastMixin):
 
             return flowable
 
-        def subscribe(observer, scheduler=None):
+        outer_self = self
 
-            def gen_conn_flowables():
-                for source in self._sources:
-                    def for_func(source=source):
+        class JoinFlowableMultiCastObservable(MultiCastObservable):
+            def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
+                observer = observer_info.observer
+
+                def gen_conn_flowables():
+                    for source in outer_self._sources:
                         conn_observer = ConnectableObserver(
                             underlying=None,
-                            scheduler=info.multicast_scheduler,
-                            subscribe_scheduler=info.multicast_scheduler,
+                            scheduler=multicast_scheduler,
+                            subscribe_scheduler=multicast_scheduler,
                         )
 
-                        # subscribe to source rx.Observables immediately
-                        source_flowable = from_rx(source.get_source(info))
-                        subscriber = Subscriber(
-                            scheduler=info.multicast_scheduler,
-                            subscribe_scheduler=info.multicast_scheduler,
+                        observer = BufferedObserver(
+                            underlying=conn_observer,
+                            scheduler=multicast_scheduler,
+                            subscribe_scheduler=multicast_scheduler,
+                            buffer_size=1000,
                         )
-                        subscription = source_flowable.unsafe_subscribe(subscriber=subscriber)
-                        subscription.observable.observe(init_observer_info(conn_observer))
+
+                        subscription = source.unsafe_subscribe(MultiCastSubscriber(
+                            multicast_scheduler=multicast_scheduler,
+                            source_scheduler=multicast_scheduler,
+                        ))
+                        subscription.observable.observe(MultiCastObserverInfo(observer=observer))
+
+                        # # subscribe to source rx.Observables immediately
+                        # source_flowable = FromMultiCastToFlowable(source, buffer_size=1000)
+                        # subscription = source_flowable.unsafe_subscribe(subscriber=init_subscriber(
+                        #     scheduler=multicast_scheduler,
+                        #     subscribe_scheduler=multicast_scheduler,
+                        # ))
+                        # subscription.observable.observe(init_observer_info(conn_observer))
 
                         conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 
                         flattened_flowable = FlatConcatNoBackpressureFlowable(
                             source=conn_flowable,
                             selector=to_flowable,
-                            subscribe_scheduler=info.source_scheduler,
+                            subscribe_scheduler=source_scheduler,
                         )
 
-                        ref_count_flowable = RefCountFlowable(flattened_flowable)
+                        yield init_flowable(RefCountFlowable(flattened_flowable))
 
-                        return MultiCastFlowable(ref_count_flowable)
+                def action(_, __):
+                    observer.on_next([flowables])
+                    observer.on_completed()
 
-                    yield for_func()
+                flowables = list(gen_conn_flowables())
 
-            def action(_, __):
-                observer.on_next(flowables)
-                observer.on_completed()
+                multicast_scheduler.schedule(action)
 
-            flowables = list(gen_conn_flowables())
-
-            info.multicast_scheduler.schedule(action)
-
-        return Observable(subscribe=subscribe)
+        return init_multicast_subscription(
+            observable=JoinFlowableMultiCastObservable(),
+        )

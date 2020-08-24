@@ -24,7 +24,7 @@ class PairwiseObserver(Observer):
             def pairwise_gen():
                 yield from self.pairwise_gen_template(elem)
 
-            ack = self.observer.on_next(pairwise_gen())
+            ack = self.sink.on_next(pairwise_gen())
             return ack
         self.on_next = types.MethodType(on_next_after_first, self)      # type: ignore
 

@@ -1,24 +1,24 @@
 import threading
 from typing import Callable, Any, Dict, Union, List
 
-import rx
-from rx import operators as rxop
 from rx.core.typing import Disposable
 from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
 
 import rxbp
 from rxbp.flowable import Flowable
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.init.initflowable import init_flowable
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.flowables.bufferflowable import BufferFlowable
 from rxbp.flowables.mapflowable import MapFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.mixins.flowablestatemixin import FlowableStateMixin
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.multicastflowable import MultiCastFlowable
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
+from rxbp.multicast.typing import MultiCastItem
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -37,21 +37,16 @@ class LoopFlowableMultiCast(MultiCastMixin):
         self.func = func
         self.initial = initial
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         initial = self.initial
 
-        class StartWithInitialValueFlowable(FlowableBaseMixin):
+        class StartWithInitialValueFlowable(FlowableMixin):
             def __init__(self):
                 # mutable state, that will be set as soon as the first Flowable is subscribed
                 self.flowable = None
 
             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-                subscription = self.flowable.unsafe_subscribe(subscriber)
-
-                return init_subscription(
-                    info=subscription.info,
-                    observable=subscription.observable,
-                )
+                return self.flowable.unsafe_subscribe(subscriber)
 
         start = StartWithInitialValueFlowable()
         shared = RefCountFlowable(source=start)
@@ -77,7 +72,9 @@ class LoopFlowableMultiCast(MultiCastMixin):
         def gen_deferred():
             for key in initial_dict.keys():
                 def for_func(key=key):
-                    return key, MultiCastFlowable(MapFlowable(source=shared, func=lambda d: d[key]))
+                    return key, init_flowable(
+                        underlying=MapFlowable(source=shared, func=lambda d: d[key]),
+                    )
 
                 yield for_func()
 
@@ -110,7 +107,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
         init = MapMultiCast(self.source, func=map_to_flowable_dict)
         output = self.func(init)
 
-        def map_func(base: MultiCastValue):
+        def map_func(base: MultiCastItem):
             match_error_message = f'loop_flowables function returned "{base}" which does not match initial "{initial}"'
 
             if isinstance(base, Flowable) and len(initial_dict) == 1:
@@ -162,8 +159,8 @@ class LoopFlowableMultiCast(MultiCastMixin):
             lock = threading.RLock()
             is_first = [True]
 
-            class DeferFlowable(FlowableBaseMixin):
-                def __init__(self, source: FlowableBaseMixin, key: Any):
+            class DeferFlowable(FlowableMixin):
+                def __init__(self, source: FlowableMixin, key: Any):
                     self.source = source
                     self.key = key
 
@@ -182,7 +179,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
                             """ for each value returned by the loop_flowables function """
                             for key in initial_dict.keys():
                                 def for_func(key=key):
-                                    return Flowable(MapFlowable(shared_flowable_state[key], func=lambda v: (key, v)))
+                                    return init_flowable(MapFlowable(shared_flowable_state[key], func=lambda v: (key, v)))
                                 yield for_func()
                         indexed_deferred_values = gen_index_for_each_deferred_state()
 
@@ -192,7 +189,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
 
                         buffered = BufferFlowable(source=zipped, buffer_size=1)
 
-                        class BreakingTheLoopFlowable(FlowableBaseMixin):
+                        class BreakingTheLoopFlowable(FlowableMixin):
                             def __init__(self):
                                 self.disposable = SingleAssignmentDisposable()
 
@@ -205,24 +202,21 @@ class LoopFlowableMultiCast(MultiCastMixin):
                                         stop calling another observe method here
                                         """
 
-                                        observer_info = observer_info.observer
-
                                         subscription = buffered.unsafe_subscribe(subscriber)
 
-                                        observer_info = init_observer_info(observer=observer_info, is_volatile=True)
+                                        observer_info = observer_info.copy(is_volatile=True)
                                         disposable = subscription.observable.observe(observer_info)
 
                                         self.disposable.set_disposable(disposable)
 
                                         def action(_, __):
-                                            observer_info.on_next([initial])
+                                            observer_info.observer.on_next([initial])
 
                                         d2 = subscriber.subscribe_scheduler.schedule(action)
 
                                         return CompositeDisposable(self.disposable, d2)
 
                                 return init_subscription(
-                                    info=BaseAndSelectors(None),
                                     observable=BreakingTheLoopObservable(),
                                 )
 
@@ -239,15 +233,16 @@ class LoopFlowableMultiCast(MultiCastMixin):
 
                     defer_observable = DeferObservable()
 
-                    return init_subscription(info=BaseAndSelectors(None), observable=defer_observable)
+                    return init_subscription(observable=defer_observable)
 
             # create a flowable for all deferred values
             new_states = {
-                k: MultiCastFlowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()
+                k: init_flowable(DeferFlowable(v, k)) for k, v in shared_flowable_state.items()
             }
 
             return from_state({**new_states, **not_deferred_flowables})
 
-        return output.get_source(info=info).pipe(
-            rxop.map(map_func),
-        )
+        return MapMultiCast(
+            source=output,
+            func=map_func,
+        ).unsafe_subscribe(subscriber=subscriber)

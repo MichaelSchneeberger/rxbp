@@ -1,11 +1,15 @@
 import rx
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.multicastInfo import MultiCastInfo
-from rxbp.multicast.rxextensions.rxdebugop import rx_debug_op
+from rxbp.multicast.multicastobservables.debugmulticastobservable import DebugMultiCastObservable
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 
 
 # todo: assert subscribe_scheduler is active
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
+
+
 class DebugMultiCast(MultiCastMixin):
     def __init__(
             self,
@@ -15,9 +19,16 @@ class DebugMultiCast(MultiCastMixin):
         self.source = source
         self.name = name
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
-        print(f'{self.name}.get_source({info})')
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+        print(f'{self.name}.get_source({subscriber})')
 
-        return self.source.get_source(info=info).pipe(
-            rx_debug_op(self.name),
+        subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+        return subscription.copy(
+            observable=DebugMultiCastObservable(
+                subscription.observable,
+                name=self.name,
+                on_next=print,
+                on_completed=lambda: print('completed'),
+                on_error=print,
+            )
         )

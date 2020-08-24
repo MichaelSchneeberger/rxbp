@@ -3,26 +3,30 @@ from typing import Callable
 
 from rx.disposable import Disposable
 
-from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
-from rxbp.multicast.mixins.multicastobservermixin import MultiCastObserverMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.typing import MultiCastItem
 
 
 @dataclass
-class MapMultiCastObservable(MultiCastObservableMixin):
-    source: MultiCastObservableMixin
-    func: Callable[[MultiCastValue], MultiCastValue]
+class MapMultiCastObservable(MultiCastObservable):
+    source: MultiCastObservable
+    func: Callable[[MultiCastItem], MultiCastItem]
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         @dataclass
-        class FilterMultiCastObserver(MultiCastObserverMixin):
-            source: MultiCastObserverMixin
-            func: Callable[[MultiCastValue], MultiCastValue]
+        class MapMultiCastObserver(MultiCastObserver):
+            source: MultiCastObserver
+            func: Callable[[MultiCastItem], MultiCastItem]
 
-            def on_next(self, elem: MultiCastValue) -> None:
+            def on_next(self, elem: MultiCastItem) -> None:
                 try:
-                    next = self.func(elem)
+                    def map_gen():
+                        for v in elem:
+                            yield self.func(v)
+
+                    next = map_gen()
                 except Exception as exc:
                     self.source.on_error(exc)
                 else:
@@ -34,7 +38,7 @@ class MapMultiCastObservable(MultiCastObservableMixin):
             def on_completed(self) -> None:
                 self.source.on_completed()
 
-        observer = FilterMultiCastObserver(
+        observer = MapMultiCastObserver(
             source=observer_info.observer,
             func=self.func,
         )

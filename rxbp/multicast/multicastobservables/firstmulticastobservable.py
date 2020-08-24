@@ -1,27 +1,25 @@
 import types
 from dataclasses import dataclass
-from typing import Callable
 
 from rx.disposable import Disposable
-from rx.internal import SequenceContainsNoElementsError
 
-from rxbp.multicast.mixins.multicastobservablemixin import MultiCastObservableMixin
-from rxbp.multicast.mixins.multicastobservermixin import MultiCastObserverMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.typing import MultiCastItem
 
 
 @dataclass
-class FirstMultiCastObservable(MultiCastObservableMixin):
-    source: MultiCastObservableMixin
+class FirstMultiCastObservable(MultiCastObservable):
+    source: MultiCastObservable
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         @dataclass
-        class FirstMultiCastObserver(MultiCastObserverMixin):
-            source: MultiCastObserverMixin
+        class FirstMultiCastObserver(MultiCastObserver):
+            source: MultiCastObserver
             is_first: bool
 
-            def on_next(self, elem: MultiCastValue) -> None:
+            def on_next(self, elem: MultiCastItem) -> None:
                 self.is_first = False
                 self.source.on_next(elem)
                 self.source.on_completed()

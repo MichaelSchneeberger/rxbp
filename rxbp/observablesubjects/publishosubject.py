@@ -128,7 +128,7 @@ class PublishOSubject(OSubjectBase):
         index = 0
         while index < len(subscribers):
             subscriber = subscribers[index]
-            observer = subscriber.observer
+            observer = subscriber.sink
             index += 1
 
             # try:
@@ -200,9 +200,9 @@ class PublishOSubject(OSubjectBase):
             if is_updated:
                 for ref in subscribers:
                     if exc is not None:
-                        ref.observer.on_error(exc)
+                        ref.sink.on_error(exc)
                     else:
-                        ref.observer.on_completed()
+                        ref.sink.on_completed()
             else:
                 self.send_oncomplete_or_error(exc)
 

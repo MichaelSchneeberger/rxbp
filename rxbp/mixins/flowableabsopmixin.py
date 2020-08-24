@@ -4,13 +4,13 @@ from typing import Callable, Any, Iterator, List
 
 from rxbp.ack.mixins.ackmixin import AckMixin
 from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.ishotflowablemixin import IsHotFlowableMixin
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.base import Base
 from rxbp.typing import ValueType
 
 
-class FlowableOperatorsMixin(FlowableMixin, ABC):
+class FlowableAbsOpMixin(ABC):
     @abstractmethod
     def buffer(self, buffer_size: int = None) -> FlowableMixin:
         """
@@ -130,7 +130,11 @@ class FlowableOperatorsMixin(FlowableMixin, ABC):
     #     ...
 
     @abstractmethod
-    def flat_map(self, func: Callable[[Any], FlowableMixin]) -> FlowableMixin:
+    def flat_map(
+            self,
+            func: Callable[[Any], IsHotFlowableMixin],
+            stack: List[FrameSummary],
+    ) -> FlowableMixin:
         """
         Apply a function to each item emitted by the source and flattens the result.
 
@@ -142,7 +146,7 @@ class FlowableOperatorsMixin(FlowableMixin, ABC):
         ...
 
     @abstractmethod
-    def map(self, func: Callable[[Any], Any], stack: List[FrameSummary]) -> FlowableMixin:
+    def map(self, func: Callable[[Any], Any]) -> FlowableMixin: #, stack: List[FrameSummary]) -> FlowableMixin:
         """ Map each element emitted by the source by applying the given function.
 
         :param func: function that defines the mapping applied to each element of the \

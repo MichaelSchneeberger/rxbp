@@ -1,6 +1,7 @@
-from typing import Callable, Any, List
+from typing import Callable, Any, List, Optional
 
 from rx.core.typing import Disposable
+from rx.disposable import CompositeDisposable
 
 from rxbp.ack.continueack import continue_ack
 from rxbp.observable import Observable
@@ -18,23 +19,28 @@ class FlatMergeNoBackpressureObserver(Observer):
             selector: Callable[[Any], Observable],
             scheduler: Scheduler,
             subscribe_scheduler: Scheduler,
-            is_volatile: bool,
+            observer_info: ObserverInfo,
+            composite_disposable: CompositeDisposable,
     ):
         self.observer = observer
         self.selector = selector
         self.scheduler = scheduler
         self.subscribe_scheduler = subscribe_scheduler
-        self.is_volatile = is_volatile
+        self.observer_info = observer_info
+        self.composite_disposable = composite_disposable
 
-        self.place_holders = (self.PlaceHolder(), self.PlaceHolder())
+        self.place_holders = (self.PlaceHolder(observer=None), self.PlaceHolder(observer=None))
 
         disposable = MergeObservable(
             left=self.place_holders[0],
             right=self.place_holders[1],
-        ).observe(ObserverInfo(observer=observer))
+        ).observe(self.observer_info.copy(observer=observer))
+        composite_disposable.add(disposable)
 
+    # @dataclass
     class PlaceHolder(Observable):
-        def __init__(self):
+        # observer: Optional[Observer]
+        def __init__(self, observer: Optional[Observer]):
             self.observer = None
 
         def observe(self, observer_info: ObserverInfo) -> Disposable:
@@ -44,22 +50,25 @@ class FlatMergeNoBackpressureObserver(Observer):
         obs_list: List[Observable] = [self.selector(e) for e in elem]
 
         for observable in obs_list:
-            place_holder = self.PlaceHolder()
+            place_holder = self.PlaceHolder(
+                observer=None,
+            )
 
             merge_obs = MergeObservable(
                 left=observable,
                 right=place_holder,
             )
 
-            parent = self.place_holders[0]
+            parent, other = self.place_holders
 
-            def observe_on_subscribe_scheduler(_, __):
-                return merge_obs.observe(ObserverInfo(observer=parent.observer))
+            def observe_on_subscribe_scheduler(_, __, merge_obs=merge_obs, parent=parent):
+                return merge_obs.observe(self.observer_info.copy(observer=parent.sink))
 
             # make sure that Trampoline Scheduler is active
             disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
+            self.composite_disposable.add(disposable)
 
-            self.place_holders = (self.place_holders[1], place_holder)
+            self.place_holders = (other, place_holder)
 
         return continue_ack
 

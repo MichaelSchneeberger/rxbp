@@ -1,4 +1,4 @@
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.tolistobservable import ToListObservable
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -6,8 +6,8 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ToListFlowable(FlowableBaseMixin):
-    def __init__(self, source: FlowableBaseMixin):
+class ToListFlowable(FlowableMixin):
+    def __init__(self, source: FlowableMixin):
         super().__init__()
 
         self._source = source
@@ -16,7 +16,4 @@ class ToListFlowable(FlowableBaseMixin):
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
         observable = ToListObservable(source=subscription.observable)
 
-        # to_list emits exactly one element
-        base = NumericalBase(1)
-
-        return init_subscription(BaseAndSelectors(base=base), observable=observable)
+        return subscription.copy(observable=observable)

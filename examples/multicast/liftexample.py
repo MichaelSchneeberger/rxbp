@@ -27,8 +27,8 @@ def merge_and_reduce(multicast: MultiCast):
     )
 
 
-result = rxbp.multicast.return_flowable(rxbp.range(10)).pipe(
-    rxbp.multicast.op.lift(lambda m, _: m),
+result = rxbp.multicast.return_value(rxbp.range(10)).pipe(
+    rxbp.multicast.op.lift(lambda m: m),
     rxbp.multicast.op.map(connect_and_zip),
     rxbp.multicast.op.map(merge_and_reduce),
     rxbp.multicast.op.flat_map(lambda m: m),

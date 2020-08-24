@@ -1,12 +1,16 @@
 from dataclasses import dataclass
 from typing import Callable, Any
 
+from dataclass_abc import dataclass_abc
+
+from rxbp.mixins.oncompletedmixin import OnCompletedMixin
+from rxbp.mixins.onerrormixin import OnErrorMixin
 from rxbp.observer import Observer
 from rxbp.typing import ElementType, ValueType
 
 
-@dataclass
-class MapObserver(Observer):
+@dataclass_abc
+class MapObserver(Observer): #OnErrorMixin, OnCompletedMixin, Observer):
     source: Observer
     func: Callable[[ValueType], ValueType]
 

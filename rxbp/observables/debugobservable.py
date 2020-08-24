@@ -7,6 +7,7 @@ from rxbp.observers.debugobserver import DebugObserver
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.subscriber import Subscriber
 
 
 @dataclass
@@ -18,13 +19,13 @@ class DebugObservable(Observable):
     on_error: Callable[[Exception], None]
     on_sync_ack: Callable[[AckMixin], None]
     on_async_ack: Callable[[AckMixin], None]
-    on_subscribe: Callable[[ObserverInfo], None]
+    on_subscribe: Callable[[ObserverInfo, Subscriber], None]
     on_raw_ack: Callable[[AckMixin], None]
-    subscribe_scheduler: Scheduler
+    subscriber: Subscriber
     stack: List[FrameSummary]
 
     def observe(self, observer_info: ObserverInfo):
-        self.on_subscribe(observer_info)
+        self.on_subscribe(observer_info, self.subscriber)
 
         observer = DebugObserver(
             source=observer_info.observer,
@@ -42,7 +43,7 @@ class DebugObservable(Observable):
 
         def action(_, __):
             observer.has_scheduled_next = True
-        self.subscribe_scheduler.schedule(action)
+        self.subscriber.subscribe_scheduler.schedule(action)
 
         return self.source.observe(observer_info.copy(
             observer=observer,

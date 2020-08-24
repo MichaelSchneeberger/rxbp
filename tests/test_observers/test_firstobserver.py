@@ -9,6 +9,7 @@ from rxbp.observers.firstobserver import FirstObserver
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 class TestFirstObserver(unittest.TestCase):
@@ -21,14 +22,14 @@ class TestFirstObserver(unittest.TestCase):
         sink = TestObserver()
         FirstObserver(
             observer=sink,
-            raise_exception=lambda f: f(),
+            stack=get_stack_lines(),
         )
 
     def test_on_complete(self):
         sink = TestObserver()
         observer = FirstObserver(
             observer=sink,
-            raise_exception=lambda f: f(),
+            stack=get_stack_lines(),
         )
         self.source.observe(init_observer_info(observer))
 
@@ -41,7 +42,7 @@ class TestFirstObserver(unittest.TestCase):
         sink = TestObserver()
         observer = FirstObserver(
             observer=sink,
-            raise_exception=lambda f: f(),
+            stack=get_stack_lines(),
         )
         self.source.observe(init_observer_info(observer))
 
@@ -53,7 +54,7 @@ class TestFirstObserver(unittest.TestCase):
         sink = TestObserver()
         observer = FirstObserver(
             observer=sink,
-            raise_exception=lambda f: f(),
+            stack=get_stack_lines(),
         )
         self.source.observe(init_observer_info(observer))
 
@@ -72,7 +73,7 @@ class TestFirstObserver(unittest.TestCase):
         sink = TestObserver()
         observer = FirstObserver(
             observer=sink,
-            raise_exception=lambda f: f(),
+            stack=get_stack_lines(),
         )
         self.source.observe(init_observer_info(observer))
 

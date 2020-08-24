@@ -2,12 +2,15 @@ from typing import Callable, Any
 
 import rx
 
-from rxbp.multicast.flowableop import FlowableOp
-from rxbp.multicast.liftedmulticast import LiftedMultiCast
+from rxbp.multicast.init.initmulticast import init_multicast
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicast import MultiCast
+from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastopmixin import MultiCastOpMixin
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.notliftedmulticast import NotLiftedMultiCast
+from rxbp.multicast.typing import MultiCastItem
 from rxbp.typing import ValueType
 
 
@@ -39,13 +42,27 @@ def join_flowables(
     return MultiCastOperator(op_func)
 
 
-def debug(name: str = None):
+def debug(
+        name: str,
+        on_next: Callable[[Any], None] = None,
+        on_completed: Callable[[], None] = None,
+        on_error: Callable[[Exception], None] = None,
+        on_subscribe: Callable[[MultiCastObserverInfo, MultiCastSubscriber], None] = None,
+        verbose: bool = None,
+):
     """
     Print debug messages to the console when providing the `name` argument
     """
 
     def op_func(source: MultiCast):
-        return source.debug(name=name)
+        return source.debug(
+            name=name,
+            on_next=on_next,
+            on_completed=on_completed,
+            on_error=on_error,
+            on_subscribe=on_subscribe,
+            verbose=verbose,
+        )
 
     return MultiCastOperator(op_func)
 
@@ -67,7 +84,7 @@ def default_if_empty(
 
 
 def loop_flowables(
-        func: Callable[[MultiCastValue], MultiCastValue],
+        func: Callable[[MultiCastItem], MultiCastItem],
         initial: ValueType,
 ):
     """
@@ -82,13 +99,16 @@ def loop_flowables(
     """
 
     def op_func(source: MultiCast):
-        return source.loop_flowables(func=func, initial=initial)
+        def lifted_func(multicast: MultiCastMixin):
+            return func(init_multicast(multicast))
+
+        return source.loop_flowables(func=lifted_func, initial=initial)
 
     return MultiCastOperator(func=op_func)
 
 
 def filter(
-        predicate: Callable[[MultiCastValue], bool],
+        predicate: Callable[[MultiCastItem], bool],
 ):
     """
     Emit only those MultiCast for which the given predicate hold.
@@ -127,7 +147,18 @@ def first_or_default(lazy_val: Callable[[], Any]):
     return MultiCastOperator(op_func)
 
 
-def flat_map(func: Callable[[MultiCastValue], MultiCastOpMixin]):
+def lift_and_flatten(func: Callable[[MultiCast], MultiCast]):
+    """
+    Emit the first element only and stop the Flowable sequence thereafter.
+    """
+
+    def op_func(source: MultiCast):
+        return source.lift_and_flatten(func=func)
+
+    return MultiCastOperator(op_func)
+
+
+def flat_map(func: Callable[[MultiCastItem], MultiCastOpMixin]):
     """
     Apply a function to each item emitted by the source and flattens the result.
     """
@@ -139,19 +170,25 @@ def flat_map(func: Callable[[MultiCastValue], MultiCastOpMixin]):
 
 
 def lift(
-    func: Callable[[MultiCast, MultiCastValue], MultiCastValue],
+    func: Callable[[MultiCast], MultiCastItem],
 ):
     """
     Lift the current `MultiCast[T]` to a `MultiCast[MultiCast[T]]`.
     """
 
-    def op_func(source: MultiCast):
-        return source.lift(func=func).map(lambda m: LiftedMultiCast(m))
+    def op_func(source: NotLiftedMultiCast):
+        # def lifted_func(m: MultiCastMixin):
+        #     return func(init_lifted_multicast(
+        #         underlying=m,
+        #         nested_layer=source.nested_layer,
+        #     ))
+
+        return source.lift(func=func)
 
     return MultiCastOperator(op_func)
 
 
-def map(func: Callable[[MultiCastValue], MultiCastValue]):
+def map(func: Callable[[MultiCastItem], MultiCastItem]):
     """
     Map each element emitted by the source by applying the given function.
     """
@@ -162,18 +199,18 @@ def map(func: Callable[[MultiCastValue], MultiCastValue]):
     return MultiCastOperator(op_func)
 
 
-def map_with_op(func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
-    """
-    Maps each `MultiCast` value by applying the given function `func`
-    """
+# def map_with_op(func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
+#     """
+#     Maps each `MultiCast` value by applying the given function `func`
+#     """
+#
+#     def op_func(source: MultiCast):
+#         return source.map_with_op(func=func)
+#
+#     return MultiCastOperator(op_func)
 
-    def op_func(source: MultiCast):
-        return source.map_with_op(func=func)
 
-    return MultiCastOperator(op_func)
-
-
-def merge(*others: MultiCastOpMixin):
+def merge(*others: MultiCastMixin):
     """
     Merge the elements of the *Flowable* sequences into a single *Flowable*.
     """

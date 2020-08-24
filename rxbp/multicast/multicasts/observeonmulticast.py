@@ -1,9 +1,9 @@
 import rx
 from rx import operators as rxop
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.typing import MultiCastValue
+from rxbp.multicast.typing import MultiCastItem
 
 
 class ObserveOnMultiCast(MultiCastMixin):
@@ -15,10 +15,10 @@ class ObserveOnMultiCast(MultiCastMixin):
         self.source = source
         self.scheduler = scheduler
 
-    def get_source(
+    def unsafe_subscribe(
             self,
-            info: MultiCastInfo,
-    ) -> rx.typing.Observable[MultiCastValue]:
+            info: MultiCastSubscriber,
+    ) -> rx.typing.Observable[MultiCastItem]:
         source = self.source.get_source(info=info)
         return source.pipe(
             rxop.observe_on(self.scheduler),

@@ -1,6 +1,7 @@
 from rx.disposable import Disposable
 
-from rxbp.mixins.flowablebasemixin import FlowableBaseMixin
+from rxbp.init.initsubscription import init_subscription
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.observables.connectableobservable import ConnectableObservable
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.selectors.baseandselectors import BaseAndSelectors
@@ -8,7 +9,7 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
-class ConnectableFlowable(FlowableBaseMixin):
+class ConnectableFlowable(FlowableMixin):
     def __init__(
             self,
             conn_observer: ConnectableObserver,
@@ -22,4 +23,4 @@ class ConnectableFlowable(FlowableBaseMixin):
             conn_observer=self._conn_observer,
             disposable=self._disposable,
         )
-        return init_subscription(info=BaseAndSelectors(base=None), observable=observable)
+        return init_subscription(observable=observable)

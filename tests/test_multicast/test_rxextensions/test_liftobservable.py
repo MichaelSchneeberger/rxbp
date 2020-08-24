@@ -3,7 +3,6 @@ import unittest
 import rx
 from rx import operators as rxop
 
-from rxbp.multicast.rxextensions.liftobservable import LiftObservable
 from rxbp.multicast.testing.testrxobservable import TestRxObservable
 from rxbp.multicast.testing.testrxobserver import TestRxObserver
 from rxbp.testing.testscheduler import TestScheduler

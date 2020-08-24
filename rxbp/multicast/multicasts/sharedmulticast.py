@@ -3,8 +3,11 @@ import threading
 import rx
 from rx import operators as rxop
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastobservables.refcountmulticastobservable import RefCountMultiCastObservable
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
+from rxbp.multicast.subjects.multicastobservablesubject import MultiCastObservableSubject
 from rxbp.subjects.subject import Subject
 
 
@@ -12,20 +15,24 @@ class SharedMultiCast(MultiCastMixin):
     def __init__(
             self,
             source: MultiCastMixin,
-            subject: Subject,
     ):
         self.source = source
-        self.subject = subject
 
-        self._shared_source = None
+        self._subscription = None
         self._lock = threading.RLock()
 
-    def get_source(self, info: MultiCastInfo) -> rx.typing.Observable:
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         with self._lock:
-            if self._shared_source is None:
-                self._shared_source = self.source.get_source(info=info).pipe(
-                    rxop.multicast(subject=self.subject),
-                    rxop.ref_count(),
+            if self._subscription is None:
+                subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+                subject = MultiCastObservableSubject()
+                self._subscription = subscription.copy(
+                    observable=RefCountMultiCastObservable(
+                        source=subscription.observable,
+                        subject=subject,
+                        lock=threading.RLock(),
+                        count=0,
+                    )
                 )
 
-        return self._shared_source
+        return self._subscription

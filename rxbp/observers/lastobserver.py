@@ -1,4 +1,5 @@
-from typing import Callable
+from traceback import FrameSummary
+from typing import Callable, List
 
 from rx.internal import SequenceContainsNoElementsError
 
@@ -6,16 +7,17 @@ from rxbp.ack.continueack import continue_ack
 from rxbp.ack.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 class LastObserver(Observer):
     def __init__(
             self,
             observer: Observer,
-            raise_exception: Callable[[Callable[[], None]], None],
+            stack: List[FrameSummary],
     ):
         self.observer = observer
-        self.raise_exception = raise_exception
+        self.stack = stack
 
         self.has_value = False
         self.last_value = None
@@ -42,15 +44,17 @@ class LastObserver(Observer):
         return self.observer.on_error(exc)
 
     def on_completed(self):
-        def func_arg():
-            raise SequenceContainsNoElementsError()
-
         if self.has_value:
             self.observer.on_next([self.last_value])
             self.observer.on_completed()
 
         else:
+            pass
             try:
-                self.raise_exception(func_arg)
+                raise SequenceContainsNoElementsError(to_operator_exception(
+                    message='',
+                    stack=self.stack,
+                ))
+
             except Exception as exc:
                 self.observer.on_error(exc)

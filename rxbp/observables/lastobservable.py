@@ -1,35 +1,21 @@
-from typing import Callable
+from dataclasses import dataclass
+from traceback import FrameSummary
+from typing import List
 
-from rx.internal import SequenceContainsNoElementsError
-
-from rxbp.ack.continueack import continue_ack
-from rxbp.ack.stopack import stop_ack
-from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.lastobserver import LastObserver
-from rxbp.typing import ElementType
 
 
+@dataclass
 class LastObservable(Observable):
-    def __init__(
-            self,
-            source: Observable,
-            raise_exception: Callable[[Callable[[], None]], None],
-    ):
-        super().__init__()
-
-        self.source = source
-        self.raise_exception = raise_exception
+    source: Observable
+    stack: List[FrameSummary]
 
     def observe(self, observer_info: ObserverInfo):
-        next_observer_info = init_observer_info(
+        return self.source.observe(observer_info.copy(
             observer=LastObserver(
                 observer=observer_info.observer,
-                raise_exception=self.raise_exception,
+                stack=self.stack,
             ),
-            is_volatile=observer_info.is_volatile,
-        )
-
-        return self.source.observe(next_observer_info)
+        ))

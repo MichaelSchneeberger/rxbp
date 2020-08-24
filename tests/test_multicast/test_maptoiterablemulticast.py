@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicasts.maptoiteratormulticast import MapToIteratorMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast
 from rxbp.multicast.testing.testrxobserver import TestRxObserver

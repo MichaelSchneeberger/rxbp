@@ -2,6 +2,7 @@ import unittest
 
 from rxbp.ack.stopack import StopAck
 from rxbp.ack.continueack import ContinueAck
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
@@ -26,7 +27,7 @@ class TestConcatObservable(unittest.TestCase):
 
     def test_on_next_first(self):
         sink = TestObserver()
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
 
         ack = self.sources[0].on_next_single(1)
 
@@ -35,7 +36,7 @@ class TestConcatObservable(unittest.TestCase):
 
     def test_on_next_second(self):
         sink = TestObserver()
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
 
         ack = self.sources[1].on_next_single(1)
 
@@ -44,7 +45,7 @@ class TestConcatObservable(unittest.TestCase):
 
     def test_on_next_second_complete_first(self):
         sink = TestObserver()
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
         ack = self.sources[1].on_next_single(1)
 
         self.sources[0].on_completed()
@@ -54,7 +55,7 @@ class TestConcatObservable(unittest.TestCase):
 
     def test_on_error(self):
         sink = TestObserver()
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
 
         self.sources[0].on_error(self.exception)
 
@@ -62,7 +63,7 @@ class TestConcatObservable(unittest.TestCase):
 
     def test_on_error_on_next(self):
         sink = TestObserver()
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
         self.sources[0].on_error(self.exception)
 
         ack = self.sources[1].on_next_single(0)

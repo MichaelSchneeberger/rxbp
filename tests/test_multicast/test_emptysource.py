@@ -3,7 +3,7 @@ import unittest
 import rxbp
 from rx.testing import ReactiveTest
 from rx.testing.mockobserver import MockObserver
-from rxbp.multicast.multicastInfo import MultiCastInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.testing.testscheduler import TestScheduler
 
 on_next = ReactiveTest.on_next

@@ -21,7 +21,7 @@ Example of a matching `initial` and `func` types:
 import rxbp
 
 
-result = rxbp.multicast.return_flowable({'input': rxbp.range(10)}).pipe(
+result = rxbp.multicast.return_value({'input': rxbp.range(10)}).pipe(
     rxbp.multicast.op.loop_flowables(                                        # create a loop with two Flowables
         initial=[1, 2],                                             # define the first elements sent by these Flwables
         func=lambda mc: mc.pipe(                                    # define the stream between where the loop starts ...
@@ -45,7 +45,7 @@ print(result)
 
 # the same example as before, but this time a dictionary is returned
 # instead of a list.
-result = rxbp.multicast.return_flowable({'input': rxbp.range(10)}).pipe(
+result = rxbp.multicast.return_value({'input': rxbp.range(10)}).pipe(
     rxbp.multicast.op.loop_flowables(
         func=lambda mc: mc.pipe(
             rxbp.multicast.op.map(lambda t: {
