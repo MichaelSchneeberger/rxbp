@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Callable
 
 import rx
@@ -5,6 +6,9 @@ from rx import Observable
 from rx.disposable import Disposable
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserver import MultiCastObserver
+from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.typing import MultiCastItem
 
@@ -19,26 +23,44 @@ class DefaultIfEmptyMultiCast(MultiCastMixin):
         self.lazy_val = lazy_val
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable[MultiCastItem]:
-        def default_if_empty() -> Callable[[Observable], Observable]:
-            def func(source: Observable) -> Observable:
-                def subscribe(observer, scheduler=None) -> Disposable:
-                    found = [False]
 
-                    def on_next(x: Any):
-                        found[0] = True
-                        observer.on_next(x)
+        @dataclass
+        class DefaultIfEmptyMultiCastObservable(MultiCastObservable):
+            source: MultiCastObservable
+            lazy_val: Callable[[], Any]
 
-                    def on_completed():
-                        if not found[0]:
-                            observer.on_next(self.lazy_val())
-                        observer.on_completed()
+            def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
 
-                    return source.subscribe_(on_next, observer.on_error, on_completed, scheduler)
+                @dataclass
+                class DefaultIfEmptyMultiCastObserver(MultiCastObserver):
+                    source: MultiCastObserver
+                    lazy_val: Callable[[], Any]
+                    found: bool
 
-                return Observable(subscribe)
+                    def on_next(self, elem: MultiCastItem) -> None:
+                        self.found = True
+                        self.source.on_next(elem)
 
-            return func
+                    def on_error(self, exc: Exception) -> None:
+                        self.source.on_error(exc)
 
-        return self.source.get_source(info=info).pipe(
-            default_if_empty(),
+                    def on_completed(self) -> None:
+                        if not self.found:
+                            self.source.on_next(self.lazy_val())
+                        self.source.on_completed()
+
+                self.source.observe(observer_info.copy(
+                    observer=DefaultIfEmptyMultiCastObserver(
+                        source=observer_info.observer,
+                        lazy_val=self.lazy_val,
+                        found=False,
+                    )
+                ))
+
+        subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+        return subscription.copy(
+            observable=DefaultIfEmptyMultiCastObservable(
+                source=subscription.observable,
+                lazy_val=self.lazy_val,
+            ),
         )
