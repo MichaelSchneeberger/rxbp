@@ -27,13 +27,7 @@ class FlatMapMultiCastObservable(MultiCastObservable):
             inner_subscription: SingleAssignmentDisposable
 
             def on_next(self, elem: MultiCastItem) -> None:
-                try:
-                    self.observer.on_next(elem)
-                except:
-                    # print(elem)
-                    # print(self.observer)
-                    # print(self.observer.on_next)
-                    raise
+                self.observer.on_next(elem)
 
             def on_error(self, exc: Exception) -> None:
                 self.observer.on_error(exc)

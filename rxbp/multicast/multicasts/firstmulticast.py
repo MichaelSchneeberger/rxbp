@@ -1,36 +1,23 @@
 from dataclasses import dataclass
-from typing import Callable
-
-import rx
-from rx import Observable
-from rx.internal import SequenceContainsNoElementsError
+from traceback import FrameSummary
+from typing import List
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.multicastobservables.firstmulticastobservable import FirstMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.multicastsubscription import MultiCastSubscription
 
 
 @dataclass
 class FirstMultiCast(MultiCastMixin):
     source: MultiCastMixin
-    raise_exception: Callable[[Callable[[], None]], None]
+    stack: List[FrameSummary]
 
-    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable:
-        source = self.source.get_source(info=info)
-
-        def subscribe(observer, scheduler=None):
-            def on_next(x):
-                observer.on_next(x)
-                observer.on_completed()
-
-            def on_completed():
-                def func():
-                    raise SequenceContainsNoElementsError()
-
-                try:
-                    self.raise_exception(func)
-                except Exception as exc:
-                    observer.on_error(exc)
-
-            return source.subscribe_(on_next, observer.on_error, on_completed, scheduler)
-
-        return Observable(subscriber)
+    def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+        subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+        return subscription.copy(
+            observable=FirstMultiCastObservable(
+                source=subscription.observable,
+                stack=self.stack,
+            )
+        )

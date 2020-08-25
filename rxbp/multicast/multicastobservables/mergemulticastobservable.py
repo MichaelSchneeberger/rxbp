@@ -30,12 +30,9 @@ class MergeMultiCastObservable(MultiCastObservable):
             inner_subscription: SingleAssignmentDisposable
 
             def on_next(self, elem: MultiCastItem) -> None:
-                # print(elem)
-                # with self.lock:
                 self.observer.on_next(elem)
 
             def on_error(self, exc: Exception) -> None:
-                # with self.lock:
                 self.observer.on_error(exc)
 
             def on_completed(self) -> None:

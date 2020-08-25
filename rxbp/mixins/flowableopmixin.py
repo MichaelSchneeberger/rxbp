@@ -165,8 +165,8 @@ class FlowableOpMixin(
         flowable = LastFlowable(source=self, stack=stack)
         return self._copy(flowable)
 
-    def map(self, func: Callable[[ValueType], Any]): #, stack: List[FrameSummary]):
-        flowable = MapFlowable(source=self, func=func)#, stack=stack)
+    def map(self, func: Callable[[ValueType], Any], stack: List[FrameSummary]):
+        flowable = MapFlowable(source=self, func=func, stack=stack)
         return self._copy(flowable)
 
     def map_to_iterator(

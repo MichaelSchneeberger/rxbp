@@ -21,7 +21,18 @@ class FilterOrDefaultMultiCastObservable(MultiCastObservable):
             lazy_val: Callable[[], Any]
 
             def on_next(self, elem: MultiCastItem) -> None:
-                observer.on_next(x)
+                if isinstance(elem, list):
+                    if len(elem) == 0:
+                        return
+                    first_elem = elem[0]
+
+                else:
+                    try:
+                        first_elem = next(elem)
+                    except StopIteration:
+                        return
+
+                observer.on_next([first_elem])
                 observer.on_completed()
 
             def on_error(self, exc: Exception) -> None:
@@ -29,7 +40,7 @@ class FilterOrDefaultMultiCastObservable(MultiCastObservable):
 
             def on_completed(self) -> None:
                 try:
-                    observer.on_next(self.lazy_val())
+                    observer.on_next([self.lazy_val()])
                     observer.on_completed()
                 except Exception as exc:
                     observer.on_error(exc)

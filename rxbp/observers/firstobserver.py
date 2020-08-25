@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import List
 
@@ -10,16 +11,11 @@ from rxbp.typing import ElementType
 from rxbp.utils.tooperatorexception import to_operator_exception
 
 
+@dataclass
 class FirstObserver(Observer):
-    def __init__(
-            self,
-            observer: Observer,
-            stack: List[FrameSummary],
-    ):
-        self.observer = observer
-        self.stack = stack
-
-        self.is_first = True
+    observer: Observer
+    stack: List[FrameSummary]
+    is_first: bool
 
     def on_next(self, elem: ElementType):
         if isinstance(elem, list):

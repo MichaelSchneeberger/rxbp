@@ -256,10 +256,10 @@ def map(func: Callable[[Any], Any]):
     Flowable sequence.
     """
 
-    # stack = get_stack_lines()
+    stack = get_stack_lines()
 
     def op_func(source: Flowable):
-        return source.map(func=func)#, stack=stack)
+        return source.map(func=func, stack=stack)
 
     return PipeOperation(op_func)
 

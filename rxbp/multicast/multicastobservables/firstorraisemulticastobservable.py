@@ -22,7 +22,7 @@ class FilterOrRaiseMultiCastObservable(MultiCastObservable):
             raise_exception: Callable[[Callable[[], None]], None]
 
             def on_next(self, elem: MultiCastItem) -> None:
-                observer.on_next(x)
+                observer.on_next(elem)
                 observer.on_completed()
 
             def on_error(self, exc: Exception) -> None:

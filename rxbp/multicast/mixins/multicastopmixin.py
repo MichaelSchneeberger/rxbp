@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Any
+from traceback import FrameSummary
+from typing import Callable, Any, List
 
 import rx
 
@@ -83,9 +84,10 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
     def first(
             self,
-            raise_exception: Callable[[Callable[[], None]], None],
+            # raise_exception: Callable[[Callable[[], None]], None],
+            stack: List[FrameSummary],
     ):
-        return self._copy(FirstMultiCast(source=self, raise_exception=raise_exception))
+        return self._copy(FirstMultiCast(source=self, stack=stack))
 
     def first_or_default(
             self,

@@ -11,6 +11,7 @@ from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.typing import MultiCastItem
 from rxbp.typing import ValueType
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 def debug(
@@ -92,7 +93,7 @@ def filter(
 
 
 def first(
-        raise_exception: Callable[[Callable[[], None]], None],
+        # raise_exception: Callable[[Callable[[], None]], None],
 ):
     """
     Either emits the elements of the source or a single element
@@ -101,8 +102,10 @@ def first(
     :param lazy_val: a function that returns the single elements
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: MultiCast):
-        return source.first(raise_exception=raise_exception)
+        return source.first(stack=stack)
 
     return MultiCastOperator(op_func)
 

@@ -20,8 +20,9 @@ class DefaultIfEmptyFlowable(FlowableMixin):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = DefaultIfEmptyObservable(source=subscription.observable, lazy_val=self.lazy_val)
-
-        base = None
-
-        return init_subscription(BaseAndSelectors(base=base), observable=observable)
+        return subscription.copy(
+            observable=DefaultIfEmptyObservable(
+                source=subscription.observable,
+                lazy_val=self.lazy_val,
+            ),
+        )
