@@ -14,7 +14,7 @@ class NotLiftedMultiCastImpl(NotLiftedMultiCast[MultiCastElemType]):
     underlying: MultiCastMixin
 
     def _copy(self, underlying: MultiCastMixin = None, **kwargs):
-        if underlying is not None:
-            kwargs['underlying'] = underlying
+        # if underlying is not None:
+        #     kwargs['underlying'] = underlying
 
-        return dataclasses.replace(self, **kwargs)
+        return dataclasses.replace(self, underlying=underlying, **kwargs)

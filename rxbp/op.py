@@ -424,8 +424,10 @@ def zip(*others: Flowable):
     :param others: :param sources: other Flowables that get zipped to this Flowable.
     """
 
+    stack = get_stack_lines()
+
     def op_func(left: Flowable):
-        return left.zip(*others)
+        return left.zip(*others, stack=stack)
 
     return PipeOperation(op_func)
 

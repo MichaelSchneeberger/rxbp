@@ -35,7 +35,6 @@ from rxbp.mixins.flowableabsopmixin import FlowableAbsOpMixin
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.materializeobservable import MaterializeObservable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
@@ -54,15 +53,15 @@ class FlowableOpMixin(
         ...
 
     @abstractmethod
-    def _copy(self, underlying: FlowableMixin, *args, **kwargs) -> 'FlowableOpMixin':
+    def _copy(self, underlying: FlowableMixin, is_shared: bool = None, *args, **kwargs) -> 'FlowableOpMixin':
         ...
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         return self.underlying.unsafe_subscribe(subscriber=subscriber)
 
-    def pipe(self, *operators: PipeOperation['FlowableOpMixin']) -> 'FlowableOpMixin':
-        raw = functools.reduce(lambda obs, op: op(obs), operators, self)
-        return self._copy(raw)
+    # def pipe(self, *operators: PipeOperation['FlowableOpMixin']) -> 'FlowableOpMixin':
+    #     raw = functools.reduce(lambda obs, op: op(obs), operators, self)
+    #     return self._copy(raw)
 
     def buffer(self, buffer_size: int = None) -> 'FlowableOpMixin':
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
@@ -247,7 +246,7 @@ class FlowableOpMixin(
         return self._copy(flowable)
 
     def share(self):
-        return self._copy(RefCountFlowable(source=self), is_hot=True)
+        return self._copy(RefCountFlowable(source=self), is_shared=True)
 
     # def set_base(self, val: Base):
     #
@@ -278,13 +277,13 @@ class FlowableOpMixin(
 
         return to_rx(source=self, batched=batched)
 
-    def zip(self, *others: 'FlowableOpMixin'):
+    def zip(self, *others: 'FlowableOpMixin', stack: List[FrameSummary]):
 
         assert all(isinstance(source, FlowableMixin) for source in others), \
             f'"{others}" must all be of type FlowableMixin'
 
         if len(others) == 0:
-            return self.map(lambda v: (v,))
+            return self.map(lambda v: (v,), stack=stack)
         else:
             sources = (self,) + others
 
@@ -292,7 +291,7 @@ class FlowableOpMixin(
                 for source in reversed(sources):
                     def _(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
                         if right is None:
-                            return left.map(lambda v: (v,))
+                            return left.map(lambda v: (v,), stack=stack)
                         else:
                             def inner_result_selector(v1: Any, v2: Tuple[Any]):
                                 return (v1,) + v2

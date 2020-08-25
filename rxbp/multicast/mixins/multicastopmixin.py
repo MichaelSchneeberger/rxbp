@@ -212,6 +212,6 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     ):
         return self._copy(
             underlying=func(self._copy(
-                underlying=SharedMultiCast(source=self.materialize()),
+                underlying=SharedMultiCast(source=self),
             )),
         )

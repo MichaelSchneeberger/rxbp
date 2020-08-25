@@ -1,11 +1,10 @@
-from rxbp.impl.flowableimpl import FlowableImpl
 from rxbp.impl.sharedflowableimpl import SharedFlowableImpl
 from rxbp.mixins.flowablemixin import FlowableMixin
 
 
-def init_flowable(
+def init_shared_flowable(
         underlying: FlowableMixin,
 ):
-    return FlowableImpl(
+    return SharedFlowableImpl(
         underlying=underlying,
     )

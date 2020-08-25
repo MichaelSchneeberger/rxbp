@@ -4,7 +4,8 @@ from rxbp.mixins.flowablemixin import FlowableMixin
 
 
 class IsHotFlowableMixin(FlowableMixin, ABC):
-    @property
-    @abstractmethod
-    def is_hot(self) -> bool:
-        ...
+    pass
+    # @property
+    # @abstractmethod
+    # def is_hot(self) -> bool:
+    #     ...

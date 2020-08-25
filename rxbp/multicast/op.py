@@ -177,12 +177,6 @@ def lift(
     """
 
     def op_func(source: MultiCast):
-        # def lifted_func(m: MultiCastMixin):
-        #     return func(init_lifted_multicast(
-        #         underlying=m,
-        #         nested_layer=source.nested_layer,
-        #     ))
-
         return source.lift(func=func)
 
     return MultiCastOperator(op_func)
@@ -269,12 +263,6 @@ def share(
     """
 
     def op_func(source: MultiCast):
-        # def lifted_func(m: MultiCastMixin):
-        #     return func(init_multicast(
-        #         underlying=m,
-        #     ))
-        #     return val
-
         return source.share_func(func=func)
 
     return MultiCastOperator(op_func)

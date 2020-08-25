@@ -6,6 +6,7 @@ from rx.disposable import Disposable
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.mixins.ishotflowablemixin import IsHotFlowableMixin
+from rxbp.mixins.ishotonsubscribemixin import SharedFlowableMixin
 from rxbp.mixins.observemixin import ObserveMixin
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -37,7 +38,8 @@ class FlowableSubscribeMixin(
         allow it to have mutable states where it make sense.
         """
 
-        assert self.is_hot is False, 'a hot Flowable cannot be subscribed, use MultiCast instead'
+        assert isinstance(self, SharedFlowableMixin) is False, \
+            'a shared Flowable cannot be subscribed, use Flowable inside MultiCast instead'
 
         subscribe_scheduler_ = subscribe_scheduler or TrampolineScheduler()
         scheduler_ = scheduler or subscribe_scheduler_

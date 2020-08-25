@@ -39,11 +39,20 @@ class MultiCastObservableSubject(MultiCastObservable, MultiCastObserver):
             return self.InnerSubscription(self, observer_info.observer)
 
     def on_next(self, value) -> None:
+        if isinstance(value, list):
+            materialized_values = value
+        else:
+            try:
+                materialized_values = list(value)
+            except Exception as exc:
+                self.on_error(exc)
+                return
+
         with self.lock:
             observers = self.observers.copy()
 
         for observer in observers:
-            observer.on_next(value)
+            observer.on_next(materialized_values)
 
     def on_error(self, error: Exception) -> None:
         with self.lock:

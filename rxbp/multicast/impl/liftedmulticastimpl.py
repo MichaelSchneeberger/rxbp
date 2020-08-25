@@ -13,8 +13,8 @@ class LiftedMultiCastImpl(LiftedMultiCast[MultiCastElemType]):
     nested_layer: int
     underlying: MultiCastMixin
 
-    def _copy(self, underlying: MultiCastMixin = None, **kwargs):
-        if underlying is not None:
-            kwargs['underlying'] = underlying
+    def _copy(self, underlying: MultiCastMixin, **kwargs):
+        # if underlying is not None:
+        #     kwargs['underlying'] = underlying
 
-        return replace(self, **kwargs)
+        return replace(self, underlying=underlying, **kwargs)

@@ -48,7 +48,7 @@ class SafeFlowableSubject(
     def _copy(self, underlying: FlowableMixin, *args, **kwargs):
         return init_flowable(
             underlying=underlying,
-            is_hot=True,
+            is_shared=True,
         )
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
