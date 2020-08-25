@@ -2,10 +2,7 @@ from typing import Callable, Any
 
 from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.selectors.baseandselectors import BaseAndSelectors
-from rxbp.selectors.selectionop import merge_selectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

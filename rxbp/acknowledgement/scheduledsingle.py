@@ -4,7 +4,7 @@ from typing import List
 from rx.core import typing
 from rx.disposable import SerialDisposable
 
-from rxbp.ack.single import Single
+from rxbp.acknowledgement.single import Single
 
 
 class ScheduledSingle(Single):

@@ -1,7 +1,7 @@
 from rx.scheduler.virtualtimescheduler import VirtualTimeScheduler
 
-from rxbp.scheduler import SchedulerBase, UncaughtExceptionReport, BatchedExecution
 from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
+from rxbp.scheduler import SchedulerBase, UncaughtExceptionReport, BatchedExecution
 
 
 class TestScheduler(VirtualTimeScheduler, SchedulerBase):

@@ -1,6 +1,6 @@
 import threading
 
-from rxbp.ack.acksubject import AckSubject
+from rxbp.acknowledgement.acksubject import AckSubject
 
 
 class PromiseCounter:

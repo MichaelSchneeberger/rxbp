@@ -4,8 +4,8 @@ from typing import Generic
 import rx
 from rx.subject import Subject
 
-from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.typing import MultiCastItem
 
 

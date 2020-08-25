@@ -1,10 +1,10 @@
 from traceback import FrameSummary
-from typing import Callable, List
+from typing import List
 
 from rx.internal import SequenceContainsNoElementsError
 
-from rxbp.ack.continueack import continue_ack
-from rxbp.ack.stopack import stop_ack
+from rxbp.acknowledgement.continueack import continue_ack
+from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 from rxbp.utils.tooperatorexception import to_operator_exception

@@ -3,7 +3,6 @@ from typing import Callable
 
 from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.fromsingleelementobservable import FromSingleElementObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription

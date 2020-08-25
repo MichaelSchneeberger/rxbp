@@ -2,9 +2,9 @@ from typing import List
 
 from rx.disposable import Disposable
 
-from rxbp.flowable import Flowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.init.initflowable import init_flowable
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
 from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
     FlatConcatNoBackpressureFlowable
@@ -30,7 +30,7 @@ class JoinFlowablesMultiCast(MultiCastMixin):
         source_scheduler = subscriber.source_scheduler
 
         def to_flowable(value):
-            if isinstance(value, Flowable):
+            if isinstance(value, FlowableMixin):
                 flowable = value
             elif isinstance(value, list) and len(value) == 1:
                 flowable = value[0]
@@ -66,7 +66,9 @@ class JoinFlowablesMultiCast(MultiCastMixin):
                             multicast_scheduler=multicast_scheduler,
                             source_scheduler=multicast_scheduler,
                         ))
-                        subscription.observable.observe(MultiCastObserverInfo(observer=observer))
+                        subscription.observable.observe(MultiCastObserverInfo(
+                            observer=observer,
+                        ))
 
                         # # subscribe to source rx.Observables immediately
                         # source_flowable = FromMultiCastToFlowable(source, buffer_size=1000)

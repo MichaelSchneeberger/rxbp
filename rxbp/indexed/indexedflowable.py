@@ -6,7 +6,7 @@ from typing import Generic
 
 import rx
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.flowables.anonymousflowablebase import AnonymousFlowableBase
 from rxbp.flowables.bufferflowable import BufferFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
@@ -33,8 +33,8 @@ from rxbp.indexed.flowables.indexedmatchflowable import IndexedMatchFlowable
 from rxbp.indexed.flowables.indexedzipflowable import IndexedZipFlowable
 from rxbp.indexed.indexedsubscription import IndexedSubscription
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
-from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.mixins.flowableabsopmixin import FlowableAbsOpMixin
+from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observerinfo import ObserverInfo
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
@@ -91,12 +91,12 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
     def debug(
             self,
             name: str,
-            on_next: Callable[[Any], AckMixin] = None,
+            on_next: Callable[[Any], Ack] = None,
             on_completed: Callable[[], None] = None,
             on_error: Callable[[Exception], None] = None,
-            on_ack: Callable[[AckMixin], None] = None,
+            on_ack: Callable[[Ack], None] = None,
             on_subscribe: Callable[[ObserverInfo], None] = None,
-            on_raw_ack: Callable[[AckMixin], None] = None,
+            on_raw_ack: Callable[[Ack], None] = None,
     ) -> IndexedFlowableMixin:
 
         return self._copy(DebugFlowable(

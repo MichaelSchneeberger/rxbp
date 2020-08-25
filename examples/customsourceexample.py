@@ -8,7 +8,7 @@ apply `on_next`, `on_completed` and `on_error`  downstream function, as well as
 react to a dispose call. It is important to be aware of this distinction!
 """
 
-from rxbp.ack.single import Single
+from rxbp.acknowledgement.single import Single
 from rxbp.subjects.subject import Subject
 
 

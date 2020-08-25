@@ -9,5 +9,5 @@ class IsHotMultiCastMixin(ABC):
 
     @property
     @abstractmethod
-    def is_hot(self) -> bool:
+    def is_hot_on_subscribe(self) -> bool:
         ...

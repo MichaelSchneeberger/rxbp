@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.zipwithindexobserver import ZipCountObserver
 from rxbp.testing.testobservable import TestObservable

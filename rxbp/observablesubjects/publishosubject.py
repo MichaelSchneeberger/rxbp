@@ -3,9 +3,9 @@ from typing import Set, List, Union
 
 from rx.disposable import Disposable
 
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observerinfo import ObserverInfo

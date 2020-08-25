@@ -1,15 +1,11 @@
 from dataclasses import dataclass
-from traceback import FrameSummary
-from typing import Callable, Any, List
-
-from dataclass_abc import dataclass_abc
+from typing import Callable, Any
 
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
-from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 @dataclass

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from rxbp.ack.continueack import continue_ack
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.continueack import continue_ack
+from rxbp.acknowledgement.ack import Ack
 from rxbp.mixins.flowablesubscribemixin import FlowableSubscribeMixin
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -17,7 +17,7 @@ def to_iterator(source: FlowableSubscribeMixin, scheduler: Scheduler = None):
         is_completed: bool
         exception: Optional[Exception]
 
-        def on_next(self, elem: ElementType) -> AckMixin:
+        def on_next(self, elem: ElementType) -> Ack:
             if not isinstance(elem, list):
                 elem = list(elem)
 

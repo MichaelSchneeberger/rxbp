@@ -1,10 +1,9 @@
 from typing import Any, Callable
 
 import rx
-from rx import operators as rxop, Observable
+from rx import Observable
 from rx.disposable import Disposable
 
-from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.typing import MultiCastItem

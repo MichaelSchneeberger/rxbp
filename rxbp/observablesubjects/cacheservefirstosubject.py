@@ -8,16 +8,16 @@ import rx
 from rx.core.notification import OnNext, OnCompleted, OnError, Notification
 from rx.disposable import Disposable, SingleAssignmentDisposable
 
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.operators.observeon import _observe_on
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.operators.observeon import _observe_on
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck, stop_ack
+from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
@@ -93,7 +93,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                 self,
                 subscription: 'CacheServeFirstOSubject.InnerSubscription',
                 index: int,
-                ack: AckMixin = None,
+                ack: Ack = None,
         ) -> Tuple[bool, Any]:
 
             if subscription.disposable.is_disposed:
@@ -209,9 +209,9 @@ class CacheServeFirstOSubject(OSubjectBase):
         class AsyncAckSingle(Single):
             current_index: int
             inner_subscription: 'CacheServeFirstOSubject.InnerSubscription'
-            ack_update: Optional[AckMixin] = None
+            ack_update: Optional[Ack] = None
 
-            def on_next(self, ack: AckMixin):
+            def on_next(self, ack: Ack):
                 # start fast_loop
                 if isinstance(ack, ContinueAck):
                     with self.inner_subscription.lock:
@@ -236,7 +236,7 @@ class CacheServeFirstOSubject(OSubjectBase):
             def on_error(self, exc: Exception):
                 raise NotImplementedError
 
-        def notify_on_next(self, values: List, current_index: int) -> Optional[AckMixin]:
+        def notify_on_next(self, values: List, current_index: int) -> Optional[Ack]:
             """ inner subscription gets only notified if all items from buffer are sent, and
             last ack received """
 

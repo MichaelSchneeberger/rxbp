@@ -4,9 +4,9 @@ from rx.disposable import CompositeDisposable
 
 from rxbp.flowable import Flowable
 from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
+from rxbp.multicast.imperative.safeflowablesubject import SafeFlowableSubject
+from rxbp.multicast.imperative.safemulticastsubject import SafeMultiCastSubject
 from rxbp.multicast.multicast import MultiCast
-from rxbp.multicast.subjects.safeflowablesubject import SafeFlowableSubject
-from rxbp.multicast.subjects.safemulticastsubject import SafeMultiCastSubject
 from rxbp.scheduler import Scheduler
 
 

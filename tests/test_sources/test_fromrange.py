@@ -1,7 +1,7 @@
 import unittest
 
 import rxbp
-from rxbp.ack.continueack import continue_ack
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber

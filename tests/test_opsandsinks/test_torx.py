@@ -2,7 +2,7 @@ import unittest
 
 from rx.core.abc import Observer
 
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.flowable import Flowable
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler

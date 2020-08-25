@@ -1,11 +1,11 @@
-from rxbp.ack.continueack import ContinueAck
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.operators.map import _map
-from rxbp.ack.operators.zip import _zip
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.operators.map import _map
+from rxbp.acknowledgement.operators.zip import _zip
+from rxbp.acknowledgement.stopack import StopAck
 
 
-def _merge(self, ack2: AckMixin) -> AckMixin:
+def _merge(self, ack2: Ack) -> Ack:
     if isinstance(ack2, ContinueAck) or isinstance(self, StopAck):
         return_ack = self
     elif isinstance(ack2, StopAck) or isinstance(self, ContinueAck):

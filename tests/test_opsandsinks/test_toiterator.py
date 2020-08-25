@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.toiterator import to_iterator

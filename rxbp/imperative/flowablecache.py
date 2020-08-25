@@ -1,8 +1,8 @@
 import types
 
-from rxbp.ack.continueack import continue_ack
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import stop_ack
+from rxbp.acknowledgement.continueack import continue_ack
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.flowable import Flowable
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -21,7 +21,7 @@ class FlowableCache:
         outer_self = self
 
         class ToCacheObserver(Observer):
-            def on_next(self, elem: ElementType) -> AckMixin:
+            def on_next(self, elem: ElementType) -> Ack:
                 try:
                     for value in elem:
                         outer_self._cache.append(value)

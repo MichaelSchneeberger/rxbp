@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import Iterator
 
-from rxbp.ack.acksubject import AckSubject
+from rxbp.acknowledgement.acksubject import AckSubject
 
 
 class ZipStates:

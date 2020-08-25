@@ -1,4 +1,4 @@
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.flatmapobservable import FlatMapObservable
 from rxbp.observerinfo import ObserverInfo

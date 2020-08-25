@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Callable, Any, List
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.debugobservable import DebugObservable
 from rxbp.observerinfo import ObserverInfo
@@ -13,13 +13,13 @@ from rxbp.subscriber import Subscriber
 class DebugFlowable(FlowableMixin):
     source: FlowableMixin
     name: str
-    on_next: Callable[[Any], AckMixin]
+    on_next: Callable[[Any], Ack]
     on_completed: Callable[[], None]
     on_error: Callable[[Exception], None]
-    on_sync_ack: Callable[[AckMixin], None]
-    on_async_ack: Callable[[AckMixin], None]
+    on_sync_ack: Callable[[Ack], None]
+    on_async_ack: Callable[[Ack], None]
     on_subscribe: Callable[[ObserverInfo, Subscriber], None]
-    on_raw_ack: Callable[[AckMixin], None]
+    on_raw_ack: Callable[[Ack], None]
     stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: Subscriber):

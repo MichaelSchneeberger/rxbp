@@ -1,6 +1,6 @@
 from abc import ABC
 
-from rxbp.ack.acksubject import AckSubject
+from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.typing import ElementType
 

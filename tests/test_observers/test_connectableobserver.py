@@ -1,5 +1,5 @@
-from rxbp.ack.stopack import StopAck
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobserver import TestObserver

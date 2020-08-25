@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.multicast.observer.flatmergenobackpressureobserver import FlatMergeNoBackpressureObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable

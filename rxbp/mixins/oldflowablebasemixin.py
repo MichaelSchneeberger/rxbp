@@ -1,14 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Any
 
-from rx.disposable import Disposable
-
-from rxbp.init.initsubscriber import init_subscriber
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.mixins.observemixin import ObserveMixin
-from rxbp.observer import Observer
-from rxbp.scheduler import Scheduler
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

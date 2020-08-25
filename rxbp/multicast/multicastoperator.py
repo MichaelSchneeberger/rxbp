@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import Callable
 
-from rxbp.multicast.multicastopmixin import MultiCastOpMixin
+from rxbp.multicast.mixins.multicastopmixin import MultiCastOpMixin
 
 
 @dataclass

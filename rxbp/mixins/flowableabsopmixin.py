@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from traceback import FrameSummary
 from typing import Callable, Any, Iterator, List
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.mixins.ishotflowablemixin import IsHotFlowableMixin
 from rxbp.observerinfo import ObserverInfo
@@ -59,13 +59,13 @@ class FlowableAbsOpMixin(ABC):
     def debug(
             self,
             name: str,
-            on_next: Callable[[Any], AckMixin],
+            on_next: Callable[[Any], Ack],
             on_completed: Callable[[], None],
             on_error: Callable[[Exception], None],
-            on_sync_ack: Callable[[AckMixin], None],
-            on_async_ack: Callable[[AckMixin], None],
+            on_sync_ack: Callable[[Ack], None],
+            on_async_ack: Callable[[Ack], None],
             on_subscribe: Callable[[ObserverInfo], None],
-            on_raw_ack: Callable[[AckMixin], None],
+            on_raw_ack: Callable[[Ack], None],
             stack: List[FrameSummary],
     ) -> FlowableMixin:
         """ Print debug messages to the console when providing the `name` argument

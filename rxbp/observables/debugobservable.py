@@ -2,11 +2,10 @@ from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Optional, Callable, Any, List
 
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.observers.debugobserver import DebugObserver
+from rxbp.acknowledgement.ack import Ack
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import Scheduler
+from rxbp.observers.debugobserver import DebugObserver
 from rxbp.subscriber import Subscriber
 
 
@@ -14,13 +13,13 @@ from rxbp.subscriber import Subscriber
 class DebugObservable(Observable):
     source: Observable
     name: Optional[str]
-    on_next: Callable[[Any], AckMixin]
+    on_next: Callable[[Any], Ack]
     on_completed: Callable[[], None]
     on_error: Callable[[Exception], None]
-    on_sync_ack: Callable[[AckMixin], None]
-    on_async_ack: Callable[[AckMixin], None]
+    on_sync_ack: Callable[[Ack], None]
+    on_async_ack: Callable[[Ack], None]
     on_subscribe: Callable[[ObserverInfo, Subscriber], None]
-    on_raw_ack: Callable[[AckMixin], None]
+    on_raw_ack: Callable[[Ack], None]
     subscriber: Subscriber
     stack: List[FrameSummary]
 

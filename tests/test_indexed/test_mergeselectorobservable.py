@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.observerinfo import ObserverInfo
 from rxbp.selectors.observables.mergeselectorobservable import MergeSelectorObservable
 from rxbp.selectors.selectionmsg import select_next, select_completed

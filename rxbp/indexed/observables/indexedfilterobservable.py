@@ -5,7 +5,6 @@ from rxbp.indexed.observers.indexedfilterobserver import IndexedFilterObserver
 from rxbp.observable import Observable
 from rxbp.observablesubjects.publishosubject import PublishOSubject
 from rxbp.observerinfo import ObserverInfo
-from rxbp.observers.filterobserver import FilterObserver
 
 
 @dataclass

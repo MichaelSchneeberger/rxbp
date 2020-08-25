@@ -6,8 +6,6 @@ from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observablesubjects.osubjectbase import OSubjectBase
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.bases.objectrefbase import ObjectRefBase
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 
 

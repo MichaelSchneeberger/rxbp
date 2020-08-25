@@ -1,6 +1,6 @@
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.continueack import ContinueAck
-from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler

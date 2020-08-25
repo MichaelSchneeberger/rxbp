@@ -2,12 +2,12 @@ import threading
 from dataclasses import dataclass
 from typing import Optional
 
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.operators.observeon import _observe_on
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.operators.observeon import _observe_on
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.states.measuredstates.bufferedstates import BufferedStates
@@ -31,12 +31,12 @@ class BufferedObserver(Observer):
         self.queue = []
         self.back_pressure = None
 
-    def _start_loop(self, last_ack: Optional[AckMixin], next_index: int):
-        def schedule_ack(ack: AckMixin, next: ElementType):
+    def _start_loop(self, last_ack: Optional[Ack], next_index: int):
+        def schedule_ack(ack: Ack, next: ElementType):
             outer_self = self
 
             class ResultSingle(Single):
-                def on_next(self, ack: AckMixin):
+                def on_next(self, ack: Ack):
                     if isinstance(ack, ContinueAck):
                         last_ack = outer_self.underlying.on_next(next)
 

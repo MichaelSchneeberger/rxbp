@@ -1,7 +1,7 @@
 import unittest
 
 import rxbp
-from rxbp.ack.continueack import continue_ack
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testobserver import TestObserver

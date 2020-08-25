@@ -1,6 +1,6 @@
 from typing import Callable, Any
 
-from rxbp.ack.stopack import stop_ack
+from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 

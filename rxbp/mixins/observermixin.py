@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.mixins.copymixin import CopyMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.typing import ElementType
 
 
@@ -16,7 +15,7 @@ class ObserverMixin(ABC):
     """
 
     @abstractmethod
-    def on_next(self, elem: ElementType) -> AckMixin:
+    def on_next(self, elem: ElementType) -> Ack:
         """
         This function is called to send information downstream. The function must return an acknowledgment,
         which is either:

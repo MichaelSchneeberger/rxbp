@@ -1,7 +1,7 @@
 from traceback import FrameSummary
 from typing import Any, Callable, List
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.flowables.debugflowable import DebugFlowable
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observerinfo import ObserverInfo
@@ -11,13 +11,13 @@ from rxbp.subscriber import Subscriber
 def init_debug_flowable(
         source: FlowableMixin,
         name: str,
-        on_next: Callable[[Any], AckMixin] = None,
+        on_next: Callable[[Any], Ack] = None,
         on_completed: Callable[[], None] = None,
         on_error: Callable[[Exception], None] = None,
-        on_sync_ack: Callable[[AckMixin], None] = None,
-        on_async_ack: Callable[[AckMixin], None] = None,
+        on_sync_ack: Callable[[Ack], None] = None,
+        on_async_ack: Callable[[Ack], None] = None,
         on_subscribe: Callable[[ObserverInfo, Subscriber], None] = None,
-        on_raw_ack: Callable[[AckMixin], None] = None,
+        on_raw_ack: Callable[[Ack], None] = None,
         verbose: bool = None,
         stack: List[FrameSummary] = None,
 ):

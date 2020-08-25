@@ -5,16 +5,22 @@ import rx
 from rx.disposable import CompositeDisposable
 from rx.subject import Subject
 
-from rxbp.multicast.liftedmulticast import LiftedMultiCast
-from rxbp.multicast.multicast import MultiCast
-from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.init.initmulticast import init_multicast
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.typing import MultiCastItem
+from rxbp.multicast.multicast import MultiCast
+from rxbp.multicast.multicastobserver import MultiCastObserver
+from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
+from rxbp.multicast.typing import MultiCastItem, MultiCastElemType
 from rxbp.scheduler import Scheduler
 
 
 @dataclass
-class SafeMultiCastSubject(LiftedMultiCast):
+class SafeMultiCastSubject(
+    MultiCast[MultiCastElemType],
+    MultiCastObserver,
+    Generic[MultiCastElemType],
+):
     def __init__(
             self,
             composite_diposable: CompositeDisposable,
@@ -29,9 +35,21 @@ class SafeMultiCastSubject(LiftedMultiCast):
         self.is_stopped = False
         self.subject = Subject()
 
+    @property
+    def nested_layer(self) -> int:
+        return 0
+
+    @property
+    def underlying(self) -> MultiCastMixin:
+        return self
+
+    @property
+    def is_hot_on_subscribe(self) -> bool:
+        return True
+
     @classmethod
     def _copy(cls, multi_cast: MultiCastMixin):
-        return LiftedMultiCast(multi_cast)
+        return init_multicast(multi_cast)
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable[MultiCastItem]:
         assert self.is_first and not self.is_stopped, (
@@ -44,12 +62,14 @@ class SafeMultiCastSubject(LiftedMultiCast):
     def subscribe_to(self, source: MultiCast, scheduler: Scheduler = None):
         scheduler = scheduler or self.scheduler
 
-        observable = source.get_source(MultiCastInfo(
+        subscription = source.unsafe_subscribe(MultiCastSubscriber(
             source_scheduler=scheduler,
             multicast_scheduler=scheduler,
         ))
 
-        disposable = observable.subscribe_(self)
+        disposable = subscription.observable.observe(MultiCastObserverInfo(
+            observer=self,
+        ))
 
         self.composite_diposable.add(disposable)
 

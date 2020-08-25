@@ -1,7 +1,7 @@
 import unittest
 
-from rxbp.ack.stopack import StopAck
-from rxbp.ack.continueack import ContinueAck
+from rxbp.acknowledgement.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.observerinfo import ObserverInfo

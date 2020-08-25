@@ -1,7 +1,7 @@
 from abc import ABC
-from typing import Optional, Union
+from typing import Optional
 
-from rxbp.ack.acksubject import AckSubject
+from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.states.measuredstates.measuredstate import MeasuredState
 from rxbp.states.measuredstates.mergestates import MergeStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates

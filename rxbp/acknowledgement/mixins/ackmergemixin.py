@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 
 
 class AckMergeMixin(ABC):
     @abstractmethod
-    def merge(self, other: AckMixin):
+    def merge(self, other: Ack):
         ...

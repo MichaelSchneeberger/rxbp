@@ -1,7 +1,5 @@
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.tolistobservable import ToListObservable
-from rxbp.selectors.bases.numericalbase import NumericalBase
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

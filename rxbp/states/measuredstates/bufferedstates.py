@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from rxbp.ack.acksubject import AckSubject
+from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.states.measuredstates.measuredstate import MeasuredState
 
 

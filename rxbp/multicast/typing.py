@@ -1,6 +1,4 @@
-from typing import TypeVar, Union, Tuple, Iterator, List
-
-from rxbp.flowable import Flowable
+from typing import TypeVar, Union, Iterator, List
 
 MultiCastElemType = TypeVar('MultiCastElemType')
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 import rx
 from rx.core.typing import Disposable, Scheduler
@@ -7,7 +6,6 @@ from rx.core.typing import Disposable, Scheduler
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.bufferedobserver import BufferedObserver
-from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import OverflowStrategy
 
 

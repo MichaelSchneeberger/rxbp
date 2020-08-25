@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import Iterator, Iterable
+from typing import Iterable
 
-import rx
-
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.mergemulticastobservable import MergeMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
-from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 
 

@@ -7,7 +7,6 @@ import rxbp
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
-from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
 from rxbp.multicast.multicasts.firstmulticast import FirstMultiCast
@@ -33,17 +32,17 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
         ...
 
     @abstractmethod
-    def _copy(self, *args, **kwargs) -> 'MultiCastMixin':
+    def _copy(self, *args, **kwargs) -> 'MultiCastOpMixin':
         ...
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         return self.underlying.unsafe_subscribe(subscriber=subscriber)
 
-    def join_flowables(self, *others: 'MultiCastMixin'):
-        if len(others) == 0:
-            return self
-
-        return self._copy(JoinFlowablesMultiCast(sources=[self] + list(others)))
+    def collect_flowables(
+            self,
+            maintain_order: bool = None,
+    ):
+        return self._copy(CollectFlowablesMultiCast(source=self, maintain_order=maintain_order))
 
     def debug(
             self,
@@ -98,6 +97,28 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     ):
         return self._copy(FlatMapMultiCast(source=self, func=func))
 
+    def join_flowables(self, *others: 'MultiCastMixin'):
+        if len(others) == 0:
+            return self
+
+        return self._copy(JoinFlowablesMultiCast(sources=[self] + list(others)))
+
+    def share_func(
+            self,
+            func: Callable[['MultiCastOpMixin'], 'MultiCastOpMixin'],
+    ):
+        # def lifted_func(m: MultiCastMixin):
+        #     val = func(self._copy(
+        #         underlying=m,
+        #     ))
+        #     return val
+
+        return self._copy(
+            underlying=func(self._copy(
+                underlying=SharedMultiCast(source=self),
+            )),
+        )
+
     # def build_imperative_multicast(
     #         self,
     #         func: Callable[[Any], ImperativeCall]
@@ -131,6 +152,13 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     #
     #     return LoopMultiCast()
 
+    @abstractmethod
+    def lift(
+            self,
+            func: Callable[['MultiCastOpMixin'], Any] = None,
+    ):
+        ...
+
     def loop_flowables(
             self,
             func: Callable[[MultiCastItem], MultiCastItem],
@@ -161,104 +189,3 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
     def observe_on(self, scheduler: rx.typing.Scheduler):
         return self._copy(ObserveOnMultiCast(source=self, scheduler=scheduler))
-
-    def collect_flowables(
-            self,
-            maintain_order: bool = None,
-    ):
-        return self._copy(CollectFlowablesMultiCast(source=self, maintain_order=maintain_order))
-
-    # @abstractmethod
-    # def debug(self, name: str = None):
-    #     ...
-    #
-    # @abstractmethod
-    # def default_if_empty(
-    #         self,
-    #         lazy_val: Callable[[], Any],
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def loop_flowables(
-    #         self,
-    #         func: Callable[[MultiCastItem], MultiCastItem],
-    #         initial: ValueType,
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def empty(self):
-    #     ...
-    #
-    # @abstractmethod
-    # def filter(
-    #         self,
-    #         predicate: Callable[[MultiCastItem], bool],
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def first(
-    #         self,
-    #         raise_exception: Callable[[Callable[[], None]], None],
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def first_or_default(
-    #         self,
-    #         lazy_val: Callable[[], Any],
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def flat_map(
-    #         self,
-    #         func: Callable[[MultiCastItem], 'MultiCastOpMixin[MultiCastItem]'],
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def lift(
-    #         self,
-    #         func: Callable[['MultiCastOpMixin'], MultiCastItem],
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def merge(self, *others: 'MultiCastOpMixin'):
-    #     ...
-    #
-    # @abstractmethod
-    # def map(self, func: Callable[[MultiCastItem], MultiCastItem]):
-    #     ...
-    #
-    # # @abstractmethod
-    # # def map_with_op(self, func: Callable[[MultiCastValue, FlowableOp], MultiCastValue]):
-    # #     ...
-    #
-    # @abstractmethod
-    # def observe_on(self, scheduler: rx.typing.Scheduler):
-    #     ...
-    #
-    # @abstractmethod
-    # def collect_flowables(
-    #         self,
-    #         maintain_order: bool = None,
-    # ):
-    #     ...
-    #
-    # @abstractmethod
-    # def _share(self):
-    #     ...
-    #
-    # def share(self) -> 'MultiCastOpMixin':
-    #     raise Exception('this MultiCast cannot be shared. Use "lift" operator to share this MultiCast.')
-    #
-    # @abstractmethod
-    # def join_flowables(
-    #         self,
-    #         *others: 'MultiCastOpMixin',
-    # ):
-    #     ...

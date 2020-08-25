@@ -2,7 +2,7 @@ import unittest
 
 from rx.internal import SequenceContainsNoElementsError
 
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.stopack import StopAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.filterobserver import FilterObserver
 from rxbp.observers.firstobserver import FirstObserver

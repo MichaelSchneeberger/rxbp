@@ -2,7 +2,6 @@ from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.observeonobservable import ObserveOnObservable
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
-from rxbp.subscription import Subscription
 
 
 class ObserveOnFlowable(FlowableMixin):

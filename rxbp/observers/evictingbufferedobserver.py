@@ -1,11 +1,11 @@
 import threading
 from typing import List, Any, Optional
 
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.operators.observeon import _observe_on
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.operators.observeon import _observe_on
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck
 from rxbp.observer import Observer
 from rxbp.overflowstrategy import OverflowStrategy, DropOld, ClearBuffer
 from rxbp.scheduler import Scheduler
@@ -53,7 +53,7 @@ class EvictingBufferedObserver(Observer):
         self.em = scheduler.get_execution_model()
         # self.buffer_size = strategy
 
-        self.last_iteration_ack: Optional[AckMixin] = None
+        self.last_iteration_ack: Optional[Ack] = None
 
         self.upstream_is_complete = False
         self.downstream_is_complete = False
@@ -156,7 +156,7 @@ class EvictingBufferedObserver(Observer):
             except:
                 raise NotImplementedError
 
-        def go_async(current_queue: List, next_val, next_size: int, ack: AckMixin, processed: int):
+        def go_async(current_queue: List, next_val, next_size: int, ack: Ack, processed: int):
             class AckSingle(Single):
                 def on_error(self, exc: Exception):
                     raise NotImplementedError
@@ -172,7 +172,7 @@ class EvictingBufferedObserver(Observer):
 
             _observe_on(ack, self.scheduler).subscribe(AckSingle())
 
-        def fast_loop(prev_queue: List, prev_ack: AckMixin, last_processed:int, start_index: int):
+        def fast_loop(prev_queue: List, prev_ack: Ack, last_processed:int, start_index: int):
             ack = continue_ack if prev_ack is None else prev_ack
             is_first_iteration = isinstance(ack, ContinueAck)
             processed = last_processed

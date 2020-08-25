@@ -1,6 +1,6 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.observerinfo import ObserverInfo

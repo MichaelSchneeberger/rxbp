@@ -1,4 +1,4 @@
-from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase

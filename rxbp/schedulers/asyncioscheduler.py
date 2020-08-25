@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 from threading import Thread
-from typing import Union, Callable, Any, Optional
 
 from rx.core.typing import ScheduledAction, RelativeTime, AbsoluteTime
 from rx.disposable import Disposable

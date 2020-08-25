@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.states.measuredstates.bufferedstates import BufferedStates
 
 
@@ -14,7 +14,7 @@ class RawBufferedStates:
 
     @dataclass
     class InitialState(State):
-        last_ack: AckMixin
+        last_ack: Ack
         meas_state: Optional[BufferedStates.State]
 
         def get_measured_state(self, has_elements: bool) -> BufferedStates.State:

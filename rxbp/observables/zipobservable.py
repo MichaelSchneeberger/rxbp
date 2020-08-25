@@ -4,9 +4,9 @@ from typing import Callable, Any, Optional
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.stopack import stop_ack, StopAck
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.stopack import stop_ack, StopAck
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -317,7 +317,7 @@ class ZipObservable(Observable):
 
         class ZipLeftObserver(Observer):
 
-            def on_next(_, elem: ElementType) -> AckMixin:
+            def on_next(_, elem: ElementType) -> Ack:
                 return self._on_next_left(elem)
 
             def on_error(_, exc: Exception):
@@ -328,7 +328,7 @@ class ZipObservable(Observable):
 
         class ZipRightObserver(Observer):
 
-            def on_next(_, elem: ElementType) -> AckMixin:
+            def on_next(_, elem: ElementType) -> Ack:
                 return self._on_next_right(elem)
 
             def on_error(_, exc: Exception):

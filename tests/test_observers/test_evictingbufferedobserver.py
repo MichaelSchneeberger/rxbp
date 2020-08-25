@@ -1,4 +1,4 @@
-from rxbp.ack.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.observers.evictingbufferedobserver import EvictingBufferedObserver
 from rxbp.overflowstrategy import DropOld
 from rxbp.testing.testcasebase import TestCaseBase

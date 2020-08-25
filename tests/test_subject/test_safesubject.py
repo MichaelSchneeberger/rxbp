@@ -2,8 +2,8 @@ import unittest
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.ack.continueack import ContinueAck
-from rxbp.multicast.subjects.safeflowablesubject import SafeFlowableSubject
+from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.multicast.imperative.safeflowablesubject import SafeFlowableSubject
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 

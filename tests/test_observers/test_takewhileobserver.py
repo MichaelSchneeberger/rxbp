@@ -1,7 +1,7 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.stopack import StopAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.filterobserver import FilterObserver
 from rxbp.observers.takewhileobserver import TakeWhileObserver

@@ -1,7 +1,7 @@
 import unittest
 
-from rxbp.ack.continueack import ContinueAck
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.acknowledgement.stopack import StopAck
 from rxbp.flowable import Flowable
 from rxbp.imperative import to_cache
 from rxbp.testing.testflowable import TestFlowable

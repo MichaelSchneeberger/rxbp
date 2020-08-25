@@ -2,7 +2,7 @@ from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable, Disposable
 
-from rxbp.ack.stopack import stop_ack
+from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo

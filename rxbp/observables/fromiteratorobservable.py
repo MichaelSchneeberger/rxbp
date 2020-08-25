@@ -2,13 +2,13 @@ from typing import Iterator, Any, Optional
 
 from rx.disposable import Disposable, BooleanDisposable, CompositeDisposable
 
-from rxbp.ack.continueack import ContinueAck
-from rxbp.ack.operators.observeon import _observe_on
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.acknowledgement.operators.observeon import _observe_on
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck
+from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
 from rxbp.scheduler import Scheduler
 
 

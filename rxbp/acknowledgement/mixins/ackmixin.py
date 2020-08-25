@@ -2,11 +2,12 @@ from abc import ABC, abstractmethod
 
 from rx.disposable import Disposable
 
-from rxbp.ack.single import Single
+from rxbp.acknowledgement.single import Single
 
 
 class AckMixin(ABC):
-    """ An acknowledgment is what is return by a on_next method call to potentially
+    """
+    An acknowledgment is what is return by a on_next method call to potentially
     back-pressure the upstream Observable.
 
     An acknowledgment is build similarly to a rx Observable by having a `subscribe`

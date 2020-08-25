@@ -6,7 +6,7 @@ import time
 from concurrent.futures import Executor
 from concurrent.futures.thread import ThreadPoolExecutor
 
-from rx.core.typing import AbsoluteTime, RelativeTime
+from rx.core.typing import RelativeTime
 from rx.disposable import Disposable, MultipleAssignmentDisposable, CompositeDisposable
 
 from rxbp.schedulers.asyncioscheduler import AsyncIOScheduler

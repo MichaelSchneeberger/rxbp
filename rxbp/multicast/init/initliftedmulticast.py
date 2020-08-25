@@ -9,5 +9,5 @@ def init_lifted_multicast(
     return LiftedMultiCastImpl(
         underlying=underlying,
         nested_layer=nested_layer,
-        is_hot=True,
+        is_hot_on_subscribe=True,
     )

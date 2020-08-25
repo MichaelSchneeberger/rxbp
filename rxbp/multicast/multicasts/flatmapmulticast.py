@@ -1,11 +1,8 @@
 from typing import Callable
 
-import rx
-from rx import operators as rxop
-
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.flatmapmulticastobservable import FlatMapMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
-from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.typing import MultiCastItem
 

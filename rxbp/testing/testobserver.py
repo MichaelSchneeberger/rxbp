@@ -1,6 +1,6 @@
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.continueack import continue_ack
-from rxbp.ack.stopack import stop_ack
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import continue_ack
+from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 

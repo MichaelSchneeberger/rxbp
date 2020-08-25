@@ -1,14 +1,10 @@
 import threading
 
-import rx
-from rx import operators as rxop
-
+from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.refcountmulticastobservable import RefCountMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
-from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.subjects.multicastobservablesubject import MultiCastObservableSubject
-from rxbp.subjects.subject import Subject
 
 
 class SharedMultiCast(MultiCastMixin):

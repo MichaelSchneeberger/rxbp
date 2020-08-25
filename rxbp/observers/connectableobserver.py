@@ -1,9 +1,9 @@
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.operators.map import _map
-from rxbp.ack.operators.mergeall import _merge_all
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.operators.map import _map
+from rxbp.acknowledgement.operators.mergeall import _merge_all
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType

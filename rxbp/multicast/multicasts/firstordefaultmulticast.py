@@ -3,10 +3,9 @@ from typing import Callable, Any
 
 import rx
 from rx import Observable
-from rx.internal import SequenceContainsNoElementsError
 
-from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 
 
 @dataclass

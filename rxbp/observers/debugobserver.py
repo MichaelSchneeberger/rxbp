@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Optional, Callable, Any, List
 
-from rxbp.ack.continueack import ContinueAck
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.typing import ElementType
@@ -16,13 +16,13 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 class DebugObserver(Observer):
     source: Observer
     name: Optional[str]
-    on_next_func: Callable[[Any], AckMixin]
+    on_next_func: Callable[[Any], Ack]
     on_completed_func: Callable[[], None]
     on_error_func: Callable[[Exception], None]
-    on_sync_ack: Callable[[AckMixin], None]
-    on_async_ack: Callable[[AckMixin], None]
+    on_sync_ack: Callable[[Ack], None]
+    on_async_ack: Callable[[Ack], None]
     on_subscribe: Callable[[ObserverInfo], None]
-    on_raw_ack: Callable[[AckMixin], None]
+    on_raw_ack: Callable[[Ack], None]
     stack: List[FrameSummary]
     has_scheduled_next: bool
 

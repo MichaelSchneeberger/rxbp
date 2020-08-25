@@ -4,42 +4,13 @@ import rx
 
 from rxbp.multicast.init.initmulticast import init_multicast
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.mixins.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicastoperator import MultiCastOperator
-from rxbp.multicast.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
-from rxbp.multicast.notliftedmulticast import NotLiftedMultiCast
 from rxbp.multicast.typing import MultiCastItem
 from rxbp.typing import ValueType
-
-
-def join_flowables(
-      *others: MultiCastOpMixin,
-):
-    """
-    Zip one or more *Multicasts* (each emitting a single *Flowable*) to a *Multicast*
-    emitting a single element (tuple of *Flowables*).
-
-    The number of Flowables contained in the tuple is equal to the number of collected
-    MultiCasts.
-
-    ::
-
-        # collect two Flowables emitted by two different MultiCast
-        rxbp.multicast.return_flowable(rxbp.range(10)).pipe(
-            rxbp.multicast.op.join_flowables(
-                rxbp.multicast.return_flowable(rxbp.range(10)),
-            ),
-        )
-
-    :param others: other MultiCasts that all emit a single Flowable
-    """
-
-    def op_func(source: MultiCast):
-        return source.join_flowables(*others)
-
-    return MultiCastOperator(op_func)
 
 
 def debug(
@@ -147,17 +118,6 @@ def first_or_default(lazy_val: Callable[[], Any]):
     return MultiCastOperator(op_func)
 
 
-def lift_and_flatten(func: Callable[[MultiCast], MultiCast]):
-    """
-    Emit the first element only and stop the Flowable sequence thereafter.
-    """
-
-    def op_func(source: MultiCast):
-        return source.lift_and_flatten(func=func)
-
-    return MultiCastOperator(op_func)
-
-
 def flat_map(func: Callable[[MultiCastItem], MultiCastOpMixin]):
     """
     Apply a function to each item emitted by the source and flattens the result.
@@ -169,14 +129,42 @@ def flat_map(func: Callable[[MultiCastItem], MultiCastOpMixin]):
     return MultiCastOperator(op_func)
 
 
+def join_flowables(
+      *others: MultiCastOpMixin,
+):
+    """
+    Zip one or more *Multicasts* (each emitting a single *Flowable*) to a *Multicast*
+    emitting a single element (tuple of *Flowables*).
+
+    The number of Flowables contained in the tuple is equal to the number of collected
+    MultiCasts.
+
+    ::
+
+        # collect two Flowables emitted by two different MultiCast
+        rxbp.multicast.return_flowable(rxbp.range(10)).pipe(
+            rxbp.multicast.op.join_flowables(
+                rxbp.multicast.return_flowable(rxbp.range(10)),
+            ),
+        )
+
+    :param others: other MultiCasts that all emit a single Flowable
+    """
+
+    def op_func(source: MultiCast):
+        return source.join_flowables(*others)
+
+    return MultiCastOperator(op_func)
+
+
 def lift(
-    func: Callable[[MultiCast], MultiCastItem],
+    func: Callable[[MultiCast], MultiCastItem] = None,
 ):
     """
     Lift the current `MultiCast[T]` to a `MultiCast[MultiCast[T]]`.
     """
 
-    def op_func(source: NotLiftedMultiCast):
+    def op_func(source: MultiCast):
         # def lifted_func(m: MultiCastMixin):
         #     return func(init_lifted_multicast(
         #         underlying=m,
@@ -210,12 +198,17 @@ def map(func: Callable[[MultiCastItem], MultiCastItem]):
 #     return MultiCastOperator(op_func)
 
 
-def merge(*others: MultiCastMixin):
+def merge(*others: MultiCast):
     """
     Merge the elements of the *Flowable* sequences into a single *Flowable*.
     """
 
     def op_func(source: MultiCast):
+        hot_sources = [source for source in (source, *others) if source.is_hot_on_subscribe]
+
+        if 1 < len(hot_sources):
+            assert all(hot_sources[0].nested_layer == other.nested_layer for other in hot_sources[1:])
+
         return source.merge(*others)
 
     return MultiCastOperator(op_func)
@@ -264,6 +257,12 @@ def share(
     """
 
     def op_func(source: MultiCast):
-        return func(source._share())
+        # def lifted_func(m: MultiCastMixin):
+        #     return func(init_multicast(
+        #         underlying=m,
+        #     ))
+        #     return val
+
+        return source.share_func(func=func)
 
     return MultiCastOperator(op_func)

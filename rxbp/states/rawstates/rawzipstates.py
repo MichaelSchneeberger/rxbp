@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import Iterator, Optional
 
-from rxbp.ack.acksubject import AckSubject
+from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.states.measuredstates.zipstates import ZipStates
 from rxbp.states.rawstates.rawstateterminationarg import RawStateTerminationArg

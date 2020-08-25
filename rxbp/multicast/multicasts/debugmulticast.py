@@ -1,8 +1,5 @@
-import rx
-
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.debugmulticastobservable import DebugMultiCastObservable
-from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 
 

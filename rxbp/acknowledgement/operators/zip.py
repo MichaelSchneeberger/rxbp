@@ -2,14 +2,14 @@ from typing import List
 
 from rx.disposable import CompositeDisposable, SingleAssignmentDisposable
 
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.single import Single
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.single import Single
 
 
-def _zip(*args: AckMixin) -> AckMixin:
+def _zip(*args: Ack) -> Ack:
     sources = list(args)
 
-    class ZipAck(AckMixin):
+    class ZipAck(Ack):
         def subscribe(self, single: Single):
             n = len(sources)
             queues: List[List] = [[] for _ in range(n)]

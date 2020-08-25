@@ -2,13 +2,13 @@ import threading
 
 from rx.disposable import CompositeDisposable, SingleAssignmentDisposable
 
-from rxbp.ack.mixins.ackmixin import AckMixin
-from rxbp.ack.single import Single
+from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.single import Single
 
 
-def _merge_all(source: AckMixin):
+def _merge_all(source: Ack):
 
-    class MergeAllAck(AckMixin):
+    class MergeAllAck(Ack):
         def subscribe(self, single: Single):
             group = CompositeDisposable()
             is_stopped = [False]
@@ -20,7 +20,7 @@ def _merge_all(source: AckMixin):
                 def on_error(self, exc: Exception):
                     single.on_error(exc)
 
-                def on_next(_, inner_source: AckMixin):
+                def on_next(_, inner_source: Ack):
                     inner_subscription = SingleAssignmentDisposable()
                     group.add(inner_subscription)
 

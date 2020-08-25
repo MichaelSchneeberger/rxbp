@@ -2,10 +2,10 @@ import threading
 from dataclasses import dataclass
 from typing import Optional
 
-from rxbp.ack.acksubject import AckSubject
-from rxbp.ack.continueack import ContinueAck, continue_ack
-from rxbp.ack.single import Single
-from rxbp.ack.stopack import StopAck, stop_ack
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver

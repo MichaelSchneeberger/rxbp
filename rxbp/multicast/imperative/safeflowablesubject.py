@@ -2,28 +2,32 @@ from typing import Any, Generic, List
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.ack.continueack import continue_ack
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.flowable import Flowable
+from rxbp.init.initflowable import init_flowable
+from rxbp.init.initobserverinfo import init_observer_info
+from rxbp.init.initsubscriber import init_subscriber
+from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
 from rxbp.observer import Observer
-from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
 
 
-class SafeFlowableSubject(Flowable[ValueType], Observer, Generic[ValueType]):
+class SafeFlowableSubject(
+    Flowable[ValueType],
+    Observer,
+    Generic[ValueType],
+):
     def __init__(
             self,
             composite_diposable: CompositeDisposable,
             scheduler: Scheduler,
     ):
-        super().__init__(underlying=self)
-
         self.composite_diposable = composite_diposable
         self.scheduler = scheduler
 
@@ -33,8 +37,19 @@ class SafeFlowableSubject(Flowable[ValueType], Observer, Generic[ValueType]):
 
         self._observable_subject = None
 
-    def _copy(cls, flowable: FlowableMixin):
-        return MultiCastFlowable(flowable)
+    @property
+    def underlying(self) -> FlowableMixin:
+        return self
+
+    @property
+    def is_hot(self) -> bool:
+        return True
+
+    def _copy(self, underlying: FlowableMixin, *args, **kwargs):
+        return init_flowable(
+            underlying=underlying,
+            is_hot=True,
+        )
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         assert self.is_first and not self.is_stopped, (
@@ -44,12 +59,12 @@ class SafeFlowableSubject(Flowable[ValueType], Observer, Generic[ValueType]):
 
         if self._observable_subject is None:
             self._observable_subject = CacheServeFirstOSubject(scheduler=subscriber.scheduler)
-        return init_subscription(BaseAndSelectors(base=None), self._observable_subject)
+        return init_subscription(observable=self._observable_subject)
 
     def subscribe_to(self, source: Flowable, scheduler: Scheduler = None):
         scheduler = scheduler or self.scheduler
 
-        subscription = source.unsafe_subscribe(Subscriber(
+        subscription = source.unsafe_subscribe(init_subscriber(
             scheduler=scheduler,
             subscribe_scheduler=self.subscribe_scheduler,
         ))

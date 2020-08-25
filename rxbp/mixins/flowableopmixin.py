@@ -6,7 +6,7 @@ from typing import Callable, Any, Tuple, Iterator, List
 
 import rx
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.flowables.bufferflowable import BufferFlowable
 from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
@@ -95,13 +95,13 @@ class FlowableOpMixin(
     def debug(
             self,
             name: str,
-            on_next: Callable[[Any], AckMixin],
+            on_next: Callable[[Any], Ack],
             on_completed: Callable[[], None] = None,
             on_error: Callable[[Exception], None] = None,
-            on_sync_ack: Callable[[AckMixin], None] = None,
-            on_async_ack: Callable[[AckMixin], None] = None,
+            on_sync_ack: Callable[[Ack], None] = None,
+            on_async_ack: Callable[[Ack], None] = None,
             on_subscribe: Callable[[ObserverInfo, Subscriber], None] = None,
-            on_raw_ack: Callable[[AckMixin], None] = None,
+            on_raw_ack: Callable[[Ack], None] = None,
             stack: List[FrameSummary] = None,
             verbose: bool = None
     ) -> 'FlowableOpMixin':

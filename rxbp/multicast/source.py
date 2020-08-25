@@ -1,11 +1,8 @@
 from typing import Any, Callable, Iterable
 
-import rx
 from rx.disposable import CompositeDisposable
 
 import rxbp
-from rxbp.flowable import Flowable
-from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
 from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.init.initmulticast import init_multicast
@@ -14,11 +11,10 @@ from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastobservables.fromiterableobservable import FromIterableObservable
 from rxbp.multicast.multicastobservables.returnvaluemulticastobservable import ReturnValueMultiCastObservable
+from rxbp.multicast.multicasts.emptymulticast import EmptyMultiCast
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.op import merge as merge_op
-from rxbp.multicast.typing import MultiCastItem
-from rxbp.torx import to_rx
 
 
 def empty():
@@ -26,20 +22,15 @@ def empty():
     create a MultiCast emitting no elements
     """
 
-    class EmptyMultiCast(MultiCastMixin):
-        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable:
-            return rx.empty(scheduler=subscriber.multicast_scheduler)
-
     return init_multicast(EmptyMultiCast())
 
 
 def build_imperative_multicast(
-    func: Callable[[ImperativeMultiCastBuilder], ImperativeMultiCastBuild],
-    composite_disposable: CompositeDisposable = None,
+        func: Callable[[ImperativeMultiCastBuilder], ImperativeMultiCastBuild],
+        composite_disposable: CompositeDisposable = None,
 ):
-
     class BuildBlockingFlowableMultiCast(MultiCastMixin):
-        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> rx.typing.Observable[MultiCastItem]:
+        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
 
             def on_completed():
                 for subject in imperative_call.subjects:
@@ -68,7 +59,7 @@ def build_imperative_multicast(
 
             return imperative_call.output_selector(
                 flowable,
-            ).get_source(info=info)
+            ).unsafe_subscribe(subscriber=subscriber)
 
     return init_multicast(BuildBlockingFlowableMultiCast())
 
@@ -127,7 +118,6 @@ def return_value(value: Any):
 
     class ReturnValueMultiCast(MultiCastMixin):
         def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-
             # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
             # this "subscribe scheduler" is not automatically provided in rx, that is
             # why it must be provided as the `scheduler` argument of the `return_flowable`
@@ -159,16 +149,16 @@ def from_iterable(values: Iterable[Any]):
     return init_multicast(FromIterableMultiCast())
 
 
-def from_rx_observable(val: rx.typing.Observable):
-    """
-    Create a *MultiCast* from an *rx.Observable*.
-    """
-
-    class FromObservableMultiCast(MultiCastMixin):
-        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> Flowable:
-            return val
-
-    return init_multicast(FromObservableMultiCast())
+# def from_rx_observable(val: rx.typing.Observable):
+#     """
+#     Create a *MultiCast* from an *rx.Observable*.
+#     """
+#
+#     class FromObservableMultiCast(MultiCastMixin):
+#         def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+#             return val
+#
+#     return init_multicast(FromObservableMultiCast())
 
 
 # def from_flowable(
@@ -207,7 +197,7 @@ def merge(
 
 
 def join_flowables(
-      *sources: MultiCast,
+        *sources: MultiCast,
 ):
     """
     Zips MultiCasts emitting a single Flowable to a MultiCast emitting a single tuple

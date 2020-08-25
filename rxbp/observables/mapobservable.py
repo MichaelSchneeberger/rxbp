@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from traceback import FrameSummary
-from typing import Callable, Any, List
+from typing import Callable, Any
 
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.mapobserver import MapObserver
-from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 @dataclass

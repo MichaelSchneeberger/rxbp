@@ -1,6 +1,6 @@
 from typing import Any, Callable, Iterator
 
-from rxbp.ack.mixins.ackmixin import AckMixin
+from rxbp.acknowledgement.ack import Ack
 from rxbp.flowable import Flowable
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observerinfo import ObserverInfo
@@ -70,13 +70,13 @@ def controlled_zip(
 
 def debug(
         name: str,
-        on_next: Callable[[Any], AckMixin] = None,
+        on_next: Callable[[Any], Ack] = None,
         on_completed: Callable[[], None] = None,
         on_error: Callable[[Exception], None] = None,
-        on_sync_ack: Callable[[AckMixin], None] = None,
-        on_async_ack: Callable[[AckMixin], None] = None,
+        on_sync_ack: Callable[[Ack], None] = None,
+        on_async_ack: Callable[[Ack], None] = None,
         on_subscribe: Callable[[ObserverInfo, Subscriber], None] = None,
-        on_raw_ack: Callable[[AckMixin], None] = None,
+        on_raw_ack: Callable[[Ack], None] = None,
         verbose: bool = None,
 ):
     """

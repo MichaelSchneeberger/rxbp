@@ -4,7 +4,6 @@ from typing import Callable, Any
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.observables.flatmergenobackpressureobservable import FlatMergeNoBackpressureObservable
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

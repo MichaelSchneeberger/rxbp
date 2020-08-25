@@ -1,9 +1,6 @@
 from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.pairwiseobservable import PairwiseObservable
-from rxbp.selectors.base import Base
-from rxbp.selectors.bases.pairwisebase import PairwiseBase
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 from rxbp.mixins.copymixin import CopyMixin
 from rxbp.scheduler import Scheduler
-from rxbp.typing import ValueType
 
 
 class SubscriberMixin(CopyMixin, ABC):

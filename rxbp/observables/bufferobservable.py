@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo

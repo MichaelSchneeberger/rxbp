@@ -5,16 +5,13 @@ from rx import Observable
 from rx.core import typing
 from rx.core.typing import AbsoluteTime, TState, Disposable, RelativeTime, ScheduledAction, ScheduledPeriodicAction
 
-from rxbp.ack.continueack import continue_ack
-from rxbp.init.initobserverinfo import init_observer_info
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observer import Observer
-from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import SchedulerBase
 from rxbp.scheduler import Scheduler
+from rxbp.scheduler import SchedulerBase
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
-from rxbp.subscriber import Subscriber
 from rxbp.typing import ElementType
 
 

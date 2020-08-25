@@ -4,11 +4,12 @@ from dataclass_abc import dataclass_abc
 
 from rxbp.multicast.liftedmulticast import LiftedMultiCast
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.typing import MultiCastElemType
 
 
 @dataclass_abc
-class LiftedMultiCastImpl(LiftedMultiCast):
-    is_hot: bool
+class LiftedMultiCastImpl(LiftedMultiCast[MultiCastElemType]):
+    is_hot_on_subscribe: bool
     nested_layer: int
     underlying: MultiCastMixin
 

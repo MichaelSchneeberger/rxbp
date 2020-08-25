@@ -1,10 +1,5 @@
 from typing import Callable
 
-import rx
-from rx import operators as rxop
-
-from rxbp.multicast.init.initmulticastsubscription import init_multicast_subscription
-from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.mapmulticastobservable import MapMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
