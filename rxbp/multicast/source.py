@@ -55,7 +55,7 @@ def build_imperative_multicast(
                     on_completed=on_completed,
                     on_error=on_error,
                 ),
-            )
+            ).materialize()
 
             return imperative_call.output_selector(
                 flowable,

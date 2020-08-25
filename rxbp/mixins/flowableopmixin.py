@@ -1,6 +1,7 @@
 import functools
 import itertools
 from abc import abstractmethod, ABC
+from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Callable, Any, Tuple, Iterator, List
 
@@ -31,6 +32,7 @@ from rxbp.flowables.zipflowable import ZipFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.mixins.flowableabsopmixin import FlowableAbsOpMixin
 from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.observables.materializeobservable import MaterializeObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
@@ -173,6 +175,23 @@ class FlowableOpMixin(
         flowable = MapToIteratorFlowable(source=self, func=func)
         return self._copy(flowable)
 
+    def materialize(
+            self,
+    ):
+        @dataclass
+        class MaterializeFlowable(FlowableMixin):
+            source: FlowableMixin
+
+            def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+                subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+                return subscription.copy(
+                    observable=MaterializeObservable(
+                        source=subscription.observable,
+                    )
+                )
+
+        return self._copy(MaterializeFlowable(source=self))
+
     def merge(self, *others: FlowableMixin):
 
         assert all(isinstance(source, FlowableMixin) for source in others), \
@@ -185,7 +204,7 @@ class FlowableOpMixin(
 
             def gen_stack():
                 for source in reversed(sources):
-                    def _(right: Flowable = None, left: Flowable = source):
+                    def _(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
                         if right is None:
                             return left
                         else:
