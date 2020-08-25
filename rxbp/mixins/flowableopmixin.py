@@ -15,6 +15,7 @@ from rxbp.flowables.defaultifemptyflowable import DefaultIfEmptyFlowable
 from rxbp.flowables.doactionflowable import DoActionFlowable
 from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
+from rxbp.flowables.firstordefaultflowable import FirstOrDefaultFlowable
 from rxbp.flowables.flatmapflowable import FlatMapFlowable
 from rxbp.flowables.init.initdebugflowable import init_debug_flowable
 from rxbp.flowables.lastflowable import LastFlowable
@@ -152,9 +153,9 @@ class FlowableOpMixin(
         flowable = FirstFlowable(source=self, stack=stack)
         return self._copy(flowable)
 
-    # def first_or_default(self, lazy_val: Callable[[], Any]):
-    #     flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
-    #     return self._copy(flowable)
+    def first_or_default(self, lazy_val: Callable[[], Any]):
+        flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
+        return self._copy(flowable)
 
     def flat_map(self, func: Callable[[Any], 'FlowableOpMixin'], stack: List[FrameSummary]):
         flowable = FlatMapFlowable(source=self, func=func, stack=stack)

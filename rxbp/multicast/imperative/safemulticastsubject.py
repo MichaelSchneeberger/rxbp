@@ -26,7 +26,7 @@ class SafeMultiCastSubject(
             composite_diposable: CompositeDisposable,
             scheduler: Scheduler,
     ):
-        super().__init__(underlying=self)
+        super().__init__()
 
         self.composite_diposable = composite_diposable
         self.scheduler = scheduler

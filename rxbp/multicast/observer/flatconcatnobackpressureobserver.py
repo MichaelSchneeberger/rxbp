@@ -77,6 +77,9 @@ class FlatConcatNoBackpressureObserver(Observer):
     def on_next(self, elem: ElementType):
         obs_list: List[Observable] = [self.selector(e) for e in elem]
 
+        if len(obs_list) == 0:
+            return continue_ack
+
         # generate a connectable observer for each observer
         def gen_connectable_observer():
             for _ in obs_list:

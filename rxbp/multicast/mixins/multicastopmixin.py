@@ -107,12 +107,6 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             self,
             func: Callable[['MultiCastOpMixin'], 'MultiCastOpMixin'],
     ):
-        # def lifted_func(m: MultiCastMixin):
-        #     val = func(self._copy(
-        #         underlying=m,
-        #     ))
-        #     return val
-
         return self._copy(
             underlying=func(self._copy(
                 underlying=SharedMultiCast(source=self),
@@ -152,12 +146,12 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     #
     #     return LoopMultiCast()
 
-    @abstractmethod
     def lift(
             self,
-            func: Callable[['MultiCastOpMixin'], Any] = None,
+            func: Callable[['MultiCast'], Any],
     ):
-        ...
+        raise Exception('Only non-lifted MultiCast implements the lift operator')
+
 
     def loop_flowables(
             self,

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from rxbp.flowables.refcountflowable import RefCountFlowable
+from rxbp.init.initflowable import init_flowable
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
 from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
@@ -106,7 +107,7 @@ class CollectFlowablesMultiCast(MultiCastMixin):
                             subscribe_scheduler=source_scheduler,
                         )
 
-                    flowable = RefCountFlowable(flattened_flowable)
+                    flowable = init_flowable(RefCountFlowable(flattened_flowable))
                     yield key, flowable
 
             return from_state(dict(gen_flowables()))

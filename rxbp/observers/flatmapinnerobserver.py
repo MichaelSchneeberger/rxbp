@@ -1,6 +1,6 @@
 import threading
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
@@ -17,24 +17,22 @@ from rxbp.typing import ElementType
 @dataclass
 class FlatMapInnerObserver(Observer):
     observer_info: ObserverInfo
-    # outer: 'FlatMapObserver'
     next_conn_observer: Optional[ConnectableObserver]
     outer_upstream_ack: AckSubject
     lock: threading.RLock()
-
-    state: RawFlatMapStates.State
+    state: List[RawFlatMapStates.State]
 
     def on_next(self, elem: ElementType):
 
-        # for mypy to type check correctly
-        assert isinstance(self.observer_info, ObserverInfo)
+        # # for mypy to type check correctly
+        # assert isinstance(self.observer_info, ObserverInfo)
 
         # on_next, on_completed, on_error are called ordered/non-concurrently
         ack = self.observer_info.observer.on_next(elem)
 
         # if ack==Stop, then update state
         if isinstance(ack, StopAck):
-            self.state = RawFlatMapStates.Stopped()
+            self.state[0] = RawFlatMapStates.Stopped()
             self.outer_upstream_ack.on_next(ack)
 
         elif not isinstance(ack, ContinueAck):
@@ -44,7 +42,7 @@ class FlatMapInnerObserver(Observer):
 
                 def on_next(_, ack):
                     if isinstance(ack, StopAck):
-                        self.state = RawFlatMapStates.Stopped()
+                        self.state[0] = RawFlatMapStates.Stopped()
                         self.outer_upstream_ack.on_next(ack)
 
             ack.subscribe(ResultSingle())
@@ -52,19 +50,20 @@ class FlatMapInnerObserver(Observer):
         return ack
 
     def on_error(self, err):
-        next_state = RawFlatMapStates.Stopped()
+        # next_state = RawFlatMapStates.Stopped()
+        #
+        # with self.lock:
+        #     prev_state = self.state[0]
+        #     self.state[0] = next_state
+        #
+        # prev_meas_state = prev_state.get_measured_state()
+        #
+        # if not isinstance(prev_meas_state, FlatMapStates.Stopped):
 
-        with self.lock:
-            prev_state = self.state
-            self.state = next_state
+        self.observer_info.observer.on_error(err)
 
-        prev_meas_state = prev_state.get_measured_state()
-
-        if not isinstance(prev_meas_state, FlatMapStates.Stopped):
-            self.observer_info.observer.on_error(err)
-
-            # stop outer stream as well
-            self.outer_upstream_ack.on_next(stop_ack)
+        # stop outer stream as well
+        self.outer_upstream_ack.on_next(stop_ack)
 
     def on_completed(self):
         """ on_next* (on_completed | on_error)?
@@ -77,8 +76,8 @@ class FlatMapInnerObserver(Observer):
             next_state = RawFlatMapStates.Active()
 
         with self.lock:
-            next_state.raw_prev_state = self.state
-            self.state = next_state
+            next_state.raw_prev_state = self.state[0]
+            self.state[0] = next_state
 
         prev_meas_state = next_state.raw_prev_state.get_measured_state()
         meas_state = next_state.get_measured_state()

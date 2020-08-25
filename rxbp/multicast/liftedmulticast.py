@@ -13,9 +13,3 @@ class LiftedMultiCast(
 ):
     def share(self):
         return self._copy(SharedMultiCast(source=self))
-
-    def lift(
-            self,
-            func: Callable[['MultiCast'], Any],
-    ):
-        raise Exception('Only non-lifted MultiCast implements the lift operator')
