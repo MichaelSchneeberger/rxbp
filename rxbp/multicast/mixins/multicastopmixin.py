@@ -9,6 +9,7 @@ import rxbp
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.materializemulticastobservable import MaterializeMultiCastObservable
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
+from rxbp.multicast.multicasts.assertsinglesubscriptionmulticast import AssertSingleSubscriptionMultiCast
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
@@ -40,6 +41,16 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         return self.underlying.unsafe_subscribe(subscriber=subscriber)
+
+    def assert_single_subscription(
+            self,
+            stack: List[FrameSummary],
+    ):
+        return self._copy(AssertSingleSubscriptionMultiCast(
+            source=self,
+            stack=stack,
+            is_first=True,
+        ))
 
     def collect_flowables(
             self,

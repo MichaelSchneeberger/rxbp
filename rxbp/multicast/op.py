@@ -14,6 +14,15 @@ from rxbp.typing import ValueType
 from rxbp.utils.getstacklines import get_stack_lines
 
 
+def assert_single_subscription():
+    stack = get_stack_lines()
+
+    def op_func(source: MultiCast):
+        return source.assert_single_subscription(stack=stack)
+
+    return MultiCastOperator(op_func)
+
+
 def debug(
         name: str,
         on_next: Callable[[Any], None] = None,
