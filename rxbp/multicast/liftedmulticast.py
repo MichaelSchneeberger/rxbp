@@ -12,4 +12,4 @@ class LiftedMultiCast(
     ABC,
 ):
     def share(self):
-        return self._copy(SharedMultiCast(source=self))
+        return self._copy(SharedMultiCast(source=self.materialize()))

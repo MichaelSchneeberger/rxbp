@@ -29,7 +29,7 @@ class NotLiftedMultiCast(
 
         return self._copy(
             underlying=LiftMultiCast(
-                source=SharedMultiCast(source=self),
+                source=SharedMultiCast(source=self.materialize()),
                 func=lifted_func,
             ),
             nested_layer=self.nested_layer + 1,

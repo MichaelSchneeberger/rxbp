@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Callable, Any
 
 import rx
 
 import rxbp
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
+from rxbp.multicast.multicastobservables.materializemulticastobservable import MaterializeMultiCastObservable
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
@@ -103,16 +105,6 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
         return self._copy(JoinFlowablesMultiCast(sources=[self] + list(others)))
 
-    def share_func(
-            self,
-            func: Callable[['MultiCastOpMixin'], 'MultiCastOpMixin'],
-    ):
-        return self._copy(
-            underlying=func(self._copy(
-                underlying=SharedMultiCast(source=self),
-            )),
-        )
-
     # def build_imperative_multicast(
     #         self,
     #         func: Callable[[Any], ImperativeCall]
@@ -164,6 +156,23 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
         return self._copy(LoopFlowableMultiCast(source=self, func=func, initial=initial))
 
+    def materialize(
+            self,
+    ):
+        @dataclass
+        class MaterializeMultiCast(MultiCastMixin):
+            source: MultiCastMixin
+
+            def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
+                subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+                return subscription.copy(
+                    observable=MaterializeMultiCastObservable(
+                        source=subscription.observable,
+                    )
+                )
+
+        return self._copy(MaterializeMultiCast(source=self))
+
     def map(
             self,
             func: Callable[[MultiCastItem], MultiCastItem],
@@ -183,3 +192,13 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
     def observe_on(self, scheduler: rx.typing.Scheduler):
         return self._copy(ObserveOnMultiCast(source=self, scheduler=scheduler))
+
+    def share_func(
+            self,
+            func: Callable[['MultiCastOpMixin'], 'MultiCastOpMixin'],
+    ):
+        return self._copy(
+            underlying=func(self._copy(
+                underlying=SharedMultiCast(source=self.materialize()),
+            )),
+        )
