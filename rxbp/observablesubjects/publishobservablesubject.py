@@ -7,14 +7,14 @@ from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.acknowledgement.single import Single
 from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.internal.promisecounter import PromiseCounter
-from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.typing import ElementType
 
 
-class PublishOSubject(OSubjectBase):
+class PublishObservableSubject(ObservableSubjectBase):
     def __init__(self, scheduler: Scheduler, min_num_of_subscriber: int = 1):
 
         super().__init__()
@@ -36,7 +36,8 @@ class PublishOSubject(OSubjectBase):
         pass
 
     class State:
-        def __init__(self, subscribers: Union[Set['PublishOSubject.SubscriberMixin'], 'PublishOSubject.Empty'] = None,
+        def __init__(self, subscribers: Union[Set[
+                                                  'PublishObservableSubject.SubscriberMixin'], 'PublishObservableSubject.Empty'] = None,
                      cache: List = None, error_thrown=None):
             self.subscribers = subscribers or set()
             self.cache = cache
@@ -47,18 +48,18 @@ class PublishOSubject(OSubjectBase):
 
             :return:
             """
-            return PublishOSubject.State(cache=list(self.subscribers))
+            return PublishObservableSubject.State(cache=list(self.subscribers))
 
         def is_done(self):
-            return isinstance(self.subscribers, PublishOSubject.Empty)
+            return isinstance(self.subscribers, PublishObservableSubject.Empty)
 
         def complete(self, error_thrown):
-            if isinstance(self.subscribers, PublishOSubject.Empty):
+            if isinstance(self.subscribers, PublishObservableSubject.Empty):
                 return self
             else:
-                return PublishOSubject.State(error_thrown=error_thrown,
-                                             subscribers=PublishOSubject.Empty(),
-                                             cache=None)
+                return PublishObservableSubject.State(error_thrown=error_thrown,
+                                                      subscribers=PublishObservableSubject.Empty(),
+                                                      cache=None)
 
     def on_subscribe_completed(self, subscriber: Subscriber, ex):
         if ex is not None:
@@ -181,7 +182,7 @@ class PublishOSubject(OSubjectBase):
         state = self.state
         sub_set = state.subscribers
 
-        subscribers: Union[Set, PublishOSubject.Empty]
+        subscribers: Union[Set, PublishObservableSubject.Empty]
 
         if state.cache is not None:
             subscribers = set(state.cache)

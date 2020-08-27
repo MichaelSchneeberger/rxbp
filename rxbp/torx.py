@@ -90,7 +90,7 @@ def to_rx(source: FlowableMixin, batched: bool = None, subscribe_schduler: Sched
             return source.subscribe(
                 observer=to_rx_observer,
                 subscribe_scheduler=subscriber.multicast_subscribe_scheduler,
-                scheduler=subscriber.scheduler,
+                scheduler=subscriber.multicast_scheduler,
             )
 
     return FromFlowableObservable()

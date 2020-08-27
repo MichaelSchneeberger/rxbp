@@ -9,7 +9,7 @@ from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
+from rxbp.observablesubjects.cacheservefirstobservablesubject import CacheServeFirstObservableSubject
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
@@ -58,7 +58,7 @@ class SafeFlowableSubject(
         )
 
         if self._observable_subject is None:
-            self._observable_subject = CacheServeFirstOSubject(scheduler=subscriber.scheduler)
+            self._observable_subject = CacheServeFirstObservableSubject(scheduler=subscriber.scheduler)
         return init_subscription(observable=self._observable_subject)
 
     def subscribe_to(self, source: Flowable, scheduler: Scheduler = None):

@@ -16,16 +16,13 @@ class NotLiftedMultiCast(
 ):
     def lift(
             self,
-            func: Callable[[MultiCast], Any] = None,
+            # func: Callable[[MultiCast], Any] = None,
     ):
-        if func is None:
-            func = lambda m: m
-
         def lifted_func(m: MultiCastMixin):
-            return func(init_lifted_multicast(
+            return init_lifted_multicast(
                 underlying=m,
                 nested_layer=self.nested_layer,
-            ))
+            )
 
         return self._copy(
             underlying=LiftMultiCast(

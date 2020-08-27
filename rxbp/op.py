@@ -225,6 +225,15 @@ def flat_map(func: Callable[[Any], Flowable]):
     return PipeOperation(op_func)
 
 
+def flatten():
+    stack = get_stack_lines()
+
+    def op_func(source: Flowable):
+        return source.flat_map(func=lambda v: v, stack=stack)
+
+    return PipeOperation(op_func)
+
+
 def last():
     """
     Emit the last element of the Flowable sequence

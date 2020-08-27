@@ -9,7 +9,7 @@ from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.operators.merge import _merge
 from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observable import Observable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
@@ -42,8 +42,8 @@ class ControlledZipObservable(Observable):
         self.match_func = match_func
 
         # create two selector observablesubjects used to match Flowables
-        self.left_selector = PublishOSubject(scheduler=scheduler)
-        self.right_selector = PublishOSubject(scheduler=scheduler)
+        self.left_selector = PublishObservableSubject(scheduler=scheduler)
+        self.right_selector = PublishObservableSubject(scheduler=scheduler)
 
         self.lock = threading.RLock()
 

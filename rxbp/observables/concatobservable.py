@@ -6,7 +6,7 @@ from rxbp.acknowledgement.single import Single
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.connectableobserver import ConnectableObserver
@@ -23,7 +23,7 @@ class ConcatObservable(Observable):
         self._scheduler = scheduler
         self._subscribe_scheduler = subscribe_scheduler
 
-        self._subjects = [PublishOSubject(scheduler=scheduler) for _ in sources]
+        self._subjects = [PublishObservableSubject(scheduler=scheduler) for _ in sources]
 
     @property
     def selectors(self):

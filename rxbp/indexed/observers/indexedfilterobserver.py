@@ -5,7 +5,7 @@ from typing import Callable, Any
 from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.operators.merge import _merge
 from rxbp.acknowledgement.stopack import stop_ack
-from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observer import Observer
 from rxbp.selectors.selectionmsg import select_next, select_completed
 from rxbp.typing import ElementType
@@ -15,7 +15,7 @@ from rxbp.typing import ElementType
 class IndexedFilterObserver(Observer):
     observer: Observer
     predicate: Callable[[Any], bool]
-    selector_subject: PublishOSubject
+    selector_subject: PublishObservableSubject
 
     def on_next(self, elem: ElementType):
         def gen_filtered_iterable():

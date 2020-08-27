@@ -7,7 +7,7 @@ from rxbp.observables.filterobservable import FilterObservable
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.observables.refcountobservable import RefCountObservable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.selectors.base import Base, BaseAndSelectorMaps
 from rxbp.selectors.matchopresult import SelectorMaps
 from rxbp.selectors.selectionmsg import select_completed, select_next, SelectNext, SelectCompleted
@@ -260,7 +260,7 @@ class BaseAndSelectors:
                                 match_func=match_func,
                                 scheduler=subscriber.scheduler,
                             )
-                            merge_sel = RefCountObservable(source=merge_sel, subject=PublishOSubject(scheduler=subscriber.scheduler))
+                            merge_sel = RefCountObservable(source=merge_sel, subject=PublishObservableSubject(scheduler=subscriber.scheduler))
 
                             def left_selector(t):
                                 if isinstance(t[1], SelectNext):
@@ -281,7 +281,7 @@ class BaseAndSelectors:
                                     scheduler=subscriber.scheduler,
                                 ),
                                 func=left_selector,
-                            ), subject=PublishOSubject(scheduler=subscriber.scheduler))
+                            ), subject=PublishObservableSubject(scheduler=subscriber.scheduler))
 
                             right_sel = RefCountObservable(MapToIteratorObservable(
                                 source=FilterObservable(
@@ -290,7 +290,7 @@ class BaseAndSelectors:
                                     scheduler=subscriber.scheduler,
                                 ),
                                 func=right_selector,
-                            ), subject=PublishOSubject(scheduler=subscriber.scheduler))
+                            ), subject=PublishObservableSubject(scheduler=subscriber.scheduler))
 
                             right_selector_map = MapObservable(
                                 source=FilterObservable(

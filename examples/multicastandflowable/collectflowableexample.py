@@ -18,9 +18,9 @@ import rxbp
 base1 = {'val1': rxbp.range(5), 'val2': rxbp.range(5).map(lambda v: v+100)}
 base2 = {'val1': rxbp.range(3).map(lambda v: v+10), 'val2': rxbp.range(3).map(lambda v: v+110)}
 
-result = rxbp.multicast.return_flowable(base1).pipe(
+result = rxbp.multicast.return_value(base1).pipe(
     rxbp.multicast.op.merge(
-        rxbp.multicast.return_flowable(base2)
+        rxbp.multicast.return_value(base2)
     ),
     rxbp.multicast.op.collect_flowables(),
     rxbp.multicast.op.map(lambda v: v['val1'].zip(v['val2'])),
@@ -32,9 +32,9 @@ print(result)
 # ----------------------
 
 # the sample example, but with just one Flowable
-result = rxbp.multicast.return_flowable(rxbp.range(5)).pipe(
+result = rxbp.multicast.return_value(rxbp.range(5)).pipe(
     rxbp.multicast.op.merge(
-        rxbp.multicast.return_flowable(rxbp.range(3))
+        rxbp.multicast.return_value(rxbp.range(3))
     ),
     rxbp.multicast.op.collect_flowables(),
 ).to_flowable().run()

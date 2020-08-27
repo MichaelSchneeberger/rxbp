@@ -3,6 +3,7 @@ from typing import Callable, Any
 import rx
 
 from rxbp.multicast.init.initmulticast import init_multicast
+from rxbp.multicast.mixins.liftedmulticastmixin import LiftedMultiCastMixin
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.mixins.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicast import MultiCast
@@ -135,8 +136,23 @@ def flat_map(func: Callable[[MultiCastItem], MultiCastOpMixin]):
     Apply a function to each item emitted by the source and flattens the result.
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: MultiCast):
-        return source.flat_map(func=func)
+        return source.flat_map(func=func, stack=stack)
+
+    return MultiCastOperator(op_func)
+
+
+def flatten():
+    """
+    Apply a function to each item emitted by the source and flattens the result.
+    """
+
+    stack = get_stack_lines()
+
+    def op_func(source: MultiCast):
+        return source.flat_map(func=lambda v: v, stack=stack)
 
     return MultiCastOperator(op_func)
 
@@ -169,15 +185,13 @@ def join_flowables(
     return MultiCastOperator(op_func)
 
 
-def lift(
-    func: Callable[[MultiCast], MultiCastItem] = None,
-):
+def lift():
     """
     Lift the current `MultiCast[T]` to a `MultiCast[MultiCast[T]]`.
     """
 
     def op_func(source: MultiCast):
-        return source.lift(func=func)
+        return source.lift()
 
     return MultiCastOperator(op_func)
 
@@ -210,10 +224,11 @@ def merge(*others: MultiCast):
     """
 
     def op_func(source: MultiCast):
-        hot_sources = [source for source in (source, *others) if source.is_hot_on_subscribe]
+        lifted_sources = [source for source in (source, *others) if isinstance(source, LiftedMultiCastMixin)]
 
-        if 1 < len(hot_sources):
-            assert all(hot_sources[0].nested_layer == other.nested_layer for other in hot_sources[1:])
+        if 1 < len(lifted_sources):
+            assert all(lifted_sources[0].nested_layer == other.nested_layer for other in lifted_sources[1:]), \
+                f'layers do not match {[source.nested_layer for source in lifted_sources]}'
 
         return source.merge(*others)
 

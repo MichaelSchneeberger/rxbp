@@ -5,8 +5,7 @@ from rx.disposable import Disposable
 
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.mixins.ishotflowablemixin import IsHotFlowableMixin
-from rxbp.mixins.ishotonsubscribemixin import SharedFlowableMixin
+from rxbp.mixins.sharedflowablemixin import SharedFlowableMixin
 from rxbp.mixins.observemixin import ObserveMixin
 from rxbp.observer import Observer
 from rxbp.scheduler import Scheduler
@@ -15,7 +14,6 @@ from rxbp.subscription import Subscription
 
 
 class FlowableSubscribeMixin(
-    IsHotFlowableMixin,
     FlowableMixin,
     ObserveMixin,
     ABC,

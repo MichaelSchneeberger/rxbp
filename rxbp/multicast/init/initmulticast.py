@@ -7,6 +7,6 @@ def init_multicast(
 ):
     return NotLiftedMultiCastImpl(
         underlying=underlying,
-        is_hot_on_subscribe=False,
+        # is_hot_on_subscribe=False,
         nested_layer=0,
     )

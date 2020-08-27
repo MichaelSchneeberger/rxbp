@@ -31,9 +31,18 @@ class DebugMultiCastObservable(MultiCastObservable):
             on_error_func: Callable[[Exception], None]
 
             def on_next(self, elem: MultiCastItem) -> None:
-                elem = list(elem)
-                self.on_next_func(elem)
-                self.source.on_next(elem)
+                try:
+                    elem = list(elem)
+
+                    if len(elem) == 0:
+                        return
+
+                    self.on_next_func(elem)
+                    self.source.on_next(elem)
+
+                except Exception as exc:
+                    self.on_error(exc)
+                    return
 
             def on_error(self, exc: Exception) -> None:
                 self.on_error_func(exc)

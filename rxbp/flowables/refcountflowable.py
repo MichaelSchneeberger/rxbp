@@ -3,8 +3,8 @@ from typing import Callable
 
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.refcountobservable import RefCountObservable
-from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
-from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.observablesubjects.cacheservefirstobservablesubject import CacheServeFirstObservableSubject
+from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 
@@ -16,7 +16,7 @@ class RefCountFlowable(FlowableMixin):
     def __init__(
             self,
             source: FlowableMixin,
-            subject_gen: Callable[[Scheduler], OSubjectBase] = None,
+            subject_gen: Callable[[Scheduler], ObservableSubjectBase] = None,
     ):
         # base_ = base or source.base or ObjectRefBase(self)  # take over base or create new one
         # super().__init__(base=base_, selectable_bases=source.selectable_bases)
@@ -24,7 +24,7 @@ class RefCountFlowable(FlowableMixin):
         super().__init__()
 
         def default_subject_gen(scheduler: Scheduler):
-            return CacheServeFirstOSubject(scheduler=scheduler)
+            return CacheServeFirstObservableSubject(scheduler=scheduler)
 
         self.source = source
         self._subject_gen = subject_gen or default_subject_gen

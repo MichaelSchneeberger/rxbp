@@ -15,14 +15,14 @@ from rxbp.acknowledgement.operators.observeon import _observe_on
 from rxbp.acknowledgement.single import Single
 from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.mixins.executionmodelmixin import ExecutionModelMixin
-from rxbp.observablesubjects.osubjectbase import OSubjectBase
+from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
-class CacheServeFirstOSubject(OSubjectBase):
+class CacheServeFirstObservableSubject(ObservableSubjectBase):
     """ A observable Subject that does not back-pressure on a `on_next` call
     and buffers the last elements according to the slowest subscriber.
     """
@@ -45,7 +45,7 @@ class CacheServeFirstOSubject(OSubjectBase):
 
         def __init__(self):
 
-            self.state = CacheServeFirstOSubject.NormalState()
+            self.state = CacheServeFirstObservableSubject.NormalState()
 
             # notification buffer
             self.first_idx = -1
@@ -56,9 +56,9 @@ class CacheServeFirstOSubject(OSubjectBase):
             self.inactive_subscriptions = []
 
             # used for deque the buffer
-            self.current_index: Dict['CacheServeFirstOSubject.InnerSubscription', int] = {}
+            self.current_index: Dict['CacheServeFirstObservableSubject.InnerSubscription', int] = {}
 
-            self.subscriptions: List['CacheServeFirstOSubject.InnerSubscription'] = []
+            self.subscriptions: List['CacheServeFirstObservableSubject.InnerSubscription'] = []
 
             # the inner subscription reaching the end of the buffer requests a new element
             self.current_ack: Optional[AckSubject] = None
@@ -91,7 +91,7 @@ class CacheServeFirstOSubject(OSubjectBase):
 
         def get_element_for(
                 self,
-                subscription: 'CacheServeFirstOSubject.InnerSubscription',
+                subscription: 'CacheServeFirstObservableSubject.InnerSubscription',
                 index: int,
                 ack: Ack = None,
         ) -> Tuple[bool, Any]:
@@ -169,12 +169,12 @@ class CacheServeFirstOSubject(OSubjectBase):
 
     class CompletedState(State):
         def __init__(self):
-            self.prev_state: CacheServeFirstOSubject.State = None
+            self.prev_state: CacheServeFirstObservableSubject.State = None
 
         def get_measured_state(self):
             previous_state = self.prev_state.get_measured_state()
 
-            if isinstance(previous_state, CacheServeFirstOSubject.ExceptionState):
+            if isinstance(previous_state, CacheServeFirstObservableSubject.ExceptionState):
                 return self.prev_state
             else:
                 return self
@@ -191,7 +191,7 @@ class CacheServeFirstOSubject(OSubjectBase):
     class InnerSubscription:
         def __init__(
                 self,
-                shared_state: 'CacheServeFirstOSubject.SharedState',
+                shared_state: 'CacheServeFirstObservableSubject.SharedState',
                 lock: threading.RLock,
                 observer: Observer,
                 scheduler: Scheduler,
@@ -208,7 +208,7 @@ class CacheServeFirstOSubject(OSubjectBase):
         @dataclass
         class AsyncAckSingle(Single):
             current_index: int
-            inner_subscription: 'CacheServeFirstOSubject.InnerSubscription'
+            inner_subscription: 'CacheServeFirstObservableSubject.InnerSubscription'
             ack_update: Optional[Ack] = None
 
             def on_next(self, ack: Ack):
@@ -327,7 +327,7 @@ class CacheServeFirstOSubject(OSubjectBase):
                     else:
 
                         meas_state = self.shared_state.state.get_measured_state()
-                        if isinstance(meas_state, CacheServeFirstOSubject.ExceptionState):
+                        if isinstance(meas_state, CacheServeFirstObservableSubject.ExceptionState):
                             break
 
                         single = self.AsyncAckSingle(
@@ -442,22 +442,22 @@ class CacheServeFirstOSubject(OSubjectBase):
             for inner_subscription in inactive_subsriptions:
                 inner_subscription.notify_on_completed()
 
-    def on_error(self, exception: Exception):
-        state = self.ExceptionState(exception)
+    def on_error(self, exc: Exception):
+        # state = self.ExceptionState(exception)
+        #
+        # with self.lock:
+        #     state.prev_state = self.shared_state.state
+        #     self.state = state
+        #
+        # subscriptions = self.shared_state.subscriptions
+        #
+        # # send notification to inactive subscriptions
+        # if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
+        #     for inner_subscription in subscriptions:
+        #         inner_subscription.notify_on_error(exception)
 
-        with self.lock:
-            state.prev_state = self.shared_state.state
-            self.state = state
-
-            # # add item to buffer
-            # inactive_subsriptions = self.shared_state.on_error(exception)
-
-        subscriptions = self.shared_state.subscriptions
-
-        # send notification to inactive subscriptions
-        if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
-            for inner_subscription in subscriptions:
-                inner_subscription.notify_on_error(exception)
+        for inner_subscription in self.shared_state.subscriptions:
+            inner_subscription.notify_on_error(exc)
 
     def dispose(self):
         """Unsubscribe all observers and release resources."""

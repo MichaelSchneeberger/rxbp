@@ -298,9 +298,10 @@ class ZipObservable(Observable):
             self._signal_on_complete_or_on_error(prev_state, exc=exc)
 
     def _on_error(self, exc: Exception):
-        next_final_state = RawTerminationStates.ErrorState(exc=exc)
-
-        self._on_error_or_complete(next_final_state=next_final_state, exc=exc)
+        # next_final_state = RawTerminationStates.ErrorState(exc=exc)
+        #
+        # self._on_error_or_complete(next_final_state=next_final_state, exc=exc)
+        self.observer.on_error(exc)
 
     def _on_completed_left(self):
         next_final_state = RawTerminationStates.LeftCompletedState()

@@ -33,6 +33,7 @@ from rxbp.flowables.zipflowable import ZipFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.mixins.flowableabsopmixin import FlowableAbsOpMixin
 from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.mixins.sharedflowablemixin import SharedFlowableMixin
 from rxbp.observables.materializeobservable import MaterializeObservable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
@@ -214,7 +215,13 @@ class FlowableOpMixin(
                     yield _
 
             obs: FlowableMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
-            return self._copy(obs)
+
+            try:
+                source = next(source for source in sources if isinstance(source, SharedFlowableMixin))
+            except StopIteration:
+                source = self
+
+            return source._copy(obs)
 
     def observe_on(self, scheduler: Scheduler):
 
@@ -302,7 +309,13 @@ class FlowableOpMixin(
                     yield _
 
             obs: FlowableMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
-            return self._copy(obs)
+
+            try:
+                source = next(source for source in sources if isinstance(source, SharedFlowableMixin))
+            except StopIteration:
+                source = self
+
+            return source._copy(obs)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
 

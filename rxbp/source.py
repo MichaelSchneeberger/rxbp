@@ -12,6 +12,7 @@ from rxbp.flowables.fromrxevictingflowable import FromRxEvictingFlowable
 from rxbp.flowables.fromsingleelementflowable import FromSingleElementFlowable
 from rxbp.init.initflowable import init_flowable
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 def concat(*sources: Flowable):
@@ -229,7 +230,9 @@ def zip(*sources: Flowable) -> Flowable: #, result_selector: Callable[..., Any] 
     :param sources: zero or more Flowables whose elements are zipped together
     """
 
+    stack = get_stack_lines()
+
     if len(sources) == 0:
         return empty()
     else:
-        return sources[0].zip(*sources[1:])
+        return sources[0].zip(*sources[1:], stack=stack)

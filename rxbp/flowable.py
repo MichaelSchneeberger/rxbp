@@ -5,6 +5,7 @@ from typing import Generic
 
 from rxbp.mixins.flowableopmixin import FlowableOpMixin
 from rxbp.mixins.flowablesubscribemixin import FlowableSubscribeMixin
+from rxbp.mixins.sharedflowablemixin import SharedFlowableMixin
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
 from rxbp.toiterator import to_iterator
@@ -19,7 +20,12 @@ class Flowable(
     ABC,
 ):
     def pipe(self, *operators: PipeOperation['Flowable']) -> 'Flowable':
-        return functools.reduce(lambda obs, op: op(obs), operators, self)
+        flowable = functools.reduce(lambda obs, op: op(obs), operators, self)
+
+        if isinstance(flowable, SharedFlowableMixin):
+            return flowable.share()
+        else:
+            return flowable
 
     def run(self, scheduler: Scheduler = None):
         return list(to_iterator(source=self, scheduler=scheduler))

@@ -109,8 +109,9 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     def flat_map(
             self,
             func: Callable[[MultiCastItem], 'MultiCast[MultiCastItem]'],
+            stack: List[FrameSummary],
     ):
-        return self._copy(FlatMapMultiCast(source=self, func=func))
+        return self._copy(FlatMapMultiCast(source=self, func=func, stack=stack))
 
     def join_flowables(self, *others: 'MultiCastMixin'):
         if len(others) == 0:
@@ -153,7 +154,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
     def lift(
             self,
-            func: Callable[['MultiCast'], Any],
+            # func: Callable[['MultiCast'], Any],
     ):
         raise Exception('Only non-lifted MultiCast implements the lift operator')
 

@@ -25,8 +25,12 @@ class LiftMultiCast(MultiCastMixin):
         class LiftObservable(MultiCastObservable):
             def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
                 def action(_, __):
-                    observer_info.observer.on_next([outer_self.func(outer_self.source)])
-                    observer_info.observer.on_completed()
+                    try:
+                        observer_info.observer.on_next([outer_self.func(outer_self.source)])
+                        observer_info.observer.on_completed()
+
+                    except Exception as exc:
+                        observer_info.observer.on_error(exc)
 
                     # subscription = outer_self.source.unsafe_subscribe(subscriber=subscriber)
                     # return subscription.observable.observe(observer_info)

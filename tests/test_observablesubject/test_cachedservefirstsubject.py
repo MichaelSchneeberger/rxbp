@@ -1,5 +1,5 @@
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
-from rxbp.observablesubjects.cacheservefirstosubject import CacheServeFirstOSubject
+from rxbp.observablesubjects.cacheservefirstobservablesubject import CacheServeFirstObservableSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testobservable import TestObservable
@@ -12,12 +12,12 @@ class TestCachedServeFirstSubject(TestCaseBase):
     def setUp(self):
         self.scheduler = TestScheduler()
         self.source = TestObservable()
-        self.subject = CacheServeFirstOSubject(scheduler=self.scheduler)
+        self.subject = CacheServeFirstObservableSubject(scheduler=self.scheduler)
         self.source.observe(ObserverInfo(self.subject))
         self.exc = Exception()
 
     def test_initialize(self):
-        CacheServeFirstOSubject(scheduler=self.scheduler)
+        CacheServeFirstObservableSubject(scheduler=self.scheduler)
 
     def test_on_next_synchronously(self):
         """
@@ -53,7 +53,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         # verification
         self.assertTrue(o1.is_completed)
         self.assertIsInstance(self.subject.state,
-                              CacheServeFirstOSubject.CompletedState)
+                              CacheServeFirstObservableSubject.CompletedState)
 
     def test_on_next_assynchronously(self):
         """
@@ -270,7 +270,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         # verification
         self.assertEqual(self.exc, o1.exception)
         self.assertIsInstance(self.subject.state,
-                              CacheServeFirstOSubject.ExceptionState)
+                              CacheServeFirstObservableSubject.ExceptionState)
 
     def test_on_next_on_error_asynchronously(self):
         o1 = TestObserver(immediate_continue=0)

@@ -4,7 +4,6 @@ from typing import Callable, Any, Iterator, List
 
 from rxbp.acknowledgement.ack import Ack
 from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.mixins.ishotflowablemixin import IsHotFlowableMixin
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.typing import ValueType
@@ -132,7 +131,7 @@ class FlowableAbsOpMixin(ABC):
     @abstractmethod
     def flat_map(
             self,
-            func: Callable[[Any], IsHotFlowableMixin],
+            func: Callable[[Any], FlowableMixin],
             stack: List[FrameSummary],
     ) -> FlowableMixin:
         """

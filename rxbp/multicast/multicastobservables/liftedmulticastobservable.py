@@ -71,6 +71,9 @@ class LiftedMultiCastObservable(MultiCastObservable):
 
         def on_next(self, item: MultiCastItem):
             if isinstance(item, list):
+                if len(item) == 0:
+                    return
+
                 first_elem = item[0]
                 all_elem = item
 

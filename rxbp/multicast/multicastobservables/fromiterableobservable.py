@@ -15,7 +15,10 @@ class FromIterableObservable(MultiCastObservable):
 
     def observe(self, info: MultiCastObserverInfo) -> Disposable:
         def scheduler_action(_, __):
-            info.observer.on_next(self.values)
-            info.observer.on_completed()
+            try:
+                info.observer.on_next(self.values)
+                info.observer.on_completed()
+            except Exception as exc:
+                info.observer.on_error(exc)
 
         return self.subscribe_scheduler.schedule(scheduler_action)

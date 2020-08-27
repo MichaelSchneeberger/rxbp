@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Optional, Callable, Any, List
 
-from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.single import Single
 from rxbp.acknowledgement.stopack import StopAck, stop_ack
@@ -35,14 +35,18 @@ class DebugObserver(Observer):
 
         try:
             materialized = list(elem)
+
+            if len(materialized) == 0:
+                return continue_ack
+
+            self.on_next_func(materialized)
+
+            ack = self.source.on_next(materialized)
+
         except Exception as exc:
             self.on_error(exc)
             self.source.on_error(exc)
             return stop_ack
-
-        self.on_next_func(materialized)
-
-        ack = self.source.on_next(materialized)
 
         if isinstance(ack, ContinueAck) or isinstance(ack, StopAck):
             self.on_sync_ack(ack)

@@ -7,6 +7,7 @@ from rx.disposable import CompositeDisposable
 from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.single import Single
+from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
@@ -75,7 +76,11 @@ class FlatConcatNoBackpressureObserver(Observer):
                 self.observer.on_completed()
 
     def on_next(self, elem: ElementType):
-        obs_list: List[Observable] = [self.selector(e) for e in elem]
+        try:
+            obs_list: List[Observable] = [self.selector(e) for e in elem]
+        except Exception as exc:
+            self.on_error(exc)
+            return stop_ack
 
         if len(obs_list) == 0:
             return continue_ack
@@ -107,10 +112,15 @@ class FlatConcatNoBackpressureObserver(Observer):
         other_conn_observers = conn_observers[1:]
 
         def observe_on_subscribe_scheduler(_, __):
-            first_obs.observe(self.observer_info.copy(observer=first_conn_observer))
+            try:
+                disposable = first_obs.observe(self.observer_info.copy(observer=first_conn_observer))
+                self.composite_disposable.add(disposable)
 
-            for obs, conn_observer in zip(other_obs, other_conn_observers):
-                obs.observe(self.observer_info.copy(observer=conn_observer))
+                for obs, conn_observer in zip(other_obs, other_conn_observers):
+                    disposable = obs.observe(self.observer_info.copy(observer=conn_observer))
+                    self.composite_disposable.add(disposable)
+            except Exception as exc:
+                self.observer.on_error(exc)
 
         disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
         self.composite_disposable.add(disposable)

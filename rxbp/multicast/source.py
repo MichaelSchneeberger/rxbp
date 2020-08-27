@@ -17,7 +17,6 @@ from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastobservable import MultiCastObservable
 from rxbp.multicast.multicastobservables.fromiterableobservable import FromIterableObservable
-from rxbp.multicast.multicastobservables.returnvaluemulticastobservable import ReturnValueMultiCastObservable
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicasts.emptymulticast import EmptyMultiCast
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
@@ -133,8 +132,8 @@ def return_value(value: Any):
             # why it must be provided as the `scheduler` argument of the `return_flowable`
             # operator.
             return init_multicast_subscription(
-                observable=ReturnValueMultiCastObservable(
-                    value=value,
+                observable=FromIterableObservable(
+                    values=[value],
                     subscribe_scheduler=subscriber.multicast_scheduler,
                 ),
             )

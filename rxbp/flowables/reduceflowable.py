@@ -23,13 +23,10 @@ class ReduceFlowable(FlowableMixin):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = ReduceObservable(
-            source=subscription.observable,
-            func=self.func,
-            initial=self.initial,
+        return subscription.copy(
+            observable=ReduceObservable(
+                source=subscription.observable,
+                func=self.func,
+                initial=self.initial,
+            ),
         )
-
-        # to_list emits exactly one element
-        base = NumericalBase(1)
-
-        return init_subscription(BaseAndSelectors(base=base), observable=observable)

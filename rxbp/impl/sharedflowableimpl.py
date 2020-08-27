@@ -11,5 +11,5 @@ from rxbp.typing import ValueType
 class SharedFlowableImpl(Flowable[ValueType]):
     underlying: FlowableMixin
 
-    def _copy(self, underlying: FlowableMixin, *args, **kwargs):
+    def _copy(self, underlying: FlowableMixin, is_shared: bool = None, *args, **kwargs):
         return replace(self, underlying=underlying, *args, **kwargs)

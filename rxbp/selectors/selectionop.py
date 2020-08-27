@@ -2,7 +2,7 @@ from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.refcountobservable import RefCountObservable
-from rxbp.observablesubjects.publishosubject import PublishOSubject
+from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.scheduler import Scheduler
 from rxbp.selectors.observables.mergeselectorobservable import MergeSelectorObservable
 from rxbp.selectors.selectionmsg import SelectCompleted, SelectNext
@@ -26,7 +26,7 @@ def merge_selectors(left: Observable, right: Observable, scheduler: Scheduler):
         scheduler=scheduler,
     )
 
-    o3 = RefCountObservable(source=obs, subject=PublishOSubject(scheduler=scheduler))
+    o3 = RefCountObservable(source=obs, subject=PublishObservableSubject(scheduler=scheduler))
 
     return o3
 

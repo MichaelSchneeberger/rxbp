@@ -9,7 +9,7 @@ from rxbp.multicast.typing import MultiCastElemType
 
 @dataclass_abc
 class LiftedMultiCastImpl(LiftedMultiCast[MultiCastElemType]):
-    is_hot_on_subscribe: bool
+    # is_hot_on_subscribe: bool
     nested_layer: int
     underlying: MultiCastMixin
 

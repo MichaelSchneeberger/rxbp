@@ -4,5 +4,5 @@ from rxbp.observable import Observable
 from rxbp.observer import Observer
 
 
-class OSubjectBase(Observable, Observer, ABC):
+class ObservableSubjectBase(Observable, Observer, ABC):
     pass
