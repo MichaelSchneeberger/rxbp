@@ -14,11 +14,17 @@ class TestConnectableObserver(TestCaseBase):
 
     def test_initialize(self):
         sink = TestObserver()
-        ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
 
     def test_connect_empty(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
 
         observer.connect()
 
@@ -26,7 +32,10 @@ class TestConnectableObserver(TestCaseBase):
 
     def test_on_next(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
 
         ack = observer.on_next([1])
 
@@ -34,7 +43,10 @@ class TestConnectableObserver(TestCaseBase):
 
     def test_on_next_then_connect(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
         ack = observer.on_next([1])
 
         observer.connect()
@@ -44,13 +56,19 @@ class TestConnectableObserver(TestCaseBase):
 
     def test_on_error(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
 
         observer.on_error(self.exception)
 
     def test_on_error_then_continue(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
         observer.on_error(self.exception)
 
         observer.connect()
@@ -59,7 +77,10 @@ class TestConnectableObserver(TestCaseBase):
 
     def test_on_next_on_error_then_connect(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
         ack = observer.on_next([1])
         observer.on_error(self.exception)
 
@@ -71,7 +92,10 @@ class TestConnectableObserver(TestCaseBase):
 
     def test_on_next_on_error_then_connect_on_next(self):
         sink = TestObserver()
-        observer = ConnectableObserver(sink, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
+        observer = ConnectableObserver(
+            sink,
+            scheduler=self.scheduler,
+        )
         ack = observer.on_next([1])
         observer.on_error(self.exception)
 

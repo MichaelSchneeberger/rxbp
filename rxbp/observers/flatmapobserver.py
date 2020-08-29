@@ -25,8 +25,10 @@ class FlatMapObserver(Observer):
     scheduler: Scheduler
     subscribe_scheduler: Scheduler
     composite_disposable: CompositeDisposable
-    lock: threading.RLock()
-    state: List[RawFlatMapStates.State]
+
+    def __post_init__(self):
+        self.lock = threading.RLock()
+        self.state = [RawFlatMapStates.InitialState()]
 
     def on_next(self, outer_elem: ElementType):
         if isinstance(outer_elem, list):
@@ -119,8 +121,11 @@ class FlatMapObserver(Observer):
                 self.observer_info.observer.on_error(exc)
                 return stop_ack
 
-        disposable = self.subscribe_scheduler.schedule(subscribe_action)
-        self.composite_disposable.add(disposable)
+        if self.subscribe_scheduler.schedule_required():
+            disposable = self.subscribe_scheduler.schedule(subscribe_action)
+            self.composite_disposable.add(disposable)
+        else:
+            subscribe_action(None, None)
 
         return async_upstream_ack
 

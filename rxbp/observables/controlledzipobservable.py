@@ -6,7 +6,7 @@ from rx.disposable import CompositeDisposable
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.acknowledgement.ack import Ack
-from rxbp.acknowledgement.operators.merge import _merge
+from rxbp.acknowledgement.operators.mergeack import merge_ack
 from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observable import Observable
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
@@ -271,8 +271,8 @@ class ControlledZipObservable(Observable):
             if request_new_elem_from_left and request_new_elem_from_right:
 
                 # integrate selector acks
-                result_ack_left = _merge(zip_out_ack, left_out_ack)
-                result_ack_right = _merge(zip_out_ack, right_out_ack)
+                result_ack_left = merge_ack(zip_out_ack, left_out_ack)
+                result_ack_right = merge_ack(zip_out_ack, right_out_ack)
 
                 # directly return ack depending on whether left or right called `iterate_over_batch`
                 if is_left:
@@ -290,7 +290,7 @@ class ControlledZipObservable(Observable):
 
                 # result_out_ack = AckSubject()
                 # _merge(_merge(zip_out_ack, left_out_ack), right_out_ack).subscribe(result_out_ack)
-                result_out_ack = _merge(_merge(zip_out_ack, left_out_ack), right_out_ack)
+                result_out_ack = merge_ack(merge_ack(zip_out_ack, left_out_ack), right_out_ack)
 
                 if is_left:
                     return result_out_ack
@@ -306,7 +306,7 @@ class ControlledZipObservable(Observable):
 
                 # result_out_ack = AckSubject()
                 # _merge(_merge(zip_out_ack, left_out_ack), right_out_ack).subscribe(result_out_ack)
-                result_out_ack = _merge(_merge(zip_out_ack, left_out_ack), right_out_ack)
+                result_out_ack = merge_ack(merge_ack(zip_out_ack, left_out_ack), right_out_ack)
 
                 if is_left:
                     result_out_ack.subscribe(right_in_ack)

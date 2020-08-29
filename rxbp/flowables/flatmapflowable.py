@@ -32,7 +32,11 @@ class FlatMapFlowable(FlowableMixin):
             subscription = flowable.unsafe_subscribe(subscriber=subscriber)
             return subscription.observable
 
-        observable = FlatMapObservable(source=subscription.observable, func=observable_selector,
-                                       scheduler=subscriber.scheduler, subscribe_scheduler=subscriber.subscribe_scheduler)
-
-        return init_subscription(observable=observable)
+        return subscription.copy(
+            observable=FlatMapObservable(
+                source=subscription.observable,
+                func=observable_selector,
+                scheduler=subscriber.scheduler,
+                subscribe_scheduler=subscriber.subscribe_scheduler,
+            )
+        )

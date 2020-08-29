@@ -81,54 +81,54 @@ class FromIteratorObservable(Observable):
     def fast_loop(self, current_item, observer, scheduler: Scheduler,
                   disposable: BooleanDisposable, em: ExecutionModelMixin, sync_index: int):
         while True:
+            # try:
+            ack = observer.on_next(current_item)
+
+            # for mypy to type check correctly
+            next_item: Optional[Any]
+
             try:
-                ack = observer.on_next(current_item)
+                next_item = next(self.iterator)
+                has_next = True
+            except StopIteration:
+                has_next = False
+                next_item = None
+            except Exception as e:
+                # stream errors == True
+                self.trigger_cancel(scheduler)
 
-                # for mypy to type check correctly
-                next_item: Optional[Any]
+                if not disposable.is_disposed:
+                    observer.on_error(e)
+                else:
+                    scheduler.report_failure(e)
 
+                has_next = False
+                next_item = None
+
+            if not has_next:
                 try:
-                    next_item = next(self.iterator)
-                    has_next = True
-                except StopIteration:
-                    has_next = False
-                    next_item = None
+                    self.on_finish.dispose()
                 except Exception as e:
-                    # stream errors == True
-                    self.trigger_cancel(scheduler)
+                    observer.on_error(e)
+                else:
+                    observer.on_completed()
+                break
+            else:
+                if isinstance(ack, ContinueAck):
+                    next_index = em.next_frame_index(sync_index)
+                elif isinstance(ack, StopAck):
+                    next_index = -1
+                else:
+                    next_index = 0
 
-                    if not disposable.is_disposed:
-                        observer.on_error(e)
-                    else:
-                        scheduler.report_failure(e)
-
-                    has_next = False
-                    next_item = None
-
-                if not has_next:
-                    try:
-                        self.on_finish.dispose()
-                    except Exception as e:
-                        observer.on_error(e)
-                    else:
-                        observer.on_completed()
+                if next_index > 0:
+                    current_item = next_item
+                    sync_index = next_index
+                elif next_index == 0 and not disposable.is_disposed:
+                    self.reschedule(ack, next_item, observer, scheduler, disposable, em)
                     break
                 else:
-                    if isinstance(ack, ContinueAck):
-                        next_index = em.next_frame_index(sync_index)
-                    elif isinstance(ack, StopAck):
-                        next_index = -1
-                    else:
-                        next_index = 0
-
-                    if next_index > 0:
-                        current_item = next_item
-                        sync_index = next_index
-                    elif next_index == 0 and not disposable.is_disposed:
-                        self.reschedule(ack, next_item, observer, scheduler, disposable, em)
-                        break
-                    else:
-                        self.trigger_cancel(scheduler)
-                        break
-            except Exception:
-                raise Exception('fatal error')
+                    self.trigger_cancel(scheduler)
+                    break
+            # except Exception:
+            #     raise Exception('fatal error')

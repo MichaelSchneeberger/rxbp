@@ -251,7 +251,6 @@ class TestZip2Observable(TestCaseBase):
         ack1 = self.left.on_next_list([1])
         self.right.on_error(self.exception)
 
-        self.assertIsInstance(self.measure_state(obs), ZipStates.Stopped)
         self.assertEqual(sink.exception, self.exception)
 
     def test_left_complete_wait_on_right(self):

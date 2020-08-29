@@ -20,6 +20,9 @@ class TestScheduler(VirtualTimeScheduler, SchedulerBase):
     def get_execution_model(self) -> ExecutionModelMixin:
         return self.execution_model
 
+    def schedule_required(self):
+        return True
+
     @staticmethod
     def add(absolute, relative):
         return absolute + relative

@@ -1,6 +1,7 @@
 import unittest
 
 from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
@@ -12,6 +13,7 @@ class TestPublishSubject(unittest.TestCase):
 
     def setUp(self):
         self.scheduler = TestScheduler()
+        self.exception = Exception()
 
     def test_should_emit_from_the_point_of_subscription_forward(self):
         subject = PublishObservableSubject(scheduler=self.scheduler)
@@ -24,7 +26,7 @@ class TestPublishSubject(unittest.TestCase):
         o1 = TestObserver()
         o1.immediate_continue = 5
 
-        subject.observe(ObserverInfo(o1))
+        subject.observe(init_observer_info(o1))
 
         self.assertIsInstance(s1.on_next_iter([4]), ContinueAck)
         self.assertIsInstance(s1.on_next_iter([5]), ContinueAck)
@@ -42,7 +44,7 @@ class TestPublishSubject(unittest.TestCase):
             for i in range(10):
                 o1 = TestObserver()
                 o1.immediate_continue = 5
-                subject.observe(ObserverInfo(o1))
+                subject.observe(init_observer_info(o1))
                 yield o1
 
         obs_list = list(gen_observers())
@@ -86,39 +88,40 @@ class TestPublishSubject(unittest.TestCase):
         subject.on_completed()
 
         o1 = TestObserver()
-        subject.observe(ObserverInfo(o1))
+        subject.observe(init_observer_info(o1))
         self.assertTrue(o1.is_completed)
 
     def test_on_error_should_terminate_current_and_future_subscribers(self):
         subject = PublishObservableSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
-        dummy = Exception('dummy')
 
         def gen_observers():
-            for i in range(10):
-                o1 = TestObserver()
-                subject.observe(ObserverInfo(o1))
-                yield o1
+            for _ in range(10):
+                observer = TestObserver()
+                subject.observe(init_observer_info(
+                    observer=observer,
+                ))
+                yield observer
 
-        obs_list = list(gen_observers())
+        observer_list = list(gen_observers())
 
         s1.on_next_iter([1])
-        s1.on_error(dummy)
+        s1.on_error(self.exception)
 
         o1 = TestObserver()
-        subject.observe(ObserverInfo(o1))
+        subject.observe(init_observer_info(o1))
 
-        for obs in obs_list:
-            self.assertListEqual(obs.received, [1])
-            self.assertEqual(obs.exception, dummy)
+        for observer in observer_list:
+            self.assertListEqual(observer.received, [1])
+            self.assertEqual(observer.exception, self.exception)
 
-        self.assertEqual(o1.exception, dummy)
+        self.assertEqual(o1.exception, self.exception)
 
     def test_unsubscribe_after_on_complete(self):
         subject = PublishObservableSubject(self.scheduler)
         s1 = TestObservable(observer=subject)
         o1 = TestObserver()
-        d = subject.observe(ObserverInfo(o1))
+        d = subject.observe(init_observer_info(o1))
 
         s1.on_next_iter([1])
         s1.on_completed()

@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import Callable, Any
 
+import rx
 from rx.disposable import Disposable
 
 from rxbp.init.initsubscriber import init_subscriber
@@ -27,7 +28,7 @@ class FlowableSubscribeMixin(
             scheduler: Scheduler = None,
             subscribe_scheduler: Scheduler = None,
             observer: Observer = None,
-    ) -> Disposable:
+    ) -> rx.typing.Disposable:
         """ Calling `subscribe` method starts some kind of process that
 
         start a chain reaction where downsream `Flowables`
@@ -52,7 +53,7 @@ class FlowableSubscribeMixin(
         assert isinstance(subscription, Subscription), \
             f'"{subscription}" must be of type Subscription'
 
-        return self._observe(
+        disposable = self._observe(
             observable=subscription.observable,
             on_next=on_next,
             on_completed=on_completed,
@@ -60,3 +61,8 @@ class FlowableSubscribeMixin(
             observer=observer,
             subscribe_scheduler=subscribe_scheduler_,
         )
+
+        assert isinstance(disposable, rx.typing.Disposable), \
+            f'"{disposable}" must be of type Disposable'
+
+        return disposable

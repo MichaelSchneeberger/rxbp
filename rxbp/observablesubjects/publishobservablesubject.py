@@ -1,228 +1,162 @@
 import threading
-from typing import Set, List, Union
+from abc import abstractmethod, ABC
+from dataclasses import dataclass
+from typing import Set, List, Union, Optional, Tuple
 
-from rx.disposable import Disposable
+import rx
+from rx.disposable import Disposable, SingleAssignmentDisposable
 
+from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
+from rxbp.acknowledgement.operators.reduceack import reduce_ack
 from rxbp.acknowledgement.single import Single
 from rxbp.acknowledgement.stopack import StopAck, stop_ack
 from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
+from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
 from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.typing import ElementType
 
 
+@dataclass
 class PublishObservableSubject(ObservableSubjectBase):
-    def __init__(self, scheduler: Scheduler, min_num_of_subscriber: int = 1):
+    scheduler: Scheduler
 
-        super().__init__()
+    def __post_init__(self):
+        self.state = PublishObservableSubject.NormalState()
+        self.subscriptions: List['PublishObservableSubject.InnerSubscription'] = []
 
-        self.state = self.State()
         self.lock = threading.RLock()
-        self.scheduler = scheduler
-        self._min_num_of_subscriber = min_num_of_subscriber
 
-    class Subscriber:
-        def __init__(self, observer, scheduler):
-            self.observer = observer
-            self.scheduler = scheduler
+    class State(ABC):
+        @abstractmethod
+        def get_measured_state(self):
+            ...
 
-    class Empty:
-        """ if state.subscriber is Empty, then the subject has completed
-        """
+    @dataclass
+    class NormalState(State):
+        def get_measured_state(self):
+            return self
 
-        pass
+    class CompletedState(State):
+        def __init__(self):
+            self.prev_state: PublishObservableSubject.State = None
 
-    class State:
-        def __init__(self, subscribers: Union[Set[
-                                                  'PublishObservableSubject.SubscriberMixin'], 'PublishObservableSubject.Empty'] = None,
-                     cache: List = None, error_thrown=None):
-            self.subscribers = subscribers or set()
-            self.cache = cache
-            self.error_thrown = error_thrown
+        def get_measured_state(self):
+            previous_state = self.prev_state.get_measured_state()
 
-        def refresh(self):
-            """ Probably it also works without the cache
-
-            :return:
-            """
-            return PublishObservableSubject.State(cache=list(self.subscribers))
-
-        def is_done(self):
-            return isinstance(self.subscribers, PublishObservableSubject.Empty)
-
-        def complete(self, error_thrown):
-            if isinstance(self.subscribers, PublishObservableSubject.Empty):
+            if isinstance(previous_state, PublishObservableSubject.ExceptionState):
+                return self.prev_state
+            else:
                 return self
-            else:
-                return PublishObservableSubject.State(error_thrown=error_thrown,
-                                                      subscribers=PublishObservableSubject.Empty(),
-                                                      cache=None)
 
-    def on_subscribe_completed(self, subscriber: Subscriber, ex):
-        if ex is not None:
-            subscriber.observer.on_error(ex)
+    class ExceptionState(State):
+        def __init__(self, exc):
+            self.exc = exc
+
+            self.prev_state = None
+
+        def get_measured_state(self):
+            return self
+
+    @dataclass
+    class InnerSubscription:
+        source: Observer
+
+    def observe(
+            self,
+            observer_info: ObserverInfo,
+    ) -> rx.typing.Disposable:
+
+        disposable = SingleAssignmentDisposable()
+        inner_subscription = self.InnerSubscription(
+            source=observer_info.observer,
+        )
+
+        with self.lock:
+            prev_state = self.state
+            self.subscriptions.append(inner_subscription)
+
+        meas_state = prev_state.get_measured_state()
+
+        if isinstance(meas_state, self.ExceptionState):
+            observer_info.observer.on_error(meas_state.exc)
+            return Disposable()
+
+        elif isinstance(meas_state, self.CompletedState):
+            observer_info.observer.on_completed()
+            return Disposable()
+
         else:
-            subscriber.observer.on_completed()
-        return Disposable()
-
-    def observe(self, observer_info: ObserverInfo):
-        observer_info = observer_info.observer
-        state = self.state
-        subscribers = state.subscribers
-
-        subscriber = self.Subscriber(observer_info, scheduler=TrampolineScheduler())  # todo: remove scheduler
-        if isinstance(subscribers, self.Empty):
-            self.on_subscribe_completed(subscriber, state.error_thrown)
-
-        else:
-            update_set = subscribers | {subscriber}
-            update = self.State(subscribers=update_set)
-
-            with self.lock:
-                if self.state is state:
-                    is_updated = True
-                    self.state = update
-                else:
-                    is_updated = False
-
-            if is_updated:
-                def dispose():
-                    self.unsubscribe(subscriber)
-                disposable = Disposable(dispose)
-                return disposable
-            else:
-                return self.observe(observer_info)
+            return disposable
 
     def on_next(self, elem: ElementType):
-        state = self.state
-        subscribers = state.cache
 
-        if subscribers is None: # or len(subscribers) < self._min_num_of_subscriber:
-            sub_set = state.subscribers
-
-            if isinstance(sub_set, self.Empty): # or len(sub_set) < self._min_num_of_subscriber:
-                return stop_ack
-
-            else:
-                update = state.refresh()
-                self.state = update
-                return self.send_on_next_to_all(update.cache, elem)
-        else:
-            return self.send_on_next_to_all(subscribers, elem)
-
-    def on_error(self, exc):
-        self.send_oncomplete_or_error(exc)
-
-    def on_completed(self):
-        self.send_oncomplete_or_error()
-
-    def send_on_next_to_all(self, subscribers: List, elem: ElementType):
-        result = None
-
+        # received elements need to be materialized before being multi-casted
         if isinstance(elem, list):
             materialized_values = elem
         else:
-            materialized_values = list(elem)
-        index = 0
-        while index < len(subscribers):
-            subscriber = subscribers[index]
-            observer = subscriber.sink
-            index += 1
+            try:
+                materialized_values = list(elem)
+            except Exception as exc:
+                self.on_error(exc)
+                return stop_ack
 
-            # try:
-            ack = observer.on_next(materialized_values)
-            # except:
-            #     raise NotImplementedError
+        def gen_acks():
+            for subscription in self.subscriptions:
+                ack = subscription.source.on_next(materialized_values)
 
-            # todo: redo this
-            if isinstance(ack, ContinueAck):
-               pass
-            elif isinstance(ack, StopAck): #and ack.exception is not None:
-                    self.unsubscribe(observer)
-            else:
-                # has_value = ack.has_value
-                has_value = False
-
-                if not has_value:
-                    if result is None:
-                        result = PromiseCounter(ContinueAck(), 1)
-
-                    result.acquire()
-
-                    def on_next(v):
-                        if isinstance(v, ContinueAck):
-                            result.countdown()
-                        else:
-                            self.unsubscribe(observer)
-                            result.countdown()
-
-                    def on_error(err):
-                        self.unsubscribe(observer)
-                        result.countdown()
-
-                    class ResultSingle(Single):
-                        def on_next(self, elem):
-                            on_next(elem)
-
-                        def on_error(self, exc: Exception):
-                            on_error(exc)
-
-                    ack.subscribe(ResultSingle())
-
-        if result is None:
-            return ContinueAck()
-        else:
-            result.countdown()
-            return result.promise
-
-    def send_oncomplete_or_error(self, exc: Exception = None):
-        state = self.state
-        sub_set = state.subscribers
-
-        subscribers: Union[Set, PublishObservableSubject.Empty]
-
-        if state.cache is not None:
-            subscribers = set(state.cache)
-        else:
-            subscribers = sub_set
-
-        if not isinstance(subscribers, self.Empty):
-            update = state.complete(exc)
-            with self.lock:
-                if self.state is state:
-                    is_updated = True
-                    self.state = update
+                if isinstance(ack, StopAck):
+                    self.subscriptions.remove(subscription)
                 else:
-                    is_updated = False
+                    yield ack
 
-            if is_updated:
-                for ref in subscribers:
-                    if exc is not None:
-                        ref.sink.on_error(exc)
-                    else:
-                        ref.sink.on_completed()
-            else:
-                self.send_oncomplete_or_error(exc)
+        acks = list(gen_acks())
 
-    def unsubscribe(self, subscriber):
-        state = self.state
-        subscribers = state.subscribers
+        async_ack = [ack for ack in acks if not isinstance(ack, ContinueAck)]
 
-        if state.cache is None:
+        if len(async_ack) == 0:
             return continue_ack
-        else:
-            update = self.State(subscribers = subscribers - {subscriber})
-            with self.lock:
-                if self.state is state:
-                    is_updated = True
-                    self.state = update
-                else:
-                    is_updated = False
 
-            if is_updated:
-                return continue_ack
-            else:
-                return self.unsubscribe(subscriber)
+        elif len(async_ack) == 1:
+            return async_ack[0]
+
+        else:
+            return reduce_ack(
+                sources=async_ack,
+                func=lambda acc, v: v if isinstance(v, StopAck) else acc,
+                initial=continue_ack,
+            )
+
+    def on_error(self, exc):
+        state = self.ExceptionState(exc=exc)
+
+        with self.lock:
+            prev_state = self.state
+            self.state = state
+
+            # add item to buffer
+            subscriptions = self.subscriptions
+            self.subscriptions = []
+
+        if isinstance(prev_state, self.NormalState):
+            for subscription in subscriptions:
+                subscription.source.on_error(exc)
+
+    def on_completed(self):
+        state = self.CompletedState()
+
+        with self.lock:
+            prev_state = self.state
+            self.state = state
+            self.state.prev_state = prev_state
+
+            # add item to buffer
+            subscriptions = self.subscriptions
+            self.subscriptions = []
+
+        if isinstance(prev_state, self.NormalState):
+            for subscription in subscriptions:
+                subscription.source.on_completed()

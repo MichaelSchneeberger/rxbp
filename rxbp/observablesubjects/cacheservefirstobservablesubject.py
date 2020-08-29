@@ -22,17 +22,14 @@ from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
+@dataclass
 class CacheServeFirstObservableSubject(ObservableSubjectBase):
     """ A observable Subject that does not back-pressure on a `on_next` call
     and buffers the last elements according to the slowest subscriber.
     """
+    scheduler: Scheduler
 
-    def __init__(self, scheduler: Scheduler, name=None):
-        super().__init__()
-
-        self.name = name
-        self.scheduler = scheduler
-
+    def __post_init__(self):
         # mutable state
         self.shared_state = self.SharedState()
 
@@ -398,7 +395,9 @@ class CacheServeFirstObservableSubject(ObservableSubjectBase):
 
         with self.lock:
             inactive_subsriptions, current_index = self.shared_state.on_next(
-                elem=materialized_values, ack=current_ack)
+                elem=materialized_values,
+                ack=current_ack,
+            )
 
         # send notification to inactive subscriptions
         def gen_inner_ack():
@@ -422,7 +421,7 @@ class CacheServeFirstObservableSubject(ObservableSubjectBase):
 
         # return any Continue or Stop ack
         if 0 < len(continue_ack):
-            return continue_ack[0]
+            return continue_ack
 
         else:
             return current_ack
@@ -438,26 +437,26 @@ class CacheServeFirstObservableSubject(ObservableSubjectBase):
             inactive_subsriptions = self.shared_state.on_completed()
 
         # send notification to inactive subscriptions
-        if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
+        if isinstance(state.prev_state, self.NormalState):
             for inner_subscription in inactive_subsriptions:
                 inner_subscription.notify_on_completed()
 
     def on_error(self, exc: Exception):
-        # state = self.ExceptionState(exception)
-        #
-        # with self.lock:
-        #     state.prev_state = self.shared_state.state
-        #     self.state = state
-        #
-        # subscriptions = self.shared_state.subscriptions
-        #
-        # # send notification to inactive subscriptions
-        # if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
-        #     for inner_subscription in subscriptions:
-        #         inner_subscription.notify_on_error(exception)
+        state = self.ExceptionState(exc)
 
-        for inner_subscription in self.shared_state.subscriptions:
-            inner_subscription.notify_on_error(exc)
+        with self.lock:
+            state.prev_state = self.shared_state.state
+            self.state = state
+
+        subscriptions = self.shared_state.subscriptions
+
+        # send notification to inactive subscriptions
+        if isinstance(state.prev_state, self.NormalState):    # todo: necessary?
+            for inner_subscription in subscriptions:
+                inner_subscription.notify_on_error(exc)
+
+        # for inner_subscription in self.shared_state.subscriptions:
+        #     inner_subscription.notify_on_error(exc)
 
     def dispose(self):
         """Unsubscribe all observers and release resources."""

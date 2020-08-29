@@ -82,8 +82,8 @@ class ConcatObservable(Observable):
         conn_observers = [ConnectableObserver(
             underlying=subject,
             scheduler=self._scheduler,
-            subscribe_scheduler=self._subscribe_scheduler,
-            is_volatile=observer_info.is_volatile,
+            # subscribe_scheduler=self._subscribe_scheduler,
+            # is_volatile=observer_info.is_volatile,
         ) for subject in self._subjects[1:]]
 
         iter_conn_obs = iter(conn_observers)

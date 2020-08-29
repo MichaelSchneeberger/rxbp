@@ -89,4 +89,4 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
         disposable = self.multicast_scheduler.schedule(action)
         composite_disposable.add(disposable)
 
-        return disposable
+        return composite_disposable

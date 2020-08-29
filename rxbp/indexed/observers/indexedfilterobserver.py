@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Callable, Any
 
 from rxbp.acknowledgement.ack import Ack
-from rxbp.acknowledgement.operators.merge import _merge
+from rxbp.acknowledgement.operators.mergeack import merge_ack
 from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observer import Observer
@@ -50,7 +50,7 @@ class IndexedFilterObserver(Observer):
 
             ack1: Ack = self.observer.on_next(gen_output())
 
-            return _merge(ack1, sel_ack)
+            return merge_ack(ack1, sel_ack)
         else:
             return sel_ack
 

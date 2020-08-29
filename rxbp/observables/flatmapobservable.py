@@ -29,8 +29,6 @@ class FlatMapObservable(Observable):
                 scheduler=self.scheduler,
                 subscribe_scheduler=self.subscribe_scheduler,
                 composite_disposable=composite_disposable,
-                lock=threading.RLock(),
-                state=[RawFlatMapStates.InitialState()],
             )),
         )
         composite_disposable.add(disposable)

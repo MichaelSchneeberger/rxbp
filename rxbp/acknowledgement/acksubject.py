@@ -6,7 +6,7 @@ from rx.internal import DisposedException
 
 from rxbp.acknowledgement.mixins.ackmergemixin import AckMergeMixin
 from rxbp.acknowledgement.ack import Ack
-from rxbp.acknowledgement.operators.merge import _merge
+from rxbp.acknowledgement.operators.mergeack import merge_ack
 from rxbp.acknowledgement.single import Single
 
 
@@ -73,7 +73,7 @@ class AckSubject(AckMergeMixin, Ack, Single):
     #         single.on_error(error)
 
     def merge(self, other: Ack):
-        return _merge(self, other)
+        return merge_ack(self, other)
 
     def dispose(self) -> None:
 

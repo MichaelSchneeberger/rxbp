@@ -1,13 +1,11 @@
 from dataclasses import dataclass
-from traceback import FrameSummary
-from typing import Callable, List
+from typing import Callable
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.flatmapmulticastobservable import FlatMapMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.typing import MultiCastItem
-from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 @dataclass
@@ -29,17 +27,6 @@ class FlatMapMultiCast(MultiCastMixin):
             observable=FlatMapMultiCastObservable(
                 source=subscription.observable,
                 func=lifted_func,
+                multicast_scheduler=subscriber.multicast_scheduler,
             )
         )
-
-        # def check_return_value_of_func(value):
-        #     multi_cast = self.func(value)
-        #
-        #     if not isinstance(multi_cast, MultiCastMixin):
-        #         raise Exception(f'"{self.func}" should return a "MultiCast", but returned "{multi_cast}"')
-        #
-        #     return multi_cast.get_source(info=info)
-        #
-        # return self.source.get_source(info=info).pipe(
-        #     rxop.flat_map(check_return_value_of_func),
-        # )
