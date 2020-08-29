@@ -80,11 +80,17 @@ def loop_flowables(
     :param initial: initial values of the looped Flowables
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: MultiCast):
         def lifted_func(multicast: MultiCastMixin):
             return func(init_multicast(multicast))
 
-        return source.loop_flowables(func=lifted_func, initial=initial)
+        return source.loop_flowables(
+            func=lifted_func,
+            initial=initial,
+            stack=stack,
+        )
 
     return MultiCastOperator(func=op_func)
 
@@ -175,8 +181,10 @@ def join_flowables(
     :param others: other MultiCasts that all emit a single Flowable
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: MultiCast):
-        return source.join_flowables(*others)
+        return source.join_flowables(list(others), stack=stack)
 
     return MultiCastOperator(op_func)
 

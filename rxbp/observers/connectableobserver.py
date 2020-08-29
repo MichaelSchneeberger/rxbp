@@ -15,8 +15,6 @@ from rxbp.typing import ElementType
 class ConnectableObserver(Observer):
     underlying: Observer
     scheduler: Scheduler
-    subscribe_scheduler: Scheduler
-    # is_volatile: bool
 
     def __post_init__(self):
         self.root_ack = AckSubject()

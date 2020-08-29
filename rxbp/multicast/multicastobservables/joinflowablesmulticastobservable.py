@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from traceback import FrameSummary
 from typing import List
 
 from rx.disposable import Disposable, CompositeDisposable
@@ -21,6 +22,7 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
     sources: List[MultiCastObservable]
     multicast_scheduler: Scheduler
     source_scheduler: Scheduler
+    stack: List[FrameSummary]
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         composite_disposable = CompositeDisposable()
@@ -32,7 +34,6 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                 conn_observer = ConnectableObserver(
                     underlying=None,
                     scheduler=self.multicast_scheduler,
-                    subscribe_scheduler=self.multicast_scheduler,
                 )
 
                 # MultiCast elements without back-pressure are converted to Flowable elements
@@ -73,7 +74,7 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
 
                 # The outgoing Flowables are shared such that they can be subscribed more
                 # than once
-                yield init_flowable(RefCountFlowable(flattened_flowable))
+                yield init_flowable(RefCountFlowable(flattened_flowable, stack=self.stack))
 
         flowables = list(gen_conn_flowables())
 

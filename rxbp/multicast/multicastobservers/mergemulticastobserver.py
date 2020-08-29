@@ -23,5 +23,5 @@ class MergeMultiCastObserver(MultiCastObserver):
     def on_completed(self) -> None:
         with self.lock:
             self.group.remove(self.inner_subscription)
-            if len(self.group) == 1:
+            if len(self.group) == 0:
                 self.observer.on_completed()

@@ -17,6 +17,5 @@ class FirstObservable(Observable):
             observer=FirstObserver(
                 observer=observer_info.observer,
                 stack=self.stack,
-                is_first=True,
             ),
         ))

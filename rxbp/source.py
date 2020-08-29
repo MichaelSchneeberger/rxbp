@@ -230,9 +230,7 @@ def zip(*sources: Flowable) -> Flowable: #, result_selector: Callable[..., Any] 
     :param sources: zero or more Flowables whose elements are zipped together
     """
 
-    stack = get_stack_lines()
-
     if len(sources) == 0:
         return empty()
     else:
-        return sources[0].zip(*sources[1:], stack=stack)
+        return sources[0].zip(*sources[1:])

@@ -7,7 +7,7 @@ from rx.disposable import CompositeDisposable, SingleAssignmentDisposable
 
 from rxbp.multicast.multicastobservable import MultiCastObservable
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.multicast.observer.mergemulticastobserver import MergeMultiCastObserver
+from rxbp.multicast.multicastobservers.mergemulticastobserver import MergeMultiCastObserver
 from rxbp.scheduler import Scheduler
 
 

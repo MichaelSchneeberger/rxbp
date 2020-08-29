@@ -1,4 +1,6 @@
 import threading
+from dataclasses import dataclass
+from traceback import FrameSummary
 from typing import List, Optional
 
 import rx
@@ -8,18 +10,23 @@ from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.observerinfo import ObserverInfo
+from rxbp.scheduler import Scheduler
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
+@dataclass
 class RefCountObservable(Observable):
-    def __init__(self, source: Observable, subject: ObservableSubjectBase):
-        super().__init__()
+    source: Observable
+    subject: ObservableSubjectBase
+    scheduler: Scheduler
+    stack: List[FrameSummary]
 
-        self.source = source
-        self.subject = subject
+    def __post_init__(self):
         self.count = 0
         self.volatile_disposables: List[rx.typing.Disposable] = []
         self.first_disposable: Optional[rx.typing.Disposable] = None
         self.lock = threading.RLock()
+        self.scheduled_next = False
 
     def observe(self, observer_info: ObserverInfo):
         disposable = self.subject.observe(observer_info)
@@ -33,8 +40,20 @@ class RefCountObservable(Observable):
             current_cound = self.count
 
         if current_cound == 1:
+            def action(_, __):
+                self.scheduled_next = True
+
+            self.scheduler.schedule(action)
+
             subject_subscription = init_observer_info(self.subject, is_volatile=observer_info.is_volatile)
             self.first_disposable = self.source.observe(subject_subscription)
+
+        else:
+            if self.scheduled_next:
+                raise Exception(to_operator_exception(
+                    message='subsequent subscribe call has been delayed, make sure to not delay Flowable subscriptions',
+                    stack=self.stack,
+                ))
 
         def dispose():
             disposable.dispose()

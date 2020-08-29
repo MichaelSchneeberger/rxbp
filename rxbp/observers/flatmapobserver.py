@@ -65,7 +65,6 @@ class FlatMapObserver(Observer):
                 conn_observer = ConnectableObserver(
                     underlying=inner_observer,
                     scheduler=self.scheduler,
-                    subscribe_scheduler=self.subscribe_scheduler,
                 )
 
                 # apply selector to get inner observable (per element received)

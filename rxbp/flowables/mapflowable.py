@@ -14,20 +14,20 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 class MapFlowable(FlowableMixin):
     source: FlowableMixin
     func: Callable[[ValueType], Any]
-    stack: List[FrameSummary]
+    # stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-        try:
-            subscription = self.source.unsafe_subscribe(subscriber=subscriber)
-            return subscription.copy(
-                observable=MapObservable(
-                    source=subscription.observable,
-                    func=self.func,
-                ),
-            )
+        # try:
+        subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+        return subscription.copy(
+            observable=MapObservable(
+                source=subscription.observable,
+                func=self.func,
+            ),
+        )
 
-        except AttributeError:
-            raise Exception(to_operator_exception(
-                message=f'something went wrong when subscribing to {self.source}',
-                stack=self.stack,
-            ))
+        # except AttributeError:
+        #     raise Exception(to_operator_exception(
+        #         message=f'something went wrong when subscribing to {self.source}',
+        #         stack=self.stack,
+        #     ))

@@ -137,11 +137,11 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     ):
         return self._copy(FlatMapMultiCast(source=self, func=func))
 
-    def join_flowables(self, *others: 'MultiCastMixin'):
+    def join_flowables(self, others: List['MultiCastMixin'], stack: List[FrameSummary]):
         if len(others) == 0:
             return self
 
-        return self._copy(JoinFlowablesMultiCast(sources=[self] + list(others)))
+        return self._copy(JoinFlowablesMultiCast(sources=[self] + others, stack=stack))
 
     # def build_imperative_multicast(
     #         self,
@@ -187,12 +187,14 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             self,
             func: Callable[[MultiCastItem], MultiCastItem],
             initial: ValueType,
+            stack: List[FrameSummary],
     ):
-        # def lifted_func(multicast: MultiCastMixin):
-        #     # return func(init_multicast(multicast))
-        #     return multicast
-
-        return self._copy(LoopFlowableMultiCast(source=self, func=func, initial=initial))
+        return self._copy(LoopFlowableMultiCast(
+            source=self,
+            func=func,
+            initial=initial,
+            stack=stack,
+        ))
 
     def materialize(
             self,

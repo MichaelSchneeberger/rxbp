@@ -41,6 +41,7 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.torx import to_rx
 from rxbp.typing import ValueType
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 class FlowableOpMixin(
@@ -165,8 +166,8 @@ class FlowableOpMixin(
         flowable = LastFlowable(source=self, stack=stack)
         return self._copy(flowable)
 
-    def map(self, func: Callable[[ValueType], Any], stack: List[FrameSummary]):
-        flowable = MapFlowable(source=self, func=func, stack=stack)
+    def map(self, func: Callable[[ValueType], Any]):
+        flowable = MapFlowable(source=self, func=func)
         return self._copy(flowable)
 
     def map_to_iterator(
@@ -252,8 +253,13 @@ class FlowableOpMixin(
         flowable = ScanFlowable(source=self, func=func, initial=initial)
         return self._copy(flowable)
 
+    def _share(self, stack: List[FrameSummary]):
+        return self._copy(RefCountFlowable(source=self, stack=stack), is_shared=True)
+
     def share(self):
-        return self._copy(RefCountFlowable(source=self), is_shared=True)
+        stack = get_stack_lines()
+
+        return self._share(stack=stack)
 
     # def set_base(self, val: Base):
     #
@@ -284,13 +290,13 @@ class FlowableOpMixin(
 
         return to_rx(source=self, batched=batched)
 
-    def zip(self, *others: 'FlowableOpMixin', stack: List[FrameSummary]):
+    def zip(self, *others: 'FlowableOpMixin'):
 
         assert all(isinstance(source, FlowableMixin) for source in others), \
             f'"{others}" must all be of type FlowableMixin'
 
         if len(others) == 0:
-            return self.map(lambda v: (v,), stack=stack)
+            return self.map(lambda v: (v,))
         else:
             sources = (self,) + others
 
@@ -298,7 +304,7 @@ class FlowableOpMixin(
                 for source in reversed(sources):
                     def _(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
                         if right is None:
-                            return left.map(lambda v: (v,), stack=stack)
+                            return left.map(lambda v: (v,))
                         else:
                             def inner_result_selector(v1: Any, v2: Tuple[Any]):
                                 return (v1,) + v2

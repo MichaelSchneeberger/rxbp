@@ -265,10 +265,8 @@ def map(func: Callable[[Any], Any]):
     Flowable sequence.
     """
 
-    stack = get_stack_lines()
-
     def op_func(source: Flowable):
-        return source.map(func=func, stack=stack)
+        return source.map(func=func)
 
     return PipeOperation(op_func)
 
@@ -389,18 +387,18 @@ def scan(func: Callable[[Any, Any], Any], initial: Any):
     return PipeOperation(op_func)
 
 
-def share():
-    """
-    Broadcast the elements of the Flowable to possibly multiple subscribers.
-
-    This function is only valid when used inside a Multicast. Otherwise, it
-    raise an exception.
-    """
-
-    def inner_func(source: Flowable):
-        return source.share()#bind_to=ability)
-
-    return PipeOperation(inner_func)
+# def share():
+#     """
+#     Broadcast the elements of the Flowable to possibly multiple subscribers.
+#
+#     This function is only valid when used inside a Multicast. Otherwise, it
+#     raise an exception.
+#     """
+#
+#     def inner_func(source: Flowable):
+#         return source.share()#bind_to=ability)
+#
+#     return PipeOperation(inner_func)
 
 
 def set_base(val: Any):
@@ -433,10 +431,8 @@ def zip(*others: Flowable):
     :param others: :param sources: other Flowables that get zipped to this Flowable.
     """
 
-    stack = get_stack_lines()
-
     def op_func(left: Flowable):
-        return left.zip(*others, stack=stack)
+        return left.zip(*others)
 
     return PipeOperation(op_func)
 

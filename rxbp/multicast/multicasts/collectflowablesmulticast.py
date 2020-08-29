@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Any
+from traceback import FrameSummary
+from typing import Any, List
 
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.init.initflowable import init_flowable
@@ -24,6 +25,7 @@ from rxbp.observers.connectableobserver import ConnectableObserver
 class CollectFlowablesMultiCast(MultiCastMixin):
     source: MultiCastMixin
     maintain_order: bool
+    stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         multicast_scheduler = subscriber.multicast_scheduler
@@ -84,7 +86,7 @@ class CollectFlowablesMultiCast(MultiCastMixin):
             # ))
 
             if 1 < len(first_state):
-                shared_flowable = RefCountFlowable(conn_flowable)
+                shared_flowable = RefCountFlowable(conn_flowable, stack=self.stack)
             else:
                 shared_flowable = conn_flowable
 
@@ -107,7 +109,7 @@ class CollectFlowablesMultiCast(MultiCastMixin):
                             subscribe_scheduler=source_scheduler,
                         )
 
-                    flowable = init_flowable(RefCountFlowable(flattened_flowable))
+                    flowable = init_flowable(RefCountFlowable(flattened_flowable, stack=self.stack))
                     yield key, flowable
 
             return from_state(dict(gen_flowables()))

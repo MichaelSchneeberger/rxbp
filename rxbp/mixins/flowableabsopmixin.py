@@ -145,7 +145,7 @@ class FlowableAbsOpMixin(ABC):
         ...
 
     @abstractmethod
-    def map(self, func: Callable[[Any], Any], stack: List[FrameSummary]) -> FlowableMixin:
+    def map(self, func: Callable[[Any], Any]) -> FlowableMixin:
         """ Map each element emitted by the source by applying the given function.
 
         :param func: function that defines the mapping applied to each element of the \

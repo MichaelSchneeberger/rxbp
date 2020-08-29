@@ -13,7 +13,7 @@ Note: that the new Flowable does not have the "sharing" behavior, see
 
 import rxbp
 
-f = rxbp.multicast.return_flowable(rxbp.range(10)).pipe(
+f = rxbp.multicast.return_value(rxbp.range(10)).pipe(
     rxbp.multicast.op.map(lambda base: base.pipe(
         rxbp.op.zip(base.pipe(
             rxbp.op.map(lambda v: v + 1),

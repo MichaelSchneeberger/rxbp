@@ -1,4 +1,6 @@
 import threading
+from dataclasses import dataclass
+from traceback import FrameSummary
 from typing import Callable, Any, Dict, Union, List
 
 from rx.core.typing import Disposable
@@ -25,16 +27,12 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
+@dataclass
 class LoopFlowableMultiCast(MultiCastMixin):
-    def __init__(
-            self,
-            source: MultiCastMixin,
-            func: Callable[[MultiCastMixin], MultiCastMixin],
-            initial: Union[List[Any], Dict[Any, Any]],
-    ):
-        self.source = source
-        self.func = func
-        self.initial = initial
+    source: MultiCastMixin
+    func: Callable[[MultiCastMixin], MultiCastMixin]
+    initial: Union[List[Any], Dict[Any, Any]]
+    stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         initial = self.initial
@@ -48,7 +46,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
                 return self.flowable.unsafe_subscribe(subscriber)
 
         start = StartWithInitialValueFlowable()
-        shared = RefCountFlowable(source=start)
+        shared = RefCountFlowable(source=start, stack=self.stack)
 
         # mutual curr_index variable is used to index the input Flowables
         # as the sequal to the deferred Flowables
@@ -72,7 +70,10 @@ class LoopFlowableMultiCast(MultiCastMixin):
             for key in initial_dict.keys():
                 def for_func(key=key):
                     return key, init_flowable(
-                        underlying=MapFlowable(source=shared, func=lambda d: d[key]),
+                        underlying=MapFlowable(
+                            source=shared,
+                            func=lambda d: d[key],
+                        ),
                     )
 
                 yield for_func()
@@ -151,7 +152,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
                 raise Exception(f'illegal case "{base}"')
 
             # share flowables
-            shared_flowable_state = {key: RefCountFlowable(value) for key, value in flowable_state.items() if key in initial_dict}
+            shared_flowable_state = {key: RefCountFlowable(value, stack=self.stack) for key, value in flowable_state.items() if key in initial_dict}
             not_deferred_flowables = {key: value for key, value in flowable_state.items() if
                                      key not in initial_dict}
 

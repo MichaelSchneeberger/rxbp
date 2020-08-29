@@ -11,6 +11,9 @@ class ScanObserver(Observer):
     func: Callable[[Any, Any], Any]
     initial: Any
 
+    def __post_init__(self):
+        self.acc = self.initial
+
     def on_next(self, elem: ElementType):
         def scan_gen():
             for v in elem:

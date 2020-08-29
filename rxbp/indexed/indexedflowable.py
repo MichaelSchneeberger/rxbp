@@ -1,7 +1,8 @@
 import functools
 import itertools
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Tuple, Iterator
+from traceback import FrameSummary
+from typing import Callable, Any, Tuple, Iterator, List
 from typing import Generic
 
 import rx
@@ -244,7 +245,7 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
     def share(self) -> IndexedFlowableMixin:
         return self._copy(super().share())
 
-    def _share(self):
+    def _share(self, stack: List[FrameSummary]):
         return self._copy(RefCountFlowable(source=self))
 
     def set_base(self, val: Base):
