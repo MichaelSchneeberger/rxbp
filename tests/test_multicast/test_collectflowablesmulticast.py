@@ -4,7 +4,7 @@ from rxbp.flowable import Flowable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
 from rxbp.multicast.testing.testmulticast import TestMultiCast
-from rxbp.multicast.testing.testrxobserver import TestRxObserver
+from rxbp.multicast.testing.testmulticastobserver import TestMultiCastObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testflowable import TestFlowable
@@ -21,7 +21,7 @@ class TestCollectFlowablesMultiCast(unittest.TestCase):
             source_scheduler=self.source_scheduler,
         )
         self.source_multicast = TestMultiCast()
-        self.rx_sink = TestRxObserver()
+        self.rx_sink = TestMultiCastObserver()
         self.source1 = TestFlowable()
         self.source2 = TestFlowable()
 

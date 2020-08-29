@@ -1,4 +1,6 @@
 import types
+from dataclasses import dataclass
+from typing import Optional, Any
 
 from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.acknowledgement.stopack import stop_ack
@@ -6,10 +8,11 @@ from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
 
+@dataclass
 class PairwiseObserver(Observer):
-    def __init__(self, observer: Observer):
-        self.observer = observer
+    source: Observer
 
+    def __post_init__(self):
         self.last_elem = None
 
     def pairwise_gen_template(self, iterator):
@@ -24,7 +27,7 @@ class PairwiseObserver(Observer):
             def pairwise_gen():
                 yield from self.pairwise_gen_template(elem)
 
-            ack = self.sink.on_next(pairwise_gen())
+            ack = self.source.on_next(pairwise_gen())
             return ack
         self.on_next = types.MethodType(on_next_after_first, self)      # type: ignore
 
@@ -44,7 +47,7 @@ class PairwiseObserver(Observer):
                 return continue_ack
 
         except Exception as exc:
-            self.observer.on_error(exc)
+            self.source.on_error(exc)
             return stop_ack
 
         def pairwise_gen():
@@ -52,11 +55,11 @@ class PairwiseObserver(Observer):
             self.last_elem = peak_second
             yield from self.pairwise_gen_template(temp_iter)
 
-        ack = self.observer.on_next(pairwise_gen())
+        ack = self.source.on_next(pairwise_gen())
         return ack
 
     def on_error(self, exc):
-        return self.observer.on_error(exc)
+        return self.source.on_error(exc)
 
     def on_completed(self):
-        return self.observer.on_completed()
+        return self.source.on_completed()

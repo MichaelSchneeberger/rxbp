@@ -42,7 +42,7 @@ class TestFlatMapObserver(unittest.TestCase):
             lock=self.lock,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            state=RawFlatMapStates.InitialState(),
+            state=[RawFlatMapStates.InitialState()],
             observer_info=init_observer_info(observer=self.sink),
         )
         self.source.observe(init_observer_info(observer))
@@ -59,7 +59,7 @@ class TestFlatMapObserver(unittest.TestCase):
             lock=self.lock,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            state=RawFlatMapStates.InitialState(),
+            state=[RawFlatMapStates.InitialState()],
             observer_info=init_observer_info(observer=self.sink),
         )
         self.source.observe(init_observer_info(observer))
@@ -78,7 +78,7 @@ class TestFlatMapObserver(unittest.TestCase):
             lock=self.lock,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            state=RawFlatMapStates.InitialState(),
+            state=[RawFlatMapStates.InitialState()],
             observer_info=init_observer_info(observer=self.sink),
         )
         self.source.observe(init_observer_info(observer))
@@ -97,7 +97,7 @@ class TestFlatMapObserver(unittest.TestCase):
             lock=self.lock,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            state=RawFlatMapStates.InitialState(),
+            state=[RawFlatMapStates.InitialState()],
             observer_info=init_observer_info(observer=self.sink),
         )
         self.source.observe(init_observer_info(observer))

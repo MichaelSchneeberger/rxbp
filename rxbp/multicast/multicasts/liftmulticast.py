@@ -16,7 +16,6 @@ from rxbp.multicast.typing import MultiCastItem
 @dataclass
 class LiftMultiCast(MultiCastMixin):
     source: SharedMultiCast
-    func: Callable[[MultiCastMixin], MultiCastItem]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
 
@@ -26,7 +25,7 @@ class LiftMultiCast(MultiCastMixin):
             def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
                 def action(_, __):
                     try:
-                        observer_info.observer.on_next([outer_self.func(outer_self.source)])
+                        observer_info.observer.on_next([outer_self.source])#outer_self.func(outer_self.source)])
                         observer_info.observer.on_completed()
 
                     except Exception as exc:

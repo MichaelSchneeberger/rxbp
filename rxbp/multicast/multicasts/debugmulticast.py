@@ -1,31 +1,35 @@
+from dataclasses import dataclass
+from typing import Callable, Any
+
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.debugmulticastobservable import DebugMultiCastObservable
+from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
-
-
-# todo: assert subscribe_scheduler is active
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 
 
+@dataclass
 class DebugMultiCast(MultiCastMixin):
-    def __init__(
-            self,
-            source: MultiCastMixin,
-            name: str = None,
-    ):
-        self.source = source
-        self.name = name
+    source: MultiCastMixin
+    name: str
+    on_next: Callable[[Any], None]
+    on_completed: Callable[[], None]
+    on_error: Callable[[Exception], None]
+    on_subscribe: Callable[[MultiCastSubscriber], None]
+    on_observe: Callable[[MultiCastObserverInfo], None]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-        print(f'{self.name}.get_source({subscriber})')
-
+        self.on_subscribe(subscriber)
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+
         return subscription.copy(
             observable=DebugMultiCastObservable(
-                subscription.observable,
+                source=subscription.observable,
                 name=self.name,
-                on_next=print,
-                on_completed=lambda: print('completed'),
-                on_error=print,
-            )
+                on_next=self.on_next,
+                on_error=self.on_error,
+                on_completed=self.on_completed,
+                on_observe=self.on_observe,
+                multicast_scheduler=subscriber.multicast_scheduler,
+            ),
         )

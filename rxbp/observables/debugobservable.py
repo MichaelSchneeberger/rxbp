@@ -37,7 +37,6 @@ class DebugObservable(Observable):
             on_async_ack=self.on_async_ack,
             on_raw_ack=self.on_raw_ack,
             stack=self.stack,
-            has_scheduled_next=False
         )
 
         def action(_, __):

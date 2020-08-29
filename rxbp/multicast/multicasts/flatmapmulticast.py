@@ -14,20 +14,14 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 class FlatMapMultiCast(MultiCastMixin):
     source: MultiCastMixin
     func: Callable[[MultiCastItem], MultiCastMixin]
-    stack: List[FrameSummary]
+    # stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
 
         def lifted_func(val):
-            try:
-                multicast = self.func(val)
-                subscription = multicast.unsafe_subscribe(subscriber=subscriber)
-            except:
-                raise Exception(to_operator_exception(
-                    message='',
-                    stack=self.stack,
-                ))
+            multicast = self.func(val)
+            subscription = multicast.unsafe_subscribe(subscriber=subscriber)
 
             return subscription.observable
 

@@ -6,9 +6,8 @@ import rx
 from rx.disposable import CompositeDisposable, SingleAssignmentDisposable
 
 from rxbp.multicast.multicastobservable import MultiCastObservable
-from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.multicast.typing import MultiCastItem
+from rxbp.multicast.observer.mergemulticastobserver import MergeMultiCastObserver
 from rxbp.scheduler import Scheduler
 
 
@@ -19,27 +18,7 @@ class MergeMultiCastObservable(MultiCastObservable):
 
     def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
         group = CompositeDisposable()
-        m = SingleAssignmentDisposable()
-        group.add(m)
         lock = threading.RLock()
-
-        @dataclass
-        class MergeMultiCastObserver(MultiCastObserver):
-            observer: MultiCastObserver
-            lock: threading.RLock()
-            inner_subscription: SingleAssignmentDisposable
-
-            def on_next(self, elem: MultiCastItem) -> None:
-                self.observer.on_next(elem)
-
-            def on_error(self, exc: Exception) -> None:
-                self.observer.on_error(exc)
-
-            def on_completed(self) -> None:
-                with self.lock:
-                    group.remove(self.inner_subscription)
-                    if len(group) == 1:
-                        self.observer.on_completed()
 
         for inner_source in self.sources:
             inner_subscription = SingleAssignmentDisposable()
@@ -50,6 +29,7 @@ class MergeMultiCastObservable(MultiCastObservable):
                     observer=observer_info.observer,
                     lock=lock,
                     inner_subscription=inner_subscription,
+                    group=group
                 )
             ))
             inner_subscription.disposable = disposable

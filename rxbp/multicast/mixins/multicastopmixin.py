@@ -11,12 +11,12 @@ from rxbp.multicast.multicastobservables.materializemulticastobservable import M
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicasts.assertsinglesubscriptionmulticast import AssertSingleSubscriptionMultiCast
 from rxbp.multicast.multicasts.collectflowablesmulticast import CollectFlowablesMultiCast
+from rxbp.multicast.multicasts.debugmulticast import DebugMultiCast
 from rxbp.multicast.multicasts.defaultifemptymulticast import DefaultIfEmptyMultiCast
 from rxbp.multicast.multicasts.filtermulticast import FilterMultiCast
 from rxbp.multicast.multicasts.firstmulticast import FirstMultiCast
 from rxbp.multicast.multicasts.firstordefaultmulticast import FirstOrDefaultMultiCast
 from rxbp.multicast.multicasts.flatmapmulticast import FlatMapMultiCast
-from rxbp.multicast.multicasts.init.initdebugmulticast import init_debug_multi_cast
 from rxbp.multicast.multicasts.joinflowablesmulticast import JoinFlowablesMultiCast
 from rxbp.multicast.multicasts.loopflowablemulticast import LoopFlowableMultiCast
 from rxbp.multicast.multicasts.mapmulticast import MapMultiCast
@@ -64,18 +64,42 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             on_next: Callable[[Any], None] = None,
             on_completed: Callable[[], None] = None,
             on_error: Callable[[Exception], None] = None,
-            on_subscribe: Callable[[MultiCastObserverInfo, MultiCastSubscriber], None] = None,
+            on_subscribe: Callable[[MultiCastSubscriber], None] = None,
+            on_observe: Callable[[MultiCastObserverInfo], None] = None,
             verbose: bool = None,
     ):
 
-        return self._copy(init_debug_multi_cast(
+        if verbose is None:
+            verbose = True
+
+        if verbose:
+            on_next_func = on_next or (lambda v: print(f'{name}.on_next {v}'))
+            on_error_func = on_error or (lambda exc: print(f'{name}.on_error {exc}'))
+            on_completed_func = on_completed or (lambda: print(f'{name}.on_completed'))
+            on_subscribe_func = on_subscribe or (lambda v: print(f'{name}.on_subscribe {v}'))
+            on_observe_func = on_subscribe or (lambda v: print(f'{name}.on_observe {v}'))
+
+        else:
+            def empty_func0():
+                return None
+
+            def empty_func1(v):
+                return None
+
+            on_next_func = on_next or empty_func1
+            on_error_func = on_error or empty_func1
+            on_completed_func = on_completed or empty_func0
+            on_subscribe_func = on_subscribe or empty_func1
+            on_observe_func = on_subscribe or empty_func1
+
+        return self._copy(DebugMultiCast(
             source=self,
             name=name,
-            on_next=on_next,
-            on_completed=on_completed,
-            on_error=on_error,
-            on_subscribe=on_subscribe,
-            verbose=verbose,
+            on_next=on_next_func,
+            on_completed=on_completed_func,
+            on_error=on_error_func,
+            on_subscribe=on_subscribe_func,
+            on_observe=on_observe_func,
         ))
 
     def default_if_empty(
@@ -109,9 +133,9 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     def flat_map(
             self,
             func: Callable[[MultiCastItem], 'MultiCast[MultiCastItem]'],
-            stack: List[FrameSummary],
+            # stack: List[FrameSummary],
     ):
-        return self._copy(FlatMapMultiCast(source=self, func=func, stack=stack))
+        return self._copy(FlatMapMultiCast(source=self, func=func))
 
     def join_flowables(self, *others: 'MultiCastMixin'):
         if len(others) == 0:
@@ -210,9 +234,13 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     def share_func(
             self,
             func: Callable[['MultiCastOpMixin'], 'MultiCastOpMixin'],
+            stack: List[FrameSummary],
     ):
         return self._copy(
             underlying=func(self._copy(
-                underlying=SharedMultiCast(source=self),
+                underlying=self._share(stack=stack),
             )),
         )
+
+    def _share(self, stack: List[FrameSummary]):
+        return self._copy(SharedMultiCast(source=self.materialize(), stack=stack))

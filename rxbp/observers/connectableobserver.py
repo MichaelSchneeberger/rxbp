@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.acknowledgement.operators.map import _map
@@ -9,18 +11,19 @@ from rxbp.scheduler import Scheduler
 from rxbp.typing import ElementType
 
 
+@dataclass
 class ConnectableObserver(Observer):
-    def __init__(self, underlying: Observer, scheduler: Scheduler, subscribe_scheduler: Scheduler = None,
-                 is_volatile: bool = None):
-        self.underlying = underlying
-        self.scheduler = scheduler
-        self.subscribe_scheduler = subscribe_scheduler  # todo: remove this
-        self.is_volatile = is_volatile or False  # todo: remove this
+    underlying: Observer
+    scheduler: Scheduler
+    subscribe_scheduler: Scheduler
+    # is_volatile: bool
 
+    def __post_init__(self):
         self.root_ack = AckSubject()
         self.connected_ack = self.root_ack
         self.is_connected = False
         self.was_canceled = False
+        self.is_volatile = False
 
     def connect(self):
         self.is_connected = True

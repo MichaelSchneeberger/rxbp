@@ -1,43 +1,46 @@
+import types
 from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import List
 
+from rx.disposable import SingleAssignmentDisposable
 from rx.internal import SequenceContainsNoElementsError
 
-from rxbp.acknowledgement.continueack import continue_ack
-from rxbp.acknowledgement.stopack import stop_ack
-from rxbp.observer import Observer
-from rxbp.typing import ElementType
+from rxbp.multicast.multicastobserver import MultiCastObserver
+from rxbp.multicast.typing import MultiCastItem
 from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 @dataclass
-class FirstObserver(Observer):
-    observer: Observer
+class FirstMultiCastObserver(MultiCastObserver):
+    source: MultiCastObserver
+    disposable: SingleAssignmentDisposable
     stack: List[FrameSummary]
 
     def __post_init__(self):
         self.is_first = True
 
-    def on_next(self, elem: ElementType):
+    def on_next(self, elem: MultiCastItem) -> None:
         try:
             first_elem = next(iter(elem))
         except StopIteration:
-            return continue_ack
+            return
         except Exception as exc:
             self.on_error(exc)
             return
 
         self.is_first = False
-        self.observer.on_next([first_elem])
-        self.observer.on_completed()
+        self.source.on_next([first_elem])
+        self.source.on_completed()
 
-        return stop_ack
+        self.disposable.dispose()
 
-    def on_error(self, exc):
-        return self.observer.on_error(exc)
+        # self.on_next = types.MethodType(lambda elem: None, self)  # type: ignore
 
-    def on_completed(self):
+    def on_error(self, exc: Exception) -> None:
+        self.source.on_error(exc)
+
+    def on_completed(self) -> None:
         if self.is_first:
             try:
                 raise SequenceContainsNoElementsError(to_operator_exception(
@@ -46,4 +49,4 @@ class FirstObserver(Observer):
                 ))
 
             except Exception as exc:
-                self.observer.on_error(exc)
+                self.source.on_error(exc)

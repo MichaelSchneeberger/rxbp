@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Callable, Any
 
 from rxbp.acknowledgement.stopack import stop_ack
@@ -5,14 +6,12 @@ from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
 
+@dataclass
 class TakeWhileObserver(Observer):
-    def __init__(
-            self,
-            observer: Observer,
-            predicate: Callable[[Any], bool],
-    ):
-        self.observer = observer
-        self.predicate = predicate
+    observer: Observer
+    predicate: Callable[[Any], bool]
+
+    def __post_init__(self):
         self.take_while_completed = False
 
     def on_next(self, elem: ElementType):

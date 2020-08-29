@@ -1,4 +1,7 @@
 import threading
+from dataclasses import dataclass
+from traceback import FrameSummary
+from typing import List
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.refcountmulticastobservable import RefCountMultiCastObservable
@@ -7,28 +10,26 @@ from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.subjects.multicastobservablesubject import MultiCastObservableSubject
 
 
+@dataclass
 class SharedMultiCast(MultiCastMixin):
-    def __init__(
-            self,
-            source: MultiCastMixin,
-    ):
-        self.source = source
+    source: MultiCastMixin
+    stack: List[FrameSummary]
 
-        self._subscription = None
-        self._lock = threading.RLock()
+    def __post_init__(self):
+        self.subscription = None
+        self.lock = threading.RLock()
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-        with self._lock:
-            if self._subscription is None:
+        with self.lock:
+            if self.subscription is None:
                 subscription = self.source.unsafe_subscribe(subscriber=subscriber)
-                subject = MultiCastObservableSubject()
-                self._subscription = subscription.copy(
+                self.subscription = subscription.copy(
                     observable=RefCountMultiCastObservable(
                         source=subscription.observable,
-                        subject=subject,
-                        lock=threading.RLock(),
-                        count=0,
+                        subject=MultiCastObservableSubject(),
+                        multicast_scheduler=subscriber.multicast_scheduler,
+                        stack=self.stack,
                     )
                 )
 
-        return self._subscription
+        return self.subscription

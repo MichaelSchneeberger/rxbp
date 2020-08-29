@@ -1,19 +1,17 @@
 import types
+from dataclasses import dataclass
 from typing import Callable, Any
 
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
 
+@dataclass
 class DefaultIfEmptyObserver(Observer):
-    def __init__(
-            self,
-            observer: Observer,
-            lazy_val: Callable[[], Any],
-    ):
-        self.observer = observer
-        self.lazy_val = lazy_val
+    observer: Observer
+    lazy_val: Callable[[], Any]
 
+    def __post_init__(self):
         self.is_first = True
 
     def on_next(self, elem: ElementType):

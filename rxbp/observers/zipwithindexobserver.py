@@ -1,18 +1,16 @@
+from dataclasses import dataclass
 from typing import Callable, Any
 
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
 
+@dataclass
 class ZipCountObserver(Observer):
-    def __init__(
-            self,
-            observer: Observer,
-            selector: Callable[[Any, int], Any],
-    ):
-        self.observer = observer
-        self.selector = selector
+    observer: Observer
+    selector: Callable[[Any, int], Any]
 
+    def __post_init__(self):
         self.count = 0
 
     def on_next(self, elem: ElementType):

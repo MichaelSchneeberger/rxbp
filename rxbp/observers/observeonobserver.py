@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.acknowledgement.stopack import StopAck, stop_ack
@@ -7,18 +9,15 @@ from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.typing import ElementType
 
 
+@dataclass
 class ObserveOnObserver(Observer):
-    def __init__(
-            self,
-            observer: Observer,
-            scheduler: Scheduler,
-    ):
-        self.observer = observer
-        self.scheduler = scheduler
+    observer: Observer
+    scheduler: Scheduler
 
+    def __post_init__(self):
         self.trampoline = TrampolineScheduler()
 
-        if scheduler.is_order_guaranteed:
+        if self.scheduler.is_order_guaranteed:
             def schedule_func(action):
                 self.scheduler.schedule(action)
 

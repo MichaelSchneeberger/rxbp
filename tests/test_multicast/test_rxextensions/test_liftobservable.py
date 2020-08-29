@@ -3,15 +3,15 @@ import unittest
 import rx
 from rx import operators as rxop
 
-from rxbp.multicast.testing.testrxobservable import TestRxObservable
-from rxbp.multicast.testing.testrxobserver import TestRxObserver
+from rxbp.multicast.testing.testmulticastobservable import TestMultiCastObservable
+from rxbp.multicast.testing.testmulticastobserver import TestMultiCastObserver
 from rxbp.testing.testscheduler import TestScheduler
 
 
 class TestLiftObservable(unittest.TestCase):
     def setUp(self):
-        self.source = TestRxObservable()
-        self.sink = TestRxObserver()
+        self.source = TestMultiCastObservable()
+        self.sink = TestMultiCastObserver()
         self.scheduler = TestScheduler()
 
         def func(obs: rx.typing.Observable, first):

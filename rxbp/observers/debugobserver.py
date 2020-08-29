@@ -24,7 +24,9 @@ class DebugObserver(Observer):
     on_subscribe: Callable[[ObserverInfo], None]
     on_raw_ack: Callable[[Ack], None]
     stack: List[FrameSummary]
-    has_scheduled_next: bool
+
+    def __post_init__(self):
+        self.has_scheduled_next = False
 
     def on_next(self, elem: ElementType):
         if not self.has_scheduled_next:

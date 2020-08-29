@@ -1,16 +1,16 @@
+from dataclasses import dataclass
+
 from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
 
+@dataclass
 class ToListObserver(Observer):
-    def __init__(
-            self,
-            observer: Observer,
-    ):
-        self.observer = observer
+    observer: Observer
 
+    def __post_init__(self):
         self.queue = []
 
     def on_next(self, elem: ElementType):

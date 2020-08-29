@@ -1,14 +1,14 @@
-from rx.core.abc import Observer
+from rxbp.multicast.multicastobserver import MultiCastObserver
 
 
-class TestRxObserver(Observer):
+class TestMultiCastObserver(MultiCastObserver):
     def __init__(self):
         self.received = []
         self.is_completed = False
         self.exception = None
 
     def on_next(self, val):
-        self.received.append(val)
+        self.received.extend(val)
 
     def on_error(self, error):
         self.exception = error
