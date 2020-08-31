@@ -2,8 +2,6 @@ from typing import Callable, Any
 
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.reduceobservable import ReduceObservable
-from rxbp.selectors.baseandselectors import BaseAndSelectors
-from rxbp.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

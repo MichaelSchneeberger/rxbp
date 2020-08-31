@@ -3,17 +3,15 @@ from typing import Callable, Any
 
 from rx.disposable import CompositeDisposable
 
+from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import continue_ack
-from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.operators.mergeack import merge_ack
 from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observable import Observable
-from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.selectionmsg import select_next, select_completed
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.states.rawstates.rawcontrolledzipstates import RawControlledZipStates
@@ -41,9 +39,9 @@ class ControlledZipObservable(Observable):
         self.request_right = request_right
         self.match_func = match_func
 
-        # create two selector observablesubjects used to match Flowables
-        self.left_selector = PublishObservableSubject(scheduler=scheduler)
-        self.right_selector = PublishObservableSubject(scheduler=scheduler)
+        # # create two selector observablesubjects used to match Flowables
+        # self.left_selector = PublishObservableSubject(scheduler=scheduler)
+        # self.right_selector = PublishObservableSubject(scheduler=scheduler)
 
         self.lock = threading.RLock()
 
@@ -143,8 +141,8 @@ class ControlledZipObservable(Observable):
         while True:
 
             if self.match_func(left_val, right_val):
-                left_index_buffer.append(select_next)
-                right_index_buffer.append(select_next)
+                # left_index_buffer.append(select_next)
+                # right_index_buffer.append(select_next)
 
                 # add to buffer
                 zipped_output_buffer.append((left_val, right_val))
@@ -153,7 +151,7 @@ class ControlledZipObservable(Observable):
             request_right = self.request_right(left_val, right_val)
 
             if request_left:
-                left_index_buffer.append(select_completed)
+                # left_index_buffer.append(select_completed)
 
                 try:
                     left_val = next(left_iter)
@@ -161,7 +159,7 @@ class ControlledZipObservable(Observable):
                     request_new_elem_from_left = True
 
             if request_right:
-                right_index_buffer.append(select_completed)
+                # right_index_buffer.append(select_completed)
 
                 try:
                     right_val = next(right_iter)
@@ -181,17 +179,17 @@ class ControlledZipObservable(Observable):
         else:
             zip_out_ack = continue_ack
 
-        # only send elements over the left selector observer, if there are any to be sent
-        if left_index_buffer:
-            left_out_ack = self.left_selector.on_next(left_index_buffer)
-        else:
-            left_out_ack = continue_ack #last_left_sel_ack or continue_ack
-
-        # only send elements over the right selector observer, if there are any to be sent
-        if right_index_buffer:
-            right_out_ack = self.right_selector.on_next(right_index_buffer)
-        else:
-            right_out_ack = continue_ack #last_right_sel_ack or continue_ack
+        # # only send elements over the left selector observer, if there are any to be sent
+        # if left_index_buffer:
+        #     left_out_ack = self.left_selector.on_next(left_index_buffer)
+        # else:
+        #     left_out_ack = continue_ack #last_left_sel_ack or continue_ack
+        #
+        # # only send elements over the right selector observer, if there are any to be sent
+        # if right_index_buffer:
+        #     right_out_ack = self.right_selector.on_next(right_index_buffer)
+        # else:
+        #     right_out_ack = continue_ack #last_right_sel_ack or continue_ack
 
         # all elements in the left and right iterable are send downstream
         if request_new_elem_from_left and request_new_elem_from_right:

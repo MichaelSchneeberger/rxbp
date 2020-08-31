@@ -2,8 +2,7 @@ from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.selectionmsg import SelectCompleted, SelectNext
+from rxbp.indexed.selectors import SelectCompleted, SelectNext
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.testing.testcasebase import TestCaseBase

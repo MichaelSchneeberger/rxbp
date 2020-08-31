@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 
 from rxbp.mixins.subscriptionmixin import SubscriptionMixin
-from rxbp.selectors.baseandselectors import BaseAndSelectors
+from rxbp.indexed.selectors.flowablebaseandselectors import FlowableBaseAndSelectors
 
 
 class IndexedSubscriptionMixin(SubscriptionMixin, ABC):
 
     @property
     @abstractmethod
-    def index(self) -> BaseAndSelectors:
+    def index(self) -> FlowableBaseAndSelectors:
         ...

@@ -2,9 +2,8 @@ import unittest
 
 import rxbp
 from rxbp.acknowledgement.continueack import continue_ack
-from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.bases.numericalbase import NumericalBase
-from rxbp.subscriber import Subscriber
+from rxbp.init.initobserverinfo import init_observer_info
+from rxbp.init.initsubscriber import init_subscriber
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
@@ -12,18 +11,15 @@ from rxbp.testing.testscheduler import TestScheduler
 class TestFromRange(unittest.TestCase):
     def setUp(self) -> None:
         self.scheduler = TestScheduler()
-
-    def test_base(self):
-        subscription = rxbp.from_range(1, 4).unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-
-        self.assertEqual(NumericalBase(3), subscription.info.base)
+        self.subscriber = init_subscriber(
+            scheduler=self.scheduler,
+            subscribe_scheduler=self.scheduler,
+        )
 
     def test_use_case(self):
         sink = TestObserver(immediate_continue=0)
-        subscription = rxbp.from_range(1, 4).unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription = rxbp.from_range(1, 4).unsafe_subscribe(self.subscriber)
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         self.scheduler.advance_by(1)
 
@@ -32,9 +28,8 @@ class TestFromRange(unittest.TestCase):
 
     def test_from_list_batch_size_of_one(self):
         sink = TestObserver(immediate_continue=0)
-        subscription = rxbp.from_range(1, 4, batch_size=1).unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription = rxbp.from_range(1, 4, batch_size=1).unsafe_subscribe(self.subscriber)
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         self.scheduler.advance_by(1)
 
@@ -48,9 +43,8 @@ class TestFromRange(unittest.TestCase):
 
     def test_from_list_batch_size_of_two(self):
         sink = TestObserver(immediate_continue=0)
-        subscription = rxbp.from_range(1, 4, batch_size=2).unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-        subscription.observable.observe(ObserverInfo(observer=sink))
+        subscription = rxbp.from_range(1, 4, batch_size=2).unsafe_subscribe(self.subscriber)
+        subscription.observable.observe(init_observer_info(observer=sink))
 
         self.scheduler.advance_by(1)
 

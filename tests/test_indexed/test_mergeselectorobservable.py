@@ -2,8 +2,8 @@ import unittest
 
 from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.observables.mergeselectorobservable import MergeSelectorObservable
-from rxbp.selectors.selectionmsg import select_next, select_completed
+from rxbp.indexed.selectors import MergeSelectorObservable
+from rxbp.indexed.selectors import select_next, select_completed
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.testing.testobservable import TestObservable

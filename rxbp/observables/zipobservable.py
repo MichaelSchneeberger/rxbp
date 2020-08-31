@@ -48,7 +48,7 @@ class ZipObservable(Observable):
             self,
             left: Observable,
             right: Observable,
-            selector: Callable[[Any, Any], Any] = None,
+            # selector: Callable[[Any, Any], Any] = None,
     ):
         """
         :param left: left observable
@@ -60,7 +60,7 @@ class ZipObservable(Observable):
 
         self.left = left
         self.right = right
-        self.selector = (lambda l, r: (l, r)) if selector is None else selector
+        # self.selector = (lambda l, r: (l, r)) if selector is None else selector
 
         self.lock = threading.RLock()
 
@@ -129,7 +129,8 @@ class ZipObservable(Observable):
                 except StopIteration:
                     break
 
-                yield self.selector(n1[0], n2)
+                # yield self.selector(n1[0], n2)
+                yield (n1[0], n2)
 
         try:
             # zip left and right batch

@@ -2,7 +2,6 @@ from typing import Callable, Any
 
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.defaultifemptyobservable import DefaultIfEmptyObservable
-from rxbp.selectors.baseandselectors import BaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

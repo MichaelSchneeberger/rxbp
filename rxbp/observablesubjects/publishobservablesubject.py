@@ -22,8 +22,6 @@ from rxbp.typing import ElementType
 
 @dataclass
 class PublishObservableSubject(ObservableSubjectBase):
-    scheduler: Scheduler
-
     def __post_init__(self):
         self.state = PublishObservableSubject.NormalState()
         self.subscriptions: List['PublishObservableSubject.InnerSubscription'] = []

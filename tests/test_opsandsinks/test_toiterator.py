@@ -1,6 +1,7 @@
 import unittest
 
 from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.init.initflowable import init_flowable
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 from rxbp.toiterator import to_iterator
@@ -13,7 +14,7 @@ class TestToIterator(unittest.TestCase):
 
     def test_immediate_yield(self):
         iterator = to_iterator(
-            source=self.source,
+            source=init_flowable(self.source),
             scheduler=self.scheduler,
         )
 
@@ -26,7 +27,7 @@ class TestToIterator(unittest.TestCase):
 
     def test_scheduled_yield(self):
         iterator = to_iterator(
-            source=self.source,
+            source=init_flowable(self.source),
             scheduler=self.scheduler,
         )
 

@@ -417,10 +417,10 @@ class CacheServeFirstObservableSubject(ObservableSubjectBase):
             with self.lock:
                 self.shared_state.dequeue()
 
-        continue_ack = [ack for ack in inner_ack_list if isinstance(ack, ContinueAck)]
+        continue_acks = [ack for ack in inner_ack_list if isinstance(ack, ContinueAck)]
 
         # return any Continue or Stop ack
-        if 0 < len(continue_ack):
+        if 0 < len(continue_acks):
             return continue_ack
 
         else:

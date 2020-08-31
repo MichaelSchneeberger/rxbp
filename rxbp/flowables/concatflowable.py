@@ -2,8 +2,6 @@ from typing import List
 
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.concatobservable import ConcatObservable
-from rxbp.selectors.baseandselectors import BaseAndSelectors
-from rxbp.selectors.bases.concatbase import ConcatBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
@@ -28,12 +26,12 @@ class ConcatFlowable(FlowableMixin):
             subscribe_scheduler=subscriber.subscribe_scheduler,
         )
 
-        base = ConcatBase(
-            underlying=[s.index for s in subscriptions],
-            sources=observable.selectors,
-        )
+        # base = ConcatBase(
+        #     underlying=[s.index for s in subscriptions],
+        #     sources=observable.selectors,
+        # )
 
-        return init_subscription(
-            info=BaseAndSelectors(base=base),
+        return subscriptions[0].copy(
+            # info=BaseAndSelectors(base=base),
             observable=observable,
         )

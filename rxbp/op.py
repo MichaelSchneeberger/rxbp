@@ -167,8 +167,10 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered Flowable
     """
 
+    stack = get_stack_lines()
+
     def op_func(left: Flowable):
-        return left.filter(predicate=predicate)
+        return left.filter(predicate=predicate, stack=stack)
 
     return PipeOperation(op_func)
 
@@ -287,7 +289,11 @@ def map_to_iterator(
     return PipeOperation(op_func)
 
 
-def match(*others: Flowable):
+def match(
+        *others: Flowable,
+        left_debug: str = None,
+        right_debug: str = None,
+):
     """
     Create a new Flowable from this and other Flowables by first filtering and duplicating (if necessary)
     the elements of each Flowable and zip the resulting Flowable sequences together.
@@ -295,8 +301,15 @@ def match(*others: Flowable):
     :param sources: other Flowables that get matched with this Flowable.
     """
 
+    stack = get_stack_lines()
+
     def op_func(left: Flowable):
-        return left.match(*others)
+        return left.match(
+            *others,
+            left_debug=left_debug,
+            right_debug=right_debug,
+            stack=stack,
+        )
 
     return PipeOperation(op_func)
 

@@ -18,7 +18,7 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 class RefCountObservable(Observable):
     source: Observable
     subject: ObservableSubjectBase
-    scheduler: Scheduler
+    subscribe_scheduler: Scheduler
     stack: List[FrameSummary]
 
     def __post_init__(self):
@@ -43,7 +43,7 @@ class RefCountObservable(Observable):
             def action(_, __):
                 self.scheduled_next = True
 
-            self.scheduler.schedule(action)
+            self.subscribe_scheduler.schedule(action)
 
             subject_subscription = init_observer_info(self.subject, is_volatile=observer_info.is_volatile)
             self.first_disposable = self.source.observe(subject_subscription)

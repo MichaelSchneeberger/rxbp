@@ -1,69 +1,27 @@
+from dataclasses import dataclass
 from typing import List
 
 from rx.disposable import CompositeDisposable
 
-from rxbp.acknowledgement.single import Single
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
-from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
-from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
+from rxbp.observers.concatobserver import ConcatObserver
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
-from rxbp.selectors.selectionmsg import select_next, select_completed
-from rxbp.typing import ElementType
 
 
+@dataclass
 class ConcatObservable(Observable):
-    def __init__(self, sources: List[Observable], scheduler: Scheduler, subscribe_scheduler: Scheduler):
-        super().__init__()
+    sources: List[Observable]
+    scheduler: Scheduler
+    subscribe_scheduler: Scheduler
 
-        self._sources = sources
-        self._scheduler = scheduler
-        self._subscribe_scheduler = subscribe_scheduler
-
-        self._subjects = [PublishObservableSubject(scheduler=scheduler) for _ in sources]
-
-    @property
-    def selectors(self):
-        return [MapToIteratorObservable(subject, lambda v: [select_next, select_completed]) for subject in self._subjects]
+    def __post_init__(self):
+        self._subjects = [PublishObservableSubject() for _ in self.sources]
 
     def observe(self, observer_info: ObserverInfo):
-        observer = observer_info.observer
-
-        class ConcatObserver(Observer):
-            def __init__(self):
-                self.ack = None
-
-            def on_next(self, elem: ElementType):
-                self.ack = observer.on_next(elem)
-                return self.ack
-
-            def on_error(self, exc):
-                observer.on_error(exc)
-
-                for conn_obs in iter_conn_obs:
-                    conn_obs.dispose()
-
-            def on_completed(self):
-                try:
-                    class _(Single):
-                        def on_next(self, elem):
-                            next_source = next(iter_conn_obs)
-                            next_source.connect()
-
-                        def on_error(self, exc: Exception):
-                            pass
-
-                    if self.ack is None or self.ack.is_sync:
-                        next_source = next(iter_conn_obs)
-                        next_source.connect()
-                    else:
-                        self.ack.subscribe(_())
-                        
-                except StopIteration:
-                    observer.on_completed()
 
         """
         sources[0] ------------------------> Subject --
@@ -73,23 +31,26 @@ class ConcatObservable(Observable):
         sources[n] -> ConnectableObserver -> Subject --
         """
 
-        concat_observer = ConcatObserver()
-        concat_observer_info = init_observer_info(concat_observer)
-
-        for subject in self._subjects:
-            subject.observe(concat_observer_info)
-
         conn_observers = [ConnectableObserver(
             underlying=subject,
-            scheduler=self._scheduler,
+            scheduler=self.scheduler,
             # subscribe_scheduler=self._subscribe_scheduler,
             # is_volatile=observer_info.is_volatile,
         ) for subject in self._subjects[1:]]
 
         iter_conn_obs = iter(conn_observers)
 
+        concat_observer = ConcatObserver(
+            source=observer_info.observer,
+            connectables=iter_conn_obs,
+        )
+        concat_observer_info = init_observer_info(concat_observer)
+
+        for subject in self._subjects:
+            subject.observe(concat_observer_info)
+
         def gen_disposable_from_observer():
-            for source, conn_observer in zip(self._sources[1:], conn_observers):
+            for source, conn_observer in zip(self.sources[1:], conn_observers):
                 yield source.observe(init_observer_info(
                     observer=conn_observer,
                     is_volatile=observer_info.is_volatile,
@@ -97,6 +58,6 @@ class ConcatObservable(Observable):
 
         others_disposables = gen_disposable_from_observer()
 
-        first_disposable = self._sources[0].observe(init_observer_info(self._subjects[0]))
+        first_disposable = self.sources[0].observe(init_observer_info(self._subjects[0]))
 
         return CompositeDisposable(first_disposable, *others_disposables)

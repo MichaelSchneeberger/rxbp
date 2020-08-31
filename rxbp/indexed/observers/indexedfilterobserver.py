@@ -7,7 +7,8 @@ from rxbp.acknowledgement.operators.mergeack import merge_ack
 from rxbp.acknowledgement.stopack import stop_ack
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observer import Observer
-from rxbp.selectors.selectionmsg import select_next, select_completed
+from rxbp.indexed.selectors.selectnext import select_next
+from rxbp.indexed.selectors.selectcompleted import select_completed
 from rxbp.typing import ElementType
 
 

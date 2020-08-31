@@ -1,9 +1,8 @@
 import unittest
 
 import rxbp
-from rxbp.observerinfo import ObserverInfo
-from rxbp.selectors.bases.numericalbase import NumericalBase
-from rxbp.subscriber import Subscriber
+from rxbp.init.initobserverinfo import init_observer_info
+from rxbp.init.initsubscriber import init_subscriber
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
 
@@ -11,17 +10,14 @@ from rxbp.testing.testscheduler import TestScheduler
 class TestReturnValue(unittest.TestCase):
     def setUp(self) -> None:
         self.scheduler = TestScheduler()
-
-    def test_base(self):
-        subscription = rxbp.return_value(1).unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
-
-        self.assertEqual(NumericalBase(1), subscription.info.base)
+        self.subscriber = init_subscriber(
+            scheduler=self.scheduler,
+            subscribe_scheduler=self.scheduler,
+        )
 
     def test_use_case(self):
         sink = TestObserver(immediate_continue=0)
-        subscription = rxbp.return_value(1).unsafe_subscribe(Subscriber(
-            scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
+        subscription = rxbp.return_value(1).unsafe_subscribe(self.subscriber)
         subscription.observable.observe(init_observer_info(observer=sink))
 
         self.scheduler.advance_by(1)

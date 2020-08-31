@@ -3,22 +3,22 @@ from typing import Any, Optional
 
 from rxbp.indexed.flowables.fromemptyindexedflowable import FromEmptyIndexedFlowable
 from rxbp.indexed.flowables.fromiterableindexedflowable import FromIterableIndexedFlowable
-from rxbp.indexed.flowables.indexedsingleelementflowable import IndexedSingleElementFlowable
+from rxbp.indexed.flowables.singleelementindexedflowable import SingleElementIndexedFlowable
 from rxbp.indexed.indexedflowable import IndexedFlowable
 from rxbp.indexed.init.initindexedflowable import init_indexed_flowable
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
-from rxbp.selectors.base import Base
-from rxbp.selectors.bases.numericalbase import NumericalBase
-from rxbp.selectors.bases.objectrefbase import ObjectRefBase
+from rxbp.indexed.selectors.flowablebase import FlowableBase
+from rxbp.indexed.selectors.bases.numericalbase import NumericalBase
+from rxbp.indexed.selectors.bases.objectrefbase import ObjectRefBase
 
 
-def _create_base(base: Optional[Any]) -> Base:
+def _create_base(base: Optional[Any]) -> FlowableBase:
     if base is not None:
         if isinstance(base, str):
             base = ObjectRefBase(base)
         elif isinstance(base, int):
             base = NumericalBase(base)
-        elif isinstance(base, Base):
+        elif isinstance(base, FlowableBase):
             base = base
         else:
             raise Exception(f'illegal base "{base}"')
@@ -59,7 +59,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
         base = NumericalBase(n_elements)
 
     if batch_size is None:
-        return init_indexed_flowable(IndexedSingleElementFlowable(
+        return init_indexed_flowable(SingleElementIndexedFlowable(
             lazy_elem=lambda: iter(range(start_idx, stop_idx)),
             base=base,
         ))
@@ -105,7 +105,6 @@ def match(*sources: IndexedFlowable) -> IndexedFlowable:
         return sources[0].match(*sources[1:])
 
 
-
 def return_value(val: Any):
     """
     Create a Flowable that emits a single element.
@@ -113,7 +112,7 @@ def return_value(val: Any):
     :param val: the single element emitted by the Flowable
     """
 
-    return init_indexed_flowable(IndexedSingleElementFlowable(
+    return init_indexed_flowable(SingleElementIndexedFlowable(
         lazy_elem=lambda: [val],
         base=NumericalBase(1),
     ))

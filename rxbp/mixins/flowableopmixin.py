@@ -306,10 +306,13 @@ class FlowableOpMixin(
                         if right is None:
                             return left.map(lambda v: (v,))
                         else:
-                            def inner_result_selector(v1: Any, v2: Tuple[Any]):
-                                return (v1,) + v2
+                            def inner_result_selector(t: Tuple[Any, Tuple[Any]]):
+                                return (t[0],) + t[1]
 
-                            flowable = ZipFlowable(left=left, right=right, func=inner_result_selector)
+                            flowable = MapFlowable(
+                                source=ZipFlowable(left=left, right=right),
+                                func=inner_result_selector,
+                            )
                             return flowable
 
                     yield _

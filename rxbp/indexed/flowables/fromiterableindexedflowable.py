@@ -4,8 +4,8 @@ from typing import Iterable
 from rxbp.indexed.init.initindexedsubscription import init_indexed_subscription
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
 from rxbp.observables.fromiteratorobservable import FromIteratorObservable
-from rxbp.selectors.base import Base
-from rxbp.selectors.baseandselectors import BaseAndSelectors
+from rxbp.indexed.selectors.flowablebase import FlowableBase
+from rxbp.indexed.selectors.flowablebaseandselectors import FlowableBaseAndSelectors
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
@@ -14,13 +14,13 @@ from rxbp.typing import ValueType
 @dataclass
 class FromIterableIndexedFlowable(IndexedFlowableMixin):
     iterable: Iterable[ValueType]
-    base: Base
+    base: FlowableBase
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         iterator = iter(self.iterable)
 
         return init_indexed_subscription(
-            index=BaseAndSelectors(
+            index=FlowableBaseAndSelectors(
                 base=self.base,
             ),
             observable=FromIteratorObservable(

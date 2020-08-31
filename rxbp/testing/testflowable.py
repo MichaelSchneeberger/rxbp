@@ -1,9 +1,9 @@
 from typing import Dict
 
+from rxbp.init.initsubscription import init_subscription
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observable import Observable
-from rxbp.selectors.base import Base
-from rxbp.selectors.baseandselectors import BaseAndSelectors
+from rxbp.indexed.selectors.flowablebase import FlowableBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 from rxbp.testing.testobservable import TestObservable
@@ -12,8 +12,8 @@ from rxbp.testing.testobservable import TestObservable
 class TestFlowable(FlowableMixin):
     def __init__(
             self,
-            base: Base = None,
-            selectors: Dict[Base, Observable] = None,
+            base: FlowableBase = None,
+            selectors: Dict[FlowableBase, Observable] = None,
             subscriber: Subscriber = None,
             observable: Observable = None,
     ):
@@ -28,7 +28,7 @@ class TestFlowable(FlowableMixin):
         self.subscriber = subscriber
 
         return init_subscription(
-            info=BaseAndSelectors(base=self.base, selectors=self.selectors),
+            # info=BaseAndSelectors(base=self.base, selectors=self.selectors),
             observable=self.observable,
         )
 

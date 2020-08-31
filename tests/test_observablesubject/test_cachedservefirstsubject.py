@@ -27,15 +27,15 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver()
-        self.subject.observe(init_observer_info(o1))
+        observer = TestObserver()
+        self.subject.observe(init_observer_info(observer))
 
         # state change (change to the same state)
         ack = self.source.on_next_single(1)
 
         # verification
         self.assertIsInstance(ack, ContinueAck)
-        self.assertEqual([1], o1.received)
+        self.assertEqual([1], observer.received)
         self.assertEqual(0, len(self.subject.shared_state.queue))
 
     def test_on_completed(self):

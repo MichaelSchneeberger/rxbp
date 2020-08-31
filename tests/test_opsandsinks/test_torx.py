@@ -4,6 +4,7 @@ from rx.core.abc import Observer
 
 from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.flowable import Flowable
+from rxbp.init.initflowable import init_flowable
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 
@@ -31,7 +32,7 @@ class TestToRx(unittest.TestCase):
         self.sink = TestObserver()
 
     def test_on_next_on_completed(self):
-        Flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
+        init_flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
 
         self.assertEqual(self.scheduler, self.source.subscriber.scheduler.underlying)
 
@@ -45,7 +46,7 @@ class TestToRx(unittest.TestCase):
         self.assertEqual([True], self.sink.on_completed_buffer)
 
     def test_on_error(self):
-        Flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
+        init_flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
         exception = Exception('test')
 
         self.source.on_error(exception)
@@ -53,7 +54,7 @@ class TestToRx(unittest.TestCase):
         self.assertEqual([exception], self.sink.on_error_buffer)
 
     def test_dispose(self):
-        disposable = Flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
+        disposable = init_flowable(self.source).to_rx().subscribe(self.sink, scheduler=self.scheduler)
         disposable.dispose()
 
         self.assertTrue(self.source.observable.is_disposed)

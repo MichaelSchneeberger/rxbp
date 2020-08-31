@@ -4,6 +4,7 @@ from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.acknowledgement.stopack import StopAck
 from rxbp.flowable import Flowable
 from rxbp.imperative import to_cache
+from rxbp.init.initflowable import init_flowable
 from rxbp.testing.testflowable import TestFlowable
 from rxbp.testing.testscheduler import TestScheduler
 
@@ -14,7 +15,7 @@ class TestOpsAndSinks(unittest.TestCase):
         self.source = TestFlowable()
 
     def test_common_case(self):
-        cache = to_cache(source=Flowable(self.source), scheduler=self.scheduler)
+        cache = to_cache(source=init_flowable(self.source), scheduler=self.scheduler)
 
         ack1 = self.source.on_next_single(1)
         ack2 = self.source.on_next_single(2)
