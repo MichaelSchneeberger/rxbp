@@ -75,7 +75,8 @@ def debug(
         on_error: Callable[[Exception], None] = None,
         on_sync_ack: Callable[[Ack], None] = None,
         on_async_ack: Callable[[Ack], None] = None,
-        on_subscribe: Callable[[ObserverInfo, Subscriber], None] = None,
+        on_observe: Callable[[ObserverInfo], None] = None,
+        on_subscribe: Callable[[Subscriber], None] = None,
         on_raw_ack: Callable[[Ack], None] = None,
         verbose: bool = None,
 ):
@@ -93,6 +94,7 @@ def debug(
             on_next=on_next,
             on_completed=on_completed,
             on_error=on_error,
+            on_observe=on_observe,
             on_subscribe=on_subscribe,
             on_sync_ack=on_sync_ack,
             on_async_ack=on_async_ack,
@@ -167,10 +169,8 @@ def filter(predicate: Callable[[Any], bool]):
     :return: filtered Flowable
     """
 
-    stack = get_stack_lines()
-
     def op_func(left: Flowable):
-        return left.filter(predicate=predicate, stack=stack)
+        return left.filter(predicate=predicate)
 
     return PipeOperation(op_func)
 

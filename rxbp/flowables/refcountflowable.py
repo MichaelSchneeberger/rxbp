@@ -46,7 +46,7 @@ class RefCountFlowable(FlowableMixin):
                     observable=RefCountObservable(
                         source=subscription.observable,
                         subject=subject,
-                        scheduler=subscriber.subscribe_scheduler,
+                        subscribe_scheduler=subscriber.subscribe_scheduler,
                         stack=self.stack,
                     ),
                 )

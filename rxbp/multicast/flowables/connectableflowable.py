@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from rx.disposable import Disposable
 
 from rxbp.init.initsubscription import init_subscription
@@ -8,18 +10,14 @@ from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 
 
+@dataclass
 class ConnectableFlowable(FlowableMixin):
-    def __init__(
-            self,
-            conn_observer: ConnectableObserver,
-            disposable: Disposable = None,
-    ):
-        self._conn_observer = conn_observer
-        self._disposable = disposable or Disposable()
+    conn_observer: ConnectableObserver
+    disposable: Disposable
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         observable = ConnectableObservable(
-            conn_observer=self._conn_observer,
-            disposable=self._disposable,
+            conn_observer=self.conn_observer,
+            disposable=self.disposable,
         )
         return init_subscription(observable=observable)

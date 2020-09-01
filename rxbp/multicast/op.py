@@ -24,17 +24,47 @@ def assert_single_subscription():
     return MultiCastOperator(op_func)
 
 
+def collect_flowables(
+    maintain_order: bool = None,
+):
+    """
+    Create a MultiCast that emits a single element containing the reduced Flowables
+    of the first element sent by the source. It is expected that the consequent
+    elements emitted by the source have the same structure as the first element.
+
+    A reduced Flowable sequences is composed by one or more (Flowable) sources.
+
+    :param maintain_order: if True, then the reduced Flowable sequences maintain
+    the order of the Flowable sources. Otherwise, the reduced Flowable
+    sequence flattens the elements emitted by the sources.
+    """
+
+    stack = get_stack_lines()
+
+    def op_func(source: MultiCast):
+        return source.collect_flowables(
+            stack=stack,
+            maintain_order=maintain_order,
+        )
+
+    return MultiCastOperator(op_func)
+
+
 def debug(
         name: str,
         on_next: Callable[[Any], None] = None,
         on_completed: Callable[[], None] = None,
         on_error: Callable[[Exception], None] = None,
         on_subscribe: Callable[[MultiCastObserverInfo, MultiCastSubscriber], None] = None,
+        on_observe: Callable[[MultiCastObserverInfo], None] = None,
+        on_dispose: Callable[[], None] = None,
         verbose: bool = None,
 ):
     """
     Print debug messages to the console when providing the `name` argument
     """
+
+    stack = get_stack_lines()
 
     def op_func(source: MultiCast):
         return source.debug(
@@ -43,7 +73,10 @@ def debug(
             on_completed=on_completed,
             on_error=on_error,
             on_subscribe=on_subscribe,
+            on_observe=on_observe,
+            on_dispose=on_dispose,
             verbose=verbose,
+            stack=stack,
         )
 
     return MultiCastOperator(op_func)
@@ -246,27 +279,6 @@ def observe_on(scheduler: rx.typing.Scheduler):
 
     def op_func(source: MultiCast):
         return source.observe_on(scheduler=scheduler)
-
-    return MultiCastOperator(op_func)
-
-
-def collect_flowables(
-    maintain_order: bool = None,
-):
-    """
-    Create a MultiCast that emits a single element containing the reduced Flowables
-    of the first element sent by the source. It is expected that the consequent
-    elements emitted by the source have the same structure as the first element.
-
-    A reduced Flowable sequences is composed by one or more (Flowable) sources.
-
-    :param maintain_order: if True, then the reduced Flowable sequences maintain
-    the order of the Flowable sources. Otherwise, the reduced Flowable
-    sequence flattens the elements emitted by the sources.
-    """
-
-    def op_func(source: MultiCast):
-        return source.collect_flowables(maintain_order=maintain_order)
 
     return MultiCastOperator(op_func)
 

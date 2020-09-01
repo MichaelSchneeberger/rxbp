@@ -81,7 +81,7 @@ class SafeMultiCastSubject(
     def on_next(self, val):
         if not self.is_stopped:
             self.is_first = False
-            self.subject.on_next(val)
+            self.subject.on_next([val])
 
     def on_error(self, exc):
         if not self.is_stopped:

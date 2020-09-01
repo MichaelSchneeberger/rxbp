@@ -10,6 +10,7 @@ from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.subjects.multicastobservablesubject import MultiCastObservableSubject
 from rxbp.observable import Observable
 from rxbp.scheduler import Scheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.utils.tooperatorexception import to_operator_exception
 
 
@@ -17,7 +18,7 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 class RefCountMultiCastObservable(Observable):
     source: MultiCastObservable
     subject: MultiCastObservableSubject
-    multicast_scheduler: Scheduler
+    multicast_scheduler: TrampolineScheduler
     stack: List[FrameSummary]
 
     def __post_init__(self):
@@ -33,6 +34,12 @@ class RefCountMultiCastObservable(Observable):
             current_cound = self.count
 
         if current_cound == 1:
+            if self.multicast_scheduler.idle:
+                raise Exception(to_operator_exception(
+                    message='observe method call should be scheduled on multicast scheduler',
+                    stack=self.stack,
+                ))
+
             def action(_, __):
                 self.scheduled_next = True
 

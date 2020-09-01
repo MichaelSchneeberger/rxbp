@@ -7,6 +7,7 @@ from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.debugobserver import DebugObserver
 from rxbp.subscriber import Subscriber
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 @dataclass
@@ -18,13 +19,19 @@ class DebugObservable(Observable):
     on_error: Callable[[Exception], None]
     on_sync_ack: Callable[[Ack], None]
     on_async_ack: Callable[[Ack], None]
-    on_subscribe: Callable[[ObserverInfo, Subscriber], None]
+    on_observe: Callable[[ObserverInfo], None]
     on_raw_ack: Callable[[Ack], None]
     subscriber: Subscriber
     stack: List[FrameSummary]
 
     def observe(self, observer_info: ObserverInfo):
-        self.on_subscribe(observer_info, self.subscriber)
+        self.on_observe(observer_info)
+
+        if self.subscriber.subscribe_scheduler.idle:
+            raise Exception(to_operator_exception(
+                message='observe method call should be scheduled on subscribe scheduler',
+                stack=self.stack,
+            ))
 
         observer = DebugObserver(
             source=observer_info.observer,
@@ -32,7 +39,6 @@ class DebugObservable(Observable):
             on_next_func=self.on_next,
             on_completed_func=self.on_completed,
             on_error_func=self.on_error,
-            on_subscribe=self.on_subscribe,
             on_sync_ack=self.on_sync_ack,
             on_async_ack=self.on_async_ack,
             on_raw_ack=self.on_raw_ack,

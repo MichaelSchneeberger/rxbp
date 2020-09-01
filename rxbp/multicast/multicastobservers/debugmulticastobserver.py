@@ -1,8 +1,10 @@
 from dataclasses import dataclass
-from typing import Callable, Any
+from traceback import FrameSummary
+from typing import Callable, Any, List
 
 from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.typing import MultiCastItem
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 @dataclass
@@ -11,11 +13,18 @@ class DebugMultiCastObserver(MultiCastObserver):
     on_next_func: Callable[[Any], None]
     on_completed_func: Callable[[], None]
     on_error_func: Callable[[Exception], None]
+    stack: List[FrameSummary]
 
     def __post_init__(self):
         self.has_scheduled_next = False
 
     def on_next(self, elem: MultiCastItem) -> None:
+        if not self.has_scheduled_next:
+            raise Exception(to_operator_exception(
+                message='Element received before subscribe scheduler advanced',
+                stack=self.stack,
+            ))
+
         try:
             elem = list(elem)
 

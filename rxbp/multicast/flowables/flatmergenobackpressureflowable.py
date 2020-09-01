@@ -15,6 +15,8 @@ class FlatMergeNoBackpressureFlowable(FlowableMixin):
     subscribe_scheduler: Scheduler
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+        assert self.subscribe_scheduler == subscriber.subscribe_scheduler
+
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
 
         def observable_selector(val: Any):
@@ -26,5 +28,5 @@ class FlatMergeNoBackpressureFlowable(FlowableMixin):
             source=subscription.observable,
             selector=observable_selector,
             scheduler=subscriber.scheduler,
-            subscribe_scheduler=self.subscribe_scheduler,
+            subscribe_scheduler=self.subscribe_scheduler,       # todo: why not taken from subscriber?
         ))

@@ -17,10 +17,7 @@ class JoinFlowablesMultiCast(MultiCastMixin):
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         def gen_observables():
             for source in self.sources:
-                yield source.unsafe_subscribe(MultiCastSubscriber(
-                    multicast_scheduler=subscriber.multicast_scheduler,
-                    source_scheduler=subscriber.multicast_scheduler,
-                )).observable
+                yield source.unsafe_subscribe(subscriber).observable
 
         return init_multicast_subscription(
             observable=JoinFlowableMultiCastObservable(

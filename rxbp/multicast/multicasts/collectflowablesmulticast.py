@@ -28,9 +28,6 @@ class CollectFlowablesMultiCast(MultiCastMixin):
     stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-        multicast_scheduler = subscriber.multicast_scheduler
-        source_scheduler = subscriber.source_scheduler
-
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
 
         def func(lifted_obs: MultiCastObservable, first: Any):
@@ -58,20 +55,24 @@ class CollectFlowablesMultiCast(MultiCastMixin):
 
             conn_observer = ConnectableObserver(
                 underlying=None,
-                scheduler=multicast_scheduler,
-                subscribe_scheduler=multicast_scheduler,
+                scheduler=subscriber.multicast_scheduler,
+                # subscribe_scheduler=multicast_scheduler,
             )
-            conn_flowable = ConnectableFlowable(conn_observer=conn_observer)
 
             observer = BufferedObserver(
                 underlying=conn_observer,
-                scheduler=multicast_scheduler,
-                subscribe_scheduler=multicast_scheduler,
+                scheduler=subscriber.multicast_scheduler,
+                subscribe_scheduler=subscriber.multicast_scheduler,
                 buffer_size=1000,
             )
 
             # def action(_, __):
-            lifted_obs.observe(MultiCastObserverInfo(observer=observer))
+            disposable = lifted_obs.observe(MultiCastObserverInfo(observer=observer))
+
+            conn_flowable = ConnectableFlowable(
+                conn_observer=conn_observer,
+                disposable=disposable,
+            )
 
             # multicast_scheduler.schedule(action)
 
@@ -100,13 +101,13 @@ class CollectFlowablesMultiCast(MultiCastMixin):
                         flattened_flowable = FlatConcatNoBackpressureFlowable(
                             source=shared_flowable,
                             selector=selector,
-                            subscribe_scheduler=source_scheduler,
+                            subscribe_scheduler=subscriber.source_scheduler,
                         )
                     else:
                         flattened_flowable = FlatMergeNoBackpressureFlowable(
                             source=shared_flowable,
                             selector=selector,
-                            subscribe_scheduler=source_scheduler,
+                            subscribe_scheduler=subscriber.source_scheduler,
                         )
 
                     flowable = init_flowable(RefCountFlowable(flattened_flowable, stack=self.stack))

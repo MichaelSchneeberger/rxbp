@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from rxbp.mixins.copymixin import CopyMixin
 from rxbp.scheduler import Scheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 
 
 class SubscriberMixin(CopyMixin, ABC):
@@ -12,5 +13,5 @@ class SubscriberMixin(CopyMixin, ABC):
 
     @property
     @abstractmethod
-    def subscribe_scheduler(self) -> Scheduler:
+    def subscribe_scheduler(self) -> TrampolineScheduler:
         ...

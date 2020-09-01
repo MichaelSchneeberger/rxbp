@@ -41,17 +41,6 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
                     else:
                         time.sleep(diff.total_seconds())
 
-    def schedule_required(self) -> bool:
-        """Test if scheduling is required.
-
-        Gets a value indicating whether the caller must call a
-        schedule method. If the trampoline is active, then it returns
-        False; otherwise, if the trampoline is not active, then it
-        returns True.
-        """
-
-        return self.idle
-
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
 

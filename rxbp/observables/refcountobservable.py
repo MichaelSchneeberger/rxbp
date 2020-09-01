@@ -11,6 +11,7 @@ from rxbp.observable import Observable
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.observerinfo import ObserverInfo
 from rxbp.scheduler import Scheduler
+from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.utils.tooperatorexception import to_operator_exception
 
 
@@ -18,7 +19,7 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 class RefCountObservable(Observable):
     source: Observable
     subject: ObservableSubjectBase
-    subscribe_scheduler: Scheduler
+    subscribe_scheduler: TrampolineScheduler
     stack: List[FrameSummary]
 
     def __post_init__(self):
@@ -40,6 +41,12 @@ class RefCountObservable(Observable):
             current_cound = self.count
 
         if current_cound == 1:
+            if self.subscribe_scheduler.idle:
+                raise Exception(to_operator_exception(
+                    message='observe method call should be scheduled on subscribe scheduler',
+                    stack=self.stack,
+                ))
+
             def action(_, __):
                 self.scheduled_next = True
 

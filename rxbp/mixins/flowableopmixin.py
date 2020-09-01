@@ -104,11 +104,12 @@ class FlowableOpMixin(
             on_error: Callable[[Exception], None] = None,
             on_sync_ack: Callable[[Ack], None] = None,
             on_async_ack: Callable[[Ack], None] = None,
-            on_subscribe: Callable[[ObserverInfo, Subscriber], None] = None,
+            on_observe: Callable[[ObserverInfo], None] = None,
+            on_subscribe: Callable[[Subscriber], None] = None,
             on_raw_ack: Callable[[Ack], None] = None,
             stack: List[FrameSummary] = None,
             verbose: bool = None
-    ) -> 'FlowableOpMixin':
+    ):
 
         return self._copy(init_debug_flowable(
             source=self,
@@ -116,6 +117,7 @@ class FlowableOpMixin(
             on_next=on_next,
             on_completed=on_completed,
             on_error=on_error,
+            on_observe=on_observe,
             on_subscribe=on_subscribe,
             on_sync_ack=on_sync_ack,
             on_async_ack=on_async_ack,

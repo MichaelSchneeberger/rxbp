@@ -16,6 +16,8 @@ class FlatConcatNoBackpressureFlowable(FlowableMixin):
     subscribe_scheduler: Scheduler
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
+        assert self.subscribe_scheduler == subscriber.subscribe_scheduler
+
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
 
         def observable_selector(elem: Any) -> Observable:

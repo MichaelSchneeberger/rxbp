@@ -21,7 +21,6 @@ class DebugObserver(Observer):
     on_error_func: Callable[[Exception], None]
     on_sync_ack: Callable[[Ack], None]
     on_async_ack: Callable[[Ack], None]
-    on_subscribe: Callable[[ObserverInfo], None]
     on_raw_ack: Callable[[Ack], None]
     stack: List[FrameSummary]
 
@@ -29,11 +28,11 @@ class DebugObserver(Observer):
         self.has_scheduled_next = False
 
     def on_next(self, elem: ElementType):
-        # if not self.has_scheduled_next:
-        #     raise Exception(to_operator_exception(
-        #         message='Element received before subscribe scheduler advanced',
-        #         stack=self.stack,
-        #     ))
+        if not self.has_scheduled_next:
+            raise Exception(to_operator_exception(
+                message='Element received before subscribe scheduler advanced',
+                stack=self.stack,
+            ))
 
         try:
             materialized = list(elem)

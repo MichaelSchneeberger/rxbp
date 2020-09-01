@@ -25,8 +25,6 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
     stack: List[FrameSummary]
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
-        composite_disposable = CompositeDisposable()
-
         def gen_conn_flowables():
             for source in self.sources:
 
@@ -48,7 +46,6 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                 disposable = source.observe(MultiCastObserverInfo(
                     observer=observer,
                 ))
-                composite_disposable.add(disposable)
 
                 # select a single Flowable per MultiCast
                 def to_flowable(value):
@@ -67,7 +64,10 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                     return flowable
 
                 flattened_flowable = FlatConcatNoBackpressureFlowable(
-                    source=ConnectableFlowable(conn_observer=conn_observer),
+                    source=ConnectableFlowable(
+                        conn_observer=conn_observer,
+                        disposable=disposable,
+                    ),
                     selector=to_flowable,
                     subscribe_scheduler=self.source_scheduler,
                 )
@@ -86,7 +86,4 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                 observer_info.observer.on_error(exc)
 
         # immediately emit a list of flowables representing the joined flowables
-        disposable = self.multicast_scheduler.schedule(action)
-        composite_disposable.add(disposable)
-
-        return composite_disposable
+        return self.multicast_scheduler.schedule(action)

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Callable, Any
+from traceback import FrameSummary
+from typing import Callable, Any, List
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.debugmulticastobservable import DebugMultiCastObservable
@@ -17,6 +18,8 @@ class DebugMultiCast(MultiCastMixin):
     on_error: Callable[[Exception], None]
     on_subscribe: Callable[[MultiCastSubscriber], None]
     on_observe: Callable[[MultiCastObserverInfo], None]
+    on_dispose: Callable[[], None]
+    stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         self.on_subscribe(subscriber)
@@ -31,5 +34,7 @@ class DebugMultiCast(MultiCastMixin):
                 on_completed=self.on_completed,
                 on_observe=self.on_observe,
                 multicast_scheduler=subscriber.multicast_scheduler,
+                on_dispose=self.on_dispose,
+                stack=self.stack,
             ),
         )

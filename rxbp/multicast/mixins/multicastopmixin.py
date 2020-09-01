@@ -54,18 +54,25 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
 
     def collect_flowables(
             self,
+            stack: List[FrameSummary],
             maintain_order: bool = None,
     ):
-        return self._copy(CollectFlowablesMultiCast(source=self, maintain_order=maintain_order))
+        return self._copy(CollectFlowablesMultiCast(
+            source=self,
+            stack=stack,
+            maintain_order=maintain_order,
+        ))
 
     def debug(
             self,
+            stack: List[FrameSummary],
             name: str = None,
             on_next: Callable[[Any], None] = None,
             on_completed: Callable[[], None] = None,
             on_error: Callable[[Exception], None] = None,
             on_subscribe: Callable[[MultiCastSubscriber], None] = None,
             on_observe: Callable[[MultiCastObserverInfo], None] = None,
+            on_dispose: Callable[[], None] = None,
             verbose: bool = None,
     ):
 
@@ -77,7 +84,8 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             on_error_func = on_error or (lambda exc: print(f'{name}.on_error {exc}'))
             on_completed_func = on_completed or (lambda: print(f'{name}.on_completed'))
             on_subscribe_func = on_subscribe or (lambda v: print(f'{name}.on_subscribe {v}'))
-            on_observe_func = on_subscribe or (lambda v: print(f'{name}.on_observe {v}'))
+            on_observe_func = on_observe or (lambda v: print(f'{name}.on_observe {v}'))
+            on_dispose_func = on_dispose or (lambda: print(f'{name}.on_disposed'))
 
         else:
             def empty_func0():
@@ -91,6 +99,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             on_completed_func = on_completed or empty_func0
             on_subscribe_func = on_subscribe or empty_func1
             on_observe_func = on_subscribe or empty_func1
+            on_dispose_func = empty_func0()
 
         return self._copy(DebugMultiCast(
             source=self,
@@ -100,6 +109,8 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             on_error=on_error_func,
             on_subscribe=on_subscribe_func,
             on_observe=on_observe_func,
+            on_dispose=on_dispose_func,
+            stack=stack,
         ))
 
     def default_if_empty(
@@ -245,4 +256,4 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
         )
 
     def _share(self, stack: List[FrameSummary]):
-        return self._copy(SharedMultiCast(source=self.materialize(), stack=stack))
+        return self._copy(SharedMultiCast(source=self, stack=stack))
