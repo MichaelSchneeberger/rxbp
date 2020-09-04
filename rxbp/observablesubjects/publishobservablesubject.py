@@ -104,7 +104,7 @@ class PublishObservableSubject(ObservableSubjectBase):
 
         def gen_acks():
             for subscription in self.subscriptions:
-                ack = subscription.source.on_next(materialized_values)
+                ack = subscription.next_observer.on_next(materialized_values)
 
                 if isinstance(ack, StopAck):
                     self.subscriptions.remove(subscription)
@@ -141,7 +141,7 @@ class PublishObservableSubject(ObservableSubjectBase):
 
         if isinstance(prev_state, self.NormalState):
             for subscription in subscriptions:
-                subscription.source.on_error(exc)
+                subscription.next_observer.on_error(exc)
 
     def on_completed(self):
         state = self.CompletedState()
@@ -157,4 +157,4 @@ class PublishObservableSubject(ObservableSubjectBase):
 
         if isinstance(prev_state, self.NormalState):
             for subscription in subscriptions:
-                subscription.source.on_completed()
+                subscription.next_observer.on_completed()

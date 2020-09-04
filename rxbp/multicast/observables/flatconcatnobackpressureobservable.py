@@ -20,7 +20,7 @@ class FlatConcatNoBackpressureObservable(Observable):
         composite_disposable = CompositeDisposable()
 
         concat_observer = FlatConcatNoBackpressureObserver(
-            observer=observer_info.observer,
+            next_observer=observer_info.observer,
             selector=self.selector,
             scheduler=self.scheduler,
             subscribe_scheduler=self.subscribe_scheduler,

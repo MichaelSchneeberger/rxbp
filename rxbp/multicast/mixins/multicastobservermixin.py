@@ -5,7 +5,7 @@ from rxbp.multicast.typing import MultiCastItem
 
 class MultiCastObserverMixin(ABC):
     @abstractmethod
-    def on_next(self, elem: MultiCastItem) -> None:
+    def on_next(self, item: MultiCastItem) -> None:
         ...
 
     @abstractmethod

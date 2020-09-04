@@ -52,12 +52,6 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                     if isinstance(value, FlowableMixin):
                         flowable = value
 
-                    elif isinstance(value, list) and len(value) == 1:
-                        flowable = value[0]
-
-                    elif isinstance(value, dict) and len(value) == 1:
-                        flowable = next(value.values())
-
                     else:
                         raise Exception(f'illegal value "{value}"')
 

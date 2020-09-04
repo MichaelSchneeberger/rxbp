@@ -10,10 +10,10 @@ class MapMultiCastObserver(MultiCastObserver):
     source: MultiCastObserver
     func: Callable[[MultiCastItem], MultiCastItem]
 
-    def on_next(self, elem: MultiCastItem) -> None:
+    def on_next(self, item: MultiCastItem) -> None:
         try:
             def map_gen():
-                for v in elem:
+                for v in item:
                     yield self.func(v)
 
             next = map_gen()

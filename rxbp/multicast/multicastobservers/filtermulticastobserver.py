@@ -10,9 +10,9 @@ class FilterMultiCastObserver(MultiCastObserver):
     source: MultiCastObserver
     predicate: Callable[[MultiCastItem], bool]
 
-    def on_next(self, elem: MultiCastItem) -> None:
+    def on_next(self, item: MultiCastItem) -> None:
         def gen_filtered_iterable():
-            for e in elem:
+            for e in item:
                 if self.predicate(e):
                     yield e
 

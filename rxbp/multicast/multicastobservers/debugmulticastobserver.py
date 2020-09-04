@@ -18,7 +18,7 @@ class DebugMultiCastObserver(MultiCastObserver):
     def __post_init__(self):
         self.has_scheduled_next = False
 
-    def on_next(self, elem: MultiCastItem) -> None:
+    def on_next(self, item: MultiCastItem) -> None:
         if not self.has_scheduled_next:
             raise Exception(to_operator_exception(
                 message='Element received before subscribe scheduler advanced',
@@ -26,13 +26,14 @@ class DebugMultiCastObserver(MultiCastObserver):
             ))
 
         try:
-            elem = list(elem)
+            item = list(item)
 
-            if len(elem) == 0:
+            if len(item) == 0:
                 return
 
-            self.on_next_func(elem)
-            self.source.on_next(elem)
+            for elem in item:
+                self.on_next_func(elem)
+            self.source.on_next(item)
 
         except Exception as exc:
             self.on_error(exc)

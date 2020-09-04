@@ -17,9 +17,9 @@ class FirstOrDefaultMultiCastObserver(MultiCastObserver):
     def __post_init__(self):
         self.is_first = True
 
-    def on_next(self, elem: MultiCastItem) -> None:
+    def on_next(self, item: MultiCastItem) -> None:
         try:
-            first_elem = next(iter(elem))
+            first_elem = next(iter(item))
         except StopIteration:
             return
         except Exception as exc:

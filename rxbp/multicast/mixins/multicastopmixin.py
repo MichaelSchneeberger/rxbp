@@ -144,13 +144,17 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
     def flat_map(
             self,
             func: Callable[[MultiCastItem], 'MultiCast[MultiCastItem]'],
-            # stack: List[FrameSummary],
+            stack: List[FrameSummary],
     ):
-        return self._copy(FlatMapMultiCast(source=self, func=func))
+        return self._copy(FlatMapMultiCast(
+            source=self,
+            func=func,
+            stack=stack,
+        ))
 
     def join_flowables(self, others: List['MultiCastMixin'], stack: List[FrameSummary]):
         if len(others) == 0:
-            return self
+            return self.map(lambda v: [v])
 
         return self._copy(JoinFlowablesMultiCast(sources=[self] + others, stack=stack))
 

@@ -258,10 +258,10 @@ class FlowableOpMixin(
     def _share(self, stack: List[FrameSummary]):
         return self._copy(RefCountFlowable(source=self, stack=stack), is_shared=True)
 
-    def share(self):
-        stack = get_stack_lines()
-
-        return self._share(stack=stack)
+    # def share(self):
+    #     stack = get_stack_lines()
+    #
+    #     return self._share(stack=stack)
 
     # def set_base(self, val: Base):
     #

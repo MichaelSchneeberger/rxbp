@@ -170,42 +170,42 @@ def from_iterable(values: Iterable[Any]):
 #     return init_multicast(FromObservableMultiCast())
 
 
-def from_flowable(
-        source: Flowable,
-):
-    """
-    Create a MultiCast that emit each element received by the Flowable.
-    """
-
-    class FromFlowableMultiCast(MultiCastMixin):
-        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> Flowable:
-            subscription = source.unsafe_subscribe(init_subscriber(
-                scheduler=subscriber.source_scheduler,
-                subscribe_scheduler=subscriber.source_scheduler,
-            ))
-
-            class FromFlowableMultiCastObservable(MultiCastObservable):
-                def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
-                    class FromFlowableMultiCastObserver(Observer):
-                        def on_next(self, elem: MultiCastItem) -> Ack:
-                            observer_info.observer.on_next(elem)
-                            return continue_ack
-
-                        def on_error(self, exc: Exception) -> None:
-                            observer_info.observer.on_error(exc)
-
-                        def on_completed(self) -> None:
-                            observer_info.observer.on_completed()
-
-                    subscription.observable.observe(init_observer_info(
-                        observer=FromFlowableMultiCastObserver()
-                    ))
-
-            return init_multicast_subscription(
-                observable=FromFlowableMultiCastObservable(),
-            )
-
-    return init_multicast(FromFlowableMultiCast())
+# def from_flowable(
+#         source: Flowable,
+# ):
+#     """
+#     Create a MultiCast that emit each element received by the Flowable.
+#     """
+#
+#     class FromFlowableMultiCast(MultiCastMixin):
+#         def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> Flowable:
+#             subscription = source.unsafe_subscribe(init_subscriber(
+#                 scheduler=subscriber.source_scheduler,
+#                 subscribe_scheduler=subscriber.source_scheduler,
+#             ))
+#
+#             class FromFlowableMultiCastObservable(MultiCastObservable):
+#                 def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
+#                     class FromFlowableMultiCastObserver(Observer):
+#                         def on_next(self, elem: MultiCastItem) -> Ack:
+#                             observer_info.observer.on_next(elem)
+#                             return continue_ack
+#
+#                         def on_error(self, exc: Exception) -> None:
+#                             observer_info.observer.on_error(exc)
+#
+#                         def on_completed(self) -> None:
+#                             observer_info.observer.on_completed()
+#
+#                     subscription.observable.observe(init_observer_info(
+#                         observer=FromFlowableMultiCastObserver()
+#                     ))
+#
+#             return init_multicast_subscription(
+#                 observable=FromFlowableMultiCastObservable(),
+#             )
+#
+#     return init_multicast(FromFlowableMultiCast())
 
 
 def merge(
@@ -237,9 +237,6 @@ def join_flowables(
 
     if len(sources) == 0:
         return empty()
-
-    elif len(sources) == 1:
-        return sources[0]
 
     else:
         return sources[0].pipe(

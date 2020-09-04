@@ -24,16 +24,10 @@ class SafeMultiCastSubject(
     MultiCastObserver,
     Generic[MultiCastElemType],
 ):
-    def __init__(
-            self,
-            composite_diposable: CompositeDisposable,
-            scheduler: Scheduler,
-    ):
-        super().__init__()
+    composite_diposable: CompositeDisposable
+    scheduler: Scheduler
 
-        self.composite_diposable = composite_diposable
-        self.scheduler = scheduler
-
+    def __post_init__(self):
         self.is_first = True
         self.is_stopped = False
         self.subject = MultiCastObservableSubject()
@@ -81,7 +75,11 @@ class SafeMultiCastSubject(
     def on_next(self, val):
         if not self.is_stopped:
             self.is_first = False
-            self.subject.on_next([val])
+
+            def action(_, __):
+                self.subject.on_next([val])
+
+            self.scheduler.schedule(action)
 
     def on_error(self, exc):
         if not self.is_stopped:
@@ -91,4 +89,8 @@ class SafeMultiCastSubject(
     def on_completed(self):
         if not self.is_stopped:
             self.is_stopped = True
-            self.subject.on_completed()
+
+            def action(_, __):
+                self.subject.on_completed()
+
+            self.scheduler.schedule(action)

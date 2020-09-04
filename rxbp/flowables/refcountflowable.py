@@ -1,4 +1,5 @@
 import threading
+from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Callable, List
 
@@ -8,6 +9,7 @@ from rxbp.observablesubjects.cacheservefirstobservablesubject import CacheServeF
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 class RefCountFlowable(FlowableMixin):
@@ -27,7 +29,9 @@ class RefCountFlowable(FlowableMixin):
         self.stack = stack
         self._subject_gen = subject_gen or default_subject_gen
 
+        self.start_subscription = False
         self.has_subscription = False
+        self.exception = None
         self.lock = threading.RLock()
 
         self.subscription = None
@@ -36,10 +40,13 @@ class RefCountFlowable(FlowableMixin):
         """ Connects the observable. """
 
         with self.lock:
-            if not self.has_subscription:
+            if not self.start_subscription:
+                self.start_subscription = True
+                try:
+                    subscription = self.source.unsafe_subscribe(subscriber)
+                except Exception as exc:
+                    self.exception = exc
                 self.has_subscription = True
-
-                subscription = self.source.unsafe_subscribe(subscriber)
                 subject = self._subject_gen(subscriber.scheduler)
 
                 self.subscription = subscription.copy(
@@ -50,5 +57,15 @@ class RefCountFlowable(FlowableMixin):
                         stack=self.stack,
                     ),
                 )
+
+            else:
+                if self.subscription is not None:
+                    raise self.exception
+
+                if not self.has_subscription:
+                    raise Exception(to_operator_exception(
+                        message='Looping Flowables is not allowed',
+                        stack=self.stack,
+                    ))
 
         return self.subscription

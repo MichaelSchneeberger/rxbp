@@ -11,9 +11,9 @@ class DefaultIfEmptyMultiCastObserver(MultiCastObserver):
     lazy_val: Callable[[], Any]
     found: bool
 
-    def on_next(self, elem: MultiCastItem) -> None:
+    def on_next(self, item: MultiCastItem) -> None:
         self.found = True
-        self.source.on_next(elem)
+        self.source.on_next(item)
 
     def on_error(self, exc: Exception) -> None:
         self.source.on_error(exc)

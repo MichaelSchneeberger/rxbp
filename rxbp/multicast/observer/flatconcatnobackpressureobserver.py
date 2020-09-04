@@ -18,7 +18,7 @@ from rxbp.typing import ElementType
 
 @dataclass
 class FlatConcatNoBackpressureObserver(Observer):
-    observer: Observer
+    next_observer: Observer
     selector: Callable[[Any], Observable]
     scheduler: Scheduler
     subscribe_scheduler: Scheduler
@@ -30,7 +30,7 @@ class FlatConcatNoBackpressureObserver(Observer):
         # self.conn_observers: List[ConnectableObserver] = []
 
         self.inner_observer = self.InnerObserver(
-            observer=self.observer,
+            observer=self.next_observer,
             last_ack=None,
             lock=self.lock,
             conn_observers=[],
@@ -100,7 +100,6 @@ class FlatConcatNoBackpressureObserver(Observer):
             prev_conn_observers = self.inner_observer.conn_observers
             self.inner_observer.conn_observers = self.inner_observer.conn_observers + conn_observers
 
-        first_obs = obs_list[0]
         if len(prev_conn_observers) == 0:
             # conn_observers[0] is not used in this case
             first_conn_observer = self.inner_observer
@@ -108,27 +107,31 @@ class FlatConcatNoBackpressureObserver(Observer):
         else:
             first_conn_observer = conn_observers[0]
 
+        first_obs = obs_list[0]
         other_obs = obs_list[1:]
         other_conn_observers = conn_observers[1:]
 
-        def observe_on_subscribe_scheduler(_, __):
-            try:
-                disposable = first_obs.observe(self.observer_info.copy(observer=first_conn_observer))
+        # def observe_on_subscribe_scheduler(_, __):
+        try:
+            disposable = first_obs.observe(self.observer_info.copy(observer=first_conn_observer))
+            self.composite_disposable.add(disposable)
+
+            for obs, conn_observer in zip(other_obs, other_conn_observers):
+                disposable = obs.observe(self.observer_info.copy(observer=conn_observer))
                 self.composite_disposable.add(disposable)
+        except Exception as exc:
+            self.next_observer.on_error(exc)
 
-                for obs, conn_observer in zip(other_obs, other_conn_observers):
-                    disposable = obs.observe(self.observer_info.copy(observer=conn_observer))
-                    self.composite_disposable.add(disposable)
-            except Exception as exc:
-                self.observer.on_error(exc)
-
-        disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
-        self.composite_disposable.add(disposable)
+        # if self.subscribe_scheduler.idle:
+        #     disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
+        #     self.composite_disposable.add(disposable)
+        # else:
+        #     observe_on_subscribe_scheduler(None, None)
 
         return continue_ack
 
     def on_error(self, exc):
-        self.observer.on_error(exc)
+        self.next_observer.on_error(exc)
 
     def on_completed(self):
         with self.lock:
@@ -136,4 +139,4 @@ class FlatConcatNoBackpressureObserver(Observer):
             self.inner_observer.is_completed = True
 
         if len(conn_observers) == 0:
-            self.observer.on_completed()
+            self.next_observer.on_completed()

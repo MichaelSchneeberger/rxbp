@@ -175,8 +175,10 @@ def flat_map(func: Callable[[MultiCastItem], MultiCastOpMixin]):
     Apply a function to each item emitted by the source and flattens the result.
     """
 
+    stack = get_stack_lines()
+
     def op_func(source: MultiCast):
-        return source.flat_map(func=func)
+        return source.flat_map(func=func, stack=stack)
 
     return MultiCastOperator(op_func)
 

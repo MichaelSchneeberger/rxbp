@@ -12,6 +12,7 @@ from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.typing import MultiCastItem
 
 
+# todo: delete this?
 class LiftedMultiCastObservable(MultiCastObservable):
     def __init__(
             self,

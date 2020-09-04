@@ -10,6 +10,7 @@ from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
 from rxbp.toiterator import to_iterator
 from rxbp.typing import ValueType
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 @dataclass
@@ -29,3 +30,8 @@ class Flowable(
 
     def run(self, scheduler: Scheduler = None):
         return list(to_iterator(source=self, scheduler=scheduler))
+
+    def share(self) -> 'Flowable':
+        stack = get_stack_lines()
+
+        return self._share(stack=stack)

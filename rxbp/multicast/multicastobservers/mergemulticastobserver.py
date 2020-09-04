@@ -14,8 +14,8 @@ class MergeMultiCastObserver(MultiCastObserver):
     inner_subscription: SingleAssignmentDisposable
     group: CompositeDisposable
 
-    def on_next(self, elem: MultiCastItem) -> None:
-        self.observer.on_next(elem)
+    def on_next(self, item: MultiCastItem) -> None:
+        self.observer.on_next(item)
 
     def on_error(self, exc: Exception) -> None:
         self.observer.on_error(exc)

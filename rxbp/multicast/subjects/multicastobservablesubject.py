@@ -52,7 +52,10 @@ class MultiCastObservableSubject(MultiCastObservable, MultiCastObserver):
             observers = self.observers.copy()
 
         for observer in observers:
-            observer.on_next(materialized_values)
+            try:
+                observer.on_next(materialized_values)
+            except Exception as exc:
+                observer.on_error(exc)
 
     def on_error(self, error: Exception) -> None:
         with self.lock:

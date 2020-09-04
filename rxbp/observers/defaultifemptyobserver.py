@@ -8,7 +8,7 @@ from rxbp.typing import ElementType
 
 @dataclass
 class DefaultIfEmptyObserver(Observer):
-    observer: Observer
+    source: Observer
     lazy_val: Callable[[], Any]
 
     def __post_init__(self):
@@ -17,19 +17,19 @@ class DefaultIfEmptyObserver(Observer):
     def on_next(self, elem: ElementType):
         self.is_first = False
 
-        self.on_next = types.MethodType(self.observer.on_next, self)  # type: ignore
+        self.on_next = types.MethodType(lambda _, v: self.source.on_next(v), self)  # type: ignore
 
-        return self.observer.on_next(elem)
+        return self.source.on_next(elem)
 
     def on_error(self, exc):
-        return self.observer.on_error(exc)
+        return self.source.on_error(exc)
 
     def on_completed(self):
         if self.is_first:
             try:
-                self.observer.on_next([self.lazy_val()])
-                self.observer.on_completed()
+                self.source.on_next([self.lazy_val()])
+                self.source.on_completed()
             except Exception as exc:
-                self.observer.on_error(exc)
+                self.source.on_error(exc)
         else:
-            self.observer.on_completed()
+            self.source.on_completed()

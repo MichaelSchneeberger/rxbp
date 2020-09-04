@@ -21,13 +21,13 @@ class ToFlowableMultiCastObserver(MultiCastObserver):
     is_first: bool
     inner_disposable: SingleAssignmentDisposable
 
-    def on_next(self, elem: MultiCastItem) -> None:
-        if isinstance(elem, list):
-            first_elem = elem[0]
+    def on_next(self, item: MultiCastItem) -> None:
+        if isinstance(item, list):
+            first_elem = item[0]
 
         else:
             try:
-                first_elem = next(elem)
+                first_elem = next(item)
             except StopIteration:
                 return
 
@@ -54,12 +54,13 @@ class ToFlowableMultiCastObserver(MultiCastObserver):
 
         subscription = flowable.unsafe_subscribe(subscriber=self.subscriber)
 
-        def subscribe_action(_, __):
-            return subscription.observable.observe(init_observer_info(
-                observer=self.observer,
-            ))
+        # def subscribe_action(_, __):
+        disposable = subscription.observable.observe(init_observer_info(
+            observer=self.observer,
+        ))
+        self.inner_disposable.disposable = disposable
 
-        self.inner_disposable.disposable = self.subscriber.subscribe_scheduler.schedule(subscribe_action)
+        # self.inner_disposable.disposable = self.subscriber.subscribe_scheduler.schedule(subscribe_action)
 
     def on_error(self, exc: Exception) -> None:
         self.observer.on_error(exc)

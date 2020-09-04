@@ -21,11 +21,11 @@ class MaterializeMultiCastObservable(MultiCastObservable):
         class MaterializeMultiCastObserver(MultiCastObserver):
             source: MultiCastObserver
 
-            def on_next(self, elem: ElementType):
-                if not isinstance(elem, list):
-                    elem = list(elem)
+            def on_next(self, item: ElementType):
+                if not isinstance(item, list):
+                    item = list(item)
 
-                self.source.on_next(elem)
+                self.source.on_next(item)
 
             def on_error(self, exc: Exception):
                 return self.source.on_error(exc)
