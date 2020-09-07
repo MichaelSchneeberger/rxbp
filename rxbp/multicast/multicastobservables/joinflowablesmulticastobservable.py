@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import List
 
-from rx.disposable import Disposable, CompositeDisposable
+from rx.disposable import Disposable
 
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.init.initflowable import init_flowable
@@ -10,11 +10,14 @@ from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.flowables.connectableflowable import ConnectableFlowable
 from rxbp.multicast.flowables.flatconcatnobackpressureflowable import \
     FlatConcatNoBackpressureFlowable
+from rxbp.multicast.init.initmulticastobserverinfo import init_multicast_observer_info
 from rxbp.multicast.multicastobservable import MultiCastObservable
+from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
-from rxbp.observers.bufferedobserver import BufferedObserver
+from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
+from rxbp.typing import ElementType
 
 
 @dataclass
@@ -28,24 +31,37 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
         def gen_conn_flowables():
             for source in self.sources:
 
-                # will be connected as soon as the outgoing Flowable is subscribed
+                # buffers elements received before outgoing Flowable is subscribed
                 conn_observer = ConnectableObserver(
                     underlying=None,
                     scheduler=self.multicast_scheduler,
                 )
 
-                # MultiCast elements without back-pressure are converted to Flowable elements
-                # with back-pressure by buffering the elements if necessary
-                observer = BufferedObserver(
-                    underlying=conn_observer,
-                    scheduler=self.multicast_scheduler,
-                    subscribe_scheduler=self.multicast_scheduler,
-                    buffer_size=1000,
-                )
+                @dataclass
+                class InnerObserver(Observer):
+                    underlying: Observer
+                    outer_observer: MultiCastObserver
 
-                disposable = source.observe(MultiCastObserverInfo(
-                    observer=observer,
-                ))
+                    def on_next(self, elem: ElementType):
+                        return self.underlying.on_next(elem)
+
+                    def on_error(self, err):
+                        self.outer_observer.on_error(err)
+                        self.underlying.on_error(err)
+
+                    def on_completed(self):
+                        self.underlying.on_completed()
+
+                assert not self.multicast_scheduler.idle
+
+                disposable = source.observe(
+                    observer_info=init_multicast_observer_info(
+                        observer=InnerObserver(
+                            underlying=conn_observer,
+                            outer_observer=observer_info.observer,
+                        ),
+                    ),
+                )
 
                 # select a single Flowable per MultiCast
                 def to_flowable(value):
@@ -68,9 +84,10 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
 
                 # The outgoing Flowables are shared such that they can be subscribed more
                 # than once
-                yield init_flowable(RefCountFlowable(flattened_flowable, stack=self.stack))
-
-        flowables = list(gen_conn_flowables())
+                yield init_flowable(RefCountFlowable(
+                    source=flattened_flowable,
+                    stack=self.stack,
+                ))
 
         def action(_, __):
             try:
@@ -80,4 +97,8 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                 observer_info.observer.on_error(exc)
 
         # immediately emit a list of flowables representing the joined flowables
-        return self.multicast_scheduler.schedule(action)
+        disposable = self.multicast_scheduler.schedule(action)
+
+        flowables = list(gen_conn_flowables())
+
+        return disposable

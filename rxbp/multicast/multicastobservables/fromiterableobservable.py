@@ -14,6 +14,11 @@ class FromIterableObservable(MultiCastObservable):
     subscribe_scheduler: SchedulerMixin
 
     def observe(self, info: MultiCastObserverInfo) -> Disposable:
+        # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
+        # this "subscribe scheduler" is not automatically provided in rx, that is
+        # why it must be provided as the `scheduler` argument of the `return_flowable`
+        # operator.
+
         def scheduler_action(_, __):
             try:
                 info.observer.on_next(self.values)

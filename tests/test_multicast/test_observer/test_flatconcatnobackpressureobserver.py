@@ -1,6 +1,9 @@
 import unittest
 
+from rx.disposable import CompositeDisposable
+
 from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.multicast.observer.flatconcatnobackpressureobserver import FlatConcatNoBackpressureObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
@@ -17,25 +20,27 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.source2 = TestObservable()
         self.source3 = TestObservable()
 
+        self.composite_disposable = CompositeDisposable()
+
     def test_initialize(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
 
     def test_on_next_does_not_backpressure(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
 
@@ -48,11 +53,11 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
     def test_inner_on_next(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -65,11 +70,11 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
     def test_on_next_on_second_source(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -85,11 +90,11 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
     def test_complete_first_source(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -108,11 +113,11 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
     def test_complete_first_source2(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -134,11 +139,11 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
     def test_three_sources(self):
         sink = TestObserver()
         observer = FlatConcatNoBackpressureObserver(
-            observer=sink,
+            next_observer=sink,
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)

@@ -41,9 +41,9 @@ class DebugMultiCastObservable(MultiCastObservable):
             stack=self.stack,
         )
 
-        def action(_, __):
-            observer.has_scheduled_next = True
-        self.multicast_scheduler.schedule(action)
+        # def action(_, __):
+        #     observer.has_scheduled_next = True
+        # self.multicast_scheduler.schedule(action)
 
         return CompositeDisposable(
             self.source.observe(observer_info.copy(

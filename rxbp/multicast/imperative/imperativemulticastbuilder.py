@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Callable
 
 from rx.disposable import CompositeDisposable
@@ -10,21 +11,18 @@ from rxbp.multicast.multicast import MultiCast
 from rxbp.scheduler import Scheduler
 
 
+@dataclass
 class ImperativeMultiCastBuilder:
-    def __init__(
-            self,
-            composite_disposable: CompositeDisposable,
-            scheduler: Scheduler,
-    ):
-        self.composite_disposable = composite_disposable
-        self.scheduler = scheduler
+    composite_disposable: CompositeDisposable
+    source_scheduler: Scheduler
 
+    def __post_init__(self):
         self.subjects = []
 
     def create_multicast_subject(self) -> SafeMultiCastSubject:
         subject = SafeMultiCastSubject(
             composite_diposable=self.composite_disposable,
-            scheduler=self.scheduler,
+            source_scheduler=self.source_scheduler,
         )
         self.subjects.append(subject)
         return subject
@@ -32,7 +30,7 @@ class ImperativeMultiCastBuilder:
     def create_flowable_subject(self) -> SafeFlowableSubject:
         subject = SafeFlowableSubject(
             composite_diposable=self.composite_disposable,
-            scheduler=self.scheduler,
+            scheduler=self.source_scheduler,
         )
         self.subjects.append(subject)
         return subject

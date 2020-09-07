@@ -1,6 +1,9 @@
 import unittest
 
+from rx.disposable import CompositeDisposable
+
 from rxbp.acknowledgement.continueack import ContinueAck
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.multicast.observer.flatmergenobackpressureobserver import FlatMergeNoBackpressureObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testobservable import TestObservable
@@ -17,6 +20,8 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
         self.source2 = TestObservable()
         self.source3 = TestObservable()
 
+        self.composite_disposable = CompositeDisposable()
+
     def test_initialize(self):
         sink = TestObserver()
         observer = FlatMergeNoBackpressureObserver(
@@ -24,7 +29,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
 
@@ -35,7 +40,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
 
@@ -52,7 +57,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -69,7 +74,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -89,7 +94,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -112,7 +117,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)
@@ -139,7 +144,7 @@ class TestFlatMergeNoBackpressureObserver(unittest.TestCase):
             selector=lambda v: v,
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,
-            is_volatile=False,
+            composite_disposable=self.composite_disposable,
         )
         self.source.observe(init_observer_info(observer=observer))
         self.source.on_next_single(self.source1)

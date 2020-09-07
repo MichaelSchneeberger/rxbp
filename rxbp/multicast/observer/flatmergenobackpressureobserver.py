@@ -5,6 +5,7 @@ import rx
 from rx.disposable import CompositeDisposable, Disposable
 
 from rxbp.acknowledgement.continueack import continue_ack
+from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observable import Observable
 from rxbp.observables.mergeobservable import MergeObservable
 from rxbp.observer import Observer
@@ -19,7 +20,7 @@ class FlatMergeNoBackpressureObserver(Observer):
     selector: Callable[[Any], Observable]
     scheduler: Scheduler
     subscribe_scheduler: Scheduler
-    observer_info: ObserverInfo
+    # observer_info: ObserverInfo
     composite_disposable: CompositeDisposable
 
     def __post_init__(self):
@@ -28,7 +29,7 @@ class FlatMergeNoBackpressureObserver(Observer):
         disposable = MergeObservable(
             left=self.place_holders[0],
             right=self.place_holders[1],
-        ).observe(self.observer_info.copy(observer=self.observer))
+        ).observe(init_observer_info(observer=self.observer))
         self.composite_disposable.add(disposable)
 
     @dataclass
@@ -54,16 +55,18 @@ class FlatMergeNoBackpressureObserver(Observer):
 
             parent, other = self.place_holders
 
-            def observe_on_subscribe_scheduler(_, __, merge_obs=merge_obs, parent=parent):
-                return merge_obs.observe(self.observer_info.copy(observer=parent.observer))
+            # def observe_on_subscribe_scheduler(_, __, merge_obs=merge_obs, parent=parent):
+            #     return merge_obs.observe(self.observer_info.copy(observer=parent.observer))
 
             # # # make sure that Trampoline Scheduler is active
             # if self.subscribe_scheduler.idle:
-            disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
+            # disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)
             # else:
             #     disposable = observe_on_subscribe_scheduler(None, None)
 
-            # disposable = merge_obs.observe(self.observer_info.copy(observer=parent.next_observer))
+            disposable = merge_obs.observe(init_observer_info(
+                observer=parent.observer,
+            ))
             self.composite_disposable.add(disposable)
 
             self.place_holders = (other, place_holder)

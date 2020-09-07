@@ -15,13 +15,19 @@ class MergeMultiCastObserver(MultiCastObserver):
     group: CompositeDisposable
 
     def on_next(self, item: MultiCastItem) -> None:
-        self.observer.on_next(item)
+        with self.lock:
+            self.observer.on_next(item)
 
     def on_error(self, exc: Exception) -> None:
         self.observer.on_error(exc)
 
     def on_completed(self) -> None:
+        do_complete = False
+
         with self.lock:
             self.group.remove(self.inner_subscription)
             if len(self.group) == 0:
-                self.observer.on_completed()
+                do_complete = True
+
+        if do_complete:
+            self.observer.on_completed()

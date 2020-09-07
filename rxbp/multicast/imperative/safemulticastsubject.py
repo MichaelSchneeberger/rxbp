@@ -25,7 +25,7 @@ class SafeMultiCastSubject(
     Generic[MultiCastElemType],
 ):
     composite_diposable: CompositeDisposable
-    scheduler: Scheduler
+    source_scheduler: Scheduler
 
     def __post_init__(self):
         self.is_first = True
@@ -51,7 +51,7 @@ class SafeMultiCastSubject(
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         assert self.is_first and not self.is_stopped, (
             f'subject not initial state when `get_source` is called, '
-            f'consider to schedule the `on_next` action  with {self.scheduler}'
+            f'consider to schedule the `on_next` action  with {self.source_scheduler}'
         )
 
         return init_multicast_subscription(
@@ -59,7 +59,7 @@ class SafeMultiCastSubject(
         )
 
     def subscribe_to(self, source: MultiCast, scheduler: Scheduler = None):
-        scheduler = scheduler or self.scheduler
+        scheduler = scheduler or self.source_scheduler
 
         subscription = source.unsafe_subscribe(MultiCastSubscriber(
             source_scheduler=scheduler,
@@ -79,7 +79,7 @@ class SafeMultiCastSubject(
             def action(_, __):
                 self.subject.on_next([val])
 
-            self.scheduler.schedule(action)
+            self.source_scheduler.schedule(action)
 
     def on_error(self, exc):
         if not self.is_stopped:
@@ -93,4 +93,4 @@ class SafeMultiCastSubject(
             def action(_, __):
                 self.subject.on_completed()
 
-            self.scheduler.schedule(action)
+            self.source_scheduler.schedule(action)

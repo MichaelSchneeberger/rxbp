@@ -27,7 +27,7 @@ class TestImperativeMultiCastBuilder(unittest.TestCase):
 
         def func(builder: ImperativeMultiCastBuilder):
             builder = ImperativeMultiCastBuilder(
-                scheduler=self.scheduler,
+                source_scheduler=self.scheduler,
                 composite_disposable=self.composite_disposable,
             )
 

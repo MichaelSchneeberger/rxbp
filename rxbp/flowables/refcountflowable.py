@@ -42,10 +42,13 @@ class RefCountFlowable(FlowableMixin):
         with self.lock:
             if not self.start_subscription:
                 self.start_subscription = True
+
                 try:
                     subscription = self.source.unsafe_subscribe(subscriber)
                 except Exception as exc:
                     self.exception = exc
+                    raise
+
                 self.has_subscription = True
                 subject = self._subject_gen(subscriber.scheduler)
 
@@ -59,7 +62,7 @@ class RefCountFlowable(FlowableMixin):
                 )
 
             else:
-                if self.subscription is not None:
+                if self.exception is not None:
                     raise self.exception
 
                 if not self.has_subscription:

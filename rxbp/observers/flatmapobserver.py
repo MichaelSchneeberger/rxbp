@@ -121,7 +121,7 @@ class FlatMapObserver(Observer):
                 self.observer_info.observer.on_error(exc)
                 return stop_ack
 
-        if self.subscribe_scheduler.schedule_required():
+        if self.subscribe_scheduler.idle:
             disposable = self.subscribe_scheduler.schedule(subscribe_action)
             self.composite_disposable.add(disposable)
         else:

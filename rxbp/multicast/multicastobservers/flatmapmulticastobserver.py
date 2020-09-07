@@ -59,7 +59,7 @@ class FlatMapMultiCastObserver(MultiCastObserver):
                 self.on_error(exc)
                 return
 
-        if self.multicast_scheduler.schedule_required():
+        if self.multicast_scheduler.idle:
             disposable = self.multicast_scheduler.schedule(subscribe_action)
             self.composite_disposable.add(disposable)
         else:

@@ -15,15 +15,15 @@ class DebugMultiCastObserver(MultiCastObserver):
     on_error_func: Callable[[Exception], None]
     stack: List[FrameSummary]
 
-    def __post_init__(self):
-        self.has_scheduled_next = False
+    # def __post_init__(self):
+    #     self.has_scheduled_next = False
 
     def on_next(self, item: MultiCastItem) -> None:
-        if not self.has_scheduled_next:
-            raise Exception(to_operator_exception(
-                message='Element received before subscribe scheduler advanced',
-                stack=self.stack,
-            ))
+        # if not self.has_scheduled_next:
+        #     raise Exception(to_operator_exception(
+        #         message='Element received before subscribe scheduler advanced',
+        #         stack=self.stack,
+        #     ))
 
         try:
             item = list(item)

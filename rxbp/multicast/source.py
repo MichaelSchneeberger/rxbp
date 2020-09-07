@@ -1,29 +1,20 @@
 from typing import Any, Callable, Iterable
 
-import rx
 from rx.disposable import CompositeDisposable
 
 import rxbp
-from rxbp.acknowledgement.ack import Ack
-from rxbp.acknowledgement.continueack import continue_ack
-from rxbp.flowable import Flowable
-from rxbp.init.initobserverinfo import init_observer_info
-from rxbp.init.initsubscriber import init_subscriber
 from rxbp.multicast.imperative.imperativemulticastbuild import ImperativeMultiCastBuild
 from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.init.initmulticast import init_multicast
 from rxbp.multicast.init.initmulticastsubscription import init_multicast_subscription
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicast import MultiCast
-from rxbp.multicast.multicastobservable import MultiCastObservable
 from rxbp.multicast.multicastobservables.fromiterableobservable import FromIterableObservable
-from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicasts.emptymulticast import EmptyMultiCast
+from rxbp.multicast.multicasts.fromiterablemulticast import FromIterableMultiCast
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.op import merge as merge_op
-from rxbp.multicast.typing import MultiCastItem
-from rxbp.observer import Observer
 
 
 def empty():
@@ -53,7 +44,7 @@ def build_imperative_multicast(
 
             builder = ImperativeMultiCastBuilder(
                 composite_disposable=composite_disposable_,
-                scheduler=subscriber.source_scheduler,
+                source_scheduler=subscriber.source_scheduler,
             )
 
             imperative_call = func(builder)
@@ -73,51 +64,6 @@ def build_imperative_multicast(
     return init_multicast(BuildBlockingFlowableMultiCast())
 
 
-# def return_flowable(
-#         val: Union[
-#             Flowable,
-#             List[Flowable],
-#             Dict[Any, Flowable],
-#             FlowableStateMixin,
-#         ],
-# ):
-#     """
-#     Turn zero or more Flowables into multi-cast Flowables emitted as a single
-#     element inside a MultiCast.
-#
-#     :param val: an object that may contain a non-multi-casted Flowables
-#     """
-#
-#     def to_multi_cast_flowable(inner_val: Flowable):
-#         if isinstance(inner_val, Flowable):
-#             # assert isinstance(f, Flowable), f'{f} is not a Flowable'
-#             assert not isinstance(inner_val, MultiCastFlowable), \
-#                 "it's not allowed to multicast a multi-casted Flowable"
-#
-#             return init_multicast_flowable(RefCountFlowable(inner_val))
-#         else:
-#             return inner_val
-#
-#     if isinstance(val, Flowable):
-#         return_val = to_multi_cast_flowable(val)
-#
-#     elif isinstance(val, list):
-#         return_val = [to_multi_cast_flowable(s) for s in val]
-#
-#     elif isinstance(val, dict):
-#         return_val = {key: to_multi_cast_flowable(s) for key, s in val.items()}
-#
-#     elif isinstance(val, FlowableStateMixin):
-#         state = val.get_flowable_state()
-#         new_state = {key: to_multi_cast_flowable(s) for key, s in state.items()}
-#         return_val = val.set_flowable_state(new_state)
-#
-#     else:
-#         raise Exception(f'unexpected argument "{val}"')
-#
-#     return return_value(return_val)
-
-
 def return_value(value: Any):
     """
     Create a MultiCast that emits a single element.
@@ -125,20 +71,7 @@ def return_value(value: Any):
     :param val: The single element emitted by the MultiCast
     """
 
-    class ReturnValueMultiCast(MultiCastMixin):
-        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-            # first element has to be scheduled on dedicated scheduler. Unlike in rxbp,
-            # this "subscribe scheduler" is not automatically provided in rx, that is
-            # why it must be provided as the `scheduler` argument of the `return_flowable`
-            # operator.
-            return init_multicast_subscription(
-                observable=FromIterableObservable(
-                    values=[value],
-                    subscribe_scheduler=subscriber.multicast_scheduler,
-                ),
-            )
-
-    return init_multicast(ReturnValueMultiCast())
+    return init_multicast(FromIterableMultiCast([value]))
 
 
 def from_iterable(values: Iterable[Any]):
@@ -148,14 +81,7 @@ def from_iterable(values: Iterable[Any]):
     :param vals: the iterable whose elements are sent
     """
 
-    class FromIterableMultiCast(MultiCastMixin):
-        def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-            return init_multicast_subscription(FromIterableObservable(
-                values=values,
-                subscribe_scheduler=subscriber.multicast_scheduler,
-            ))
-
-    return init_multicast(FromIterableMultiCast())
+    return init_multicast(FromIterableMultiCast(values))
 
 
 # def from_rx_observable(val: rx.typing.Observable):

@@ -19,16 +19,16 @@ class FlatMergeNoBackpressureObservable(Observable):
     def observe(self, observer_info: ObserverInfo):
         composite_disposable = CompositeDisposable()
 
-        concat_observer = FlatMergeNoBackpressureObserver(
-            observer=observer_info.observer,
-            selector=self.selector,
-            scheduler=self.scheduler,
-            subscribe_scheduler=self.subscribe_scheduler,
-            observer_info=observer_info,
-            composite_disposable=composite_disposable,
-        )
-
-        disposable = self.source.observe(observer_info.copy(observer=concat_observer))
+        disposable = self.source.observe(observer_info.copy(
+            observer=FlatMergeNoBackpressureObserver(
+                observer=observer_info.observer,
+                selector=self.selector,
+                scheduler=self.scheduler,
+                subscribe_scheduler=self.subscribe_scheduler,
+                observer_info=observer_info,
+                composite_disposable=composite_disposable,
+            ),
+        ))
         composite_disposable.add(disposable)
 
         return composite_disposable
