@@ -26,6 +26,7 @@ from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 from rxbp.multicast.typing import MultiCastItem
+from rxbp.scheduler import Scheduler
 from rxbp.typing import ValueType
 
 
@@ -36,7 +37,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
         ...
 
     @abstractmethod
-    def _copy(self, *args, **kwargs) -> 'MultiCastOpMixin':
+    def _copy(self, **kwargs) -> 'MultiCastOpMixin':
         ...
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
@@ -46,7 +47,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             self,
             stack: List[FrameSummary],
     ):
-        return self._copy(AssertSingleSubscriptionMultiCast(
+        return self._copy(underlying=AssertSingleSubscriptionMultiCast(
             source=self,
             stack=stack,
             is_first=True,
@@ -57,7 +58,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             stack: List[FrameSummary],
             maintain_order: bool = None,
     ):
-        return self._copy(CollectFlowablesMultiCast(
+        return self._copy(underlying=CollectFlowablesMultiCast(
             source=self,
             stack=stack,
             maintain_order=maintain_order,
@@ -101,7 +102,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             on_observe_func = on_subscribe or empty_func1
             on_dispose_func = empty_func0()
 
-        return self._copy(DebugMultiCast(
+        return self._copy(underlying=DebugMultiCast(
             source=self,
             name=name,
             on_next=on_next_func,
@@ -117,7 +118,9 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             self,
             lazy_val: Callable[[], Any],
     ):
-        return self._copy(DefaultIfEmptyMultiCast(source=self, lazy_val=lazy_val))
+        return self._copy(
+            underlying=DefaultIfEmptyMultiCast(source=self, lazy_val=lazy_val),
+        )
 
     def empty(self):
         return rxbp.multicast.empty()
@@ -126,27 +129,33 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             self,
             predicate: Callable[[MultiCastItem], bool],
     ):
-        return self._copy(FilterMultiCast(source=self, predicate=predicate))
+        return self._copy(
+            underlying=FilterMultiCast(source=self, predicate=predicate),
+        )
 
     def first(
             self,
             # raise_exception: Callable[[Callable[[], None]], None],
             stack: List[FrameSummary],
     ):
-        return self._copy(FirstMultiCast(source=self, stack=stack))
+        return self._copy(
+            underlying=FirstMultiCast(source=self, stack=stack),
+        )
 
     def first_or_default(
             self,
             lazy_val: Callable[[], Any],
     ):
-        return self._copy(FirstOrDefaultMultiCast(source=self, lazy_val=lazy_val))
+        return self._copy(
+            underlying=FirstOrDefaultMultiCast(source=self, lazy_val=lazy_val),
+        )
 
     def flat_map(
             self,
             func: Callable[[MultiCastItem], 'MultiCast[MultiCastItem]'],
             stack: List[FrameSummary],
     ):
-        return self._copy(FlatMapMultiCast(
+        return self._copy(underlying=FlatMapMultiCast(
             source=self,
             func=func,
             stack=stack,
@@ -156,7 +165,9 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
         if len(others) == 0:
             return self.map(lambda v: [v])
 
-        return self._copy(JoinFlowablesMultiCast(sources=[self] + others, stack=stack))
+        return self._copy(
+            underlying=JoinFlowablesMultiCast(sources=[self] + others, stack=stack),
+        )
 
     # def build_imperative_multicast(
     #         self,
@@ -204,7 +215,7 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             initial: ValueType,
             stack: List[FrameSummary],
     ):
-        return self._copy(LoopFlowableMultiCast(
+        return self._copy(underlying=LoopFlowableMultiCast(
             source=self,
             func=func,
             initial=initial,
@@ -226,13 +237,13 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
                     )
                 )
 
-        return self._copy(MaterializeMultiCast(source=self))
+        return self._copy(underlying=MaterializeMultiCast(source=self))
 
     def map(
             self,
             func: Callable[[MultiCastItem], MultiCastItem],
     ):
-        return self._copy(MapMultiCast(source=self, func=func))
+        return self._copy(underlying=MapMultiCast(source=self, func=func))
 
     # def map_to_iterator(self, func: Callable[[MultiCastValue], Iterator[MultiCastValue]]):
     #     return self._copy(MapToIteratorMultiCast(source=self, func=func))
@@ -241,23 +252,29 @@ class MultiCastOpMixin(MultiCastMixin, ABC):
             self,
             *others: 'MultiCastMixin',
     ):
-        sources = reversed([self] + list(others))
+        sources = list(reversed([self] + list(others)))
 
-        return self._copy(MergeMultiCast(sources=sources))
+        lift_index = max(m.lift_index for m in sources)
 
-    def observe_on(self, scheduler: rx.typing.Scheduler):
-        return self._copy(ObserveOnMultiCast(source=self, scheduler=scheduler))
+        return self._copy(
+            underlying=MergeMultiCast(sources=sources),
+            lift_index=lift_index,
+        )
+
+    def observe_on(self, scheduler: Scheduler = None):
+        return self._copy(underlying=ObserveOnMultiCast(source=self, scheduler=scheduler))
 
     def share_func(
             self,
             func: Callable[['MultiCastOpMixin'], 'MultiCastOpMixin'],
             stack: List[FrameSummary],
     ):
-        return self._copy(
-            underlying=func(self._copy(
-                underlying=self._share(stack=stack),
-            )),
-        )
+        underlying = func(self._copy(
+            underlying=self._share(stack=stack),
+        ))
+        return underlying
 
     def _share(self, stack: List[FrameSummary]):
-        return self._copy(SharedMultiCast(source=self, stack=stack))
+        return self._copy(
+            underlying=SharedMultiCast(source=self, stack=stack),
+        )

@@ -2,12 +2,14 @@ from abc import ABC
 from typing import Generic
 
 from rxbp.multicast.init.initliftedmulticast import init_lifted_multicast
+from rxbp.multicast.mixins.toflowablemixin import ToFlowableMixin
 from rxbp.multicast.multicast import MultiCast
-from rxbp.multicast.multicasts.liftmulticast import LiftMultiCast
+from rxbp.multicast.multicasts.fromiterablemulticast import FromIterableMultiCast
 from rxbp.multicast.typing import MultiCastElemType
 
 
 class NotLiftedMultiCast(
+    ToFlowableMixin,
     MultiCast[MultiCastElemType],
     Generic[MultiCastElemType],
     ABC,
@@ -16,11 +18,12 @@ class NotLiftedMultiCast(
             self,
     ):
         return self._copy(
-            underlying=LiftMultiCast(
-                source=init_lifted_multicast(
+            underlying=FromIterableMultiCast(
+                values=[init_lifted_multicast(
                     underlying=self,
-                    nested_layer=self.nested_layer,
-                ).share(),
+                    lift_index=self.lift_index,
+                ).share()],
+                scheduler_index=self.lift_index + 1,
             ),
-            nested_layer=self.nested_layer + 1,
+            lift_index=self.lift_index + 1,
         )

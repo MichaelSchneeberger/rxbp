@@ -11,7 +11,7 @@ from rxbp.scheduler import Scheduler
 @dataclass
 class LiftMultiCastObservable(MultiCastObservable):
     source: MultiCastMixin
-    multicast_scheduler: Scheduler
+    # multicast_scheduler: Scheduler
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         def action(_, __):

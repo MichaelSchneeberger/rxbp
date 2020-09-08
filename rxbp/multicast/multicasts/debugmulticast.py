@@ -33,7 +33,6 @@ class DebugMultiCast(MultiCastMixin):
                 on_error=self.on_error,
                 on_completed=self.on_completed,
                 on_observe=self.on_observe,
-                multicast_scheduler=subscriber.multicast_scheduler,
                 on_dispose=self.on_dispose,
                 stack=self.stack,
             ),

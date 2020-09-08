@@ -14,7 +14,7 @@ from rxbp.scheduler import Scheduler
 @dataclass
 class MergeMultiCastObservable(MultiCastObservable):
     sources: Iterable[MultiCastObservable]
-    scheduler: Scheduler
+    # scheduler: Scheduler
 
     def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
         group = CompositeDisposable()

@@ -34,11 +34,11 @@ class RefCountMultiCastObservable(Observable):
             current_cound = self.count
 
         if current_cound == 1:
-            if self.multicast_scheduler.idle:
-                raise Exception(to_operator_exception(
-                    message='observe method call should be scheduled on multicast scheduler',
-                    stack=self.stack,
-                ))
+            # if self.multicast_scheduler.idle:
+            #     raise Exception(to_operator_exception(
+            #         message='observe method call should be scheduled on multicast scheduler',
+            #         stack=self.stack,
+            #     ))
 
             def action(_, __):
                 self.scheduled_next = True
@@ -48,12 +48,12 @@ class RefCountMultiCastObservable(Observable):
             subject_subscription = observer_info.copy(observer=self.subject)
             self.first_disposable = self.source.observe(subject_subscription)
 
-        else:
-            if self.scheduled_next:
-                raise Exception(to_operator_exception(
-                    message='subsequent subscribe call has been delayed, make sure to not delay MultiCasts subscriptions',
-                    stack=self.stack,
-                ))
+        # else:
+        #     if self.scheduled_next:
+        #         raise Exception(to_operator_exception(
+        #             message='subsequent subscribe call has been delayed, make sure to not delay MultiCasts subscriptions',
+        #             stack=self.stack,
+        #         ))
 
         def dispose():
             disposable.dispose()

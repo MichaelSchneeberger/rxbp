@@ -91,7 +91,7 @@ class FlatConcatNoBackpressureObserver(Observer):
             for _ in obs_list:
                 conn_observer = ConnectableObserver(
                     underlying=self.inner_observer,
-                    scheduler=self.scheduler,
+                    # scheduler=self.scheduler,
                 )
                 yield conn_observer
 
@@ -113,19 +113,16 @@ class FlatConcatNoBackpressureObserver(Observer):
         other_conn_observers = conn_observers[1:]
 
         # def observe_on_subscribe_scheduler(_, __):
-        try:
-            disposable = first_obs.observe(init_observer_info(
-                observer=first_conn_observer,
+        disposable = first_obs.observe(init_observer_info(
+            observer=first_conn_observer,
+        ))
+        self.composite_disposable.add(disposable)
+
+        for obs, conn_observer in zip(other_obs, other_conn_observers):
+            disposable = obs.observe(init_observer_info(
+                observer=conn_observer,
             ))
             self.composite_disposable.add(disposable)
-
-            for obs, conn_observer in zip(other_obs, other_conn_observers):
-                disposable = obs.observe(init_observer_info(
-                    observer=conn_observer,
-                ))
-                self.composite_disposable.add(disposable)
-        except Exception as exc:
-            self.next_observer.on_error(exc)
 
         # if self.subscribe_scheduler.idle:
         #     disposable = self.subscribe_scheduler.schedule(observe_on_subscribe_scheduler)

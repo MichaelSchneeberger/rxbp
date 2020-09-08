@@ -25,6 +25,7 @@ class SafeMultiCastSubject(
     Generic[MultiCastElemType],
 ):
     composite_diposable: CompositeDisposable
+    multicast_scheduler: Scheduler
     source_scheduler: Scheduler
 
     def __post_init__(self):
@@ -58,18 +59,23 @@ class SafeMultiCastSubject(
             observable=self.subject,
         )
 
-    def subscribe_to(self, source: MultiCast, scheduler: Scheduler = None):
-        scheduler = scheduler or self.source_scheduler
+    def subscribe_to(self, source: MultiCast):
+        def source_action(_, __):
+            def multicast_action(_, __):
+                subscription = source.unsafe_subscribe(MultiCastSubscriber(
+                    source_scheduler=self.source_scheduler,
+                    multicast_scheduler=self.multicast_scheduler,
+                ))
 
-        subscription = source.unsafe_subscribe(MultiCastSubscriber(
-            source_scheduler=scheduler,
-            multicast_scheduler=scheduler,
-        ))
+                disposable = subscription.observable.observe(MultiCastObserverInfo(
+                    observer=self,
+                ))
+                return disposable
+                # self.composite_diposable.add(disposable)
 
-        disposable = subscription.observable.observe(MultiCastObserverInfo(
-            observer=self,
-        ))
+            return self.multicast_scheduler.schedule(multicast_action)
 
+        disposable = self.source_scheduler.schedule(source_action)
         self.composite_diposable.add(disposable)
 
     def on_next(self, val):
@@ -77,7 +83,10 @@ class SafeMultiCastSubject(
             self.is_first = False
 
             def action(_, __):
-                self.subject.on_next([val])
+                try:
+                    self.subject.on_next([val])
+                except Exception as exc:
+                    self.subject.on_error(exc)
 
             self.source_scheduler.schedule(action)
 
@@ -91,6 +100,9 @@ class SafeMultiCastSubject(
             self.is_stopped = True
 
             def action(_, __):
-                self.subject.on_completed()
+                try:
+                    self.subject.on_completed()
+                except Exception as exc:
+                    self.subject.on_error(exc)
 
             self.source_scheduler.schedule(action)

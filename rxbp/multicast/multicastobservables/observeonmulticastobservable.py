@@ -15,11 +15,13 @@ from rxbp.scheduler import Scheduler
 class ObserveOnMultiCastObservable(MultiCastObservable):
     source: MultiCastObservable
     scheduler: Scheduler
+    source_scheduler: Scheduler
 
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         return self.source.observe(observer_info.copy(
             observer=ObserveOnMultiCastObserver(
                 next_observer=observer_info.observer,
                 scheduler=self.scheduler,
+                source_scheduler=self.source_scheduler,
             )
         ))

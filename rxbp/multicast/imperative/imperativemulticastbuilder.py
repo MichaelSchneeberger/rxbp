@@ -15,6 +15,7 @@ from rxbp.scheduler import Scheduler
 class ImperativeMultiCastBuilder:
     composite_disposable: CompositeDisposable
     source_scheduler: Scheduler
+    multicast_scheduler: Scheduler
 
     def __post_init__(self):
         self.subjects = []
@@ -23,6 +24,7 @@ class ImperativeMultiCastBuilder:
         subject = SafeMultiCastSubject(
             composite_diposable=self.composite_disposable,
             source_scheduler=self.source_scheduler,
+            multicast_scheduler=self.multicast_scheduler,
         )
         self.subjects.append(subject)
         return subject

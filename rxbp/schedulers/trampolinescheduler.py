@@ -2,6 +2,7 @@ import datetime
 import logging
 import threading
 import time
+import traceback
 from typing import Optional
 
 from rx.core import typing
@@ -113,6 +114,8 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
             while True:
                 try:
                     TrampolineScheduler.Trampoline.run(self.queue)
+                except:
+                    traceback.print_exc()
                 finally:
                     with self.lock:
                         if not self.queue:

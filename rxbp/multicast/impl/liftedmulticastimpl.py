@@ -1,4 +1,4 @@
-from dataclasses import replace
+import dataclasses
 
 from dataclass_abc import dataclass_abc
 
@@ -9,12 +9,8 @@ from rxbp.multicast.typing import MultiCastElemType
 
 @dataclass_abc
 class LiftedMultiCastImpl(LiftedMultiCast[MultiCastElemType]):
-    # is_hot_on_subscribe: bool
-    nested_layer: int
     underlying: MultiCastMixin
+    lift_index: int
 
-    def _copy(self, underlying: MultiCastMixin, **kwargs):
-        # if underlying is not None:
-        #     kwargs['underlying'] = underlying
-
-        return replace(self, underlying=underlying, **kwargs)
+    def _copy(self, **kwargs):
+        return dataclasses.replace(self, **kwargs)

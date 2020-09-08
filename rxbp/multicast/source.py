@@ -22,7 +22,9 @@ def empty():
     create a MultiCast emitting no elements
     """
 
-    return init_multicast(EmptyMultiCast())
+    return init_multicast(EmptyMultiCast(
+        scheduler_index=1,
+    ))
 
 
 def build_imperative_multicast(
@@ -33,8 +35,10 @@ def build_imperative_multicast(
         def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
 
             def on_completed():
-                for subject in imperative_call.subjects:
-                    subject.on_completed()
+                def action(_, __):
+                    for subject in imperative_call.subjects:
+                        subject.on_completed()
+                subscriber.source_scheduler.schedule(action)
 
             def on_error(exc: Exception):
                 for subject in imperative_call.subjects:
@@ -45,6 +49,7 @@ def build_imperative_multicast(
             builder = ImperativeMultiCastBuilder(
                 composite_disposable=composite_disposable_,
                 source_scheduler=subscriber.source_scheduler,
+                multicast_scheduler=subscriber.multicast_scheduler,
             )
 
             imperative_call = func(builder)
@@ -71,7 +76,10 @@ def return_value(value: Any):
     :param val: The single element emitted by the MultiCast
     """
 
-    return init_multicast(FromIterableMultiCast([value]))
+    return init_multicast(FromIterableMultiCast(
+        values=[value],
+        scheduler_index=1,
+    ))
 
 
 def from_iterable(values: Iterable[Any]):

@@ -17,6 +17,6 @@ class MergeMultiCast(MultiCastMixin):
         return subscriptions[0].copy(
             observable=MergeMultiCastObservable(
                 sources=[s.observable for s in subscriptions],
-                scheduler=subscriber.multicast_scheduler,
+                # scheduler=subscriber.multicast_scheduler,
             ),
         )

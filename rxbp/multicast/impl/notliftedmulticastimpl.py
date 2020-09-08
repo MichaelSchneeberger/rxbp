@@ -9,12 +9,8 @@ from rxbp.multicast.typing import MultiCastElemType
 
 @dataclass_abc
 class NotLiftedMultiCastImpl(NotLiftedMultiCast[MultiCastElemType]):
-    # is_hot_on_subscribe: bool
-    nested_layer: int
     underlying: MultiCastMixin
+    lift_index: int
 
-    def _copy(self, underlying: MultiCastMixin = None, **kwargs):
-        # if underlying is not None:
-        #     kwargs['underlying'] = underlying
-
-        return dataclasses.replace(self, underlying=underlying, **kwargs)
+    def _copy(self, **kwargs):
+        return dataclasses.replace(self, **kwargs)

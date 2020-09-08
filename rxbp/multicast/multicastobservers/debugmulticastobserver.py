@@ -4,6 +4,7 @@ from typing import Callable, Any, List
 
 from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.typing import MultiCastItem
+from rxbp.scheduler import Scheduler
 from rxbp.utils.tooperatorexception import to_operator_exception
 
 
@@ -14,14 +15,12 @@ class DebugMultiCastObserver(MultiCastObserver):
     on_completed_func: Callable[[], None]
     on_error_func: Callable[[Exception], None]
     stack: List[FrameSummary]
-
-    # def __post_init__(self):
-    #     self.has_scheduled_next = False
+    # source_scheduler: Scheduler
 
     def on_next(self, item: MultiCastItem) -> None:
-        # if not self.has_scheduled_next:
+        # if self.source_scheduler.idle:
         #     raise Exception(to_operator_exception(
-        #         message='Element received before subscribe scheduler advanced',
+        #         message='source scheduler should be active',
         #         stack=self.stack,
         #     ))
 

@@ -11,6 +11,7 @@ from rxbp.typing import ElementType
 class ObserveOnMultiCastObserver(MultiCastObserver):
     next_observer: MultiCastObserver
     scheduler: Scheduler
+    source_scheduler: Scheduler
 
     def __post_init__(self):
         self.trampoline = TrampolineScheduler()
@@ -43,7 +44,9 @@ class ObserveOnMultiCastObserver(MultiCastObserver):
                 return
 
         def action(_, __):
-            self.next_observer.on_next(elem)
+            def subscribe_action(_, __):
+                self.next_observer.on_next(elem)
+            self.source_scheduler.schedule(subscribe_action)
 
         self.schedule_func(action)
         return ack_subject
@@ -53,6 +56,8 @@ class ObserveOnMultiCastObserver(MultiCastObserver):
 
     def on_completed(self):
         def action(_, __):
-            self.next_observer.on_completed()
+            def subscribe_action(_, __):
+                self.next_observer.on_completed()
+            self.source_scheduler.schedule(subscribe_action)
 
         self.schedule_func(action)

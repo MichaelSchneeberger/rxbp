@@ -1,9 +1,7 @@
-from dataclasses import dataclass
+from abc import ABC
 
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
+from rxbp.multicast.mixins.multicastsubscribermixin import MultiCastSubscriberMixin
 
 
-@dataclass
-class MultiCastSubscriber:
-    source_scheduler: TrampolineScheduler
-    multicast_scheduler: TrampolineScheduler
+class MultiCastSubscriber(MultiCastSubscriberMixin, ABC):
+    pass

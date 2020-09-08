@@ -15,7 +15,8 @@ from rxbp.utils.tooperatorexception import to_operator_exception
 @dataclass
 class DebugMultiCastObservable(MultiCastObservable):
     source: MultiCastObservable
-    multicast_scheduler: Scheduler
+    # multicast_scheduler: Scheduler
+    # source_scheduler: Scheduler
     name: str
     on_next: Callable[[Any], None]
     on_completed: Callable[[], None]
@@ -27,11 +28,11 @@ class DebugMultiCastObservable(MultiCastObservable):
     def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
         self.on_observe(observer_info)
 
-        if self.multicast_scheduler.idle:
-            raise Exception(to_operator_exception(
-                message='observe method call should be scheduled on multicast scheduler',
-                stack=self.stack,
-            ))
+        # if self.multicast_scheduler.idle:
+        #     raise Exception(to_operator_exception(
+        #         message='observe method call should be scheduled on multicast scheduler',
+        #         stack=self.stack,
+        #     ))
 
         observer = DebugMultiCastObserver(
             source=observer_info.observer,
@@ -39,6 +40,7 @@ class DebugMultiCastObservable(MultiCastObservable):
             on_completed_func=self.on_completed,
             on_error_func=self.on_error,
             stack=self.stack,
+            # source_scheduler=self.source_scheduler,
         )
 
         # def action(_, __):

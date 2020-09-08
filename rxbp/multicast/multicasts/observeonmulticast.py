@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.multicastobservables.observeonmulticastobservable import ObserveOnMultiCastObservable
@@ -10,15 +11,18 @@ from rxbp.scheduler import Scheduler
 @dataclass
 class ObserveOnMultiCast(MultiCastMixin):
     source: MultiCastMixin
-    scheduler: Scheduler
+    scheduler: Optional[Scheduler]
 
     def unsafe_subscribe(
             self,
             subscriber: MultiCastSubscriber,
     ) -> MultiCastSubscription:
+        scheduler = self.scheduler or subscriber.source_scheduler
+
         subscription = self.source.unsafe_subscribe(subscriber=subscriber)
         return subscription.copy(observable=ObserveOnMultiCastObservable(
             source=subscription.observable,
-            scheduler=self.scheduler,
+            scheduler=scheduler,
+            source_scheduler=subscriber.source_scheduler,
         ))
 

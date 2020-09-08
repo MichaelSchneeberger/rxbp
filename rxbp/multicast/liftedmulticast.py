@@ -1,11 +1,9 @@
 import functools
 from abc import ABC
-from traceback import FrameSummary
-from typing import Generic, Callable, Any, List
+from typing import Generic
 
 from rxbp.multicast.multicast import MultiCast
 from rxbp.multicast.multicastoperator import MultiCastOperator
-from rxbp.multicast.multicasts.sharedmulticast import SharedMultiCast
 from rxbp.multicast.typing import MultiCastElemType
 from rxbp.utils.getstacklines import get_stack_lines
 

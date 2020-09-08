@@ -13,6 +13,8 @@ class ObserveOnFlowable(FlowableMixin):
 
     def unsafe_subscribe(self, subscriber: Subscriber):
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = ObserveOnObservable(source=subscription.observable, scheduler=self._scheduler)
 
-        return init_subscription(subscription.info, observable=observable)
+        return subscription.copy(observable=ObserveOnObservable(
+            source=subscription.observable,
+            scheduler=self._scheduler,
+        ))

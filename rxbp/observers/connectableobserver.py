@@ -14,7 +14,7 @@ from rxbp.typing import ElementType
 @dataclass
 class ConnectableObserver(Observer):
     underlying: Observer
-    scheduler: Scheduler        # todo: remote this
+    # scheduler: Scheduler        # todo: remote this
 
     def __post_init__(self):
         self.root_ack = AckSubject()

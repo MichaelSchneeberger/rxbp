@@ -25,7 +25,6 @@ class FlatMergeNoBackpressureObservable(Observable):
                 selector=self.selector,
                 scheduler=self.scheduler,
                 subscribe_scheduler=self.subscribe_scheduler,
-                observer_info=observer_info,
                 composite_disposable=composite_disposable,
             ),
         ))

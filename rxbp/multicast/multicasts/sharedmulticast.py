@@ -22,12 +22,13 @@ class SharedMultiCast(MultiCastMixin):
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         with self.lock:
             if self.subscription is None:
+                multicast_scheduler = subscriber.subscribe_schedulers[-1]
                 subscription = self.source.unsafe_subscribe(subscriber=subscriber)
                 self.subscription = subscription.copy(
                     observable=RefCountMultiCastObservable(
                         source=subscription.observable,
                         subject=MultiCastObservableSubject(),
-                        multicast_scheduler=subscriber.multicast_scheduler,
+                        multicast_scheduler=multicast_scheduler,
                         stack=self.stack,
                     )
                 )

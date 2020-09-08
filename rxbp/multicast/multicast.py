@@ -2,18 +2,16 @@ import functools
 from abc import ABC, abstractmethod
 from typing import Generic
 
-from rxbp.multicast.mixins.liftedmulticastmixin import LiftedMultiCastMixin
+from rxbp.multicast.mixins.liftindexmulticastmixin import LiftIndexMultiCastMixin
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.mixins.multicastopmixin import MultiCastOpMixin
-from rxbp.multicast.mixins.toflowablemixin import ToFlowableMixin
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.typing import MultiCastElemType
 
 
 class MultiCast(
-    LiftedMultiCastMixin,
+    LiftIndexMultiCastMixin,
     MultiCastOpMixin,
-    ToFlowableMixin,
     MultiCastMixin,
     Generic[MultiCastElemType],
     ABC,

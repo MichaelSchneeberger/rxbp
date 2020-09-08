@@ -22,8 +22,8 @@ class JoinFlowablesMultiCast(MultiCastMixin):
         return init_multicast_subscription(
             observable=JoinFlowableMultiCastObservable(
                 sources=list(gen_observables()),
-                multicast_scheduler=subscriber.multicast_scheduler,
-                source_scheduler=subscriber.source_scheduler,
+                subscriber=subscriber,
+                source_scheduler=subscriber.subscribe_schedulers[0],
                 stack=self.stack,
             ),
         )

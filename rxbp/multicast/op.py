@@ -3,7 +3,7 @@ from typing import Callable, Any
 import rx
 
 from rxbp.multicast.init.initmulticast import init_multicast
-from rxbp.multicast.mixins.liftedmulticastmixin import LiftedMultiCastMixin
+from rxbp.multicast.mixins.liftindexmulticastmixin import LiftIndexMultiCastMixin
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.multicast.mixins.multicastopmixin import MultiCastOpMixin
 from rxbp.multicast.multicast import MultiCast
@@ -11,6 +11,7 @@ from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
 from rxbp.multicast.multicastoperator import MultiCastOperator
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.typing import MultiCastItem
+from rxbp.scheduler import Scheduler
 from rxbp.typing import ValueType
 from rxbp.utils.getstacklines import get_stack_lines
 
@@ -265,26 +266,26 @@ def merge(*others: MultiCast):
     """
 
     def op_func(source: MultiCast):
-        lifted_sources = [source for source in (source, *others) if isinstance(source, LiftedMultiCastMixin)]
+        # lifted_sources = [source for source in (source, *others) if isinstance(source, LiftIndexMultiCastMixin)]
 
-        if 1 < len(lifted_sources):
-            assert all(lifted_sources[0].nested_layer == other.nested_layer for other in lifted_sources[1:]), \
-                f'layers do not match {[source.nested_layer for source in lifted_sources]}'
+        # if 1 < len(lifted_sources):
+        #     assert all(lifted_sources[0].lift_index == other.lift_index for other in lifted_sources[1:]), \
+        #         f'layers do not match {[source.lift_index for source in lifted_sources]}'
 
         return source.merge(*others)
 
     return MultiCastOperator(op_func)
 
 
-def observe_on(scheduler: rx.typing.Scheduler):
-    """
-    Schedule elements emitted by the source on a dedicated scheduler
-    """
-
-    def op_func(source: MultiCast):
-        return source.observe_on(scheduler=scheduler)
-
-    return MultiCastOperator(op_func)
+# def observe_on(scheduler: Scheduler = None):
+#     """
+#     Schedule elements emitted by the source on a dedicated scheduler
+#     """
+#
+#     def op_func(source: MultiCast):
+#         return source.observe_on(scheduler=scheduler)
+#
+#     return MultiCastOperator(op_func)
 
 
 def share(

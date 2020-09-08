@@ -11,9 +11,11 @@ from rxbp.multicast.multicastsubscription import MultiCastSubscription
 @dataclass
 class FromIterableMultiCast(MultiCastMixin):
     values: Iterable[Any]
+    scheduler_index: int
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
         return init_multicast_subscription(FromIterableObservable(
             values=self.values,
-            subscribe_scheduler=subscriber.multicast_scheduler,
+            subscriber=subscriber,
+            scheduler_index=self.scheduler_index,
         ))

@@ -14,6 +14,7 @@ from rxbp.multicast.init.initmulticastobserverinfo import init_multicast_observe
 from rxbp.multicast.multicastobservable import MultiCastObservable
 from rxbp.multicast.multicastobserver import MultiCastObserver
 from rxbp.multicast.multicastobserverinfo import MultiCastObserverInfo
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.observer import Observer
 from rxbp.observers.connectableobserver import ConnectableObserver
 from rxbp.scheduler import Scheduler
@@ -23,7 +24,7 @@ from rxbp.typing import ElementType
 @dataclass
 class JoinFlowableMultiCastObservable(MultiCastObservable):
     sources: List[MultiCastObservable]
-    multicast_scheduler: Scheduler
+    subscriber: MultiCastSubscriber
     source_scheduler: Scheduler
     stack: List[FrameSummary]
 
@@ -34,7 +35,7 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                 # buffers elements received before outgoing Flowable is subscribed
                 conn_observer = ConnectableObserver(
                     underlying=None,
-                    scheduler=self.multicast_scheduler,
+                    # scheduler=self.multicast_scheduler,
                 )
 
                 @dataclass
@@ -52,7 +53,7 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                     def on_completed(self):
                         self.underlying.on_completed()
 
-                assert not self.multicast_scheduler.idle
+                # assert not self.multicast_scheduler.idle
 
                 disposable = source.observe(
                     observer_info=init_multicast_observer_info(
@@ -89,6 +90,8 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                     stack=self.stack,
                 ))
 
+        flowables = list(gen_conn_flowables())
+
         def action(_, __):
             try:
                 observer_info.observer.on_next([flowables])
@@ -96,9 +99,6 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
             except Exception as exc:
                 observer_info.observer.on_error(exc)
 
-        # immediately emit a list of flowables representing the joined flowables
-        disposable = self.multicast_scheduler.schedule(action)
-
-        flowables = list(gen_conn_flowables())
+        disposable = self.subscriber.subscribe_schedulers[1].schedule(action)
 
         return disposable
