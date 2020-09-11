@@ -59,7 +59,7 @@ def build_imperative_multicast(
                     on_completed=on_completed,
                     on_error=on_error,
                 ),
-            ).materialize()
+            ).materialize().share()
 
             return imperative_call.output_selector(
                 flowable,
@@ -113,7 +113,7 @@ def from_flowable(
     Create a MultiCast that emit each element received by the Flowable.
     """
 
-    return init_multicast(FromFlowableMultiCast())
+    return init_multicast(FromFlowableMultiCast(source=source))
 
 
 def merge(

@@ -51,7 +51,7 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                     def on_next(self, elem: ElementType):
                         if not outer_self.is_sent:
 
-                            self.is_sent = True
+                            outer_self.is_sent = True
                             try:
                                 observer_info.observer.on_next([flowables])
                                 observer_info.observer.on_completed()

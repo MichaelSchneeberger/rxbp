@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from rxbp.flowable import Flowable
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.multicast.init.initmulticastsubscription import init_multicast_subscription
@@ -7,6 +9,7 @@ from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
 
 
+@dataclass
 class FromFlowableMultiCast(MultiCastMixin):
     source: Flowable
 
