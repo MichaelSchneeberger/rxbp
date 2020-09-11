@@ -36,7 +36,7 @@ class FirstOrDefaultObserver(Observer):
     def on_completed(self):
         if self.is_first:
             try:
-                self.observer.on_next(self.lazy_val())
+                self.observer.on_next([self.lazy_val()])
                 self.observer.on_completed()
             except Exception as exc:
                 self.observer.on_error(exc)

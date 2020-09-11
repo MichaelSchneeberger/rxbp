@@ -24,9 +24,6 @@ class FirstObserver(Observer):
             first_elem = next(iter(elem))
         except StopIteration:
             return continue_ack
-        except Exception as exc:
-            self.on_error(exc)
-            return
 
         self.is_first = False
         self.observer.on_next([first_elem])

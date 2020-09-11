@@ -20,6 +20,9 @@ class MultiCastSubscriberMixin(ABC):
         if index is None:
             index = len(self.subscribe_schedulers) - 1
 
+        else:
+            assert index < len(self.subscribe_schedulers), f'index "{index}" is out of range of "{len(self.subscribe_schedulers)}"'
+
         def inner_schedule_action(
                 action: Callable[[], Optional[rx.typing.Disposable]],
                 current_index: int,
@@ -35,12 +38,13 @@ class MultiCastSubscriberMixin(ABC):
                         action=action,
                     )
 
-            if self.subscribe_schedulers[current_index].idle:
-                disposable = self.subscribe_schedulers[current_index].schedule(inner_action)
-                return disposable
+            with self.subscribe_schedulers[current_index].lock:
+                if self.subscribe_schedulers[current_index].idle:
+                    disposable = self.subscribe_schedulers[current_index].schedule(inner_action)
+                    return disposable
 
-            else:
-                return inner_action(None, None)
+                else:
+                    return inner_action(None, None)
 
         return inner_schedule_action(
             current_index=0,

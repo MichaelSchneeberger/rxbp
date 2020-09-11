@@ -14,12 +14,9 @@ class DefaultIfEmptyMultiCastObservable(MultiCastObservable):
     lazy_val: Callable[[], Any]
 
     def observe(self, observer_info: MultiCastObserverInfo) -> rx.typing.Disposable:
-
-
         return self.source.observe(observer_info.copy(
             observer=DefaultIfEmptyMultiCastObserver(
                 source=observer_info.observer,
                 lazy_val=self.lazy_val,
-                found=False,
             )
         ))

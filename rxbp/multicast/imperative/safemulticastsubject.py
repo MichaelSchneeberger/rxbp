@@ -25,8 +25,9 @@ class SafeMultiCastSubject(
     Generic[MultiCastElemType],
 ):
     composite_diposable: CompositeDisposable
-    multicast_scheduler: Scheduler
-    source_scheduler: Scheduler
+    subscriber: MultiCastSubscriber
+    # multicast_scheduler: Scheduler
+    # source_scheduler: Scheduler
 
     def __post_init__(self):
         self.is_first = True
@@ -34,61 +35,60 @@ class SafeMultiCastSubject(
         self.subject = MultiCastObservableSubject()
 
     @property
-    def nested_layer(self) -> int:
-        return 0
+    def lift_index(self) -> int:
+        return 1
 
     @property
     def underlying(self) -> MultiCastMixin:
         return self
 
-    @property
-    def is_hot_on_subscribe(self) -> bool:
-        return True
-
     @classmethod
-    def _copy(cls, multi_cast: MultiCastMixin):
-        return init_multicast(multi_cast)
+    def _copy(cls, underlying: MultiCastMixin):
+        return init_multicast(underlying)
 
     def unsafe_subscribe(self, subscriber: MultiCastSubscriber) -> MultiCastSubscription:
-        assert self.is_first and not self.is_stopped, (
-            f'subject not initial state when `get_source` is called, '
-            f'consider to schedule the `on_next` action  with {self.source_scheduler}'
-        )
+        # assert self.is_first and not self.is_stopped, (
+        #     f'subject not initial state when `get_source` is called, '
+        #     f'consider to schedule the `on_next` action  with {self.source_scheduler}'
+        # )
 
         return init_multicast_subscription(
             observable=self.subject,
         )
 
-    def subscribe_to(self, source: MultiCast):
-        def source_action(_, __):
-            def multicast_action(_, __):
-                subscription = source.unsafe_subscribe(MultiCastSubscriber(
-                    source_scheduler=self.source_scheduler,
-                    multicast_scheduler=self.multicast_scheduler,
-                ))
-
-                disposable = subscription.observable.observe(MultiCastObserverInfo(
-                    observer=self,
-                ))
-                return disposable
-                # self.composite_diposable.add(disposable)
-
-            return self.multicast_scheduler.schedule(multicast_action)
-
-        disposable = self.source_scheduler.schedule(source_action)
-        self.composite_diposable.add(disposable)
+    # def subscribe_to(self, source: MultiCast):
+    #     def source_action(_, __):
+    #         def multicast_action(_, __):
+    #             subscription = source.unsafe_subscribe(MultiCastSubscriber(
+    #                 source_scheduler=self.source_scheduler,
+    #                 multicast_scheduler=self.multicast_scheduler,
+    #             ))
+    #
+    #             disposable = subscription.observable.observe(MultiCastObserverInfo(
+    #                 observer=self,
+    #             ))
+    #             return disposable
+    #             # self.composite_diposable.add(disposable)
+    #
+    #         return self.multicast_scheduler.schedule(multicast_action)
+    #
+    #     disposable = self.source_scheduler.schedule(source_action)
+    #     self.composite_diposable.add(disposable)
 
     def on_next(self, val):
         if not self.is_stopped:
             self.is_first = False
 
-            def action(_, __):
+            def action():
                 try:
                     self.subject.on_next([val])
                 except Exception as exc:
                     self.subject.on_error(exc)
 
-            self.source_scheduler.schedule(action)
+            self.subscriber.schedule_action(
+                action=action,
+                index=1,
+            )
 
     def on_error(self, exc):
         if not self.is_stopped:
@@ -99,10 +99,13 @@ class SafeMultiCastSubject(
         if not self.is_stopped:
             self.is_stopped = True
 
-            def action(_, __):
+            def action():
                 try:
                     self.subject.on_completed()
                 except Exception as exc:
                     self.subject.on_error(exc)
 
-            self.source_scheduler.schedule(action)
+            self.subscriber.schedule_action(
+                action=action,
+                index=1,
+            )

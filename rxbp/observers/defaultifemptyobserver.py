@@ -2,6 +2,7 @@ import types
 from dataclasses import dataclass
 from typing import Callable, Any
 
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
@@ -15,11 +16,19 @@ class DefaultIfEmptyObserver(Observer):
         self.is_first = True
 
     def on_next(self, elem: ElementType):
+        if isinstance(elem, list):
+            materialized = elem
+        else:
+            materialized = list(elem)
+
+        if len(materialized) == 0:
+            return continue_ack
+
         self.is_first = False
 
         self.on_next = types.MethodType(lambda _, v: self.source.on_next(v), self)  # type: ignore
 
-        return self.source.on_next(elem)
+        return self.source.on_next(materialized)
 
     def on_error(self, exc):
         return self.source.on_error(exc)

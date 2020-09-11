@@ -23,18 +23,13 @@ class LastObserver(Observer):
     def on_next(self, elem: ElementType):
 
         if isinstance(elem, list):
-            elem_list = elem
-
+            materialized = elem
         else:
-            try:
-                elem_list = list(elem)
-            except Exception as exc:
-                self.observer.on_error(exc)
-                return stop_ack
+            materialized = list(elem)
 
-        if 0 < len(elem_list):
+        if 0 < len(materialized):
             self.has_value = True
-            self.last_value = elem_list[-1]
+            self.last_value = materialized[-1]
 
         return continue_ack
 

@@ -25,9 +25,14 @@ class FromRxBufferingObservable(Observable):
             buffer_size=self.buffer_size,
         )
 
-        return self.batched_source.subscribe(
-            on_next=observer.on_next,
-            on_error=observer.on_error,
-            on_completed=observer.on_completed,
-            scheduler=self.scheduler,
-        )
+        def action(_, __):
+            return self.batched_source.subscribe(
+                on_next=observer.on_next,
+                on_error=observer.on_error,
+                on_completed=observer.on_completed,
+                scheduler=self.scheduler,
+            )
+
+        # delay subscription of rx Observable to guarantee that first element is send
+        # after the subscription process
+        return self.subscribe_scheduler.schedule(action)

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Generic, List
 
 from rx.disposable import CompositeDisposable
@@ -18,19 +19,16 @@ from rxbp.subscription import Subscription
 from rxbp.typing import ValueType
 
 
+@dataclass
 class SafeFlowableSubject(
     Flowable[ValueType],
     Observer,
     Generic[ValueType],
 ):
-    def __init__(
-            self,
-            composite_diposable: CompositeDisposable,
-            scheduler: Scheduler,
-    ):
-        self.composite_diposable = composite_diposable
-        self.scheduler = scheduler
+    composite_diposable: CompositeDisposable
+    scheduler: Scheduler
 
+    def __post_init__(self):
         self.is_first = True
         self.is_stopped = False
         self.subscribe_scheduler = TrampolineScheduler()
@@ -48,14 +46,13 @@ class SafeFlowableSubject(
     def _copy(self, underlying: FlowableMixin, *args, **kwargs):
         return init_flowable(
             underlying=underlying,
-            is_shared=True,
         )
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
-        assert self.is_first and not self.is_stopped, (
-            f'subject not initial state when `subscribe` is called, '
-            f'consider to schedule the `on_next` action  with {self.scheduler}'
-        )
+        # assert self.is_first and not self.is_stopped, (
+        #     f'subject not initial state when `subscribe` is called, '
+        #     f'consider to schedule the `on_next` action  with {self.scheduler}'
+        # )
 
         if self._observable_subject is None:
             self._observable_subject = CacheServeFirstObservableSubject(scheduler=subscriber.scheduler)

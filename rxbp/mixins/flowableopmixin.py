@@ -292,7 +292,7 @@ class FlowableOpMixin(
 
         return to_rx(source=self, batched=batched)
 
-    def zip(self, *others: 'FlowableOpMixin'):
+    def zip(self, others: Tuple['FlowableOpMixin'], stack: List[FrameSummary]):
 
         assert all(isinstance(source, FlowableMixin) for source in others), \
             f'"{others}" must all be of type FlowableMixin'
@@ -312,7 +312,11 @@ class FlowableOpMixin(
                                 return (t[0],) + t[1]
 
                             flowable = MapFlowable(
-                                source=ZipFlowable(left=left, right=right),
+                                source=ZipFlowable(
+                                    left=left,
+                                    right=right,
+                                    stack=stack,
+                                ),
                                 func=inner_result_selector,
                             )
                             return flowable

@@ -5,7 +5,7 @@ from typing import Callable, List
 from rxbp.multicast.init.initmulticastsubscriber import init_multicast_subscriber
 from rxbp.multicast.mixins.liftindexmulticastmixin import LiftIndexMultiCastMixin
 from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
-from rxbp.multicast.mixins.toflowablemixin import ToFlowableMixin
+from rxbp.multicast.mixins.notliftedmulticastmixin import NotLiftedMultiCastMixin
 from rxbp.multicast.multicastobservables.flatmapmulticastobservable import FlatMapMultiCastObservable
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.multicastsubscription import MultiCastSubscription
@@ -32,11 +32,7 @@ class FlatMapMultiCast(MultiCastMixin):
                     stack=self.stack,
                 ))
 
-            if isinstance(multicast, ToFlowableMixin):
-                inner_subscriber = None
-                subscription = multicast.unsafe_subscribe(subscriber=subscriber)
-
-            else:
+            if isinstance(multicast, NotLiftedMultiCastMixin):
                 diff_schedulers = multicast.lift_index + 1 - len(subscriber.subscribe_schedulers)
                 if 0 < diff_schedulers:
                     def gen_subscribe_schedulers():
@@ -44,7 +40,7 @@ class FlatMapMultiCast(MultiCastMixin):
                             yield TrampolineScheduler()
 
                     inner_subscriber = init_multicast_subscriber(
-                        subscribe_schedulers=tuple(subscriber.subscribe_schedulers + gen_subscribe_schedulers()),
+                        subscribe_schedulers=subscriber.subscribe_schedulers + tuple(gen_subscribe_schedulers()),
                     )
 
                 elif diff_schedulers < 0:
@@ -56,6 +52,10 @@ class FlatMapMultiCast(MultiCastMixin):
                     inner_subscriber = subscriber
 
                 subscription = multicast.unsafe_subscribe(subscriber=inner_subscriber)
+
+            else:
+                inner_subscriber = None
+                subscription = multicast.unsafe_subscribe(subscriber=subscriber)
 
             return subscription.observable, inner_subscriber
 

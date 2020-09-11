@@ -1,3 +1,4 @@
+import types
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -9,11 +10,24 @@ from rxbp.multicast.typing import MultiCastItem
 class DefaultIfEmptyMultiCastObserver(MultiCastObserver):
     source: MultiCastObserver
     lazy_val: Callable[[], Any]
-    found: bool
+
+    def __post_init__(self):
+        self.found = False
 
     def on_next(self, item: MultiCastItem) -> None:
+        if isinstance(item, list):
+            materialized = item
+        else:
+            materialized = list(item)
+
+        if len(materialized) == 0:
+            return
+
         self.found = True
-        self.source.on_next(item)
+
+        self.on_next = types.MethodType(lambda _, v: self.source.on_next(v), self)  # type: ignore
+
+        self.source.on_next(materialized)
 
     def on_error(self, exc: Exception) -> None:
         self.source.on_error(exc)

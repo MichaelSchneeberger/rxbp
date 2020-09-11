@@ -7,7 +7,7 @@ from rxbp.multicast.mixins.multicastmixin import MultiCastMixin
 from rxbp.typing import ValueType
 
 
-class ToFlowableMixin(MultiCastMixin, ABC):
+class NotLiftedMultiCastMixin(MultiCastMixin, ABC):
     def to_flowable(self) -> Flowable[ValueType]:
         return init_flowable(FromMultiCastFlowable(
             source=self,

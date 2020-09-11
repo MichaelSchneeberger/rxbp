@@ -28,6 +28,9 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
     source_scheduler: Scheduler
     stack: List[FrameSummary]
 
+    def __post_init__(self):
+        self.is_sent = False
+
     def observe(self, observer_info: MultiCastObserverInfo) -> Disposable:
         def gen_conn_flowables():
             for source in self.sources:
@@ -38,12 +41,23 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
                     # scheduler=self.multicast_scheduler,
                 )
 
+                outer_self = self
+
                 @dataclass
                 class InnerObserver(Observer):
                     underlying: Observer
                     outer_observer: MultiCastObserver
 
                     def on_next(self, elem: ElementType):
+                        if not outer_self.is_sent:
+
+                            self.is_sent = True
+                            try:
+                                observer_info.observer.on_next([flowables])
+                                observer_info.observer.on_completed()
+                            except Exception as exc:
+                                observer_info.observer.on_error(exc)
+
                         return self.underlying.on_next(elem)
 
                     def on_error(self, err):
@@ -52,8 +66,6 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
 
                     def on_completed(self):
                         self.underlying.on_completed()
-
-                # assert not self.multicast_scheduler.idle
 
                 disposable = source.observe(
                     observer_info=init_multicast_observer_info(
@@ -93,6 +105,10 @@ class JoinFlowableMultiCastObservable(MultiCastObservable):
         flowables = list(gen_conn_flowables())
 
         def action(_, __):
+            if self.is_sent:
+                return
+
+            self.is_sent = True
             try:
                 observer_info.observer.on_next([flowables])
                 observer_info.observer.on_completed()

@@ -27,21 +27,6 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
 
         self.lock = threading.RLock()
 
-    class Trampoline(object):
-        @classmethod
-        def run(cls, queue: PriorityQueue) -> None:
-            while queue:
-                item: ScheduledItem = queue.peek()
-                if item.is_cancelled():
-                    queue.dequeue()
-                else:
-                    diff = item.duetime - item.scheduler.now
-                    if diff <= datetime.timedelta(0):
-                        item.invoke()
-                        queue.dequeue()
-                    else:
-                        time.sleep(diff.total_seconds())
-
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
 
@@ -113,7 +98,22 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
         if start_trampoline:
             while True:
                 try:
-                    TrampolineScheduler.Trampoline.run(self.queue)
+                    while self.queue:
+                        item: ScheduledItem = self.queue.peek()
+
+                        if item.is_cancelled():
+                            with self.lock:
+                                self.queue.dequeue()
+
+                        else:
+                            diff = item.duetime - item.scheduler.now
+                            if diff <= datetime.timedelta(0):
+                                item.invoke()
+                                with self.lock:
+                                    self.queue.dequeue()
+                            else:
+                                time.sleep(diff.total_seconds())
+
                 except:
                     traceback.print_exc()
                 finally:

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Callable, Any
+from traceback import FrameSummary
+from typing import Callable, Any, List
 
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observables.zipobservable import ZipObservable
@@ -11,7 +12,7 @@ from rxbp.subscription import Subscription
 class ZipFlowable(FlowableMixin):
     left: FlowableMixin
     right: FlowableMixin
-    # func: Callable[[Any, Any], Any] = None
+    stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         left_subscription = self.left.unsafe_subscribe(subscriber=subscriber)
@@ -21,6 +22,6 @@ class ZipFlowable(FlowableMixin):
             observable=ZipObservable(
                 left=left_subscription.observable,
                 right=right_subscription.observable,
-                # selector=self._func,
+                stack=self.stack,
             ),
         )

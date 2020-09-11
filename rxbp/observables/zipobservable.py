@@ -1,11 +1,13 @@
 import itertools
 import threading
-from typing import Callable, Any, Optional
+from traceback import FrameSummary
+from typing import Callable, Any, Optional, List
 
 from rx.disposable import CompositeDisposable
 
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.ack import Ack
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.acknowledgement.stopack import stop_ack, StopAck
 from rxbp.observable import Observable
 from rxbp.observer import Observer
@@ -15,6 +17,7 @@ from rxbp.states.measuredstates.zipstates import ZipStates
 from rxbp.states.rawstates.rawterminationstates import RawTerminationStates
 from rxbp.states.rawstates.rawzipstates import RawZipStates
 from rxbp.typing import ElementType
+from rxbp.utils.tooperatorexception import to_operator_exception
 
 
 class ZipObservable(Observable):
@@ -48,7 +51,7 @@ class ZipObservable(Observable):
             self,
             left: Observable,
             right: Observable,
-            # selector: Callable[[Any, Any], Any] = None,
+            stack: List[FrameSummary],
     ):
         """
         :param left: left observable
@@ -60,7 +63,7 @@ class ZipObservable(Observable):
 
         self.left = left
         self.right = right
-        # self.selector = (lambda l, r: (l, r)) if selector is None else selector
+        self.stack = stack
 
         self.lock = threading.RLock()
 
@@ -137,11 +140,18 @@ class ZipObservable(Observable):
             zipped_elements = list(gen_zipped_elements())
 
         except Exception as exc:
-            self.observer.on_error(exc)
+            # self.observer.on_error(exc)
             other_upstream_ack.on_next(stop_ack)
-            return stop_ack
+            # return stop_ack
+            raise Exception(to_operator_exception(
+                message='',
+                stack=self.stack,
+            ))
 
-        downstream_ack = self.observer.on_next(zipped_elements)
+        if 0 < len(zipped_elements):
+            downstream_ack = self.observer.on_next(zipped_elements)
+        else:
+            downstream_ack = continue_ack
 
         if isinstance(downstream_ack, StopAck):
             other_upstream_ack.on_next(stop_ack)
