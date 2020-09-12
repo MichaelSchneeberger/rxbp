@@ -13,12 +13,12 @@ source1.pipe(
 
 import rxbp
 
-m1 = rxbp.multicast.return_flowable(rxbp.range(10))
-m2 = rxbp.multicast.return_flowable(rxbp.range(5))
+m1 = rxbp.multicast.return_value(rxbp.range(10))
+m2 = rxbp.multicast.return_value(rxbp.range(5))
 
 
 result = rxbp.multicast.merge(m1, m2).pipe(
-    rxbp.multicast.op.collect_flowables(),
+    rxbp.multicast.op.merge_flowables(),
 ).to_flowable().run()
 
 print(result)

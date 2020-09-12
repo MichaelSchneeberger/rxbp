@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from traceback import FrameSummary
 from typing import Callable, Any, Dict, Union, List
 
-from rx.core.typing import Disposable
-from rx.disposable import SingleAssignmentDisposable, CompositeDisposable
+import rx
+from rx.disposable import SingleAssignmentDisposable, CompositeDisposable, Disposable
 
 import rxbp
 from rxbp.flowable import Flowable
@@ -29,6 +29,10 @@ from rxbp.subscription import Subscription
 
 @dataclass
 class LoopFlowableMultiCast(MultiCastMixin):
+    """
+
+    """
+
     source: MultiCastMixin
     func: Callable[[MultiCastMixin], MultiCastMixin]
     initial: Union[List[Any], Dict[Any, Any]]
@@ -68,15 +72,12 @@ class LoopFlowableMultiCast(MultiCastMixin):
 
         def gen_deferred():
             for key in initial_dict.keys():
-                def for_func(key=key):
-                    return key, init_flowable(
-                        underlying=MapFlowable(
-                            source=shared,
-                            func=lambda d: d[key],
-                        ),
-                    )
-
-                yield for_func()
+                yield key, init_flowable(
+                    underlying=MapFlowable(
+                        source=shared,
+                        func=lambda d, key=key: d[key],
+                    ),
+                )
 
         deferred = dict(gen_deferred())
 
@@ -96,16 +97,10 @@ class LoopFlowableMultiCast(MultiCastMixin):
             elif isinstance(base, FlowableStateMixin):
                 states = base.get_flowable_state()
 
-                # if isinstance(base, SingleFlowableMixin):
-                #     states = {**states, curr_index: base.get_single_flowable()}
-
             else:
                 raise Exception(f'illegal base "{base}"')
 
             return FlowableDict({**states, **deferred})
-
-        init = MapMultiCast(self.source, func=map_to_flowable_dict)
-        output = self.func(init)
 
         def map_func(base: MultiCastItem):
             match_error_message = f'loop_flowables function returned "{base}" which does not match initial "{initial}"'
@@ -178,9 +173,10 @@ class LoopFlowableMultiCast(MultiCastMixin):
                         def gen_index_for_each_deferred_state():
                             """ for each value returned by the loop_flowables function """
                             for key in initial_dict.keys():
-                                def for_func(key=key):
-                                    return init_flowable(MapFlowable(shared_flowable_state[key], func=lambda v: (key, v)))
-                                yield for_func()
+                                yield init_flowable(MapFlowable(
+                                    source=shared_flowable_state[key],
+                                    func=lambda v, key=key: (key, v)),
+                                )
                         indexed_deferred_values = gen_index_for_each_deferred_state()
 
                         zipped = rxbp.zip(*indexed_deferred_values).pipe(
@@ -196,21 +192,24 @@ class LoopFlowableMultiCast(MultiCastMixin):
                             def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
 
                                 class BreakingTheLoopObservable(Observable):
-                                    def observe(_, observer_info: ObserverInfo) -> Disposable:
+                                    def observe(_, observer_info: ObserverInfo) -> rx.typing.Disposable:
                                         """
                                         this method should only be called once
                                         stop calling another observe method here
                                         """
 
                                         subscription = buffered.unsafe_subscribe(subscriber)
-
-                                        observer_info = observer_info.copy(is_volatile=True)
-                                        disposable = subscription.observable.observe(observer_info)
+                                        disposable = subscription.observable.observe(
+                                            observer_info=observer_info, #.copy(is_volatile=True),
+                                        )
 
                                         self.disposable.set_disposable(disposable)
 
                                         def action(_, __):
-                                            observer_info.observer.on_next([initial])
+                                            try:
+                                                observer_info.observer.on_next([initial])
+                                            except Exception as exc:
+                                                observer_info.observer.on_error(exc)
 
                                         d2 = subscriber.subscribe_scheduler.schedule(action)
 
@@ -223,17 +222,7 @@ class LoopFlowableMultiCast(MultiCastMixin):
                         start.flowable = BreakingTheLoopFlowable()
 
                     # subscribe method call might close the loop_flowables loop
-                    subscription = self.source.unsafe_subscribe(subscriber)
-
-                    class DeferObservable(Observable):
-                        def observe(self, observer_info: ObserverInfo):
-                            disposable = subscription.observable.observe(observer_info)
-
-                            return disposable
-
-                    defer_observable = DeferObservable()
-
-                    return init_subscription(observable=defer_observable)
+                    return self.source.unsafe_subscribe(subscriber)
 
             # create a flowable for all deferred values
             new_states = {
@@ -241,6 +230,13 @@ class LoopFlowableMultiCast(MultiCastMixin):
             }
 
             return from_state({**new_states, **not_deferred_flowables})
+
+        init = MapMultiCast(
+            self.source,
+            func=map_to_flowable_dict,
+        )
+
+        output = self.func(init)
 
         return MapMultiCast(
             source=output,

@@ -61,7 +61,7 @@ class PublishObservableSubject(ObservableSubjectBase):
 
     @dataclass
     class InnerSubscription:
-        source: Observer
+        next_observer: Observer
 
     def observe(
             self,
@@ -70,7 +70,7 @@ class PublishObservableSubject(ObservableSubjectBase):
 
         disposable = SingleAssignmentDisposable()
         inner_subscription = self.InnerSubscription(
-            source=observer_info.observer,
+            next_observer=observer_info.observer,
         )
 
         with self.lock:

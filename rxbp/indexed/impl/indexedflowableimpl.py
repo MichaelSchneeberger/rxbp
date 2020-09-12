@@ -11,5 +11,5 @@ from rxbp.typing import ValueType
 class IndexedFlowableImpl(IndexedFlowable[ValueType]):
     underlying: IndexedFlowableMixin
 
-    def _copy(self, flowable: IndexedFlowableMixin):
-        return replace(self, underlying=flowable)
+    def _copy(self, **kwargs):
+        return replace(self, **kwargs)

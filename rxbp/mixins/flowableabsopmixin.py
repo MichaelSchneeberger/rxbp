@@ -103,7 +103,11 @@ class FlowableAbsOpMixin(ABC):
     #     ...
 
     @abstractmethod
-    def filter(self, predicate: Callable[[Any], bool]) -> FlowableMixin:
+    def filter(
+            self,
+            predicate: Callable[[Any], bool],
+            stack: List[FrameSummary],
+    ) -> FlowableMixin:
         """ Only emit those elements for which the given predicate holds.
 
         :param predicate: a function that returns True, if the current element passes the filter
@@ -167,17 +171,6 @@ class FlowableAbsOpMixin(ABC):
         """
 
         ...
-
-    # @abstractmethod
-    # def match(self, *others: FlowableTemplateMixin) -> FlowableTemplateMixin:
-    #     """
-    #     Create a new Flowable from this and other Flowables by first filtering and duplicating (if necessary)
-    #     the elements of each Flowable and zip the resulting Flowable sequences together.
-    #
-    #     :param sources: other Flowables that get matched with this Flowable.
-    #     """
-    #
-    #     ...
 
     @abstractmethod
     def merge(self, *others: FlowableMixin) -> FlowableMixin:
@@ -257,18 +250,6 @@ class FlowableAbsOpMixin(ABC):
         """
 
         raise Exception('this Flowable cannot be shared. Use multicasting to share Flowables.')
-
-    # @abstractmethod
-    # def _share(self) -> FlowableTemplateMixin:
-    #     ...
-
-    # @abstractmethod
-    # def set_base(self, val: Base) -> FlowableTemplateMixin:
-    #     """
-    #     Overwrite the base of the current Flowable sequence.
-    #     """
-    #
-    #     ...
 
     @abstractmethod
     def to_list(self) -> FlowableMixin:

@@ -25,11 +25,14 @@ The second map composed with the first map look like this:
 """
 
 import rxbp
+from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
+from rxbp.indexed.selectors.bases.numericalbase import NumericalBase
 
 f1 = rxbp.indexed.range(10)
 
 f2 = rxbp.indexed.range(10).pipe(
     rxbp.op.filter(lambda v: v%2),          # first mapping is defined in f2
+    rxbp.indexed.op.debug_base(NumericalBase(10))
 )
 
 f3 = rxbp.indexed.match(f1, f2).pipe(               # apply first mapping to f1
@@ -38,6 +41,8 @@ f3 = rxbp.indexed.match(f1, f2).pipe(               # apply first mapping to f1
 
 f4 = rxbp.indexed.range(10)
 
-result = rxbp.indexed.match(f3, f4).run()           # apply composed mapping to f4
+# result = rxbp.indexed.match(f3, f4).run()           # apply composed mapping to f4
+result = f3.run()
 
 print(result)
+

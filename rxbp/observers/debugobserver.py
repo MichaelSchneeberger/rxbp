@@ -40,7 +40,8 @@ class DebugObserver(Observer):
             if len(materialized) == 0:
                 return continue_ack
 
-            self.on_next_func(materialized)
+            for elem in materialized:
+                self.on_next_func(elem)
 
             ack = self.source.on_next(materialized)
 

@@ -14,7 +14,9 @@ def connect_and_zip(multicast: MultiCast):
         multicast,
         multicast,
     ).pipe(
-        rxbp.multicast.op.map(lambda t: t[0].zip(t[1]))
+        rxbp.multicast.op.map(lambda t: t[0].pipe(
+            rxbp.op.zip(t[1]),
+        )),
     )
 
 
@@ -23,12 +25,12 @@ def merge_and_reduce(multicast: MultiCast):
         multicast,
         multicast,
     ).pipe(
-        rxbp.multicast.op.collect_flowables(),
+        rxbp.multicast.op.merge_flowables(),
     )
 
 
 result = rxbp.multicast.return_value(rxbp.range(10)).pipe(
-    rxbp.multicast.op.lift(lambda m: m),
+    rxbp.multicast.op.lift(),
     rxbp.multicast.op.map(connect_and_zip),
     rxbp.multicast.op.map(merge_and_reduce),
     rxbp.multicast.op.flat_map(lambda m: m),

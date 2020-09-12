@@ -53,15 +53,15 @@ class MatchIndexedFlowable(IndexedFlowableMixin):
 
             # left Flowable needs a transformation to match the other Flowable
             elif isinstance(result.left, ObservableSeqMapInfo):
-                if self.left_debug:
-                    left_selector = init_debug_observable(
-                        source=result.left.observable,
-                        name=self.right_debug,
-                        subscriber=subscriber,
-                        stack=self.stack,
-                    )
-                else:
-                    left_selector = result.left.observable
+                # if self.left_debug:
+                #     left_selector = init_debug_observable(
+                #         source=result.left.observable,
+                #         name=self.right_debug,
+                #         subscriber=subscriber,
+                #         stack=self.stack,
+                #     )
+                # else:
+                left_selector = result.left.observable
 
                 sel_left_obs = select_observable(
                     left_subscription.observable,
@@ -78,15 +78,15 @@ class MatchIndexedFlowable(IndexedFlowableMixin):
                 sel_right_obs = right_subscription.observable
 
             elif isinstance(result.right, ObservableSeqMapInfo):
-                if self.right_debug:
-                    right_selector = init_debug_observable(
-                        source=result.right.observable,
-                        name=self.right_debug,
-                        subscriber=subscriber,
-                        stack=self.stack,
-                    )
-                else:
-                    right_selector = result.right.observable
+                # if self.right_debug:
+                #     right_selector = init_debug_observable(
+                #         source=result.right.observable,
+                #         name=self.right_debug,
+                #         subscriber=subscriber,
+                #         stack=self.stack,
+                #     )
+                # else:
+                right_selector = result.right.observable
 
                 sel_right_obs = select_observable(
                     right_subscription.observable,
@@ -113,6 +113,7 @@ class MatchIndexedFlowable(IndexedFlowableMixin):
         observable = ZipObservable(
             left=sel_left_obs,
             right=sel_right_obs,
+            stack=self.stack,
         )
 
         return left_subscription.copy(

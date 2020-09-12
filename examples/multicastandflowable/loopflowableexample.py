@@ -39,7 +39,9 @@ result = rxbp.multicast.return_value({'input': rxbp.range(10)}).pipe(
         ),
     ),
     rxbp.multicast.op.map(lambda t: t[0]),
-).to_flowable().run()
+).to_flowable().pipe(
+    # rxbp.op.debug('d1')
+).run()
 
 print(result)
 

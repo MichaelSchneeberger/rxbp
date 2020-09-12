@@ -147,7 +147,11 @@ class FlowableOpMixin(
     # def execute_on(self, scheduler: Scheduler):
     #     return self._copy(ExecuteOnFlowable(source=self, scheduler=scheduler))
 
-    def filter(self, predicate: Callable[[Any], bool]) -> 'FlowableOpMixin':
+    def filter(
+            self,
+            predicate: Callable[[Any], bool],
+            stack: List[FrameSummary],
+    ) -> 'FlowableOpMixin':
 
         flowable = FilterFlowable(source=self, predicate=predicate)
         return self._copy(flowable)
@@ -257,26 +261,6 @@ class FlowableOpMixin(
 
     def _share(self, stack: List[FrameSummary]):
         return self._copy(RefCountFlowable(source=self, stack=stack), is_shared=True)
-
-    # def share(self):
-    #     stack = get_stack_lines()
-    #
-    #     return self._share(stack=stack)
-
-    # def set_base(self, val: Base):
-    #
-    #     def unsafe_unsafe_subscribe(subscriber: Subscriber) -> Subscription:
-    #         subscription = self.unsafe_subscribe(subscriber=subscriber)
-    #
-    #         return subscription.copy(
-    #             base=val,
-    #             observable=subscription.observable,
-    #         )
-    #
-    #     flowable = AnonymousFlowableBase(
-    #         unsafe_subscribe_func=unsafe_unsafe_subscribe,
-    #     )
-    #     return self._copy(flowable)
 
     def to_list(self):
 

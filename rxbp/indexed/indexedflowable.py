@@ -2,7 +2,7 @@ import functools
 import itertools
 from abc import ABC, abstractmethod
 from traceback import FrameSummary
-from typing import Callable, Any, Tuple, Iterator, List
+from typing import Callable, Any, Tuple, Iterator, List, Optional
 from typing import Generic
 
 import rx
@@ -29,6 +29,7 @@ from rxbp.flowables.tolistflowable import ToListFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
 from rxbp.indexed.flowables.concatindexedflowable import ConcatIndexedFlowable
 from rxbp.indexed.flowables.controlledzipindexedflowable import ControlledZipIndexedFlowable
+from rxbp.indexed.flowables.debugbaseindexedflowable import DebugBaseIndexedFlowable
 from rxbp.indexed.flowables.filterindexedflowable import FilterIndexedFlowable
 from rxbp.indexed.flowables.matchindexedflowable import MatchIndexedFlowable
 from rxbp.indexed.flowables.zipindexedflowable import ZipIndexedFlowable
@@ -57,7 +58,7 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
         return self.underlying.unsafe_subscribe(subscriber=subscriber)
 
     @abstractmethod
-    def _copy(self, flowable: IndexedFlowableMixin) -> 'IndexedFlowable':
+    def _copy(self, **kwargs) -> 'IndexedFlowable':
         ...
 
     def buffer(self, buffer_size: int = None) -> IndexedFlowableMixin:
@@ -69,7 +70,7 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             return self
 
         all_sources = itertools.chain([self], others)
-        return self._copy(ConcatIndexedFlowable(sources=list(all_sources)))
+        return self._copy(underlying=ConcatIndexedFlowable(sources=list(all_sources)))
 
     def controlled_zip(
             self,
@@ -86,7 +87,7 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             request_right=request_right,
             match_func=match_func,
         )
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def debug(
             self,
@@ -103,7 +104,7 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             verbose: bool = None
     ):
 
-        return self._copy(init_debug_flowable(
+        return self._copy(underlying=init_debug_flowable(
             source=self,
             name=name,
             on_next=on_next,
@@ -118,8 +119,24 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             verbose=verbose,
         ))
 
+    def debug_base(
+            self,
+            base: FlowableBase,
+            stack: List[FrameSummary],
+            name: str = None,
+    ):
+        if name is None:
+            name = str(base)
+
+        return self._copy(underlying=DebugBaseIndexedFlowable(
+            source=self,
+            base=base,
+            name=name,
+            stack=stack,
+        ))
+
     def default_if_empty(self, lazy_val: Callable[[], Any]) -> IndexedFlowableMixin:
-        return self._copy(DefaultIfEmptyFlowable(source=self, lazy_val=lazy_val))
+        return self._copy(underlying=DefaultIfEmptyFlowable(source=self, lazy_val=lazy_val))
 
     def do_action(
             self,
@@ -128,16 +145,13 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             on_error: Callable[[Exception], None] = None,
             on_disposed: Callable[[], None] = None,
     ) -> IndexedFlowableMixin:
-        return self._copy(DoActionFlowable(
+        return self._copy(underlying=DoActionFlowable(
             source=self,
             on_next=on_next,
             on_completed=on_completed,
             on_error=on_error,
             on_disposed=on_disposed,
         ))
-
-    def execute_on(self, scheduler: Scheduler):
-        return self._copy(ExecuteOnFlowable(source=self, scheduler=scheduler))
 
     def filter(
             self,
@@ -149,38 +163,38 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             predicate=predicate,
             stack=stack,
         )
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def first(self, raise_exception: Callable[[Callable[[], None]], None]):
         flowable = FirstFlowable(source=self, raise_exception=raise_exception)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def first_or_default(self, lazy_val: Callable[[], Any]):
         flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def flat_map(self, func: Callable[[Any], FlowableMixin]):
         flowable = FlatMapFlowable(source=self, func=func)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def map(self, func: Callable[[ValueType], Any]) -> IndexedFlowableMixin:
 
         flowable = MapFlowable(source=self, func=func)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def map_to_iterator(
             self,
             func: Callable[[ValueType], Iterator[ValueType]],
     ):
         flowable = MapToIteratorFlowable(source=self, func=func)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def match(
             self,
             *others: IndexedFlowableMixin,
-            left_debug: str,
-            right_debug: str,
             stack: List[FrameSummary],
+            left_debug: Optional[str] = None,
+            right_debug: Optional[str] = None,
     ) -> 'IndexedFlowable':
 
         if len(others) == 0:
@@ -212,7 +226,7 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
                     yield _
 
             flowable: 'IndexedFlowable' = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
-            return self._copy(flowable=flowable)
+            return self._copy(underlying=flowable)
 
     def merge(self, *others: IndexedFlowableMixin):
 
@@ -237,13 +251,13 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
 
     def observe_on(self, scheduler: Scheduler):
 
-        return self._copy(ObserveOnFlowable(source=self, scheduler=scheduler))
+        return self._copy(underlying=ObserveOnFlowable(source=self, scheduler=scheduler))
 
     def pairwise(self) -> IndexedFlowableMixin:
 
         return self._copy(PairwiseFlowable(source=self))
 
-    def pipe(self, *operators: PipeOperation[FlowableAbsOpMixin]) -> IndexedFlowableMixin:
+    def pipe(self, *operators: PipeOperation[FlowableAbsOpMixin]) -> 'IndexedFlowable':
         raw = functools.reduce(lambda obs, op: op(obs), operators, self)
         # return self._copy(raw)
         return raw
@@ -258,25 +272,25 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
             func=func,
             initial=initial,
         )
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def repeat_first(self):
 
         flowable = RepeatFirstFlowable(source=self)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def run(self, scheduler: Scheduler = None):
         return list(to_iterator(source=self, scheduler=scheduler))
 
     def scan(self, func: Callable[[Any, Any], Any], initial: Any):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def share(self) -> IndexedFlowableMixin:
-        return self._copy(super().share())
+        return self._copy(underlying=super().share())
 
     def _share(self, stack: List[FrameSummary]):
-        return self._copy(RefCountFlowable(source=self))
+        return self._copy(underlying=RefCountFlowable(source=self))
 
     def set_base(self, val: FlowableBase):
 
@@ -291,12 +305,12 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
         flowable = AnonymousFlowableBase(
             unsafe_subscribe_func=unsafe_unsafe_subscribe,
         )
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def to_list(self):
 
         flowable = ToListFlowable(source=self)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def to_rx(self, batched: bool = None) -> rx.Observable:
         """ Converts this Flowable to an rx.Observable
@@ -337,4 +351,4 @@ class IndexedFlowable(FlowableAbsOpMixin, IndexedFlowableMixin, Generic[ValueTyp
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
 
         flowable = ZipWithIndexFlowable(source=self, selector=selector)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)

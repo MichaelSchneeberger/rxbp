@@ -23,7 +23,9 @@ result = rxbp.multicast.return_value(base1).pipe(
         rxbp.multicast.return_value(base2)
     ),
     rxbp.multicast.op.collect_flowables(),
-    rxbp.multicast.op.map(lambda v: v['val1'].zip(v['val2'])),
+    rxbp.multicast.op.map(lambda v: v['val1'].pipe(
+        rxbp.op.zip(v['val2']),
+    )),
 ).to_flowable().run()
 
 print(result)

@@ -10,6 +10,7 @@ from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
 from rxbp.indexed.selectors.flowablebase import FlowableBase
 from rxbp.indexed.selectors.bases.numericalbase import NumericalBase
 from rxbp.indexed.selectors.bases.objectrefbase import ObjectRefBase
+from rxbp.utils.getstacklines import get_stack_lines
 
 
 def _create_base(base: Optional[Any]) -> FlowableBase:
@@ -99,10 +100,12 @@ def match(*sources: IndexedFlowable) -> IndexedFlowable:
     assert all(isinstance(source, IndexedFlowableMixin) for source in sources), \
         f'"{sources}" must all be of type IndexedFlowableMixin'
 
+    stack = get_stack_lines()
+
     if len(sources) == 0:
         return empty()
     else:
-        return sources[0].match(*sources[1:])
+        return sources[0].match(*sources[1:], stack=stack)
 
 
 def return_value(val: Any):
