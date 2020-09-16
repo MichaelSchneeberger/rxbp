@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from rx.disposable import Disposable
 
 from rxbp.acknowledgement.mixins.ackmergemixin import AckMergeMixin
@@ -5,6 +7,7 @@ from rxbp.acknowledgement.ack import Ack
 from rxbp.acknowledgement.single import Single
 
 
+@dataclass(frozen=True)
 class ContinueAck(AckMergeMixin, Ack):
     is_sync = True
 

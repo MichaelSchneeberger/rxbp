@@ -11,10 +11,13 @@ from rxbp.typing import ValueType
 @dataclass_abc
 class FlowableImpl(Flowable[ValueType]):
     underlying: FlowableMixin
-    # is_hot: bool
 
-    def _copy(self, underlying: FlowableMixin, is_shared: bool = None, *args, **kwargs):
+    def _copy(
+            self,
+            is_shared: bool = None,
+            **kwargs,
+    ):
         if is_shared:
-            return init_shared_flowable(underlying=underlying)
+            return init_shared_flowable(**kwargs)
 
-        return replace(self, underlying=underlying, *args, **kwargs)
+        return replace(self, **kwargs)

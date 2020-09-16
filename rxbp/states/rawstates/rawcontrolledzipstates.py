@@ -117,6 +117,7 @@ class RawControlledZipStates:
                             left_iter=self.iter,
                             left_ack=self.ack,
                         )
+
                     else:
                         raw_state = RawControlledZipStates.WaitOnLeft(
                             right_val=self.val,

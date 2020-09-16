@@ -284,61 +284,61 @@ class CacheServeFirstObservableSubject(ObservableSubjectBase):
                     with self.lock:
                         self.shared_state.dequeue()
 
-                try:
-                    if isinstance(notification, OnCompleted):
-                        self.observer.on_completed()
-                        break
+                # try:
+                if isinstance(notification, OnCompleted):
+                    self.observer.on_completed()
+                    break
 
-                    else:
-                        # for mypy to type check correctly
-                        assert isinstance(notification.value, list)
+                else:
+                    # for mypy to type check correctly
+                    assert isinstance(notification.value, list)
 
-                        ack = self.observer.on_next(notification.value)
+                    ack = self.observer.on_next(notification.value)
 
-                    # synchronous or asynchronous acknowledgment
-                    if isinstance(ack, ContinueAck):
-                        with self.lock:
-                            has_elem, notification = self.shared_state.get_element_for(
-                                self, current_index, ack)
+                # synchronous or asynchronous acknowledgment
+                if isinstance(ack, ContinueAck):
+                    with self.lock:
+                        has_elem, notification = self.shared_state.get_element_for(
+                            self, current_index, ack)
 
-                        if has_elem:
+                    if has_elem:
 
-                            # use frame index to either continue looping over elements or
-                            # schedule to send element with a scheduler
-                            next_index = self.em.next_frame_index(sync_index)
+                        # use frame index to either continue looping over elements or
+                        # schedule to send element with a scheduler
+                        next_index = self.em.next_frame_index(sync_index)
 
-                            if 0 < next_index:
-                                continue
-
-                            else:
-                                self.fast_loop(current_index, notification, sync_index=0)
-                                break
+                        if 0 < next_index:
+                            continue
 
                         else:
+                            self.fast_loop(current_index, notification, sync_index=0)
                             break
-
-                    elif isinstance(ack, StopAck):
-                        self.signal_stop()
-                        break
 
                     else:
-
-                        meas_state = self.shared_state.state.get_measured_state()
-                        if isinstance(meas_state, CacheServeFirstObservableSubject.ExceptionState):
-                            break
-
-                        single = self.AsyncAckSingle(
-                            inner_subscription=self,
-                            current_index=current_index,
-                        )
-
-                        _observe_on(source=ack, scheduler=self.scheduler).subscribe(single)
                         break
 
-                except:
-                    pass
+                elif isinstance(ack, StopAck):
+                    self.signal_stop()
+                    break
 
-                raise Exception('fatal error')
+                else:
+
+                    meas_state = self.shared_state.state.get_measured_state()
+                    if isinstance(meas_state, CacheServeFirstObservableSubject.ExceptionState):
+                        break
+
+                    single = self.AsyncAckSingle(
+                        inner_subscription=self,
+                        current_index=current_index,
+                    )
+
+                    _observe_on(source=ack, scheduler=self.scheduler).subscribe(single)
+                    break
+
+                # except:
+                #     pass
+                #
+                # raise Exception('fatal error')
 
     def observe(self, observer_info: ObserverInfo) -> rx.typing.Disposable:
         """ Create a new inner subscription and append it to the inactive subscriptions list (because there

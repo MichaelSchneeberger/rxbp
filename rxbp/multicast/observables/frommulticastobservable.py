@@ -28,6 +28,7 @@ class FromMultiCastObservable(Observable):
                 observer_info=init_multicast_observer_info(
                     observer=ToFlowableMultiCastObserver(
                         observer=observer_info.observer,
+                        multicast_subscriber=self.multicast_subscriber,
                         subscriber=self.subscriber,
                         is_first=True,
                         inner_disposable=inner_disposable,

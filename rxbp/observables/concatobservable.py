@@ -18,9 +18,6 @@ class ConcatObservable(Observable):
     scheduler: Scheduler
     subscribe_scheduler: Scheduler
 
-    def __post_init__(self):
-        self._subjects = [PublishObservableSubject() for _ in self.sources]
-
     def observe(self, observer_info: ObserverInfo):
 
         """
@@ -32,32 +29,29 @@ class ConcatObservable(Observable):
         """
 
         conn_observers = [ConnectableObserver(
-            underlying=subject,
-            scheduler=self.scheduler,
-            # subscribe_scheduler=self._subscribe_scheduler,
-            # is_volatile=observer_info.is_volatile,
-        ) for subject in self._subjects[1:]]
+            underlying=None,
+        ) for _ in self.sources]
 
         iter_conn_obs = iter(conn_observers)
 
         concat_observer = ConcatObserver(
-            source=observer_info.observer,
+            next_observer=observer_info.observer,
             connectables=iter_conn_obs,
         )
-        concat_observer_info = init_observer_info(concat_observer)
 
-        for subject in self._subjects:
-            subject.observe(concat_observer_info)
+        for conn_observer in conn_observers:
+            conn_observer.underlying = concat_observer
 
         def gen_disposable_from_observer():
             for source, conn_observer in zip(self.sources[1:], conn_observers):
-                yield source.observe(init_observer_info(
+                yield source.observe(observer_info.copy(
                     observer=conn_observer,
-                    is_volatile=observer_info.is_volatile,
                 ))
 
         others_disposables = gen_disposable_from_observer()
 
-        first_disposable = self.sources[0].observe(init_observer_info(self._subjects[0]))
+        first_disposable = self.sources[0].observe(observer_info.copy(
+            observer=concat_observer,
+        ))
 
         return CompositeDisposable(first_disposable, *others_disposables)

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from traceback import FrameSummary
+from typing import Optional, List
 
 from rxbp.indexed.selectors.seqmapinfopair import SeqMapInfoPair
 from rxbp.subscriber import Subscriber
@@ -22,6 +23,7 @@ class FlowableBase(ABC):
             self,
             other: 'FlowableBase',
             subscriber: Subscriber,
+            stack: List[FrameSummary],
     ) -> Optional[FlowableBaseMatch]:
         """
         determines if two Flowables bases match. If they match a FlowableBaseMatch

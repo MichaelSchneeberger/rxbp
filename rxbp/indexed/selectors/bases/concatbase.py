@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from traceback import FrameSummary
 from typing import List, Tuple
 
 from rxbp.indexed.selectors.selectionop import merge_selectors
@@ -35,13 +36,22 @@ class ConcatBase(FlowableBase):
         source_names = ', '.join(list(gen_names()))
         return f'ConcatBase({source_names})'
 
-    def match_with(self, other: FlowableBase, subscriber: Subscriber):
+    def match_with(
+            self,
+            other: FlowableBase,
+            subscriber: Subscriber,
+            stack: List[FrameSummary],
+    ):
         if isinstance(other, ConcatBase):
             other_base = other
 
             def gen_selectors():
                 for left, right in zip(self.underlying, other_base.underlying):
-                    yield left.match_with(right, subscriber)
+                    yield left.match_with(
+                        other=right,
+                        subscriber=subscriber,
+                        stack=stack,
+                    )
             selector_results = list(gen_selectors())
 
             if all(isinstance(result, FlowableBaseAndSelectorsMatch) for result in selector_results):
@@ -57,7 +67,12 @@ class ConcatBase(FlowableBase):
                             yield source, source
 
                         elif isinstance(selector, ObservableSeqMapInfo):
-                            yield selector.observable, merge_selectors(source, selector.observable, subscriber.scheduler)
+                            yield selector.observable, merge_selectors(
+                                source,
+                                selector.observable,
+                                subscriber.scheduler,
+                                stack=stack,
+                            )
 
                 if all(isinstance(selector, IdentitySeqMapInfo) for selector in left_selectors):
                     base = self

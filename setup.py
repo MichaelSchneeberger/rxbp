@@ -10,8 +10,8 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='rxbp',
-    version='3.0.0a9',
-    install_requires=['rx'],
+    version='3.0.0a10',
+    install_requires=['rx', 'dataclass-abc'],
     description='An RxPY extension with back-pressure',
     long_description=long_description,
     long_description_content_type='text/markdown',

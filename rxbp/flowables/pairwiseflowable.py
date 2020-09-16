@@ -13,5 +13,6 @@ class PairwiseFlowable(FlowableMixin):
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         subscription = self._source.unsafe_subscribe(subscriber=subscriber)
-        observable = PairwiseObservable(source=subscription.observable)
-        return init_subscription(observable=observable)
+        return subscription.copy(observable=PairwiseObservable(
+            source=subscription.observable,
+        ))

@@ -1,10 +1,9 @@
 from typing import List
 
 from rxbp.indexed.observables.concatindexedobservable import ConcatIndexedObservable
-from rxbp.indexed.selectors.flowablebaseandselectors import FlowableBaseAndSelectors
 from rxbp.indexed.selectors.bases.concatbase import ConcatBase
+from rxbp.indexed.selectors.flowablebaseandselectors import FlowableBaseAndSelectors
 from rxbp.mixins.flowablemixin import FlowableMixin
-from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
 

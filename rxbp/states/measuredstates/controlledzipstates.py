@@ -29,6 +29,7 @@ class ControlledZipStates:
         left_ack: AckSubject
         left_iter: Iterator
 
+    @dataclass
     class WaitOnLeftRight(ZipState):
         """ Zip observable actor has or will back-pressure the left and right source, but
         no element has yet been received.

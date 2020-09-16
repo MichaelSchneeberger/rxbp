@@ -57,9 +57,12 @@ def controlled_zip(
     :return: zipped Flowable
     """
 
+    stack = get_stack_lines()
+
     def op_func(left: Flowable):
         return left.controlled_zip(
             right=right,
+            stack=stack,
             request_left=request_left,
             request_right=request_right,
             match_func=match_func,
@@ -413,7 +416,7 @@ def zip(*others: Flowable):
     stack = get_stack_lines()
 
     def op_func(left: Flowable):
-        return left.zip(others, stack=stack)
+        return left.zip(others=others, stack=stack)
 
     return PipeOperation(op_func)
 

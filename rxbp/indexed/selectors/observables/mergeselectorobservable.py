@@ -24,7 +24,6 @@ class MergeSelectorObservable(Observable):
             self,
             left: Observable,
             right: Observable,
-            scheduler: Scheduler,
     ):
         """
         :param left: lef observable

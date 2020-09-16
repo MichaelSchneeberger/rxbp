@@ -1,3 +1,5 @@
+import threading
+from dataclasses import dataclass
 from typing import List
 
 from rx.disposable import CompositeDisposable, SingleAssignmentDisposable
@@ -11,38 +13,44 @@ def _zip(*args: Ack) -> Ack:
 
     class ZipAck(Ack):
         def subscribe(self, single: Single):
-            n = len(sources)
-            queues: List[List] = [[] for _ in range(n)]
 
-            def next():
-                if all([len(q) for q in queues]):
-                    try:
-                        queued_values = [x.pop(0) for x in queues]
+            @dataclass
+            class ZipSinlge(Single):
+                idx: int
+                queues: List[List]
+                lock: threading.RLock
+
+                def on_next(self, elem):
+                    with self.lock:
+                        self.queues[self.idx].append(elem)
+                        send_values = all([len(q) for q in self.queues])
+
+                    if send_values:
+                        # try:
+                        queued_values = [x.pop(0) for x in self.queues]
                         res = tuple(queued_values)
-                    except Exception as ex:
-                        single.on_error(ex)
-                        return
+                        # except Exception as ex:
+                        #     single.on_error(ex)
+                        #     return
 
-                    single.on_next(res)
+                        single.on_next(res)
 
-            subscriptions = [None]*n
+                # def on_error(self, exc: Exception):
+                #     single.on_error(exc)
 
-            def func(i):
-                source = sources[i]
-                sad = SingleAssignmentDisposable()
+            queues: List[List] = [[] for _ in sources]
+            lock = threading.RLock()
 
-                class ZipSinlge(Single):
-                    def on_next(self, elem):
-                        queues[i].append(elem)
-                        next()
+            def gen_subscriptions():
+                for idx, source in enumerate(sources):
+                    yield source.subscribe(ZipSinlge(
+                        idx=idx,
+                        queues=queues,
+                        lock=lock,
+                    ))
 
-                    def on_error(self, exc: Exception):
-                        single.on_error(exc)
+            subscriptions = list(gen_subscriptions())
 
-                sad.disposable = source.subscribe(ZipSinlge())
-                subscriptions[i] = sad
-
-            for idx in range(n):
-                func(idx)
             return CompositeDisposable(subscriptions)
+
     return ZipAck()

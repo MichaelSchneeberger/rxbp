@@ -1,33 +1,24 @@
 import threading
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import Set, List, Union, Optional, Tuple
+from typing import List, Callable
 
 import rx
-from rx.disposable import Disposable, SingleAssignmentDisposable
+from rx.disposable import Disposable
 
 from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.acknowledgement.operators.reduceack import reduce_ack
 from rxbp.acknowledgement.single import Single
 from rxbp.acknowledgement.stopack import StopAck, stop_ack
-from rxbp.internal.promisecounter import PromiseCounter
 from rxbp.observablesubjects.observablesubjectbase import ObservableSubjectBase
 from rxbp.observer import Observer
 from rxbp.observerinfo import ObserverInfo
-from rxbp.scheduler import Scheduler
-from rxbp.schedulers.trampolinescheduler import TrampolineScheduler
 from rxbp.typing import ElementType
 
 
 @dataclass
 class PublishObservableSubject(ObservableSubjectBase):
-    def __post_init__(self):
-        self.state = PublishObservableSubject.NormalState()
-        self.subscriptions: List['PublishObservableSubject.InnerSubscription'] = []
-
-        self.lock = threading.RLock()
-
     class State(ABC):
         @abstractmethod
         def get_measured_state(self):
@@ -59,6 +50,12 @@ class PublishObservableSubject(ObservableSubjectBase):
         def get_measured_state(self):
             return self
 
+    def __post_init__(self):
+        self.state = PublishObservableSubject.NormalState()
+        self.subscriptions: List['PublishObservableSubject.InnerSubscription'] = []
+
+        self.lock = threading.RLock()
+
     @dataclass
     class InnerSubscription:
         next_observer: Observer
@@ -68,7 +65,6 @@ class PublishObservableSubject(ObservableSubjectBase):
             observer_info: ObserverInfo,
     ) -> rx.typing.Disposable:
 
-        disposable = SingleAssignmentDisposable()
         inner_subscription = self.InnerSubscription(
             next_observer=observer_info.observer,
         )
@@ -81,14 +77,33 @@ class PublishObservableSubject(ObservableSubjectBase):
 
         if isinstance(meas_state, self.ExceptionState):
             observer_info.observer.on_error(meas_state.exc)
+
+            try:
+                self.subscriptions.remove(inner_subscription)
+            except ValueError:
+                pass
+
             return Disposable()
 
         elif isinstance(meas_state, self.CompletedState):
             observer_info.observer.on_completed()
+
+            try:
+                self.subscriptions.remove(inner_subscription)
+            except ValueError:
+                pass
+
             return Disposable()
 
         else:
-            return disposable
+            def dispose_func():
+                with self.lock:
+                    try:
+                        self.subscriptions.remove(inner_subscription)
+                    except ValueError:
+                        pass
+
+            return Disposable(dispose_func)
 
     def on_next(self, elem: ElementType):
 
@@ -102,12 +117,65 @@ class PublishObservableSubject(ObservableSubjectBase):
                 self.on_error(exc)
                 return stop_ack
 
+        with self.lock:
+            subscriptions = self.subscriptions.copy()
+
+        if len(subscriptions) == 0:
+            return continue_ack
+
         def gen_acks():
-            for subscription in self.subscriptions:
-                ack = subscription.next_observer.on_next(materialized_values)
+            for subscription in subscriptions:
+
+                # synchronize on_next call to conform with Observer convention
+                with self.lock:
+                    ack = subscription.next_observer.on_next(materialized_values)
 
                 if isinstance(ack, StopAck):
-                    self.subscriptions.remove(subscription)
+                    with self.lock:
+                        try:
+                            self.subscriptions.remove(subscription)
+                        except ValueError:
+                            pass
+
+                        n_subscriptions = len(self.subscriptions)
+
+                    if n_subscriptions == 0:
+                        return stop_ack
+
+                elif isinstance(ack, AckSubject):
+                    @dataclass
+                    class SubscriptionSingle(Single):
+                        subscriptions: List['PublishObservableSubject.InnerSubscription']
+                        subscription: 'PublishObservableSubject.InnerSubscription'
+                        out_ack: AckSubject
+                        lock: threading.RLock
+
+                        def on_next(self, elem):
+                            if isinstance(ack, StopAck):
+                                with self.lock:
+                                    try:
+                                        self.subscriptions.remove(subscription)
+                                    except ValueError:
+                                        pass
+
+                                    n_subscriptions = len(self.subscriptions)
+
+                                if n_subscriptions == 0:
+                                    self.out_ack.on_next(stop_ack)
+                                    return
+
+                            else:
+                                self.out_ack.on_next(elem)
+
+                    out_ack = AckSubject()
+                    ack.subscribe(SubscriptionSingle(
+                        subscriptions=self.subscriptions,
+                        subscription=subscription,
+                        out_ack=out_ack,
+                        lock=self.lock,
+                    ))
+                    yield out_ack
+
                 else:
                     yield ack
 
@@ -136,8 +204,8 @@ class PublishObservableSubject(ObservableSubjectBase):
             self.state = state
 
             # add item to buffer
-            subscriptions = self.subscriptions
-            self.subscriptions = []
+            subscriptions = self.subscriptions.copy()
+            self.subscriptions.clear()
 
         if isinstance(prev_state, self.NormalState):
             for subscription in subscriptions:
@@ -152,8 +220,8 @@ class PublishObservableSubject(ObservableSubjectBase):
             self.state.prev_state = prev_state
 
             # add item to buffer
-            subscriptions = self.subscriptions
-            self.subscriptions = []
+            subscriptions = self.subscriptions.copy()
+            self.subscriptions.clear()
 
         if isinstance(prev_state, self.NormalState):
             for subscription in subscriptions:

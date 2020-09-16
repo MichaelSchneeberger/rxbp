@@ -8,7 +8,7 @@ from rxbp.observerinfo import ObserverInfo
 
 
 @dataclass
-class IndexedFilterObservable(Observable):
+class FilterIndexedObservable(Observable):
     source: Observable
     predicate: Callable[[Any], bool]
     selector_subject: PublishObservableSubject

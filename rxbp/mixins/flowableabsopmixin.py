@@ -33,6 +33,7 @@ class FlowableAbsOpMixin(ABC):
     def controlled_zip(
             self,
             right: FlowableMixin,
+            stack: List[FrameSummary],
             request_left: Callable[[Any, Any], bool] = None,
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,

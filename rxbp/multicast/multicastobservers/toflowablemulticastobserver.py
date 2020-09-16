@@ -9,6 +9,7 @@ from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.multicast.flowabledict import FlowableDict
 from rxbp.multicast.multicastobserver import MultiCastObserver
+from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.multicast.typing import MultiCastItem
 from rxbp.observer import Observer
 from rxbp.subscriber import Subscriber
@@ -18,10 +19,14 @@ from rxbp.subscriber import Subscriber
 class ToFlowableMultiCastObserver(MultiCastObserver):
     observer: Observer
     subscriber: Subscriber
+    multicast_subscriber: MultiCastSubscriber
     is_first: bool
     inner_disposable: SingleAssignmentDisposable
 
     def on_next(self, item: MultiCastItem) -> None:
+
+        # assert all(not scheduler.idle for scheduler in self.multicast_subscriber.subscribe_schedulers)
+
         if isinstance(item, list):
             first_elem = item[0]
 
@@ -36,19 +41,35 @@ class ToFlowableMultiCastObserver(MultiCastObserver):
 
         if isinstance(first_elem, FlowableMixin):
             flowable = first_elem
+
         elif isinstance(first_elem, list):
             flist = [f.to_list() for f in first_elem if isinstance(f, Flowable)]
             flowable = rxbp.zip(*flist)
+
         elif isinstance(first_elem, dict) or isinstance(first_elem, FlowableDict):
             if isinstance(first_elem, dict):
                 fdict = first_elem
             else:
                 fdict = first_elem.get_flowable_state()
 
-            keys, flist = zip(*((key, f.to_list()) for key, f in fdict.items() if isinstance(f, FlowableMixin)))
+            def gen_key_to_list_flowables():
+                for key, flowable in fdict.items():
+                    if isinstance(flowable, FlowableMixin):
+                        def gen_debug():
+                            if key == 't_2_base_main':
+                                yield rxbp.op.debug(key)
+
+                        yield key, flowable.pipe(
+                            # *gen_debug(),
+                            rxbp.op.to_list(),
+                        )
+
+            keys, flist = zip(*gen_key_to_list_flowables())
+
             flowable = rxbp.zip(*flist).pipe(
                 rxbp.op.map(lambda vlist: dict(zip(keys, vlist))),
             )
+
         else:
             raise Exception(f'illegal value "{first_elem}"')
 

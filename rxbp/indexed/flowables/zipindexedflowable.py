@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Callable, Any
+from traceback import FrameSummary
+from typing import Callable, Any, List
 
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
 from rxbp.observables.zipobservable import ZipObservable
@@ -13,7 +14,7 @@ from rxbp.subscription import Subscription
 class ZipIndexedFlowable(IndexedFlowableMixin):
     left: IndexedFlowableMixin
     right: IndexedFlowableMixin
-    # func: Callable[[Any, Any], Any] = None
+    stack: List[FrameSummary]
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         left_subscription = self.left.unsafe_subscribe(subscriber=subscriber)
@@ -22,6 +23,7 @@ class ZipIndexedFlowable(IndexedFlowableMixin):
         result = left_subscription.index.match_with(
             right_subscription.index,
             subscriber=subscriber,
+            stack=self.stack,
         )
 
         # The resulting zip Flowable propagates selectors from left and right downstream if the bases of
@@ -45,7 +47,7 @@ class ZipIndexedFlowable(IndexedFlowableMixin):
         observable = ZipObservable(
             left=left_subscription.observable,
             right=right_subscription.observable,
-            # selector=self._func,
+            stack=self.stack,
         )
 
         return left_subscription.copy(

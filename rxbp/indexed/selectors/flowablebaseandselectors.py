@@ -12,7 +12,9 @@ from rxbp.indexed.selectors.observableseqmapinfo import ObservableSeqMapInfo
 from rxbp.indexed.selectors.identityseqmapinfo import IdentitySeqMapInfo
 from rxbp.observable import Observable
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
+from rxbp.observables.debugobservable import DebugObservable
 from rxbp.observables.filterobservable import FilterObservable
+from rxbp.observables.init.initdebugobservable import init_debug_observable
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.maptoiteratorobservable import MapToIteratorObservable
 from rxbp.observables.refcountobservable import RefCountObservable
@@ -85,7 +87,7 @@ class FlowableBaseAndSelectors:
         for selector_base, selector_obs in self.selectors.items():
 
             # get selector maps of bases
-            result = other.base.match_with(selector_base, subscriber=subscriber)
+            result = other.base.match_with(selector_base, subscriber=subscriber, stack=stack)
 
             if isinstance(result, FlowableBaseMatch):
 
@@ -99,6 +101,7 @@ class FlowableBaseAndSelectors:
                             result.left.observable,
                             selector_obs,
                             subscribe_scheduler=subscriber.scheduler,
+                            stack=stack,
                         ))
 
                         if other.selectors is not None:
@@ -165,7 +168,7 @@ class FlowableBaseAndSelectors:
         # bases are of type Optional[Base], therefore check first if base is not None
         if self.base is not None and other.base is not None:
 
-            result = self.base.match_with(other.base, subscriber=subscriber)
+            result = self.base.match_with(other.base, subscriber=subscriber, stack=stack)
 
             # this BaseAndSelectors and the other BaseAndSelectors match directly with
             # their bases
@@ -222,8 +225,8 @@ class FlowableBaseAndSelectors:
                 base_selectors=base_selectors,
             )
 
-        # two bases B1, B2 defined in selectors match, the following MatchedBaseMap is created
-        # - define a new anonymeous base B_match
+        # two bases B1, B2 defined in selectors match, the following map is created
+        # - define a new anonymous base B_match
         # - define two selectors that map a sequence with base B1 and B2 to base B_match
         #   in case B1 and B2 match with identity, only define no selector
         # - define two selectors that map the two sequences of the match operator to base B_match
@@ -233,38 +236,33 @@ class FlowableBaseAndSelectors:
             for sel_base_1, sel_observable_1 in self.selectors.items():
                 for sel_base_2, sel_observable_2 in other.selectors.items():
 
-                    result = sel_base_1.match_with(sel_base_2, subscriber=subscriber)
+                    result = sel_base_1.match_with(
+                        sel_base_2,
+                        subscriber=subscriber,
+                        stack=stack,
+                    )
 
                     # if two bases match ...
                     if isinstance(result, FlowableBaseMatch):
 
                         # once right is completed, keep consuming left side until it is completed as well
                         def request_left(left, right):
-                            return not all([
-                                isinstance(left, SelectCompleted),
-                                isinstance(right, SelectNext),
-                            ])
+                            return not (isinstance(left, SelectCompleted) and isinstance(right, SelectNext))
 
                         def request_right(left, right):
-                            return not all([
-                                isinstance(right, SelectCompleted),
-                                isinstance(left, SelectNext),
-                            ])
-
-                        def match_func(left, right):
-                            return True
+                            return not (isinstance(right, SelectCompleted) and isinstance(left, SelectNext))
 
                         if isinstance(result.left, IdentitySeqMapInfo) and isinstance(result.right, IdentitySeqMapInfo):
-                            merge_sel = ControlledZipObservable(
-                                left=sel_observable_1,
-                                right=sel_observable_2,
-                                request_left=request_left,
-                                request_right=request_right,
-                                match_func=match_func,
-                                scheduler=subscriber.scheduler,
-                            )
                             merge_sel = RefCountObservable(
-                                source=merge_sel,
+                                source=ControlledZipObservable(
+                                    left=sel_observable_1, #init_debug_observable(sel_observable_1, name='d1', stack=stack, subscriber=subscriber),
+                                    right=sel_observable_2, #init_debug_observable(sel_observable_2, name='d1', stack=stack, subscriber=subscriber),
+                                    request_left=request_left,
+                                    request_right=request_right,
+                                    match_func=lambda _, __: True,
+                                    scheduler=subscriber.scheduler,
+                                    stack=stack,
+                                ), #name='d2', stack=stack, subscriber=subscriber),
                                 subject=PublishObservableSubject(),
                                 subscribe_scheduler=subscriber.subscribe_scheduler,
                                 stack=stack,
@@ -323,9 +321,9 @@ class FlowableBaseAndSelectors:
                                     base=None,
                                     selectors={
                                         sel_base_1: right_selector_map,
-                                        **{k: merge_selectors(v, left_sel, subscribe_scheduler=subscriber.scheduler) for k, v in
+                                        **{k: merge_selectors(v, left_sel, subscribe_scheduler=subscriber.scheduler, stack=stack) for k, v in
                                            self.selectors.items() if k != sel_base_1},
-                                        **{k: merge_selectors(v, right_sel, subscribe_scheduler=subscriber.scheduler) for k, v in
+                                        **{k: merge_selectors(v, right_sel, subscribe_scheduler=subscriber.scheduler, stack=stack) for k, v in
                                            other.selectors.items() if k != sel_base_2}
                                     },
                                 ),

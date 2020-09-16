@@ -9,36 +9,36 @@ from rxbp.typing import ElementType
 
 @dataclass
 class ConcatObserver(Observer):
-    source: Observer
+    next_observer: Observer
     connectables: Iterator[ConnectableObserver]
 
     def __post_init__(self):
         self.ack = None
 
     def on_next(self, elem: ElementType):
-        self.ack = self.source.on_next(elem)
+        self.ack = self.next_observer.on_next(elem)
         return self.ack
 
     def on_error(self, exc):
-        self.source.on_error(exc)
+        self.next_observer.on_error(exc)
 
         for conn_obs in self.connectables:
             conn_obs.dispose()
 
     def on_completed(self):
         try:
-            connectables = self.connectables
+            next_source = next(self.connectables)
+        except StopIteration:
+            self.next_observer.on_completed()
+            return
 
-            class _(Single):
+        if self.ack is None or self.ack.is_sync:
+            next_source.connect()
+
+        else:
+            class ConcatSingle(Single):
                 def on_next(self, elem):
-                    next_source = next(connectables)
                     next_source.connect()
 
-            if self.ack is None or self.ack.is_sync:
-                next_source = next(self.connectables)
-                next_source.connect()
-            else:
-                self.ack.subscribe(_())
+            self.ack.subscribe(ConcatSingle())
 
-        except StopIteration:
-            self.source.on_completed()

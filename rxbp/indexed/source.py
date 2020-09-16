@@ -1,30 +1,23 @@
 import math
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
+from rxbp.flowable import Flowable
 from rxbp.indexed.flowables.fromemptyindexedflowable import FromEmptyIndexedFlowable
 from rxbp.indexed.flowables.fromiterableindexedflowable import FromIterableIndexedFlowable
 from rxbp.indexed.flowables.singleelementindexedflowable import SingleElementIndexedFlowable
 from rxbp.indexed.indexedflowable import IndexedFlowable
+from rxbp.indexed.indexedsubscription import IndexedSubscription
 from rxbp.indexed.init.initindexedflowable import init_indexed_flowable
+from rxbp.indexed.init.initindexedsubscription import init_indexed_subscription
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
-from rxbp.indexed.selectors.flowablebase import FlowableBase
 from rxbp.indexed.selectors.bases.numericalbase import NumericalBase
-from rxbp.indexed.selectors.bases.objectrefbase import ObjectRefBase
+from rxbp.indexed.selectors.flowablebase import FlowableBase
+from rxbp.indexed.selectors.flowablebaseandselectors import FlowableBaseAndSelectors
+from rxbp.indexed.utils.initbase import init_base
+from rxbp.mixins.flowablemixin import FlowableMixin
+from rxbp.subscriber import Subscriber
 from rxbp.utils.getstacklines import get_stack_lines
-
-
-def _create_base(base: Optional[Any]) -> FlowableBase:
-    if base is not None:
-        if isinstance(base, str):
-            base = ObjectRefBase(base)
-        elif isinstance(base, int):
-            base = NumericalBase(base)
-        elif isinstance(base, FlowableBase):
-            base = base
-        else:
-            raise Exception(f'illegal base "{base}"')
-
-    return base
 
 
 def empty():
@@ -32,7 +25,32 @@ def empty():
     create a Flowable emitting no elements
     """
 
-    return init_indexed_flowable(FromEmptyIndexedFlowable())
+    return init_indexed_flowable(
+        underlying=FromEmptyIndexedFlowable(),
+    )
+
+
+def from_flowable(
+        source: Flowable,
+        base: Any,
+):
+    @dataclass
+    class SetBaseIndexedFlowable(IndexedFlowableMixin):
+        source: FlowableMixin
+        base: FlowableBase
+
+        def unsafe_subscribe(self, subscriber: Subscriber) -> IndexedSubscription:
+            subscription = self.source.unsafe_subscribe(subscriber=subscriber)
+
+            return init_indexed_subscription(
+                index=FlowableBaseAndSelectors(base=self.base, selectors=None),
+                observable=subscription.observable,
+            )
+
+    return init_indexed_flowable(underlying=SetBaseIndexedFlowable(
+        source=source,
+        base=init_base(base),
+    ))
 
 
 def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = None):
@@ -54,7 +72,7 @@ def from_range(arg1: int, arg2: int = None, batch_size: int = None, base: Any = 
 
     n_elements = stop_idx - start_idx
 
-    base = _create_base(base)
+    base = init_base(base)
 
     if base is None:
         base = NumericalBase(n_elements)

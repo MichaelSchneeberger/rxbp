@@ -55,7 +55,10 @@ class FlowableOpMixin(
         ...
 
     @abstractmethod
-    def _copy(self, underlying: FlowableMixin, is_shared: bool = None, *args, **kwargs) -> 'FlowableOpMixin':
+    def _copy(
+            self,
+            **kwargs,
+    ) -> 'FlowableOpMixin':
         ...
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
@@ -67,7 +70,7 @@ class FlowableOpMixin(
 
     def buffer(self, buffer_size: int = None) -> 'FlowableOpMixin':
         flowable = BufferFlowable(source=self, buffer_size=buffer_size)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def concat(self, *others: FlowableMixin) -> 'FlowableOpMixin':
         if len(others) == 0:
@@ -75,11 +78,20 @@ class FlowableOpMixin(
 
         all_sources = itertools.chain([self], others)
         flowable = ConcatFlowable(sources=list(all_sources))
-        return self._copy(flowable)
+
+        sources = (self,) + others
+
+        try:
+            source = next(source for source in sources if isinstance(source, SharedFlowableMixin))
+        except StopIteration:
+            source = self
+
+        return source._copy(underlying=flowable)
 
     def controlled_zip(
             self,
             right: FlowableMixin,
+            stack: List[FrameSummary],
             request_left: Callable[[Any, Any], bool] = None,
             request_right: Callable[[Any, Any], bool] = None,
             match_func: Callable[[Any, Any], bool] = None,
@@ -90,11 +102,18 @@ class FlowableOpMixin(
         flowable = ControlledZipFlowable(
             left=self,
             right=right,
+            stack=stack,
             request_left=request_left,
             request_right=request_right,
             match_func=match_func,
         )
-        return self._copy(flowable)
+
+        try:
+            source = next(source for source in [self, right] if isinstance(source, SharedFlowableMixin))
+        except StopIteration:
+            source = self
+
+        return source._copy(underlying=flowable)
 
     def debug(
             self,
@@ -111,7 +130,7 @@ class FlowableOpMixin(
             verbose: bool = None
     ):
 
-        return self._copy(init_debug_flowable(
+        return self._copy(underlying=init_debug_flowable(
             source=self,
             name=name,
             on_next=on_next,
@@ -127,7 +146,9 @@ class FlowableOpMixin(
         ))
 
     def default_if_empty(self, lazy_val: Callable[[], Any]) -> 'FlowableOpMixin':
-        return self._copy(DefaultIfEmptyFlowable(source=self, lazy_val=lazy_val))
+        return self._copy(
+            underlying=DefaultIfEmptyFlowable(source=self, lazy_val=lazy_val),
+        )
 
     def do_action(
             self,
@@ -136,7 +157,7 @@ class FlowableOpMixin(
             on_error: Callable[[Exception], None] = None,
             on_disposed: Callable[[], None] = None,
     ) -> 'FlowableOpMixin':
-        return self._copy(DoActionFlowable(
+        return self._copy(underlying=DoActionFlowable(
             source=self,
             on_next=on_next,
             on_completed=on_completed,
@@ -145,43 +166,42 @@ class FlowableOpMixin(
         ))
 
     # def execute_on(self, scheduler: Scheduler):
-    #     return self._copy(ExecuteOnFlowable(source=self, scheduler=scheduler))
+    #     return self._copy(underlying=ExecuteOnFlowable(source=self, scheduler=scheduler))
 
     def filter(
             self,
             predicate: Callable[[Any], bool],
             stack: List[FrameSummary],
     ) -> 'FlowableOpMixin':
-
         flowable = FilterFlowable(source=self, predicate=predicate)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def first(self, stack: List[FrameSummary]):
         flowable = FirstFlowable(source=self, stack=stack)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def first_or_default(self, lazy_val: Callable[[], Any]):
         flowable = FirstOrDefaultFlowable(source=self, lazy_val=lazy_val)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def flat_map(self, func: Callable[[Any], 'FlowableOpMixin'], stack: List[FrameSummary]):
         flowable = FlatMapFlowable(source=self, func=func, stack=stack)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def last(self, stack: List[FrameSummary]):
         flowable = LastFlowable(source=self, stack=stack)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def map(self, func: Callable[[ValueType], Any]):
         flowable = MapFlowable(source=self, func=func)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def map_to_iterator(
             self,
             func: Callable[[ValueType], Iterator[ValueType]],
     ):
         flowable = MapToIteratorFlowable(source=self, func=func)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def materialize(
             self,
@@ -198,7 +218,7 @@ class FlowableOpMixin(
                     )
                 )
 
-        return self._copy(MaterializeFlowable(source=self))
+        return self._copy(underlying=MaterializeFlowable(source=self))
 
     def merge(self, *others: FlowableMixin):
 
@@ -212,31 +232,31 @@ class FlowableOpMixin(
 
             def gen_stack():
                 for source in reversed(sources):
-                    def _(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
+                    def func(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
                         if right is None:
                             return left
                         else:
                             flowable = MergeFlowable(source=left, other=right)
                             return flowable
 
-                    yield _
+                    yield func
 
-            obs: FlowableMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            flowable: FlowableMixin = functools.reduce(lambda acc, func: func(acc), gen_stack(), None)
 
             try:
                 source = next(source for source in sources if isinstance(source, SharedFlowableMixin))
             except StopIteration:
                 source = self
 
-            return source._copy(obs)
+            return source._copy(underlying=flowable)
 
     def observe_on(self, scheduler: Scheduler):
 
-        return self._copy(ObserveOnFlowable(source=self, scheduler=scheduler))
+        return self._copy(underlying=ObserveOnFlowable(source=self, scheduler=scheduler))
 
     def pairwise(self) -> 'FlowableOpMixin':
 
-        return self._copy(PairwiseFlowable(source=self))
+        return self._copy(underlying=PairwiseFlowable(source=self))
 
     def reduce(
             self,
@@ -248,24 +268,24 @@ class FlowableOpMixin(
             func=func,
             initial=initial,
         )
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def repeat_first(self):
 
         flowable = RepeatFirstFlowable(source=self)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def scan(self, func: Callable[[Any, Any], Any], initial: Any):
         flowable = ScanFlowable(source=self, func=func, initial=initial)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def _share(self, stack: List[FrameSummary]):
-        return self._copy(RefCountFlowable(source=self, stack=stack), is_shared=True)
+        return self._copy(underlying=RefCountFlowable(source=self, stack=stack), is_shared=True)
 
     def to_list(self):
 
         flowable = ToListFlowable(source=self)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 
     def to_rx(self, batched: bool = None) -> rx.Observable:
         """ Converts this Flowable to an rx.Observable
@@ -288,7 +308,7 @@ class FlowableOpMixin(
 
             def gen_stack():
                 for source in reversed(sources):
-                    def _(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
+                    def func(right: 'FlowableOpMixin' = None, left: 'FlowableOpMixin' = source):
                         if right is None:
                             return left.map(lambda v: (v,))
                         else:
@@ -305,19 +325,19 @@ class FlowableOpMixin(
                             )
                             return flowable
 
-                    yield _
+                    yield func
 
-            obs: FlowableMixin = functools.reduce(lambda acc, v: v(acc), gen_stack(), None)
+            flowable: FlowableMixin = functools.reduce(lambda acc, func: func(acc), gen_stack(), None)
 
             try:
                 source = next(source for source in sources if isinstance(source, SharedFlowableMixin))
             except StopIteration:
                 source = self
 
-            return source._copy(obs)
+            return source._copy(underlying=flowable)
 
     def zip_with_index(self, selector: Callable[[Any, int], Any] = None):
 
         flowable = ZipWithIndexFlowable(source=self, selector=selector)
-        return self._copy(flowable)
+        return self._copy(underlying=flowable)
 

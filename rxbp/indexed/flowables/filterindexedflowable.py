@@ -4,7 +4,7 @@ from typing import Callable, Any, List
 
 from rxbp.indexed.indexedsubscription import IndexedSubscription
 from rxbp.indexed.mixins.indexedflowablemixin import IndexedFlowableMixin
-from rxbp.indexed.observables.indexedfilterobservable import IndexedFilterObservable
+from rxbp.indexed.observables.filterindexedobservable import FilterIndexedObservable
 from rxbp.indexed.selectors.flowablebaseandselectors import FlowableBaseAndSelectors
 from rxbp.indexed.selectors.selectionop import merge_selectors
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
@@ -20,7 +20,7 @@ class FilterIndexedFlowable(IndexedFlowableMixin):
     def unsafe_subscribe(self, subscriber: Subscriber) -> IndexedSubscription:
         subscription = self.source.unsafe_subscribe(subscriber)
 
-        observable = IndexedFilterObservable(
+        observable = FilterIndexedObservable(
             source=subscription.observable,
             predicate=self.predicate,
             selector_subject=PublishObservableSubject(),

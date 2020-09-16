@@ -1,11 +1,12 @@
 from traceback import FrameSummary
 from typing import List
 
-from rxbp.indexed.observables.controlledzipobservable import ControlledZipObservable
+from rxbp.indexed.observables.controlledzipindexedobservable import ControlledZipIndexedObservable
 from rxbp.indexed.selectors.observables.mergeselectorobservable import MergeSelectorObservable
 from rxbp.indexed.selectors.selectnext import SelectNext
 from rxbp.indexed.selectors.selectcompleted import SelectCompleted
 from rxbp.observable import Observable
+from rxbp.observables.controlledzipobservable import ControlledZipObservable
 from rxbp.observables.mapobservable import MapObservable
 from rxbp.observables.refcountobservable import RefCountObservable
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
@@ -32,7 +33,7 @@ def merge_selectors(
     obs = MergeSelectorObservable(
         left=left,
         right=right,
-        scheduler=subscribe_scheduler,
+        # scheduler=subscribe_scheduler,
     )
 
     o3 = RefCountObservable(
@@ -49,18 +50,21 @@ def select_observable(
         obs: Observable,
         selector: Observable,
         scheduler: Scheduler,
+        stack: List[FrameSummary],
 ):
     def request_left(left, right):
         return isinstance(right, SelectCompleted)
 
-    obs = ControlledZipObservable(
-        left=obs,
-        right=selector,
-        request_left=request_left,
-        request_right=lambda l, r: True,
-        match_func=lambda l, r: isinstance(r, SelectNext),
-        scheduler=scheduler,
+    result = MapObservable(
+        source=ControlledZipObservable(
+            left=obs,
+            right=selector,
+            request_left=request_left,
+            request_right=lambda l, r: True,
+            match_func=lambda l, r: isinstance(r, SelectNext),
+            scheduler=scheduler,
+            stack=stack,
+        ),
+        func=lambda t2: t2[0],
     )
-    result = MapObservable(obs, lambda t2: t2[0])
     return result
-

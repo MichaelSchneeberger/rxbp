@@ -7,7 +7,8 @@ from rxbp.utils.getstacklines import get_stack_lines
 
 
 def debug_base(
-        base: FlowableBase,
+        base: Any,
+        name: str = None,
 ):
     stack = get_stack_lines()
 
@@ -15,6 +16,7 @@ def debug_base(
         return source.debug_base(
             base=base,
             stack=stack,
+            name=name,
         )
 
     return PipeOperation(op_func)

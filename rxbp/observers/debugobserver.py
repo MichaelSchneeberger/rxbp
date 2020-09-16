@@ -52,6 +52,7 @@ class DebugObserver(Observer):
 
         if isinstance(ack, ContinueAck) or isinstance(ack, StopAck):
             self.on_sync_ack(ack)
+
         else:
             self.on_raw_ack(ack)
 
@@ -63,6 +64,7 @@ class DebugObserver(Observer):
                     pass
 
             ack.subscribe(ResultSingle())
+
         return ack
 
     def on_error(self, exc):
