@@ -21,14 +21,14 @@ class TestDefaultIfEmptyObserver(unittest.TestCase):
     def test_initialize(self):
         sink = TestObserver()
         DefaultIfEmptyObserver(
-            observer=sink,
+            next_observer=sink,
             lazy_val=lambda: 0,
         )
 
     def test_on_complete(self):
         sink = TestObserver()
         observer = DefaultIfEmptyObserver(
-            observer=sink,
+            next_observer=sink,
             lazy_val=lambda: 0,
         )
         self.source.observe(init_observer_info(observer))
@@ -41,7 +41,7 @@ class TestDefaultIfEmptyObserver(unittest.TestCase):
     def test_on_error(self):
         sink = TestObserver()
         observer = DefaultIfEmptyObserver(
-            observer=sink,
+            next_observer=sink,
             lazy_val=lambda: 0,
         )
         self.source.observe(init_observer_info(observer))
@@ -53,7 +53,7 @@ class TestDefaultIfEmptyObserver(unittest.TestCase):
     def test_single_element(self):
         sink = TestObserver()
         observer = DefaultIfEmptyObserver(
-            observer=sink,
+            next_observer=sink,
             lazy_val=lambda: 0,
         )
         self.source.observe(init_observer_info(observer))
@@ -70,7 +70,7 @@ class TestDefaultIfEmptyObserver(unittest.TestCase):
     def test_single_batch(self):
         sink = TestObserver()
         observer = DefaultIfEmptyObserver(
-            observer=sink,
+            next_observer=sink,
             lazy_val=lambda: 0,
         )
         self.source.observe(init_observer_info(observer))

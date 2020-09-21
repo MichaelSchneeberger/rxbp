@@ -13,7 +13,7 @@ class DefaultIfEmptyObservable(Observable):
 
     def observe(self, observer_info: ObserverInfo):
         first_observer = DefaultIfEmptyObserver(
-            source=observer_info.observer,
+            next_observer=observer_info.observer,
             lazy_val=self.lazy_val,
         )
         map_subscription = observer_info.copy(observer=first_observer)

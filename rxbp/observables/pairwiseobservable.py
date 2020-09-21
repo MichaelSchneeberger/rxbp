@@ -1,3 +1,5 @@
+import rx
+
 from rxbp.observable import Observable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.pairwiseobserver import PairwiseObserver
@@ -7,7 +9,9 @@ class PairwiseObservable(Observable):
     def __init__(self, source):
         self.source = source
 
-    def observe(self, observer_info: ObserverInfo):
-        pairwise_observer = PairwiseObserver(observer_info.observer)
-        pairwise_subscription = observer_info.copy(observer=pairwise_observer)
-        return self.source.observe(pairwise_subscription)
+    def observe(self, observer_info: ObserverInfo) -> rx.typing.Disposable:
+        return self.source.observe(observer_info.copy(
+            observer=PairwiseObserver(
+                next_observer=observer_info.observer,
+            ),
+        ))
