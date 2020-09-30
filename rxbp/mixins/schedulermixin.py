@@ -19,6 +19,11 @@ class SchedulerMixin(RxScheduler, ABC):
     def is_order_guaranteed(self) -> bool:
         ...
 
+    @property
+    @abstractmethod
+    def idle(self) -> bool:
+        ...
+
     @abstractmethod
     def sleep(self, seconds: float) -> None:
         ...

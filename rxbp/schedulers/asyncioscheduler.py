@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import time
 from threading import Thread
 
 from rx.core.typing import ScheduledAction, RelativeTime, AbsoluteTime
@@ -18,6 +19,13 @@ class AsyncIOScheduler(SchedulerBase, Disposable):
             t = Thread(target=self.start_loop)
             t.setDaemon(True)
             t.start()
+
+    @property
+    def idle(self) -> bool:
+        return True
+
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)
 
     @property
     def is_order_guaranteed(self) -> bool:

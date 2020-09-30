@@ -7,6 +7,10 @@ from rxbp.scheduler import SchedulerBase
 
 class EventLoopScheduler(SchedulerBase, ParentEventLoopScheduler):
     @property
+    def idle(self) -> bool:
+        return True
+
+    @property
     def is_order_guaranteed(self) -> bool:
         return True
 

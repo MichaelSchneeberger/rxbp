@@ -22,13 +22,17 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
 
         super().__init__()
 
-        self.idle = True
+        self._idle = True
         self.queue = PriorityQueue()
 
         self.lock = threading.RLock()
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
+
+    @property
+    def idle(self) -> bool:
+        return self._idle
 
     @property
     def is_order_guaranteed(self) -> bool:
@@ -89,8 +93,8 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
         with self.lock:
             self.queue.enqueue(si)
 
-            if self.idle:
-                self.idle = False
+            if self._idle:
+                self._idle = False
                 start_trampoline = True
             else:
                 start_trampoline = False
@@ -119,7 +123,7 @@ class TrampolineScheduler(RxBPSchedulerBase, Scheduler):
                 finally:
                     with self.lock:
                         if not self.queue:
-                            self.idle = True
+                            self._idle = True
                             # self.queue.clear()
                             break
 
