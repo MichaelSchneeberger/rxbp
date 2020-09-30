@@ -42,6 +42,7 @@ class FlowableCache:
         source.subscribe(
             observer=self._observer,
             scheduler=scheduler,
+            subscribe_scheduler=scheduler,
         )
 
     def to_list(self):

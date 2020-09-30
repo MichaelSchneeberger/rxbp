@@ -27,7 +27,7 @@ class RefCountObservable(Observable):
         self.volatile_disposables: List[rx.typing.Disposable] = []
         self.first_disposable: Optional[rx.typing.Disposable] = None
         self.lock = threading.RLock()
-        self.scheduled_next = False
+        # self.scheduled_next = False
 
     def observe(self, observer_info: ObserverInfo):
         disposable = self.subject.observe(observer_info)
@@ -47,20 +47,20 @@ class RefCountObservable(Observable):
                     stack=self.stack,
                 ))
 
-            def action(_, __):
-                self.scheduled_next = True
-
-            self.subscribe_scheduler.schedule(action)
+            # def action(_, __):
+            #     self.scheduled_next = True
+            #
+            # self.subscribe_scheduler.schedule(action)
 
             subject_subscription = init_observer_info(self.subject, is_volatile=observer_info.is_volatile)
             self.first_disposable = self.source.observe(subject_subscription)
 
-        else:
-            if self.scheduled_next:
-                raise Exception(to_operator_exception(
-                    message='subsequent subscribe call has been delayed, make sure to not delay Flowable subscriptions',
-                    stack=self.stack,
-                ))
+        # else:
+        #     if self.scheduled_next:
+        #         raise Exception(to_operator_exception(
+        #             message='subsequent subscribe call has been delayed, make sure to not delay Flowable subscriptions',
+        #             stack=self.stack,
+        #         ))
 
         def dispose():
             disposable.dispose()
