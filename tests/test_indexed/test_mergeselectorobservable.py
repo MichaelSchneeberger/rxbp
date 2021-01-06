@@ -2,13 +2,15 @@ import unittest
 
 from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.observerinfo import ObserverInfo
-from rxbp.indexed.selectors import MergeSelectorObservable
-from rxbp.indexed.selectors import select_next, select_completed
+from rxbp.indexed.selectors.observables.mergeselectorobservable import MergeSelectorObservable
+from rxbp.indexed.selectors.selectnext import select_next
+from rxbp.indexed.selectors.selectcompleted import select_completed
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.testing.testobservable import TestObservable
 from rxbp.testing.testobserver import TestObserver
 from rxbp.testing.testscheduler import TestScheduler
+from rxbp.init.initobserverinfo import init_observer_info
 
 
 class TestMergeSelectorObservable(unittest.TestCase):
@@ -19,7 +21,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         self.obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
         self.exception = Exception()
 
@@ -33,7 +35,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
 
         self.assertIsInstance(self.measure_termination_state(obs), TerminationStates.InitState)
@@ -50,7 +52,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
         obs.observe(init_observer_info(sink))
 
@@ -72,9 +74,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.left.on_next_list([select_completed, select_completed, select_completed])
 
@@ -94,9 +96,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
 
         ack = self.left.on_next_list([select_next, select_completed])
 
@@ -116,9 +118,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack_left = self.left.on_next_list([select_next, select_completed])
 
         ack_right = self.right.on_next_list([select_completed])
@@ -140,9 +142,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack_left = self.left.on_next_list([select_next, select_completed])
 
         ack_right = self.right.on_next_list([select_next, select_next, select_completed])
@@ -164,9 +166,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack_right = self.right.on_next_list([select_next, select_completed])
 
         ack_left = self.left.on_next_list([select_next, select_completed, select_completed])
@@ -188,9 +190,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack_right = self.right.on_next_list([select_next, select_completed])
 
         ack_left = self.left.on_next_list([select_completed, select_completed])
@@ -212,9 +214,9 @@ class TestMergeSelectorObservable(unittest.TestCase):
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
-            scheduler=self.scheduler,
+            # scheduler=self.scheduler,
         )
-        obs.observe(ObserverInfo(sink))
+        obs.observe(init_observer_info(sink))
         ack_left = self.left.on_next_list([select_next, select_completed, select_completed])
 
         ack_right = self.right.on_next_list([select_completed])
@@ -232,7 +234,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         """
 
         sink = TestObserver(immediate_continue=0)
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
         self.right.on_next_list([select_completed])
 
         self.right.on_completed()
@@ -251,7 +253,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         """
 
         sink = TestObserver(immediate_continue=0)
-        self.obs.observe(ObserverInfo(sink))
+        self.obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_list([select_completed])
 
         self.right.on_error(self.exception)
