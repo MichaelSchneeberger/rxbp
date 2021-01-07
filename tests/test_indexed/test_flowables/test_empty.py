@@ -3,16 +3,16 @@ import unittest
 import rxbp
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestFromRange(unittest.TestCase):
     def setUp(self):
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
 
     def test_happy_case(self):
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         subscription = rxbp.empty().unsafe_subscribe(Subscriber(
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler,

@@ -2,13 +2,14 @@ from rxbp.acknowledgement.acksubject import AckSubject
 from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.controlledzipobservable import ControlledZipObservable
-from rxbp.indexed.selectors import SelectCompleted, SelectNext
+from rxbp.indexed.selectors.selectcompleted import SelectCompleted
+from rxbp.indexed.selectors.selectnext import SelectNext
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.testing.testcasebase import TestCaseBase
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestControlledZipObservable(TestCaseBase):
@@ -25,9 +26,9 @@ class TestControlledZipObservable(TestCaseBase):
         pass
 
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.left = TestObservable()
-        self.right = TestObservable()
+        self.scheduler = TScheduler()
+        self.left = TObservable()
+        self.right = TObservable()
         self.exception = Exception()
 
     def measure_state(self, obs: ControlledZipObservable):
@@ -37,7 +38,7 @@ class TestControlledZipObservable(TestCaseBase):
         return obs.termination_state.get_measured_state()
 
     def test_init_state(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -56,7 +57,7 @@ class TestControlledZipObservable(TestCaseBase):
          InitState                   LeftCompletedState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -78,7 +79,7 @@ class TestControlledZipObservable(TestCaseBase):
          InitState                    InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -100,7 +101,7 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -123,7 +124,7 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnRight ------------> WaitOnRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -146,7 +147,7 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -169,7 +170,7 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -192,7 +193,7 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnRightLeft ------------> WaitOnRightLeft
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -217,7 +218,7 @@ class TestControlledZipObservable(TestCaseBase):
         LeftComplete              BothCompletedState
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -240,7 +241,7 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnRight ------------> Stopped
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -261,9 +262,9 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnLeftRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver(immediate_continue=0)
-        left_sel_sink = TestObserver(immediate_continue=0)
-        right_sel_sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
+        left_sel_sink = TObserver(immediate_continue=0)
+        right_sel_sink = TObserver(immediate_continue=0)
         obs = ControlledZipObservable(
             left=self.left, right=self.right, scheduler=self.scheduler,
             request_left=lambda left, right: left <= right,
@@ -297,9 +298,9 @@ class TestControlledZipObservable(TestCaseBase):
         WaitOnLeftRight ------------> WaitOnLeft
         """
 
-        sink = TestObserver(immediate_continue=0)
-        left_sel_sink = TestObserver(immediate_continue=0)
-        right_sel_sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
+        left_sel_sink = TObserver(immediate_continue=0)
+        right_sel_sink = TObserver(immediate_continue=0)
         ack1 = AckSubject()
         ack2 = AckSubject()
         obs = ControlledZipObservable(

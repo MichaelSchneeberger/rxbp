@@ -5,12 +5,12 @@ from rxbp.init.initflowable import init_flowable
 from rxbp.init.initsubscriber import init_subscriber
 from rxbp.indexed.selectors.bases.objectrefbase import ObjectRefBase
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestOperators(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
         self.left_base = ObjectRefBase('left')
         self.right_base = ObjectRefBase('right')
         self.left = TestFlowable(base=self.left_base)

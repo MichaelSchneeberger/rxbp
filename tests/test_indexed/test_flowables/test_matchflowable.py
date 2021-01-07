@@ -3,8 +3,8 @@ from rxbp.indexed.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testcasebase import TestCaseBase
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestMatchFlowable(TestCaseBase):
@@ -12,8 +12,8 @@ class TestMatchFlowable(TestCaseBase):
     """
 
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.sink = TestObserver()
+        self.scheduler = TScheduler()
+        self.sink = TObserver()
 
     def test_matching_base_with_automatching(self):
         b1 = NumericalBase(1)

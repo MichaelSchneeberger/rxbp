@@ -8,25 +8,25 @@ from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.filterobserver import FilterObserver
 from rxbp.observers.firstobserver import FirstObserver
 from rxbp.observers.tolistobserver import ToListObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestToListObserver(unittest.TestCase):
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.source = TestObservable()
+        self.scheduler = TScheduler()
+        self.source = TObservable()
         self.exc = Exception()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         ToListObserver(
             observer=sink,
         )
 
     def test_on_complete(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ToListObserver(
             observer=sink,
         )
@@ -38,7 +38,7 @@ class TestToListObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_on_error(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ToListObserver(
             observer=sink,
         )
@@ -49,7 +49,7 @@ class TestToListObserver(unittest.TestCase):
         self.assertEqual(self.exc, sink.exception)
 
     def test_single_element(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ToListObserver(
             observer=sink,
         )
@@ -67,7 +67,7 @@ class TestToListObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_single_batch(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ToListObserver(
             observer=sink,
         )

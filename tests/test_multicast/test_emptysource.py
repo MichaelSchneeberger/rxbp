@@ -4,7 +4,7 @@ import rxbp
 from rx.testing import ReactiveTest
 from rx.testing.mockobserver import MockObserver
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tscheduler import TScheduler
 
 on_next = ReactiveTest.on_next
 on_completed = ReactiveTest.on_completed
@@ -17,8 +17,8 @@ created = ReactiveTest.created
 
 class TestEmptySource(unittest.TestCase):
     def setUp(self) -> None:
-        self.multicast_scheduler = TestScheduler()
-        self.source_scheduler = TestScheduler()
+        self.multicast_scheduler = TScheduler()
+        self.source_scheduler = TScheduler()
         self.info = MultiCastInfo(
             multicast_scheduler=self.multicast_scheduler,
             source_scheduler=self.source_scheduler,

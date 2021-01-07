@@ -5,7 +5,7 @@ from rxbp.observer import Observer
 from rxbp.typing import ElementType
 
 
-class TestObserver(Observer):
+class TObserver(Observer):
     """ A test observer that immediately returns a Continue acknowledgment for some number of times, otherwise it
     returns an asynchronous acknowledgment
     """

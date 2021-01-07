@@ -7,19 +7,19 @@ from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.flatmapobserver import FlatMapObserver
 from rxbp.states.rawstates.rawflatmapstates import RawFlatMapStates
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestFlatMapObserver(unittest.TestCase):
     def setUp(self):
-        self.source = TestObservable()
-        self.inner_source_1 = TestObservable()
-        self.inner_source_2 = TestObservable()
+        self.source = TObservable()
+        self.inner_source_1 = TObservable()
+        self.inner_source_2 = TObservable()
 
-        self.sink = TestObserver()
-        self.scheduler = TestScheduler()
+        self.sink = TObserver()
+        self.scheduler = TScheduler()
         self.composite_disposable = CompositeDisposable()
         self.exc = Exception()
         self.lock = threading.RLock()

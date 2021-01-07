@@ -4,26 +4,26 @@ from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observablesubjects.publishobservablesubject import PublishObservableSubject
 from rxbp.observerinfo import ObserverInfo
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestPublishSubject(unittest.TestCase):
 
     def setUp(self):
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
         self.exception = Exception()
 
     def test_should_emit_from_the_point_of_subscription_forward(self):
         subject = PublishObservableSubject(scheduler=self.scheduler)
-        s1 = TestObservable(observer=subject)
+        s1 = TObservable(observer=subject)
 
         self.assertIsInstance(s1.on_next_iter([1]), ContinueAck)
         self.assertIsInstance(s1.on_next_iter([2]), ContinueAck)
         self.assertIsInstance(s1.on_next_iter([3]), ContinueAck)
 
-        o1 = TestObserver()
+        o1 = TObserver()
         o1.immediate_continue = 5
 
         subject.observe(init_observer_info(o1))
@@ -38,11 +38,11 @@ class TestPublishSubject(unittest.TestCase):
 
     def test_should_work_synchronously_for_synchronous_subscribers(self):
         subject = PublishObservableSubject(self.scheduler)
-        s1 = TestObservable(observer=subject)
+        s1 = TObservable(observer=subject)
 
         def gen_observers():
             for i in range(10):
-                o1 = TestObserver()
+                o1 = TObserver()
                 o1.immediate_continue = 5
                 subject.observe(init_observer_info(o1))
                 yield o1
@@ -87,17 +87,17 @@ class TestPublishSubject(unittest.TestCase):
         subject = PublishObservableSubject(self.scheduler)
         subject.on_completed()
 
-        o1 = TestObserver()
+        o1 = TObserver()
         subject.observe(init_observer_info(o1))
         self.assertTrue(o1.is_completed)
 
     def test_on_error_should_terminate_current_and_future_subscribers(self):
         subject = PublishObservableSubject(self.scheduler)
-        s1 = TestObservable(observer=subject)
+        s1 = TObservable(observer=subject)
 
         def gen_observers():
             for _ in range(10):
-                observer = TestObserver()
+                observer = TObserver()
                 subject.observe(init_observer_info(
                     observer=observer,
                 ))
@@ -108,7 +108,7 @@ class TestPublishSubject(unittest.TestCase):
         s1.on_next_iter([1])
         s1.on_error(self.exception)
 
-        o1 = TestObserver()
+        o1 = TObserver()
         subject.observe(init_observer_info(o1))
 
         for observer in observer_list:
@@ -119,8 +119,8 @@ class TestPublishSubject(unittest.TestCase):
 
     def test_unsubscribe_after_on_complete(self):
         subject = PublishObservableSubject(self.scheduler)
-        s1 = TestObservable(observer=subject)
-        o1 = TestObserver()
+        s1 = TObservable(observer=subject)
+        o1 = TObserver()
         d = subject.observe(init_observer_info(o1))
 
         s1.on_next_iter([1])

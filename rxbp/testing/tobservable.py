@@ -8,7 +8,7 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.typing import ValueType
 
 
-class TestObservable(Observable):
+class TObservable(Observable):
     def __init__(self, observer: Observer = None):
         self.observer = observer
 

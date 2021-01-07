@@ -3,14 +3,14 @@ import unittest
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.pairwiseobserver import PairwiseObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
 
 
 class TestPairwiseObserver(unittest.TestCase):
     def setUp(self) -> None:
-        self.source = TestObservable()
-        self.sink = TestObserver()
+        self.source = TObservable()
+        self.sink = TObserver()
 
     def test_initialize(self):
         PairwiseObserver(self.sink)

@@ -5,13 +5,13 @@ from rxbp.multicast.multicasts.maptoiteratormulticast import MapToIteratorMultiC
 from rxbp.multicast.testing.testmulticast import TestMultiCast
 from rxbp.multicast.testing.testmulticastobserver import TestMultiCastObserver
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestDeferMultiCast(unittest.TestCase):
     def setUp(self) -> None:
-        self.multicast_scheduler = TestScheduler()
-        self.source_scheduler = TestScheduler()
+        self.multicast_scheduler = TScheduler()
+        self.source_scheduler = TScheduler()
         self.info = MultiCastInfo(
             multicast_scheduler=self.multicast_scheduler,
             source_scheduler=self.source_scheduler,

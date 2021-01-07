@@ -5,13 +5,13 @@ from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.observerinfo import ObserverInfo
 from rxbp.indexed.selectors.bases.numericalbase import NumericalBase
 from rxbp.subscriber import Subscriber
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestFromList(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
 
     def test_base(self):
         test_list = [1, 2, 3]
@@ -24,7 +24,7 @@ class TestFromList(unittest.TestCase):
     def test_from_list(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         subscription = rxbp.from_list(test_list).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
@@ -37,7 +37,7 @@ class TestFromList(unittest.TestCase):
     def test_from_list_batch_size_of_one(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         subscription = rxbp.from_list(test_list, batch_size=1).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))
@@ -55,7 +55,7 @@ class TestFromList(unittest.TestCase):
     def test_from_list_batch_size_of_two(self):
         test_list = [1, 2, 3]
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         subscription = rxbp.from_list(test_list, batch_size=2).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(ObserverInfo(observer=sink))

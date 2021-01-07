@@ -5,26 +5,26 @@ from rxbp.acknowledgement.stopack import StopAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.filterobserver import FilterObserver
 from rxbp.observers.takewhileobserver import TakeWhileObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestTakeWhileObserver(unittest.TestCase):
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.source = TestObservable()
+        self.scheduler = TScheduler()
+        self.source = TObservable()
         self.exception = Exception()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         TakeWhileObserver(
             observer=sink,
             predicate=lambda _: True,
         )
 
     def test_empty_sequence(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v > 0,
@@ -36,7 +36,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_on_error(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v > 0,
@@ -48,7 +48,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertEqual(self.exception, sink.exception)
 
     def test_single_non_matching_element_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -62,7 +62,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertListEqual(sink.received, [])
 
     def test_single_matching_elements_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -82,7 +82,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertListEqual(sink.received, [1, 1])
 
     def test_list_and_complete_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -99,7 +99,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_list_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -118,7 +118,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_iterable_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -137,7 +137,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_failure_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -158,7 +158,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertEqual(self.exception, sink.exception)
 
     def test_failure_after_non_matching_element_synchronously(self):
-        sink = TestObserver(immediate_continue=None)
+        sink = TObserver(immediate_continue=None)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,
@@ -183,7 +183,7 @@ class TestTakeWhileObserver(unittest.TestCase):
         self.assertIsNone(sink.exception)
 
     def test_list_asynchronously(self):
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         observer = TakeWhileObserver(
             observer=sink,
             predicate=lambda v: v,

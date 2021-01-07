@@ -10,14 +10,14 @@ from rxbp.multicast.testing.testmulticastobserver import TestMultiCastObserver
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestLoopFlowablesMultiCast(unittest.TestCase):
     def setUp(self) -> None:
-        self.multicast_scheduler = TestScheduler()
-        self.source_scheduler = TestScheduler()
+        self.multicast_scheduler = TScheduler()
+        self.source_scheduler = TScheduler()
         self.info = MultiCastInfo(
             multicast_scheduler=self.multicast_scheduler,
             source_scheduler=self.source_scheduler,
@@ -52,7 +52,7 @@ class TestLoopFlowablesMultiCast(unittest.TestCase):
         reduce_multicast.get_source(self.info).subscribe(self.rx_sink)
         self.source_multicast.on_next(Flowable(self.source1))
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         subscription = self.rx_sink.received[0].unsafe_subscribe(Subscriber(
             scheduler=self.source_scheduler, subscribe_scheduler=self.source_scheduler,
         ))

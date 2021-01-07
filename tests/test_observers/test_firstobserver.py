@@ -6,27 +6,27 @@ from rxbp.acknowledgement.stopack import StopAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.filterobserver import FilterObserver
 from rxbp.observers.firstobserver import FirstObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 from rxbp.utils.getstacklines import get_stack_lines
 
 
 class TestFirstObserver(unittest.TestCase):
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.source = TestObservable()
+        self.scheduler = TScheduler()
+        self.source = TObservable()
         self.exc = Exception()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         FirstObserver(
             observer=sink,
             stack=get_stack_lines(),
         )
 
     def test_on_complete(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FirstObserver(
             observer=sink,
             stack=get_stack_lines(),
@@ -39,7 +39,7 @@ class TestFirstObserver(unittest.TestCase):
         self.assertIsInstance(sink.exception, SequenceContainsNoElementsError)
 
     def test_on_error(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FirstObserver(
             observer=sink,
             stack=get_stack_lines(),
@@ -51,7 +51,7 @@ class TestFirstObserver(unittest.TestCase):
         self.assertEqual(self.exc, sink.exception)
 
     def test_single_element(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FirstObserver(
             observer=sink,
             stack=get_stack_lines(),
@@ -70,7 +70,7 @@ class TestFirstObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_single_batch(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FirstObserver(
             observer=sink,
             stack=get_stack_lines(),

@@ -7,17 +7,17 @@ from rxbp.indexed.selectors.selectnext import select_next
 from rxbp.indexed.selectors.selectcompleted import select_completed
 from rxbp.states.measuredstates.controlledzipstates import ControlledZipStates
 from rxbp.states.measuredstates.terminationstates import TerminationStates
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 from rxbp.init.initobserverinfo import init_observer_info
 
 
 class TestMergeSelectorObservable(unittest.TestCase):
     def setUp(self) -> None:
-        self.left = TestObservable()
-        self.right = TestObservable()
-        self.scheduler = TestScheduler()
+        self.left = TObservable()
+        self.right = TObservable()
+        self.scheduler = TScheduler()
         self.obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -48,7 +48,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                             InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -70,7 +70,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                             InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -92,7 +92,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                          InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -114,7 +114,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                          InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -138,7 +138,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                          InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -162,7 +162,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                       InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -186,7 +186,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                          InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -210,7 +210,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
          InitState                          InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = MergeSelectorObservable(
             left=self.left,
             right=self.right,
@@ -233,7 +233,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         WaitOnLeft --------------------> WaitOnLeft ------------------> Stopped
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         self.obs.observe(init_observer_info(sink))
         self.right.on_next_list([select_completed])
 
@@ -252,7 +252,7 @@ class TestMergeSelectorObservable(unittest.TestCase):
         WaitOnRight -------------> Stopped
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         self.obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_list([select_completed])
 

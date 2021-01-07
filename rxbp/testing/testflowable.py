@@ -6,7 +6,7 @@ from rxbp.observable import Observable
 from rxbp.indexed.selectors.flowablebase import FlowableBase
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
-from rxbp.testing.testobservable import TestObservable
+from rxbp.testing.tobservable import TObservable
 
 
 class TestFlowable(FlowableMixin):
@@ -22,7 +22,7 @@ class TestFlowable(FlowableMixin):
         self.base = base
         self.selectors = selectors
         self.subscriber = subscriber
-        self.observable = observable or TestObservable()
+        self.observable = observable or TObservable()
 
     def unsafe_subscribe(self, subscriber: Subscriber) -> Subscription:
         self.subscriber = subscriber

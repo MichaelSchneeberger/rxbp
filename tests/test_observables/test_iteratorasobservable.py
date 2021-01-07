@@ -4,13 +4,13 @@ from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.fromiteratorobservable import FromIteratorObservable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestIteratorAsObservable(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
 
     def test_initialize(self):
         FromIteratorObservable(
@@ -25,7 +25,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver()
+        sink = TObserver()
 
         obs.observe(init_observer_info(sink))
         self.scheduler.advance_by(1)
@@ -39,7 +39,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs.observe(init_observer_info(sink))
         self.scheduler.advance_by(1)
 
@@ -52,7 +52,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs.observe(init_observer_info(sink))
         self.scheduler.advance_by(1)
 
@@ -65,7 +65,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver()
+        sink = TObserver()
         obs.observe(init_observer_info(sink))
         self.scheduler.advance_by(1)
 
@@ -78,7 +78,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs.observe(init_observer_info(sink))
         self.scheduler.advance_by(1)
 
@@ -91,7 +91,7 @@ class TestIteratorAsObservable(unittest.TestCase):
             scheduler=self.scheduler,
             subscribe_scheduler=self.scheduler
         )
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs.observe(init_observer_info(sink))
         self.scheduler.advance_by(1)
 

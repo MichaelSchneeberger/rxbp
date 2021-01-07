@@ -3,16 +3,16 @@ from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observablesubjects.cacheservefirstobservablesubject import CacheServeFirstObservableSubject
 from rxbp.observerinfo import ObserverInfo
 from rxbp.testing.testcasebase import TestCaseBase
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestCachedServeFirstSubject(TestCaseBase):
 
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.source = TestObservable()
+        self.scheduler = TScheduler()
+        self.source = TObservable()
         self.subject = CacheServeFirstObservableSubject(scheduler=self.scheduler)
         self.source.observe(init_observer_info(self.subject))
         self.exc = Exception()
@@ -27,7 +27,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        observer = TestObserver()
+        observer = TObserver()
         self.subject.observe(init_observer_info(observer))
 
         # state change (change to the same state)
@@ -45,7 +45,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver()
+        o1 = TObserver()
         self.subject.observe(init_observer_info(o1))
 
         # state change
@@ -63,7 +63,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
 
         # state change
@@ -80,7 +80,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         ack = self.source.on_next_single(1)
 
@@ -101,7 +101,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.source.on_next_single(1)
 
@@ -121,7 +121,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         #preparation
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.source.on_next_single(1)
         self.source.on_next_single(2)
@@ -140,7 +140,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.source.on_next_single(1)
         self.source.on_next_single(2)
@@ -162,7 +162,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparations
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.source.on_next_single(1)
         self.source.on_next_single(2)
@@ -185,8 +185,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver()
-        o2 = TestObserver()
+        o1 = TObserver()
+        o2 = TObserver()
         self.subject.observe(init_observer_info(o1))
         self.subject.observe(init_observer_info(o2))
 
@@ -207,8 +207,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver(immediate_continue=0)
-        o2 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
+        o2 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.subject.observe(init_observer_info(o2))
         self.source.on_next_single(1)
@@ -222,8 +222,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(1, len(self.subject.shared_state.queue))
 
     def test_on_next_enter_fast_loop_two_subscribers_asynchronously(self):
-        o1 = TestObserver(immediate_continue=0)
-        o2 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
+        o2 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.subject.observe(init_observer_info(o2))
         self.source.on_next_single(1)
@@ -236,8 +236,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual([1], o2.received)
 
     def test_on_next_enter_fast_loop_two_subscribers_asynchronously2(self):
-        o1 = TestObserver()
-        o2 = TestObserver(immediate_continue=0)
+        o1 = TObserver()
+        o2 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.subject.observe(init_observer_info(o2))
 
@@ -262,7 +262,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         """
 
         # preparation
-        o1 = TestObserver()
+        o1 = TObserver()
         self.subject.observe(init_observer_info(o1))
 
         # state change
@@ -274,8 +274,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
                               CacheServeFirstObservableSubject.ExceptionState)
 
     def test_on_next_on_error_asynchronously(self):
-        o1 = TestObserver(immediate_continue=0)
-        o2 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
+        o2 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.subject.observe(init_observer_info(o2))
 
@@ -290,8 +290,8 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(self.exc, o2.exception)
 
     def test_on_error_two_subscribers_asynchronously(self):
-        o1 = TestObserver()
-        o2 = TestObserver(immediate_continue=0)
+        o1 = TObserver()
+        o2 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.subject.observe(init_observer_info(o2))
         self.source.on_next_single(1)
@@ -302,7 +302,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(self.exc, o2.exception)
 
     def test_on_error_asynchronously(self):
-        o1 = TestObserver(immediate_continue=0)
+        o1 = TObserver(immediate_continue=0)
         self.subject.observe(init_observer_info(o1))
         self.source.on_next_single(1)
         self.source.on_error(self.exc)
@@ -313,7 +313,7 @@ class TestCachedServeFirstSubject(TestCaseBase):
         self.assertEqual(self.exc, o1.exception)
 
     def test_on_disposed(self):
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         disposable = self.subject.observe(init_observer_info(sink))
 
         disposable.dispose()

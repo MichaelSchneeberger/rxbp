@@ -5,17 +5,17 @@ from rxbp.flowable import Flowable
 from rxbp.observerinfo import ObserverInfo
 from rxbp.subscriber import Subscriber
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestZip(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
         self.sources = [TestFlowable(), TestFlowable(), TestFlowable()]
 
     def test_use_case(self):
-        sink = TestObserver()
+        sink = TObserver()
         subscription = rxbp.zip(*[Flowable(e) for e in self.sources]).unsafe_subscribe(Subscriber(
             scheduler=self.scheduler, subscribe_scheduler=self.scheduler))
         subscription.observable.observe(init_observer_info(observer=sink))

@@ -5,14 +5,14 @@ from rx import operators as rxop
 
 from rxbp.multicast.testing.testmulticastobservable import TestMultiCastObservable
 from rxbp.multicast.testing.testmulticastobserver import TestMultiCastObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestLiftObservable(unittest.TestCase):
     def setUp(self):
         self.source = TestMultiCastObservable()
         self.sink = TestMultiCastObserver()
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
 
         def func(obs: rx.typing.Observable, first):
             return obs

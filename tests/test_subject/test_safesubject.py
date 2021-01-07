@@ -4,15 +4,15 @@ from rx.disposable import CompositeDisposable
 
 from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.multicast.imperative.safeflowablesubject import SafeFlowableSubject
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestSafeSubject(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
         self.composite_disposable = CompositeDisposable()
-        self.sink = TestObserver()
+        self.sink = TObserver()
         self.exception = Exception()
 
     def test_on_next_return_continue_ack(self):

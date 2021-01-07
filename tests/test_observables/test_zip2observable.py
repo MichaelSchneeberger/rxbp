@@ -5,9 +5,9 @@ from rxbp.observerinfo import ObserverInfo
 from rxbp.states.measuredstates.terminationstates import TerminationStates
 from rxbp.states.measuredstates.zipstates import ZipStates
 from rxbp.testing.testcasebase import TestCaseBase
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestZip2Observable(TestCaseBase):
@@ -39,9 +39,9 @@ class TestZip2Observable(TestCaseBase):
     """
 
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.left = TestObservable()
-        self.right = TestObservable()
+        self.scheduler = TScheduler()
+        self.left = TObservable()
+        self.right = TObservable()
         self.exception = Exception('test')
 
     def measure_state(self, obs: ZipObservable):
@@ -51,7 +51,7 @@ class TestZip2Observable(TestCaseBase):
         return obs.termination_state.get_measured_state()
 
     def test_init_state(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -65,7 +65,7 @@ class TestZip2Observable(TestCaseBase):
          InitState                   LeftCompletedState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -82,7 +82,7 @@ class TestZip2Observable(TestCaseBase):
          InitState                   RightCompletedState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -99,7 +99,7 @@ class TestZip2Observable(TestCaseBase):
          InitState                    InitState
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -116,7 +116,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
         ack1 = self.left.on_next_single(1)
@@ -134,7 +134,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRight ------------> WaitOnLeftRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -152,7 +152,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRight ------------> WaitOnRight
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -170,7 +170,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRight ------------> WaitOnLeft
         """
 
-        sink = TestObserver()
+        sink = TObserver()
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -188,7 +188,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRightLeft ------------> WaitOnRightLeft
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -207,7 +207,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnLeft ------------> WaitOnLeft
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -226,7 +226,7 @@ class TestZip2Observable(TestCaseBase):
         Stopped ------------> Stopped
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -244,7 +244,7 @@ class TestZip2Observable(TestCaseBase):
         WaitOnRight ------------> Stopped
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -260,7 +260,7 @@ class TestZip2Observable(TestCaseBase):
           InitState                LeftCompletedState
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -277,7 +277,7 @@ class TestZip2Observable(TestCaseBase):
         LeftComplete              BothCompletedState
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 
@@ -296,7 +296,7 @@ class TestZip2Observable(TestCaseBase):
         LeftComplete              LeftComplete
         """
 
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         obs = ZipObservable(self.left, self.right)
         obs.observe(init_observer_info(sink))
 

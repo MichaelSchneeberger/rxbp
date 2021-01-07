@@ -12,9 +12,9 @@ from rxbp.multicast.testing.testmulticastobservable import TestMultiCastObservab
 from rxbp.multicast.testing.testmulticastobserver import TestMultiCastObserver
 from rxbp.observers.flatmapobserver import FlatMapObserver
 from rxbp.states.rawstates.rawflatmapstates import RawFlatMapStates
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestFlatMapMultiCastObserver(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestFlatMapMultiCastObserver(unittest.TestCase):
         self.inner_source_2 = TestMultiCastObservable()
 
         self.sink = TestMultiCastObserver()
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
         self.composite_disposable = CompositeDisposable()
         self.exc = Exception()
         self.lock = threading.RLock()

@@ -4,18 +4,18 @@ from rxbp.acknowledgement.continueack import ContinueAck, continue_ack
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.bufferedobserver import BufferedObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestBackpressureBufferedObserver(unittest.TestCase):
     def setUp(self) -> None:
-        self.source = TestObservable()
-        self.scheduler = TestScheduler()
+        self.source = TObservable()
+        self.scheduler = TScheduler()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         BufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,
@@ -24,7 +24,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         )
 
     def test_observe(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = BufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,
@@ -35,7 +35,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         self.source.observe(init_observer_info(observer))
 
     def test_on_next_zero_buffer(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = BufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,
@@ -51,7 +51,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         self.assertEqual([0], sink.received)
 
     def test_acknowledge_zero_buffer(self):
-        sink = TestObserver(immediate_continue=0)
+        sink = TObserver(immediate_continue=0)
         observer = BufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,
@@ -67,7 +67,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         self.assertIsInstance(ack.value, ContinueAck)
 
     def test_on_next(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = BufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,
@@ -83,7 +83,7 @@ class TestBackpressureBufferedObserver(unittest.TestCase):
         self.assertEqual([0], sink.received)
 
     def test_fill_up_buffer(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = BufferedObserver(
             underlying=sink,
             scheduler=self.scheduler,

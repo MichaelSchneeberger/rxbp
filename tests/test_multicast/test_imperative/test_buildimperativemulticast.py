@@ -7,18 +7,18 @@ from rxbp.flowable import Flowable
 from rxbp.multicast.imperative.imperativemulticastbuilder import ImperativeMultiCastBuilder
 from rxbp.multicast.multicastsubscriber import MultiCastSubscriber
 from rxbp.testing.testflowable import TestFlowable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestImperativeMultiCastBuilder(unittest.TestCase):
     def setUp(self) -> None:
         self.source = TestFlowable()
-        self.scheduler = TestScheduler()
+        self.scheduler = TScheduler()
         self.composite_disposable = CompositeDisposable()
-        self.sink1 = TestObserver()
-        self.sink2 = TestObserver()
-        self.sink3 = TestObserver()
+        self.sink1 = TObserver()
+        self.sink2 = TObserver()
+        self.sink3 = TObserver()
 
     def test_common_case(self):
         s1 = [None]

@@ -5,15 +5,15 @@ from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observables.concatobservable import ConcatObservable
 from rxbp.observerinfo import ObserverInfo
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestConcatObservable(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
-        self.sources = [TestObservable(), TestObservable()]
+        self.scheduler = TScheduler()
+        self.sources = [TObservable(), TObservable()]
         self.obs = ConcatObservable(
             sources=self.sources, 
             scheduler=self.scheduler, 
@@ -26,7 +26,7 @@ class TestConcatObservable(unittest.TestCase):
         ConcatObservable(sources=sources, scheduler=self.scheduler, subscribe_scheduler=self.scheduler)
 
     def test_on_next_first(self):
-        sink = TestObserver()
+        sink = TObserver()
         self.obs.observe(init_observer_info(sink))
 
         ack = self.sources[0].on_next_single(1)
@@ -35,7 +35,7 @@ class TestConcatObservable(unittest.TestCase):
         self.assertEqual([1], sink.received)
 
     def test_on_next_second(self):
-        sink = TestObserver()
+        sink = TObserver()
         self.obs.observe(init_observer_info(sink))
 
         ack = self.sources[1].on_next_single(1)
@@ -44,7 +44,7 @@ class TestConcatObservable(unittest.TestCase):
         self.assertEqual([], sink.received)
 
     def test_on_next_second_complete_first(self):
-        sink = TestObserver()
+        sink = TObserver()
         self.obs.observe(init_observer_info(sink))
         ack = self.sources[1].on_next_single(1)
 
@@ -54,7 +54,7 @@ class TestConcatObservable(unittest.TestCase):
         self.assertEqual([1], sink.received)
 
     def test_on_error(self):
-        sink = TestObserver()
+        sink = TObserver()
         self.obs.observe(init_observer_info(sink))
 
         self.sources[0].on_error(self.exception)
@@ -62,7 +62,7 @@ class TestConcatObservable(unittest.TestCase):
         self.assertEqual(self.exception, sink.exception)
 
     def test_on_error_on_next(self):
-        sink = TestObserver()
+        sink = TObserver()
         self.obs.observe(init_observer_info(sink))
         self.sources[0].on_error(self.exception)
 

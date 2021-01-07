@@ -5,7 +5,7 @@ from rxbp.flowable import Flowable
 from rxbp.multicast.mixins.flowablestatemixin import FlowableStateMixin
 
 
-class FlowableDict(FlowableStateMixin, collections.MutableMapping):
+class FlowableDict(FlowableStateMixin, collections.abc.MutableMapping):
     def __init__(self, states: Dict[Any, Flowable] = None):
         self._states = states or {}
 

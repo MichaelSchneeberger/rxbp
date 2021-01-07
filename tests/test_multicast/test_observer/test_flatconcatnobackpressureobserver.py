@@ -6,24 +6,24 @@ from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.multicast.observer.flatconcatnobackpressureobserver import FlatConcatNoBackpressureObserver
 from rxbp.observerinfo import ObserverInfo
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
     def setUp(self) -> None:
-        self.scheduler = TestScheduler()
-        self.source = TestObservable()
+        self.scheduler = TScheduler()
+        self.source = TObservable()
 
-        self.source1 = TestObservable()
-        self.source2 = TestObservable()
-        self.source3 = TestObservable()
+        self.source1 = TObservable()
+        self.source2 = TObservable()
+        self.source3 = TObservable()
 
         self.composite_disposable = CompositeDisposable()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,
@@ -34,7 +34,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.source.observe(init_observer_info(observer=observer))
 
     def test_on_next_does_not_backpressure(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,
@@ -51,7 +51,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.assertIsInstance(ack2, ContinueAck)
 
     def test_inner_on_next(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,
@@ -68,7 +68,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.assertEqual([1], sink.received)
 
     def test_on_next_on_second_source(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,
@@ -88,7 +88,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.assertEqual([1], sink.received)
 
     def test_complete_first_source(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,
@@ -111,7 +111,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.assertFalse(sink.is_completed)
 
     def test_complete_first_source2(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,
@@ -137,7 +137,7 @@ class TestFlatConcatNoBackpressureObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_three_sources(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = FlatConcatNoBackpressureObserver(
             next_observer=sink,
             selector=lambda v: v,

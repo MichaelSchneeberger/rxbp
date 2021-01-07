@@ -4,16 +4,16 @@ from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observerinfo import ObserverInfo
 from rxbp.observers.pairwiseobserver import PairwiseObserver
 from rxbp.observers.scanobserver import ScanObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
 
 
 class TestScanObserver(unittest.TestCase):
     def setUp(self) -> None:
-        self.source = TestObservable()
+        self.source = TObservable()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -21,7 +21,7 @@ class TestScanObserver(unittest.TestCase):
         )
 
     def test_on_error(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -35,7 +35,7 @@ class TestScanObserver(unittest.TestCase):
         self.assertEqual(exc, sink.exception)
 
     def test_exception_during_on_next(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -53,7 +53,7 @@ class TestScanObserver(unittest.TestCase):
         self.assertEqual(exc, sink.exception)
 
     def test_on_completed(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -66,7 +66,7 @@ class TestScanObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_single_value(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -79,7 +79,7 @@ class TestScanObserver(unittest.TestCase):
         self.assertEqual([1], sink.received)
 
     def test_single_batch(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -92,7 +92,7 @@ class TestScanObserver(unittest.TestCase):
         self.assertEqual([1, 3, 6], sink.received)
 
     def test_two_values(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,
@@ -106,7 +106,7 @@ class TestScanObserver(unittest.TestCase):
         self.assertEqual([1, 3], sink.received)
 
     def test_two_batches(self):
-        sink = TestObserver()
+        sink = TObserver()
         obs = ScanObserver(
             observer=sink,
             func=lambda acc, v: acc + v,

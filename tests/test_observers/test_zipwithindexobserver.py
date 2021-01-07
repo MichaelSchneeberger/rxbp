@@ -3,26 +3,26 @@ import unittest
 from rxbp.acknowledgement.continueack import ContinueAck
 from rxbp.init.initobserverinfo import init_observer_info
 from rxbp.observers.zipwithindexobserver import ZipCountObserver
-from rxbp.testing.testobservable import TestObservable
-from rxbp.testing.testobserver import TestObserver
-from rxbp.testing.testscheduler import TestScheduler
+from rxbp.testing.tobservable import TObservable
+from rxbp.testing.tobserver import TObserver
+from rxbp.testing.tscheduler import TScheduler
 
 
 class TestZipWithIndexObserver(unittest.TestCase):
     def setUp(self):
-        self.scheduler = TestScheduler()
-        self.source = TestObservable()
+        self.scheduler = TScheduler()
+        self.source = TObservable()
         self.exc = Exception()
 
     def test_initialize(self):
-        sink = TestObserver()
+        sink = TObserver()
         ZipCountObserver(
             observer=sink,
             selector=lambda v, idx: (v, idx),
         )
 
     def test_on_complete(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ZipCountObserver(
             observer=sink,
             selector=lambda v, idx: (v, idx),
@@ -34,7 +34,7 @@ class TestZipWithIndexObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_on_error(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ZipCountObserver(
             observer=sink,
             selector=lambda v, idx: (v, idx),
@@ -46,7 +46,7 @@ class TestZipWithIndexObserver(unittest.TestCase):
         self.assertEqual(self.exc, sink.exception)
 
     def test_single_element(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ZipCountObserver(
             observer=sink,
             selector=lambda v, idx: (v, idx),
@@ -64,7 +64,7 @@ class TestZipWithIndexObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_multiple_element(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ZipCountObserver(
             observer=sink,
             selector=lambda v, idx: (v, idx),
@@ -83,7 +83,7 @@ class TestZipWithIndexObserver(unittest.TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_single_batch(self):
-        sink = TestObserver()
+        sink = TObserver()
         observer = ZipCountObserver(
             observer=sink,
             selector=lambda v, idx: (v, idx),
