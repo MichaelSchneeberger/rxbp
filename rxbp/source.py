@@ -3,8 +3,10 @@ from typing import Iterable, Any, List
 
 import rx
 from rx import operators
+from rx.core import typing
 
 from rxbp.flowable import Flowable
+from rxbp.flowables.createflowable import CreateFlowable
 from rxbp.flowables.fromemptyflowable import FromEmptyFlowable
 from rxbp.flowables.fromiterableflowable import FromIterableFlowable
 from rxbp.flowables.fromrxbufferingflowable import FromRxBufferingFlowable
@@ -236,3 +238,14 @@ def zip(*sources: Flowable) -> Flowable: #, result_selector: Callable[..., Any] 
         return empty()
     else:
         return sources[0].zip(sources[1:], stack=stack)
+
+
+def create(observer: typing.Subscription) -> Flowable:
+    """
+    Create a Flowable that emits each element of the given specified subscription function.
+
+    :param observer: Subscription function
+    """
+    return init_flowable(CreateFlowable(
+        observer=observer,
+    ))
