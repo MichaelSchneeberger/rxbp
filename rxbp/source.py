@@ -12,6 +12,7 @@ from rxbp.flowables.fromiterableflowable import FromIterableFlowable
 from rxbp.flowables.fromrxbufferingflowable import FromRxBufferingFlowable
 from rxbp.flowables.fromrxevictingflowable import FromRxEvictingFlowable
 from rxbp.flowables.fromsingleelementflowable import FromSingleElementFlowable
+from rxbp.flowables.intervalflowable import IntervalFlowable
 from rxbp.init.initflowable import init_flowable
 from rxbp.overflowstrategy import OverflowStrategy, BackPressure, DropOld, ClearBuffer
 from rxbp.utils.getstacklines import get_stack_lines
@@ -248,4 +249,17 @@ def create(observer: typing.Subscription) -> Flowable:
     """
     return init_flowable(CreateFlowable(
         observer=observer,
+    ))
+
+
+def interval(period: typing.RelativeTime) -> Flowable:
+    """
+    Create a Flowable that emits each element after each period.
+
+    :param period: Period for producing the values in the resulting sequence
+        (specified as a :class:`float` denoting seconds or an instance of
+        :class:`timedelta`).
+    """
+    return init_flowable(IntervalFlowable(
+        period=period,
     ))
