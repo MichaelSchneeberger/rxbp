@@ -4,6 +4,7 @@ from rxbp.acknowledgement.ack import Ack
 from rxbp.flowable import Flowable
 from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.observerinfo import ObserverInfo
+from rxbp.overflowstrategy import OverflowStrategy
 from rxbp.pipeoperation import PipeOperation
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
@@ -428,5 +429,16 @@ def zip_with_index():
 
     def op_func(left: Flowable):
         return left.zip_with_index()
+
+    return PipeOperation(op_func)
+
+
+def strategy(overflow_strategy: OverflowStrategy):
+    """
+    Buffer the element emitted by the source use overflow strategy.
+    """
+
+    def op_func(source: Flowable):
+        return source.strategy(overflow_strategy=overflow_strategy)
 
     return PipeOperation(op_func)

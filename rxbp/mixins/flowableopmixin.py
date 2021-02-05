@@ -13,6 +13,7 @@ from rxbp.flowables.concatflowable import ConcatFlowable
 from rxbp.flowables.controlledzipflowable import ControlledZipFlowable
 from rxbp.flowables.defaultifemptyflowable import DefaultIfEmptyFlowable
 from rxbp.flowables.doactionflowable import DoActionFlowable
+from rxbp.flowables.evictingbufferflowable import EvictingBufferFlowable
 from rxbp.flowables.filterflowable import FilterFlowable
 from rxbp.flowables.firstflowable import FirstFlowable
 from rxbp.flowables.firstordefaultflowable import FirstOrDefaultFlowable
@@ -36,6 +37,7 @@ from rxbp.mixins.flowablemixin import FlowableMixin
 from rxbp.mixins.sharedflowablemixin import SharedFlowableMixin
 from rxbp.observables.materializeobservable import MaterializeObservable
 from rxbp.observerinfo import ObserverInfo
+from rxbp.overflowstrategy import OverflowStrategy
 from rxbp.scheduler import Scheduler
 from rxbp.subscriber import Subscriber
 from rxbp.subscription import Subscription
@@ -341,3 +343,6 @@ class FlowableOpMixin(
         flowable = ZipWithIndexFlowable(source=self, selector=selector)
         return self._copy(underlying=flowable)
 
+    def strategy(self, overflow_strategy: OverflowStrategy) -> 'FlowableOpMixin':
+        flowable = EvictingBufferFlowable(source=self, overflow_strategy=overflow_strategy)
+        return self._copy(underlying=flowable)
