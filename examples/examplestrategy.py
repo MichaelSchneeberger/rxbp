@@ -2,6 +2,8 @@ import time
 from threading import Thread
 
 import rxbp
+from rxbp.acknowledgement.acksubject import AckSubject
+from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.overflowstrategy import DropOld, ClearBuffer, Drop
 from rxbp.schedulers.asyncioscheduler import AsyncIOScheduler
 from rxbp.schedulers.threadpoolscheduler import ThreadPoolScheduler
@@ -34,14 +36,15 @@ def demo2():
             print(f"[**client**] received: ", sink.received)
 
     def work(o, skd):
-        for i in range(1_000_000):
+        for i in range(1_000):
             o.on_next([i])
         o.on_completed()
 
     source = rxbp.create(work)
     source = source.pipe(
-        rxbp.op.strategy(DropOld(buffer_size=15)),
+        rxbp.op.strategy(DropOld(buffer_size=100)),
         # rxbp.op.strategy(ClearBuffer(buffer_size=15)),
+        # rxbp.op.strategy(Drop(buffer_size=15)),
     )
 
     sink = TObserver(immediate_continue=5)
