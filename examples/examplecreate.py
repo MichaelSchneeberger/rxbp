@@ -4,7 +4,6 @@ from threading import Thread
 import rxbp
 from rxbp.acknowledgement.continueack import continue_ack
 from rxbp.schedulers.asyncioscheduler import AsyncIOScheduler
-from rxbp.schedulers.eventloopscheduler import EventLoopScheduler
 from rxbp.schedulers.threadpoolscheduler import ThreadPoolScheduler
 from rxbp.testing.tobserver import TObserver
 
@@ -20,10 +19,12 @@ def demo1():
         rxbp.op.observe_on(scheduler=AsyncIOScheduler()),
         # rxbp.op.observe_on(scheduler=EventLoopScheduler()),
         # rxbp.op.observe_on(scheduler=ThreadPoolScheduler("receiver")),
+        rxbp.op.subscribe_on(scheduler=ThreadPoolScheduler("publisher")),
     )
 
     sink = TObserver(immediate_continue=4)
-    source.subscribe(observer=sink, subscribe_scheduler=ThreadPoolScheduler("publisher"))
+    # source.subscribe(observer=sink, subscribe_scheduler=ThreadPoolScheduler("publisher"))
+    source.subscribe(observer=sink)
 
     time.sleep(1)
     assert sink.received == [0, 1, 2, 3, 4]
@@ -67,6 +68,6 @@ def demo2():
 
 
 if __name__ == '__main__':
-    # demo1()
+    demo1()
 
-    demo2()
+    # demo2()

@@ -29,6 +29,7 @@ from rxbp.flowables.reduceflowable import ReduceFlowable
 from rxbp.flowables.refcountflowable import RefCountFlowable
 from rxbp.flowables.repeatfirstflowable import RepeatFirstFlowable
 from rxbp.flowables.scanflowable import ScanFlowable
+from rxbp.flowables.subscribeonflowable import SubscribeOnFlowable
 from rxbp.flowables.tolistflowable import ToListFlowable
 from rxbp.flowables.zipflowable import ZipFlowable
 from rxbp.flowables.zipwithindexflowable import ZipWithIndexFlowable
@@ -346,3 +347,6 @@ class FlowableOpMixin(
     def strategy(self, overflow_strategy: OverflowStrategy) -> 'FlowableOpMixin':
         flowable = EvictingBufferFlowable(source=self, overflow_strategy=overflow_strategy)
         return self._copy(underlying=flowable)
+
+    def subscribe_on(self, scheduler: Scheduler):
+        return self._copy(underlying=SubscribeOnFlowable(source=self, scheduler=scheduler))

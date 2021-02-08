@@ -442,3 +442,20 @@ def strategy(overflow_strategy: OverflowStrategy):
         return source.strategy(overflow_strategy=overflow_strategy)
 
     return PipeOperation(op_func)
+
+
+def subscribe_on(scheduler: Scheduler):
+    """
+    Subscribe on the specified scheduler.
+
+    This only performs the side-effects of subscription and
+    unsubscription on the specified scheduler. In order to invoke
+    observer callbacks on a scheduler, use observe_on.
+
+    :param scheduler: a rxbackpressure scheduler
+    """
+
+    def op_func(source: Flowable):
+        return source.subscribe_on(scheduler=scheduler)
+
+    return PipeOperation(op_func)
