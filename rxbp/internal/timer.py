@@ -38,7 +38,7 @@ def observable_timer_date(duetime,
             _scheduler = TimeoutScheduler.singleton()
 
         def action(scheduler, state):
-            observer.on_next(0)
+            observer.on_next([0])
             observer.on_completed()
 
         return _scheduler.schedule_absolute(duetime, action)
@@ -75,7 +75,7 @@ def observable_timer_duetime_and_period(duetime,
                 if dt <= now:
                     dt = now + scheduler.to_timedelta(p)
 
-            observer.on_next(count)
+            observer.on_next([count])
             count += 1
             mad.disposable = scheduler.schedule_absolute(dt, action)
 
@@ -96,7 +96,7 @@ def observable_timer_timespan(duetime: typing.RelativeTime,
         d = _scheduler.to_seconds(duetime)
 
         def action(scheduler, state):
-            observer.on_next(0)
+            observer.on_next([0])
             observer.on_completed()
 
         if d <= 0.0:
