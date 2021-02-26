@@ -25,7 +25,7 @@ class SubscriptionObservable(Observable):
         d1 = BooleanDisposable()
 
         def action(_, __):
-            self.source(observer, self.subscribe_scheduler)
+            return self.source(observer, self.subscribe_scheduler)
 
         d2 = self.subscribe_scheduler.schedule(action)
         return CompositeDisposable(d1, d2)
