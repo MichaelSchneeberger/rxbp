@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from dataclasses import dataclass
+from typing import override
 
 import continuationmonad
 from continuationmonad.typing import Scheduler, ContinuationCertificate, ContinuationMonad
@@ -15,7 +18,7 @@ from rxbp.state import State, init_state
 class Flowable[V](SingleChildFlowableNode[V, V]):
 
     @abstractmethod
-    def copy(self, /, **changes) -> ContinuationMonad: ...
+    def copy(self, /, **changes) -> Flowable: ...
 
     def share(self):
         return self.copy(
@@ -24,7 +27,7 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             )
         )
 
-    def run(self, scheduler: Scheduler | None = None) -> list[V]:
+    def run(self, scheduler: Scheduler | None = None):
         main_trampoline = continuationmonad.init_main_trampoline()
 
         @dataclass()
@@ -52,6 +55,7 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
 
         state = init_state(
             subscription_trampoline=main_trampoline,
+            scheduler=scheduler,
         )
 
         observer = MainObserver[V](
@@ -70,6 +74,7 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
 
         return received_items
     
+    @override
     def unsafe_subscribe(
         self, state: State, observer: Observer[V]
     ) -> tuple[State, ObserveResult]:

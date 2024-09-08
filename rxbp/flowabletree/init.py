@@ -40,5 +40,5 @@ class ZipImpl[V](Zip[V]):
     children: tuple[FlowableNode, ...]
 
 
-def init_zip[V](children: tuple[FlowableNode, ...]):
+def init_zip[V](children: tuple[FlowableNode[V], ...]):
     return ZipImpl[V](children=children)

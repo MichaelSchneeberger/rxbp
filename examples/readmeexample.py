@@ -1,13 +1,3 @@
-RxPy back-pressure extension
-============================
-
-*rxbp* is an extension to the [RxPY](https://github.com/ReactiveX/RxPY) python library, that integrates back-pressure into the *Observable* pattern in form of *Flowables*.
-
-
-Basic Example
--------------
-
-``` python
 import rxbp
 
 # Defines a flowable that emits up to 7 elements
@@ -25,4 +15,3 @@ result = flowable.run()
 
 #The output will be [(0, 0, 0), (1, 1, 1), (2, 2, 2)]
 print(result)
-```

@@ -4,13 +4,13 @@ from rxbp.flowabletree.init import init_from_iterable, init_from_value, init_zip
 from rxbp.flowabletree.nodes import FlowableNode
 
 
-def from_iterable[V](iterable: Iterable[V]):
+def from_iterable(iterable: Iterable):
     return init_flowable(
         child=init_from_iterable(iterable=iterable)
     )
 
 
-def from_value[V](value: V):
+def from_value(value):
     return init_flowable(
         child=init_from_value(value=value),
     )
