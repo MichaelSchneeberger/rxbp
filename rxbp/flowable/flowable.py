@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import override
+from typing import Callable, override
 
 import continuationmonad
 from continuationmonad.typing import Scheduler, ContinuationCertificate, ContinuationMonad
 
 from rxbp.flowabletree.data.observer import Observer
-from rxbp.flowabletree.init import init_shared
-from rxbp.flowabletree.nodes import SingleChildFlowableNode
+from rxbp.flowabletree.init import init_flat_map, init_shared
+from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.data.observeresult import ObserveResult
 from rxbp.state import State, init_state
 
@@ -19,6 +19,14 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
 
     @abstractmethod
     def copy(self, /, **changes) -> Flowable: ...
+
+    def flat_map(self, func: Callable[[V], FlowableNode]):
+        return self.copy(
+            child=init_flat_map(
+                child=self.child,
+                func=func,
+            )
+        )
 
     def share(self):
         return self.copy(

@@ -1,7 +1,8 @@
-from typing import Iterable
+from typing import Callable, Iterable
 from dataclassabc import dataclassabc
 
 from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.operations.flatmap import FlatMap
 from rxbp.flowabletree.operations.fromiterable import FromIterable
 from rxbp.flowabletree.operations.fromvalue import FromValue
 from rxbp.flowabletree.operations.shared import Shared
@@ -15,6 +16,21 @@ class FromIterableImpl[V](FromIterable[V]):
 
 def init_from_iterable[V](iterable: Iterable[V]):
     return FromIterableImpl[V](iterable=iterable)
+
+
+@dataclassabc(frozen=True)
+class FlatMapImpl[V](FlatMap[V]):
+    child: FlowableNode[V]
+
+
+def init_flat_map[V](
+    child: FlowableNode[V],
+    func: Callable[[V], FlowableNode],
+):
+    return FlatMapImpl(
+        child=child,
+        func=func,
+    )
 
 
 @dataclassabc(frozen=True)
