@@ -5,13 +5,15 @@ from dataclasses import dataclass
 from typing import Callable, override
 
 import continuationmonad
-from continuationmonad.typing import Scheduler, ContinuationCertificate, ContinuationMonad
+from continuationmonad.typing import Scheduler
 
-from rxbp.flowabletree.data.observer import Observer
-from rxbp.flowabletree.init import init_flat_map, init_shared
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
-from rxbp.flowabletree.data.observeresult import ObserveResult
 from rxbp.state import State, init_state
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.subscribeargs import SubscribeArgs
+from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
+from rxbp.flowabletree.operations.share.flowable import init_share
 
 
 
@@ -30,7 +32,7 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
 
     def share(self):
         return self.copy(
-            child=init_shared(
+            child=init_share(
                 child=self.child,
             )
         )
@@ -43,36 +45,51 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             received_items: list[U]
             received_exception: list[Exception | None]
 
-            def on_next(self, value: U) -> ContinuationMonad[None]:
+            def on_next(self, value: U):
                 self.received_items.append(value)
                 return continuationmonad.from_(None)
 
-            def on_next_and_complete(self, value: U) -> ContinuationMonad[ContinuationCertificate]:
+            def on_next_and_complete(self, value: U):
                 self.received_items.append(value)
                 return continuationmonad.from_(main_trampoline.stop())
+                # return main_trampoline.stop()
 
-            def on_completed(self) -> ContinuationMonad[ContinuationCertificate]:
+            def on_completed(self):
                 return continuationmonad.from_(main_trampoline.stop())
+                # return main_trampoline.stop()
 
-            def on_error(self, exception: Exception) -> ContinuationMonad[ContinuationCertificate]:
+            def on_error(self, exception: Exception):
                 self.received_exception[0] = exception
                 return continuationmonad.from_(main_trampoline.stop())
+                # return main_trampoline.stop()
 
         received_items: list[V] = []
         received_exception: list[Exception | None] = [None]
 
+        subscriber_count = {}
+        shared_weights = {}
+
+        self.child.discover(subscriber_count)
+        self.child.assign_weights(1, shared_weights, subscriber_count)
+
         state = init_state(
             subscription_trampoline=main_trampoline,
             scheduler=scheduler,
+            shared_weights=shared_weights,
         )
 
-        observer = MainObserver[V](
+        sink = MainObserver[V](
             received_items=received_items,
             received_exception=received_exception,
         )
 
+        args = SubscribeArgs(
+            observer=sink,
+            schedule_weight=1,
+        )
+
         def main_action():
-            _, result = self.child.unsafe_subscribe(state, observer)
+            _, result = self.child.unsafe_subscribe(state, args)
             return result.certificate
 
         main_trampoline.run(main_action)
@@ -84,6 +101,6 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
     
     @override
     def unsafe_subscribe(
-        self, state: State, observer: Observer[V]
+        self, state: State, args: SubscribeArgs[V]
     ) -> tuple[State, ObserveResult]:
-        return self.child.unsafe_subscribe(state, observer)
+        return self.child.unsafe_subscribe(state, args)

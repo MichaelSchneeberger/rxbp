@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from continuationmonad.abc import Cancellable
-from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
+
+from continuationmonad.typing import ContinuationCertificate
+
+from rxbp.cancellable import Cancellable
 
 
 @dataclass

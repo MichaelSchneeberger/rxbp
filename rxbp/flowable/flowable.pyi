@@ -3,8 +3,8 @@ from typing import Callable, Generator, override
 
 from continuationmonad.typing import Scheduler
 
-from rxbp.flowabletree.data.observer import Observer
-from rxbp.flowabletree.data.observeresult import ObserveResult
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.observeresult import ObserveResult
 from rxbp.flowabletree.nodes import SingleChildFlowableNode
 from rxbp.state import State
 
