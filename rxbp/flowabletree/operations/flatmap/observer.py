@@ -33,11 +33,18 @@ class FlatMapObserver[V](Observer[V]):
     def _on_next(self, value: V, deferred_observer: DeferredObserver | None):
         flowable = self.func(value)
 
+        subscriber_count = {}
+        shared_weights = {}
+
+        flowable.discover(subscriber_count)
+        flowable.assign_weights(1, shared_weights, subscriber_count)
+
         trampoline = yield from continuationmonad.get_trampoline()
 
         state = init_state(
             subscription_trampoline=trampoline,
             scheduler=self.scheduler,
+            shared_weights=shared_weights,
         )
 
         observer = FlatMapNestedObserver(

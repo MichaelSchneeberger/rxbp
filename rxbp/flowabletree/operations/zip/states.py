@@ -37,13 +37,7 @@ class OnNextState(ActiveState):
 
 @dataclassabc
 class NotActiveState(ZipState):
-    certificate: ContinuationCertificate
     certificates: tuple[ContinuationCertificate, ...]
-
-
-@dataclassabc
-class OnErrorState(NotActiveState):
-    exception: Exception
 
 
 @dataclassabc
@@ -52,5 +46,12 @@ class OnCompleteState(NotActiveState):
 
 
 @dataclassabc
+class OnErrorState(NotActiveState):
+    certificate: ContinuationCertificate
+    exception: Exception
+
+
+@dataclassabc
 class HasTerminatedState(NotActiveState):
+    certificate: ContinuationCertificate
     pass

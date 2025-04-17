@@ -117,14 +117,6 @@ class SharedObserver[V](Observer[V]):
                     lambda c: ContinuationCertificate.merge((acc_certificate,) + c)
                 )
 
-                # downstream_certificates = yield from continuationmonad.zip(
-                #     tuple(gen_certificates())
-                # )
-                # certificate = ContinuationCertificate.merge(
-                #     (acc_certificate,) + downstream_certificates
-                # )
-                # return continuationmonad.from_(certificate)
-
             case _:
                 raise Exception(f"Unexpected state {state}")
 
@@ -150,14 +142,6 @@ class SharedObserver[V](Observer[V]):
                 return continuationmonad.zip(tuple(gen_certificates())).map(
                     lambda c: ContinuationCertificate.merge((acc_certificate,) + c)
                 )
-
-                # downstream_certificates = yield from continuationmonad.zip(
-                #     tuple(gen_certificates())
-                # )
-                # certificate = ContinuationCertificate.merge(
-                #     (acc_certificate,) + downstream_certificates
-                # )
-                # return continuationmonad.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -186,12 +170,6 @@ class SharedObserver[V](Observer[V]):
                 return continuationmonad.zip(tuple(gen_certificates())).map(
                     lambda c: ContinuationCertificate.merge((acc_certificate,) + c)
                 )
-
-                # downstream_certificates = yield from continuationmonad.zip(tuple(gen_certificates()))
-                # certificate = ContinuationCertificate.merge(
-                #     (acc_certificate,) + downstream_certificates
-                # )
-                # return continuationmonad.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

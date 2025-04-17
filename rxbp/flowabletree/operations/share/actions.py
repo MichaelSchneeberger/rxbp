@@ -209,7 +209,7 @@ class OnCompletedAction(ShareAction):
                 last_buffer_index=last_buffer_index,
                 acc_certificate=acc_certificate,
             ):
-                send_ids = tuple(id for id, index in buffer_map.items() if index == last_buffer_index)
+                send_ids = tuple(id for id, index in buffer_map.items() if last_buffer_index <= index)
 
                 return CompleteState(
                     send_ids=send_ids,

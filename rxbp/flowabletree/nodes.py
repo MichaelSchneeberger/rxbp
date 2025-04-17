@@ -27,7 +27,7 @@ class FlowableNode[V](ABC):
     def assign_weights(
         self,
         weight: int,
-        shared_weightsss: dict[FlowableNode, int],
+        shared_weights: dict[FlowableNode, int],
         subscriber_count: dict[FlowableNode, int],
     ): # -> dict[FlowableNode, int]:
         ...

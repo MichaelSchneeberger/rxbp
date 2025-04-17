@@ -128,10 +128,9 @@ class OnCompletedAction(SingleChildNodeAction):
 
     def get_state(self):
         match state := self.child.get_state():
-            case WaitFurtherItemsState(certificates=certificates):
+            case WaitState(certificates=certificates):
                 return OnCompleteState(
-                    certificate=certificates[0],
-                    certificates=certificates[1:],
+                    certificates=certificates,
                 )
             
             case NotActiveState(certificates=certificates):

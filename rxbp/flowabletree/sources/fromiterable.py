@@ -68,15 +68,6 @@ class FromIterable[V](FlowableNode[V]):
 
             except StopIteration:
                 return args.observer.on_completed()
-                # certificate = args.observer.on_completed()
-                # return continuationmonad.from_(certificate)
-                # match result := args.observer.on_completed():
-                #     case ContinuationCertificate():
-                #         return continuationmonad.from_(result)
-                #     case ContinuationMonad():
-                #         return result
-                #     case _:
-                #         raise Exception(f"Unexpected result {result}.")
 
             else:
                 return schedule_and_send_next(next_item, iterator)

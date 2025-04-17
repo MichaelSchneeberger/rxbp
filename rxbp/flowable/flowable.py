@@ -63,9 +63,6 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
                 return continuationmonad.from_(main_trampoline.stop())
                 # return main_trampoline.stop()
 
-        received_items: list[V] = []
-        received_exception: list[Exception | None] = [None]
-
         subscriber_count = {}
         shared_weights = {}
 
@@ -77,6 +74,9 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             scheduler=scheduler,
             shared_weights=shared_weights,
         )
+
+        received_items: list[V] = []
+        received_exception: list[Exception | None] = [None]
 
         sink = MainObserver[V](
             received_items=received_items,
