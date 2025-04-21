@@ -6,8 +6,8 @@ from continuationmonad.typing import (
 )
 
 from rxbp.cancellable import Cancellable, CancellationState
-from rxbp.flowabletree.operations.share.actions import (
-    CancelAction,
+from rxbp.flowabletree.operations.share.transitions import (
+    CancelTransition,
 )
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 from rxbp.flowabletree.operations.share.states import (
@@ -26,7 +26,7 @@ class ShareCancellation(CancellationState):
     def cancel(self, certificate: ContinuationCertificate):
         super().cancel(certificate)
 
-        action = CancelAction(
+        action = CancelTransition(
             child=None,  # type: ignore
             id=self.id,
             certificate=certificate,

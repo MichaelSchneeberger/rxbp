@@ -2,10 +2,15 @@ from typing import Iterable
 
 from rxbp.flowable.init import init_flowable
 from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.sources.connectable import init_connectable
 from rxbp.flowabletree.sources.fromiterable import init_from_iterable
 from rxbp.flowabletree.sources.fromvalue import init_from_value
 from rxbp.flowabletree.operations.merge.flowable import init_merge
 from rxbp.flowabletree.operations.zip.flowable import init_zip
+
+
+def connectable(id, init_item):
+    return init_flowable(child=init_connectable(id, init_item))
 
 
 def from_iterable(iterable: Iterable):

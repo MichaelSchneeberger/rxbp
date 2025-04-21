@@ -3,12 +3,13 @@ from __future__ import annotations
 from dataclassabc import dataclassabc
 from donotation import do
 
+from rxbp.exceptions import RxBpException
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.observeresult import ObserveResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.share.states import InitState
-from rxbp.flowabletree.operations.share.actions import FromStateAction
+from rxbp.flowabletree.operations.share.transitions import ToStateTransition
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 from rxbp.flowabletree.operations.share.cancellable import ShareCancellation
 from rxbp.flowabletree.operations.share.ackobserver import ShareAckObserver
@@ -19,38 +20,46 @@ from rxbp.flowabletree.operations.share.observer import SharedObserver
 class ShareFlowable[V](SingleChildFlowableNode[V, V]):
     child: FlowableNode
 
-    def discover(self, subscriber_count: dict[FlowableNode, int]):
-        if self not in subscriber_count:
-            subscriber_count[self] = 1
-            self.child.discover(subscriber_count)
+    def discover(
+        self, 
+        state: State,
+    ):
+        if self not in state.subscriber_count:
+            state.subscriber_count[self] = 1
+            state = self.child.discover(state)
+
         else:
-            subscriber_count[self] += 1
+            state.subscriber_count[self] += 1
+
+        return state
 
     def assign_weights(
         self,
+        state: State,
         weight: int,
-        shared_weights: dict[FlowableNode, int],
-        subscriber_count: dict[FlowableNode, int],
     ):
-        if self not in shared_weights:
-            shared_weights[self] = weight
-        else:
-            shared_weights[self] += weight
-        subscriber_count[self] -= 1
+        state.subscriber_count[self] -= 1
+        if self not in state.shared_weights:
+            state.shared_weights[self] = weight
 
-        if subscriber_count[self] == 0:
-            self.child.assign_weights(shared_weights[self], shared_weights, subscriber_count)
+        else:
+            state.shared_weights[self] += weight
+
+        if state.subscriber_count[self] == 0:
+            state = self.child.assign_weights(state, state.shared_weights[self])
+
+        return state
 
     @do()
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs[V]
     ) -> tuple[State, ObserveResult]:
-        weight = state.shared_weights[self]
-
         if self in state.shared_observers:
             observer = state.shared_observers[self]
 
         else:
+            total_weight = state.shared_weights[self]
+
             shared = ShareSharedMemory(
                 upstream_cancellation=None,
                 action=None,  # type: ignore
@@ -59,7 +68,7 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
                 buffer_lock=state.lock,
                 first_index=0,
                 buffer=[],
-                total_weight=weight,
+                total_weight=total_weight,
             )
 
             observer = SharedObserver(
@@ -75,12 +84,12 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
                 state,
                 SubscribeArgs(
                     observer=observer,
-                    schedule_weight=weight,
+                    schedule_weight=total_weight,
                 ),
             )
             shared.upstream_cancellation = result.cancellable
 
-            shared.action = FromStateAction(
+            shared.action = ToStateTransition(
                 InitState(
                     buffer_map={},
                     first_buffer_index=0,

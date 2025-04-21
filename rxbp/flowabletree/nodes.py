@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from rxbp.flowabletree.observer import Observer
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.observeresult import ObserveResult
@@ -18,19 +19,49 @@ class FlowableNode[V](ABC):
         state: object that is passed through the entire tree structure
         """
 
-    def discover(
+    def subscribe(
         self, 
-        subscriber_count: dict[FlowableNode, int]
-    ): # -> dict[FlowableNode, int]:
-        ...
+        state: State,
+        args: SubscribeArgs[V],
+    ):
+        state = self.discover(state)
+        state = self.assign_weights(state, 1)
+        for sink in state.connections.values():
+            state = sink.assign_weights(state, 1)
+
+        state, result = self.unsafe_subscribe(
+            state,
+            args=args,
+        )
+        main_result = result
+
+        while state.connectable_observers:
+            for connectable, observer in state.connectable_observers.items():
+                # state = state.copy(connectable_observers={})
+                state, result = connectable.unsafe_subscribe(
+                    state=state.copy(connectable_observers={}),
+                    # state.copy(certificate=result.certificate),
+                    args=SubscribeArgs(
+                        observer=observer,
+                        schedule_weight=1,
+                    ),
+                )
+                observer.certificate = result.certificate
+
+        return main_result
+
+    def discover(
+        self,
+        state: State,
+    ) -> State:
+        return state
 
     def assign_weights(
         self,
+        state: State,
         weight: int,
-        shared_weights: dict[FlowableNode, int],
-        subscriber_count: dict[FlowableNode, int],
-    ): # -> dict[FlowableNode, int]:
-        ...
+    ) -> State:
+        return state
 
 
 class SingleChildFlowableNode[V, ChildV](FlowableNode[V]):
@@ -42,16 +73,18 @@ class SingleChildFlowableNode[V, ChildV](FlowableNode[V]):
     @abstractmethod
     def child(self) -> FlowableNode[ChildV]: ...
 
-    def discover(self, subscriber_count: dict[FlowableNode, int]):
-        self.child.discover(subscriber_count)
+    def discover(
+        self,
+        state: State,
+    ):
+        return self.child.discover(state)
 
     def assign_weights(
         self,
+        state: State,
         weight: int,
-        shared_weights: dict[FlowableNode, int],
-        subscriber_count: dict[FlowableNode, int],
     ):
-        self.child.assign_weights(weight, shared_weights, subscriber_count)
+        return self.child.assign_weights(state, weight)
 
 
 class TwoChildrenFlowableNode[V, L, R](FlowableNode[V]):
@@ -67,18 +100,20 @@ class TwoChildrenFlowableNode[V, L, R](FlowableNode[V]):
     @abstractmethod
     def right(self) -> FlowableNode[R]: ...
 
-    def discover(self, subscriber_count: dict[FlowableNode, int]):
-        self.left.discover(subscriber_count)
-        self.right.discover(subscriber_count)
+    def discover(
+        self,
+        state: State,
+    ):
+        state = self.left.discover(state)
+        return self.right.discover(state)
 
     def assign_weights(
         self,
+        state: State,
         weight: int,
-        shared_weights: dict[FlowableNode, int],
-        subscriber_count: dict[FlowableNode, int],
     ):
-        self.left.assign_weights(weight, shared_weights, subscriber_count)
-        self.right.assign_weights(weight, shared_weights, subscriber_count)
+        state = self.left.assign_weights(state, weight)
+        return self.right.assign_weights(state, weight)
 
 
 class MultiChildrenFlowableNode[V](FlowableNode[V]):
@@ -90,15 +125,19 @@ class MultiChildrenFlowableNode[V](FlowableNode[V]):
     @abstractmethod
     def children(self) -> tuple[FlowableNode, ...]: ...
 
-    def discover(self, subscriber_count: dict[FlowableNode, int]):
+    def discover(
+        self,
+        state: State,
+    ):
         for child in self.children:
-            child.discover(subscriber_count)
+            state = child.discover(state)
+        return state
 
     def assign_weights(
         self,
-        upstream_weight: int,
-        weights: dict[FlowableNode, int],
-        subscriber_count: dict[FlowableNode, int],
+        state: State,
+        weight: int,
     ):
         for child in self.children:
-            child.assign_weights(upstream_weight, weights, subscriber_count)
+            state = child.assign_weights(state, weight)
+        return state

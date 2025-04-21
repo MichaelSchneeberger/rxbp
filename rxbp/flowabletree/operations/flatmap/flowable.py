@@ -10,7 +10,7 @@ from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.observeresult import ObserveResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.flatmap.states import ActiveState
-from rxbp.flowabletree.operations.flatmap.actions import FromStateAction
+from rxbp.flowabletree.operations.flatmap.transitions import ToStateTransition
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.cancellable import FlatMapCancellable
 from rxbp.flowabletree.operations.flatmap.observer import FlatMapObserver
@@ -25,7 +25,7 @@ class FlatMap[V](SingleChildFlowableNode[V, V]):
         state: State,
         args: SubscribeArgs[V],
     ) -> tuple[State, ObserveResult]:
-        action = FromStateAction(
+        action = ToStateTransition(
             state=ActiveState(
                 cancellable=None,  # type: ignore
             ),

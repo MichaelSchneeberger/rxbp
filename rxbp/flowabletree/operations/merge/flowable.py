@@ -15,7 +15,7 @@ from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.observeresult import ObserveResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
 from rxbp.flowabletree.operations.merge.states import UpstreamID
-from rxbp.flowabletree.operations.merge.actions import InitAction
+from rxbp.flowabletree.operations.merge.transitions import InitAction
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
 from rxbp.flowabletree.operations.merge.cancellable import MergeCancellable
 from rxbp.flowabletree.operations.merge.observer import MergeObserver

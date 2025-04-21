@@ -13,8 +13,8 @@ from continuationmonad.typing import (
 
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.flatmap.states import ActiveState, CancelledState
-from rxbp.flowabletree.operations.flatmap.actions import (
-    FromStateAction,
+from rxbp.flowabletree.operations.flatmap.transitions import (
+    ToStateTransition,
     UpdateCancellableAction,
 )
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
@@ -48,7 +48,7 @@ class FlatMapNestedObserver[V](Observer[V]):
         with self.shared.lock:
             action.child = self.shared.action
             state = action.get_state()
-            self.shared.action = FromStateAction(state=state)
+            self.shared.action = ToStateTransition(state=state)
 
         match state:
             case ActiveState():

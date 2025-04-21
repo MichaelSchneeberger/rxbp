@@ -17,7 +17,7 @@ from rxbp.state import init_state
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.flatmap.states import CancelledState
-from rxbp.flowabletree.operations.flatmap.actions import UpdateCancellableAction
+from rxbp.flowabletree.operations.flatmap.transitions import UpdateCancellableAction
 from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapNestedObserver
 
 
@@ -33,33 +33,53 @@ class FlatMapObserver[V](Observer[V]):
     def _on_next(self, value: V, deferred_observer: DeferredObserver | None):
         flowable = self.func(value)
 
-        subscriber_count = {}
-        shared_weights = {}
+        # subscriber_count = {}
+        # shared_weights = {}
 
-        flowable.discover(subscriber_count)
-        flowable.assign_weights(1, shared_weights, subscriber_count)
+        # flowable.discover(subscriber_count)
+        # flowable.assign_weights(1, shared_weights, subscriber_count)
+
+        # raise NotImplementedError
 
         trampoline = yield from continuationmonad.get_trampoline()
 
-        state = init_state(
-            subscription_trampoline=trampoline,
-            scheduler=self.scheduler,
-            shared_weights=shared_weights,
-        )
+        # state = init_state(
+        #     subscription_trampoline=trampoline,
+        #     scheduler=self.scheduler,
+        # )
 
-        observer = FlatMapNestedObserver(
-            downstream=self.downstream,
-            upstream=deferred_observer,
-            shared=self.shared,
-        )
+        # observer = FlatMapNestedObserver(
+        #     downstream=self.downstream,
+        #     upstream=deferred_observer,
+        #     shared=self.shared,
+        # )
 
-        _, result = flowable.unsafe_subscribe(
-            state,
-            SubscribeArgs(
-                observer=observer,
-                schedule_weight=self.schedule_weight,
+        result = flowable.subscribe(
+            state=init_state(
+                subscription_trampoline=trampoline,
+                scheduler=self.scheduler,
             ),
+            args=SubscribeArgs(
+                observer=FlatMapNestedObserver(
+                    downstream=self.downstream,
+                    upstream=deferred_observer,
+                    shared=self.shared,
+                ),
+                schedule_weight=self.schedule_weight,
+            )
         )
+
+        # certificate = subscrption_task()
+
+        # certificate = trampoline.schedule(subscrption_task, weight=self.schedule_weight)
+
+        # _, result = flowable.unsafe_subscribe(
+        #     state,
+        #     SubscribeArgs(
+        #         observer=observer,
+        #         schedule_weight=self.schedule_weight,
+        #     ),
+        # )
 
         action = UpdateCancellableAction(
             child=None,  # type: ignore

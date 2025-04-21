@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.cancellable import Cancellable, CancellationState
-from rxbp.flowabletree.operations.merge.actions import CancelAction
+from rxbp.flowabletree.operations.merge.transitions import CancelTransition
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
 from rxbp.flowabletree.operations.merge.states import UpstreamID
 
@@ -16,7 +16,7 @@ class MergeCancellable(CancellationState):
     shared: MergeSharedMemory
 
     def cancel(self, certificate: ContinuationCertificate):
-        action = CancelAction(
+        action = CancelTransition(
             child=None,  # type: ignore
             certificate=certificate,
             n_children=self.n_children,

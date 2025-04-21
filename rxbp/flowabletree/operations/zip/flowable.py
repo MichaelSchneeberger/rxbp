@@ -7,7 +7,7 @@ from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.observeresult import ObserveResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
-from rxbp.flowabletree.operations.zip.actions import WaitAction
+from rxbp.flowabletree.operations.zip.transitions import RequestTransition
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
 from rxbp.flowabletree.operations.zip.cancellable import CompositeCancellable
 from rxbp.flowabletree.operations.zip.observer import ZipObserver
@@ -43,7 +43,7 @@ class Zip[V](MultiChildrenFlowableNode[V]):
                 ),
             )
 
-            n_state, n_result = child.unsafe_subscribe(state, n_args)
+            state, n_result = child.unsafe_subscribe(state, n_args)
 
             if n_result.certificate:
                 certificates.append(n_result.certificate)
@@ -52,7 +52,7 @@ class Zip[V](MultiChildrenFlowableNode[V]):
 
         certificate, *others = certificates
 
-        shared_memory.action = WaitAction(
+        shared_memory.action = RequestTransition(
             certificates=tuple(others),
             values={},
             observers={}
@@ -64,7 +64,7 @@ class Zip[V](MultiChildrenFlowableNode[V]):
             certificates=tuple(others),
         )
 
-        return n_state, ObserveResult(
+        return state, ObserveResult(
             cancellable=cancellable, 
             certificate=certificate,
         )

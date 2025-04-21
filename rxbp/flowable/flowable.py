@@ -16,9 +16,7 @@ from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
 from rxbp.flowabletree.operations.share.flowable import init_share
 
 
-
 class Flowable[V](SingleChildFlowableNode[V, V]):
-
     @abstractmethod
     def copy(self, /, **changes) -> Flowable: ...
 
@@ -37,7 +35,11 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             )
         )
 
-    def run(self, scheduler: Scheduler | None = None):
+    def run(
+        self,
+        scheduler: Scheduler | None = None,
+        connections: dict[Flowable, Flowable] | None = None,
+    ):
         main_trampoline = continuationmonad.init_main_trampoline()
 
         @dataclass()
@@ -63,34 +65,70 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
                 return continuationmonad.from_(main_trampoline.stop())
                 # return main_trampoline.stop()
 
-        subscriber_count = {}
-        shared_weights = {}
-
-        self.child.discover(subscriber_count)
-        self.child.assign_weights(1, shared_weights, subscriber_count)
-
-        state = init_state(
-            subscription_trampoline=main_trampoline,
-            scheduler=scheduler,
-            shared_weights=shared_weights,
-        )
+        if connections is None:
+            connections = {}
 
         received_items: list[V] = []
         received_exception: list[Exception | None] = [None]
 
-        sink = MainObserver[V](
+        observer =  MainObserver[V](
             received_items=received_items,
             received_exception=received_exception,
         )
 
-        args = SubscribeArgs(
-            observer=sink,
-            schedule_weight=1,
-        )
-
         def main_action():
-            _, result = self.child.unsafe_subscribe(state, args)
+
+            state = init_state(
+                subscription_trampoline=main_trampoline,
+                scheduler=scheduler,
+                connections={c.child: s for c, s in connections.items()},
+            )
+
+            result = self.child.subscribe(
+                state=state,
+                args=SubscribeArgs(
+                    observer=observer,
+                    schedule_weight=1,
+                )
+            )
+
             return result.certificate
+
+        # state = self.child.discover(state)
+        # state = self.child.assign_weights(state, 1)
+        # for sink in connections.values():
+        #     state = sink.assign_weights(state, 1)
+
+        # def main_action(state=state):
+        #     state, result = self.child.unsafe_subscribe(
+        #         state,
+        #         args = SubscribeArgs(
+        #             observer=MainObserver[V](
+        #                 received_items=received_items,
+        #                 received_exception=received_exception,
+        #             ),
+        #             schedule_weight=1,
+        #         )
+        #     )
+        #     certificate = result.certificate
+
+        #     # print(state.connectable_observers)
+
+        #     while state.connectable_observers:
+        #         for connectable, observer in state.connectable_observers.items():
+        #             state = state.copy(connectable_observers={})
+        #             state, result = connectable.unsafe_subscribe(
+        #                 state.copy(
+        #                     certificate=result.certificate
+        #                 ),
+        #                 args = SubscribeArgs(
+        #                     observer=observer,
+        #                     schedule_weight=1,
+        #                 )
+        #             )
+        #             observer.certificate = result.certificate
+
+        #     return certificate
 
         main_trampoline.run(main_action)
 
@@ -98,9 +136,14 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             raise received_exception[0]
 
         return received_items
-    
+
     @override
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs[V]
     ) -> tuple[State, ObserveResult]:
         return self.child.unsafe_subscribe(state, args)
+
+
+# class ConnectableFlowable[V](Flowable[V]):
+#     def connect(self, child: Flowable):
+#         self.child.connect(child)

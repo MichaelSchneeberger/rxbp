@@ -8,8 +8,8 @@ from continuationmonad.typing import (
 )
 
 from rxbp.cancellable import Cancellable
-from rxbp.flowabletree.operations.share.actions import (
-    ShareAction,
+from rxbp.flowabletree.operations.share.transitions import (
+    ShareTransition,
 )
 
 
@@ -23,7 +23,7 @@ class ShareSharedMemory[V]:
     upstream_ack_observer: DeferredObserver
 
     # modified using lock
-    action: ShareAction
+    action: ShareTransition
     lock: RLock
 
     buffer_lock: RLock

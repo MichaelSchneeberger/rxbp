@@ -19,3 +19,17 @@ class FlowableImpl[V](Flowable[V]):
 
 def init_flowable[V](child: FlowableNode[V]):
     return FlowableImpl[V](child=child)
+
+
+
+# @dataclassabc(frozen=True)
+# class ConnectableFlowableImpl[V](ConnectableFlowable[V]):
+#     child: FlowableNode[V]
+
+#     @override
+#     def copy(self, /, **changes) -> FlowableImpl[V]:
+#         return replace(self, **changes)
+
+
+# def init_connectable_flowable[V](child: FlowableNode[V]):
+#     return ConnectableFlowableImpl[V](child=child)

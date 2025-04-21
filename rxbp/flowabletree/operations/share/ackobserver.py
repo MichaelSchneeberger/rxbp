@@ -16,9 +16,9 @@ from rxbp.flowabletree.operations.share.states import (
     SendItemFromBuffer,
     TerminatedState,
 )
-from rxbp.flowabletree.operations.share.actions import (
-    AcknowledgeAction,
-    FromStateAction,
+from rxbp.flowabletree.operations.share.transitions import (
+    RequestTransition,
+    ToStateTransition,
 )
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 
@@ -38,7 +38,7 @@ class ShareAckObserver:
     ) -> ContinuationCertificate:
         # print(f"request({self.id})")
 
-        action = AcknowledgeAction(
+        action = RequestTransition(
             child=None,  # type: ignore
             id=self.id,
             weight=self.weight,
@@ -60,7 +60,7 @@ class ShareAckObserver:
                     )
                     state.certificate, state.acc_certificate = certificate.take(self.weight)
 
-            self.shared.action = FromStateAction(state)
+            self.shared.action = ToStateTransition(state)
 
         match state:
             case AckUpstream() | AwaitOnNext():

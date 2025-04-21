@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.cancellable import CancellationState
-from rxbp.flowabletree.operations.flatmap.actions import CancelAction
+from rxbp.flowabletree.operations.flatmap.transitions import CancelAction
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.states import CancelledState
 

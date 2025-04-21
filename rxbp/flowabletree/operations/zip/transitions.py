@@ -22,13 +22,13 @@ from rxbp.flowabletree.operations.zip.states import (
 )
 
 
-class ZipAction(ABC):
+class ZipTransition(ABC):
     @abstractmethod
     def get_state(self) -> ZipState: ...
 
 
 @dataclass
-class WaitAction(ZipAction):
+class RequestTransition(ZipTransition):
     values: dict[int, None]
     observers: dict[int, DeferredObserver]
     certificates: tuple[ContinuationCertificate, ...]
@@ -41,15 +41,15 @@ class WaitAction(ZipAction):
         )
 
 
-class SingleChildNodeAction(ZipAction):
+class SingleChildNodeTransition(ZipTransition):
     @property
     @abstractmethod
-    def child(self) -> ZipAction: ...
+    def child(self) -> ZipTransition: ...
 
 
 @dataclassabc
-class OnNextAction[U](SingleChildNodeAction):
-    child: ZipAction
+class OnNextTransition[U](SingleChildNodeTransition):
+    child: ZipTransition
     id: int
     n_children: int
     value: U
@@ -86,8 +86,8 @@ class OnNextAction[U](SingleChildNodeAction):
 
 
 @dataclassabc
-class OnNextAndCompleteAction[U](SingleChildNodeAction):
-    child: ZipAction
+class OnNextAndCompleteTransition[U](SingleChildNodeTransition):
+    child: ZipTransition
     id: int
     n_children: int
     value: U
@@ -123,8 +123,8 @@ class OnNextAndCompleteAction[U](SingleChildNodeAction):
 
 
 @dataclassabc
-class OnCompletedAction(SingleChildNodeAction):
-    child: ZipAction
+class OnCompletedTransition(SingleChildNodeTransition):
+    child: ZipTransition
 
     def get_state(self):
         match state := self.child.get_state():
@@ -144,8 +144,8 @@ class OnCompletedAction(SingleChildNodeAction):
 
 
 @dataclassabc
-class OnErrorAction(SingleChildNodeAction):
-    child: ZipAction
+class OnErrorTransition(SingleChildNodeTransition):
+    child: ZipTransition
     exception: Exception
 
     def get_state(self):

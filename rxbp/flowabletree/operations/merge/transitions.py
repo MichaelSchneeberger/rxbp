@@ -31,13 +31,15 @@ from rxbp.flowabletree.operations.merge.states import (
 )
 
 
-class MergeAction(ABC):
+class MergeTransition(ABC):
     @abstractmethod
     def get_state(self) -> MergeState: ...
 
 
 @dataclass(frozen=True)
-class FromStateAction(MergeAction):
+class ToStateTransition(MergeTransition):
+    """ Transitions to predefined state """
+
     state: MergeState
 
     def get_state(self):
@@ -45,7 +47,7 @@ class FromStateAction(MergeAction):
 
 
 @dataclass(frozen=True)
-class InitAction(MergeAction):  # is this needed?
+class InitAction(MergeTransition):  # is this needed?
     n_completed: int
     certificates: tuple[ContinuationCertificate, ...]
 
@@ -58,8 +60,8 @@ class InitAction(MergeAction):  # is this needed?
 
 
 @dataclassabc
-class OnNextAction[U](MergeAction):
-    child: MergeAction
+class OnNextTransition[U](MergeTransition):
+    child: MergeTransition
     id: UpstreamID
     value: U
     subscription: DeferredObserver
@@ -113,8 +115,8 @@ class OnNextAction[U](MergeAction):
 
 
 @dataclassabc
-class OnNextAndCompleteAction[U](MergeAction):
-    child: MergeAction
+class OnNextAndCompleteTransition[U](MergeTransition):
+    child: MergeTransition
     id: UpstreamID
     value: U
     n_children: int
@@ -172,11 +174,11 @@ class OnNextAndCompleteAction[U](MergeAction):
 
 
 @dataclassabc
-class AcknowledgeAction(MergeAction):
-    """Downstream acknowledgment received."""
+class RequestTransition(MergeTransition):
+    """Downstream request received."""
 
     id: UpstreamID
-    child: MergeAction
+    child: MergeTransition
     certificate: ContinuationCertificate
     n_children: int
 
@@ -232,8 +234,8 @@ class AcknowledgeAction(MergeAction):
 
 
 @dataclassabc
-class OnCompletedAction(MergeAction):
-    child: MergeAction
+class OnCompletedTransition(MergeTransition):
+    child: MergeTransition
     id: UpstreamID
     n_children: int
 
@@ -277,8 +279,8 @@ class OnCompletedAction(MergeAction):
 
 
 @dataclassabc(frozen=False)
-class OnErrorAction(MergeAction):
-    child: MergeAction
+class OnErrorTransition(MergeTransition):
+    child: MergeTransition
     id: UpstreamID
     n_children: int
     exception: Exception
@@ -321,8 +323,8 @@ class OnErrorAction(MergeAction):
 
 
 @dataclassabc(frozen=False)
-class CancelAction(MergeAction):
-    child: MergeAction
+class CancelTransition(MergeTransition):
+    child: MergeTransition
     n_children: int
     certificate: ContinuationCertificate
 
@@ -354,9 +356,9 @@ class CancelAction(MergeAction):
 
 
 @dataclassabc(frozen=False)
-class SubscribeAction(MergeAction):
+class SubscribeTransition(MergeTransition):
     id: UpstreamID
-    child: MergeAction
+    child: MergeTransition
     certificate: ContinuationCertificate
 
     def get_state(self):

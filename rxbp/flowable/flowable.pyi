@@ -20,3 +20,7 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
     def unsafe_subscribe(
         self, state: State, observer: Observer[V]
     ) -> tuple[State, ObserveResult]: ...
+
+class ConnectableFlowable[V](SingleChildFlowableNode[V, V]):
+    # def connect(self, child: Flowable) -> Flowable: ...
+    pass

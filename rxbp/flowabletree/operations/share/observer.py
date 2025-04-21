@@ -18,11 +18,11 @@ from rxbp.flowabletree.operations.share.states import (
     ErrorState,
     SendItem,
 )
-from rxbp.flowabletree.operations.share.actions import (
-    OnErrorAction,
-    OnNextAction,
-    OnNextAndCompleteAction,
-    OnCompletedAction,
+from rxbp.flowabletree.operations.share.transitions import (
+    OnErrorTransition,
+    OnNextTransition,
+    OnNextAndCompleteTransition,
+    OnCompletedTransition,
 )
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 from rxbp.flowabletree.operations.share.ackobserver import ShareAckObserver
@@ -42,11 +42,11 @@ class SharedObserver[V](Observer[V]):
         def on_next_ackowledgment(
             trampoline: Trampoline, deferred_observer: DeferredObserver
         ):
-            # print(f"on_next_subscription({value})")
+            # print(f"on_next_subscription({value}), weight={deferred_observer.weight}")
 
             self.shared.upstream_ack_observer = deferred_observer
 
-            action = OnNextAction(
+            action = OnNextTransition(
                 child=None,  # type: ignore
             )
 
@@ -91,7 +91,7 @@ class SharedObserver[V](Observer[V]):
     def on_next_and_complete(self, value: V):
         # print(f"on_next_and_complete({value})")
 
-        action = OnNextAndCompleteAction(
+        action = OnNextAndCompleteTransition(
             child=None,  # type: ignore
         )
 
@@ -113,15 +113,18 @@ class SharedObserver[V](Observer[V]):
                             value
                         )
 
+                def print_(v):
+                    print(v)
+                    return v
                 return continuationmonad.zip(tuple(gen_certificates())).map(
-                    lambda c: ContinuationCertificate.merge((acc_certificate,) + c)
+                    lambda c: ContinuationCertificate.merge((acc_certificate,) + print_(c))
                 )
 
             case _:
                 raise Exception(f"Unexpected state {state}")
 
     def on_completed(self):
-        action = OnCompletedAction(
+        action = OnCompletedTransition(
             child=None,  # type: ignore
         )
 
@@ -147,7 +150,7 @@ class SharedObserver[V](Observer[V]):
                 raise Exception(f"Unexpected state {state}.")
 
     def on_error(self, exception: Exception):
-        action = OnErrorAction(
+        action = OnErrorTransition(
             exception=exception,
             child=None,  # type: ignore
         )

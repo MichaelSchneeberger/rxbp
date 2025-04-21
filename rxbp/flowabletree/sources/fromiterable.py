@@ -6,13 +6,13 @@ from dataclassabc import dataclassabc
 from donotation import do
 
 import continuationmonad
-from continuationmonad.typing import ContinuationMonad, ContinuationCertificate
+from continuationmonad.typing import ContinuationMonad
 
 from rxbp.cancellable import init_cancellation_state
+from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observeresult import ObserveResult
-from rxbp.state import State
 
 
 class FromIterable[V](FlowableNode[V]):
@@ -51,15 +51,6 @@ class FromIterable[V](FlowableNode[V]):
 
             else:
                 return args.observer.on_next_and_complete(current_item)
-                # certificate = args.observer.on_next_and_complete(current_item)
-                # return continuationmonad.from_(certificate)
-                # match result := args.observer.on_next_and_complete(current_item):
-                #     case ContinuationCertificate():
-                #         return continuationmonad.from_(result)
-                #     case ContinuationMonad():
-                #         return result
-                #     case _:
-                #         raise Exception(f"Unexpected result {result}.")
 
         @do()
         def starting_procedure(iterator):
@@ -74,24 +65,14 @@ class FromIterable[V](FlowableNode[V]):
 
         cancellable = init_cancellation_state()
 
-        # try:
-        #     next_item = next(iterator)
-
-        # except StopIteration:
-        #     # continuation = args.observer.on_completed()
-        #     certificate = args.observer.on_completed()
-
-        # else:
-        #     # continuation: ContinuationMonad = schedule_and_send_next(next_item, iterator)
-
-        certificate = (
-            continuationmonad.from_(None)
-            .flat_map(lambda _: starting_procedure(iterator))
-            .run_on_trampoline(
-                trampoline=state.subscription_trampoline,  # ensures scheduling on trampoline
-                cancellation=cancellable,
-                weight=args.schedule_weight,
-            )
+        certificate = continuationmonad.fork(
+            source=(
+                continuationmonad.from_(None)
+                .flat_map(lambda _: starting_procedure(iterator))
+            ),
+            scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
+            cancellation=cancellable,
+            weight=args.schedule_weight,
         )
 
         result = ObserveResult(

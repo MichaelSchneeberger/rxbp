@@ -9,12 +9,12 @@ from dataclassabc import dataclassabc
 from rxbp.utils.lockmixin import LockMixin
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.zip.actions import ZipAction
+from rxbp.flowabletree.operations.zip.transitions import ZipTransition
 
 
 @dataclassabc
 class ZipSharedMemory[V](LockMixin):
-    action: ZipAction
+    action: ZipTransition
     downstream: Observer[tuple[V, ...]]
     zip_func: Callable[[dict[int, V]], tuple[int, ...]]
     n_children: int

@@ -17,12 +17,12 @@ from rxbp.flowabletree.operations.zip.states import (
     OnNextState,
     WaitFurtherItemsState,
 )
-from rxbp.flowabletree.operations.zip.actions import (
-    WaitAction,
-    OnErrorAction,
-    OnNextAction,
-    OnNextAndCompleteAction,
-    OnCompletedAction,
+from rxbp.flowabletree.operations.zip.transitions import (
+    RequestTransition,
+    OnErrorTransition,
+    OnNextTransition,
+    OnNextAndCompleteTransition,
+    OnCompletedTransition,
 )
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
 
@@ -41,9 +41,9 @@ class ZipObserver[V](Observer[V]):
             _: Trampoline,
             observer: DeferredObserver
         ):
-            # print(f'on_next_ack({value}), id={self.id}')
+            # print(f'on_next_ack({value}), id={self.id}, weight={observer.weight}')
 
-            action = OnNextAction(
+            action = OnNextTransition(
                 id=self.id,
                 value=value,
                 observer=observer,
@@ -89,7 +89,7 @@ class ZipObserver[V](Observer[V]):
                             None
                         ).connect(observers)
 
-                        self.shared.action = WaitAction(
+                        self.shared.action = RequestTransition(
                             certificates=tuple(certificates),
                             values={
                                 id: value
@@ -117,7 +117,7 @@ class ZipObserver[V](Observer[V]):
     def on_next_and_complete(self, value: V):
         # print(f'on_next_and_complete({value}), id={self.id}')
 
-        action = OnNextAndCompleteAction(
+        action = OnNextAndCompleteTransition(
             id=self.id,
             value=value,
             n_children=self.shared.n_children,
@@ -146,7 +146,7 @@ class ZipObserver[V](Observer[V]):
                 raise Exception(f"Unexpected state {state}.")
 
     def on_completed(self):
-        action = OnCompletedAction(child=None)  # type: ignore
+        action = OnCompletedTransition(child=None)  # type: ignore
 
         with self.shared.lock:
             action.child = self.shared.action
@@ -165,7 +165,7 @@ class ZipObserver[V](Observer[V]):
     def on_error(
         self, exception: Exception
     ):
-        action = OnErrorAction(
+        action = OnErrorTransition(
             child=None,  # type: ignore
             exception=exception,
         )
