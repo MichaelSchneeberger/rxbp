@@ -14,7 +14,7 @@ type UpstreamID = int
 class OnNextPreState[U]:
     id: UpstreamID
     value: U
-    subscription: DeferredObserver | None
+    observer: DeferredObserver | None
     n_completed: int
 
 
@@ -53,7 +53,7 @@ class AwaitNextState(AwaitNextBaseState):
 class OnNextState[U](AwaitAckBaseState):
     """send item"""
     value: U
-    subscription: DeferredObserver
+    observer: DeferredObserver
 
 
 @dataclass(frozen=True)

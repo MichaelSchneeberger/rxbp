@@ -5,7 +5,7 @@ from donotation import do
 
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
 from rxbp.flowabletree.operations.zip.transitions import RequestTransition
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
@@ -18,7 +18,7 @@ class Zip[V](MultiChildrenFlowableNode[V]):
     @do()
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs[tuple[V, ...]]
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         def zip_func(_: dict[int, V]):
             return tuple()
 
@@ -64,7 +64,7 @@ class Zip[V](MultiChildrenFlowableNode[V]):
             certificates=tuple(others),
         )
 
-        return state, ObserveResult(
+        return state, SubscriptionResult(
             cancellable=cancellable, 
             certificate=certificate,
         )

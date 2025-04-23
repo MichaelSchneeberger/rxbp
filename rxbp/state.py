@@ -23,7 +23,7 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def scheduler(self) -> Scheduler | None:
+    def scheduler(self) -> Scheduler:
         """
         Scheduler is propagated from downstream to upstream
         """
@@ -60,7 +60,7 @@ class State(ABC):
 class StateImpl(State):
     lock: RLock
     subscription_trampoline: Trampoline
-    scheduler: Scheduler | None
+    scheduler: Scheduler
     shared_observers: dict
     shared_weights: dict
     connections: dict
@@ -75,7 +75,7 @@ class StateImpl(State):
 
 def init_state(
     subscription_trampoline: Trampoline,
-    scheduler: Scheduler | None = None,
+    scheduler: Scheduler,
     shared_observers: dict | None = None,
     shared_weights: dict | None = None,
     subscriber_count: dict | None = None,

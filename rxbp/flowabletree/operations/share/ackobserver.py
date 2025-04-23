@@ -26,7 +26,7 @@ from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 @dataclass(frozen=False)
 class ShareAckObserver:
     shared: ShareSharedMemory
-    downstream_observer: Observer
+    observer: Observer
     id: int
     weight: int
     cancellation: CancellationState
@@ -49,15 +49,16 @@ class ShareAckObserver:
 
             match state := action.get_state():
                 case AckUpstream():
-                    def scheduled_task():
-                        return self.shared.upstream_ack_observer.on_next(
+                    def trampoline_task():
+                        return self.shared.deferred_observer.on_next(
                             trampoline, None
                         )
                     
                     certificate = trampoline.schedule(
-                        task=scheduled_task, 
+                        task=trampoline_task, 
                         weight=self.shared.total_weight,
                     )
+
                     state.certificate, state.acc_certificate = certificate.take(self.weight)
 
             self.shared.action = ToStateTransition(state)
@@ -72,7 +73,7 @@ class ShareAckObserver:
                 if state.pop_item:
                     self.shared.pop_buffer(1)
 
-                return self.downstream_observer.on_next(value).subscribe(
+                return self.observer.on_next(value).subscribe(
                     args=continuationmonad.init_subscribe_args(
                         on_next=self.on_next,
                         weight=self.weight,
@@ -82,7 +83,7 @@ class ShareAckObserver:
                 )
             
             case TerminatedState(exception=exception):
-                return self.downstream_observer.on_error(exception=exception)
+                return self.observer.on_error(exception=exception)
 
             case _:
                 raise Exception(f"Unexpected state {state}")

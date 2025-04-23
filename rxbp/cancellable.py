@@ -6,7 +6,7 @@ from continuationmonad.typing import ContinuationCertificate
 
 class Cancellable(ABC):
     @abstractmethod
-    def cancel(self, certificates: ContinuationCertificate):
+    def cancel(self, certificate: ContinuationCertificate):
         ...
 
 class CancellationState(Cancellation, Cancellable):

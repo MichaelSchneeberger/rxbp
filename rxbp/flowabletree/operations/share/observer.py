@@ -44,7 +44,7 @@ class SharedObserver[V](Observer[V]):
         ):
             # print(f"on_next_subscription({value}), weight={deferred_observer.weight}")
 
-            self.shared.upstream_ack_observer = deferred_observer
+            self.shared.deferred_observer = deferred_observer
 
             action = OnNextTransition(
                 child=None,  # type: ignore
@@ -63,7 +63,7 @@ class SharedObserver[V](Observer[V]):
                         for id in state.send_ids:
                             ack_observer = self.ack_observers[id]
 
-                            certificate = ack_observer.downstream_observer.on_next(
+                            certificate = ack_observer.observer.on_next(
                                 value
                             ).subscribe(
                                 args=continuationmonad.init_subscribe_args(
@@ -109,15 +109,12 @@ class SharedObserver[V](Observer[V]):
                 def gen_certificates():
                     for id in send_ids:
                         ack_observer = self.ack_observers[id]
-                        yield ack_observer.downstream_observer.on_next_and_complete(
+                        yield ack_observer.observer.on_next_and_complete(
                             value
                         )
 
-                def print_(v):
-                    print(v)
-                    return v
                 return continuationmonad.zip(tuple(gen_certificates())).map(
-                    lambda c: ContinuationCertificate.merge((acc_certificate,) + print_(c))
+                    lambda c: ContinuationCertificate.merge((acc_certificate,) + c)
                 )
 
             case _:
@@ -140,7 +137,7 @@ class SharedObserver[V](Observer[V]):
                 def gen_certificates():
                     for id in send_ids:
                         ack_observer = self.ack_observers[id]
-                        yield ack_observer.downstream_observer.on_completed()
+                        yield ack_observer.observer.on_completed()
 
                 return continuationmonad.zip(tuple(gen_certificates())).map(
                     lambda c: ContinuationCertificate.merge((acc_certificate,) + c)
@@ -168,7 +165,7 @@ class SharedObserver[V](Observer[V]):
                 def gen_certificates():
                     for id in send_ids:
                         ack_observer = self.ack_observers[id]
-                        yield ack_observer.downstream_observer.on_error(exception)
+                        yield ack_observer.observer.on_error(exception)
 
                 return continuationmonad.zip(tuple(gen_certificates())).map(
                     lambda c: ContinuationCertificate.merge((acc_certificate,) + c)

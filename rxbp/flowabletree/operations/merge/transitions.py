@@ -64,7 +64,7 @@ class OnNextTransition[U](MergeTransition):
     child: MergeTransition
     id: UpstreamID
     value: U
-    subscription: DeferredObserver
+    observer: DeferredObserver
 
     def get_state(self):
         match child_state := self.child.get_state():
@@ -77,7 +77,7 @@ class OnNextTransition[U](MergeTransition):
                 pre_state = OnNextPreState(
                     id=self.id,
                     value=self.value,
-                    subscription=self.subscription,
+                    observer=self.observer,
                     n_completed=n_completed,
                 )
                 n_acc_states = acc_states + [pre_state]
@@ -94,7 +94,7 @@ class OnNextTransition[U](MergeTransition):
                 return OnNextState(
                     # id=self.id,
                     value=self.value,
-                    subscription=self.subscription,
+                    observer=self.observer,
                     acc_states=[],
                     n_completed=n_completed,
                     certificates=certificates,
@@ -131,7 +131,7 @@ class OnNextAndCompleteTransition[U](MergeTransition):
                 pre_state = OnNextPreState(
                     id=self.id,
                     value=self.value,
-                    subscription=None,
+                    observer=None,
                     n_completed=n_completed + 1,
                 )
                 n_acc_states = acc_states + [pre_state]
@@ -199,12 +199,12 @@ class RequestTransition(MergeTransition):
                         OnNextPreState(
                             # id=id,
                             value=value,
-                            subscription=subscription,
+                            observer=observer,
                             n_completed=n_completed,
                         ),
                         *others,
                     ]:
-                        if subscription is None:
+                        if observer is None:
                             return OnNextNoAckState(
                                 certificate=self.certificate,
                                 # id=id,
@@ -217,7 +217,7 @@ class RequestTransition(MergeTransition):
                             return OnNextState(
                                 # id=id,
                                 value=value,
-                                subscription=subscription,
+                                observer=observer,
                                 acc_states=others,
                                 n_completed=n_completed,
                                 certificates=(self.certificate,) + certificates,

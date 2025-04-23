@@ -7,7 +7,7 @@ from typing import Callable
 from dataclassabc import dataclassabc
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.flatmap.states import ActiveState
 from rxbp.flowabletree.operations.flatmap.transitions import ToStateTransition
@@ -24,7 +24,7 @@ class FlatMap[V](SingleChildFlowableNode[V, V]):
         self,
         state: State,
         args: SubscribeArgs[V],
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         action = ToStateTransition(
             state=ActiveState(
                 cancellable=None,  # type: ignore
@@ -58,7 +58,7 @@ class FlatMap[V](SingleChildFlowableNode[V, V]):
             shared=shared,
         )
 
-        return n_state, ObserveResult(
+        return n_state, SubscriptionResult(
             cancellable=cancellable,
             certificate=result.certificate,
         )

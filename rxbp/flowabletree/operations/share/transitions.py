@@ -4,6 +4,7 @@ from dataclasses import replace
 from dataclassabc import dataclassabc
 
 from continuationmonad.typing import ContinuationCertificate
+
 from rxbp.flowabletree.operations.share.states import (
     AckUpstream,
     ActiveState,
@@ -13,8 +14,8 @@ from rxbp.flowabletree.operations.share.states import (
     CompleteState,
     ErrorState,
     SendItemFromBuffer,
-    ShareState,
     SendItem,
+    ShareState,
     TerminatedBaseState,
     TerminatedState,
 )

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from rxbp.flowabletree.observer import Observer
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 
 
 class FlowableNode[V](ABC):
@@ -14,7 +13,7 @@ class FlowableNode[V](ABC):
         self,
         state: State,
         args: SubscribeArgs[V],
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         """
         state: object that is passed through the entire tree structure
         """

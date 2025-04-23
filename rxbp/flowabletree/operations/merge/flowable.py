@@ -12,7 +12,7 @@ from continuationmonad.typing import (
 from rxbp.cancellable import Cancellable
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
 from rxbp.flowabletree.operations.merge.states import UpstreamID
 from rxbp.flowabletree.operations.merge.transitions import InitAction
@@ -28,7 +28,7 @@ class Merge[V](MultiChildrenFlowableNode[V]):
     @do()
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs,
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         shared_state = MergeSharedMemory(
             downstream=args.observer,
             n_children=len(self.children),
@@ -85,7 +85,7 @@ class Merge[V](MultiChildrenFlowableNode[V]):
             shared=shared_state,
         )
 
-        return n_state, ObserveResult(
+        return n_state, SubscriptionResult(
             cancellable=cancellable, 
             certificate=first_certificate,
         )

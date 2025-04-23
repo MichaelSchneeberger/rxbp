@@ -52,11 +52,11 @@ class MergeObserver[V](Observer[V]):
             case OnNextAndCompleteState(value=value):
                 return self.shared.downstream.on_next_and_complete(value)
 
-            case OnNextState(value=value, subscription=subscription):
+            case OnNextState(value=value, observer=observer):
                 _ = yield from self.shared.downstream.on_next(value)
                 
                 certificate, *_ = yield from continuationmonad.from_(None).connect(
-                    observers=(subscription,)
+                    observers=(observer,)
                 )
 
                 action = RequestTransition(
@@ -83,13 +83,13 @@ class MergeObserver[V](Observer[V]):
 
     @do()
     def on_next(self, value: V):
-        # wait for upstream subscription before continuing to simplify concurrency
-        def on_next_ackowledgment(_, subscription: DeferredObserver):
+        # wait for upstream observer before continuing to simplify concurrency
+        def on_next_ackowledgment(_, observer: DeferredObserver):
             action = OnNextTransition(
                 child=None,  # type: ignore
                 id=self.id,
                 value=value,
-                subscription=subscription,
+                observer=observer,
             )
 
             with self.shared.lock:

@@ -12,7 +12,7 @@ from rxbp.cancellable import init_cancellation_state
 from rxbp.state import State
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode
 
 
@@ -61,7 +61,7 @@ class ConnectableImpl[V](FlowableNode[V]):
         self,
         state: State,
         args: SubscribeArgs[V],
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         observer = ConnectableObserver(
             lock=state.lock,
             downstream=args.observer,
@@ -124,7 +124,7 @@ class ConnectableImpl[V](FlowableNode[V]):
             weight=args.schedule_weight,
         )
 
-        result = ObserveResult(
+        result = SubscriptionResult(
             certificate=certificate,
             cancellable=cancellable,
         )

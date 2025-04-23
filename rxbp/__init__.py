@@ -4,10 +4,15 @@ from rxbp.flowable.from_ import (
     zip as _zip,
     merge as _merge,
     connectable as _connectable,
+    from_rx as _from_rx,
 )
+from rxbp.flowable.to import to_rx as _to_rx
 
 from_iterable = _from_iterable
 from_value = _from_value
 zip = _zip
 merge = _merge
 connectable = _connectable
+from_rx = _from_rx
+
+to_rx = _to_rx

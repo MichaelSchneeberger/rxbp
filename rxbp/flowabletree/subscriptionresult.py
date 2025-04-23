@@ -6,6 +6,6 @@ from rxbp.cancellable import Cancellable
 
 
 @dataclass
-class ObserveResult:
+class SubscriptionResult:
     cancellable: Cancellable
     certificate: ContinuationCertificate

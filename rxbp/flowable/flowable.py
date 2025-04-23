@@ -10,8 +10,9 @@ from continuationmonad.typing import Scheduler
 from rxbp.state import State, init_state
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
 from rxbp.flowabletree.operations.share.flowable import init_share
 
@@ -19,6 +20,13 @@ from rxbp.flowabletree.operations.share.flowable import init_share
 class Flowable[V](SingleChildFlowableNode[V, V]):
     @abstractmethod
     def copy(self, /, **changes) -> Flowable: ...
+
+    def buffer(self):
+        return self.copy(
+            child=init_buffer(
+                child=self.child,
+            )
+        )
 
     def flat_map(self, func: Callable[[V], FlowableNode]):
         return self.copy(
@@ -37,10 +45,11 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
 
     def run(
         self,
-        scheduler: Scheduler | None = None,
+        # scheduler: Scheduler | None = None,
         connections: dict[Flowable, Flowable] | None = None,
     ):
-        main_trampoline = continuationmonad.init_main_trampoline()
+        main_scheduler = continuationmonad.init_main_scheduler()
+        subscribe_trampoline = continuationmonad.init_trampoline()
 
         @dataclass()
         class MainObserver[U](Observer[U]):
@@ -48,102 +57,62 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             received_exception: list[Exception | None]
 
             def on_next(self, value: U):
+                # print(f'on_next({value})')
                 self.received_items.append(value)
                 return continuationmonad.from_(None)
 
             def on_next_and_complete(self, value: U):
                 self.received_items.append(value)
-                return continuationmonad.from_(main_trampoline.stop())
+                return continuationmonad.from_(main_scheduler.stop())
                 # return main_trampoline.stop()
 
             def on_completed(self):
-                return continuationmonad.from_(main_trampoline.stop())
+                # print('on_complete()')
+                return continuationmonad.from_(main_scheduler.stop())
                 # return main_trampoline.stop()
 
             def on_error(self, exception: Exception):
                 self.received_exception[0] = exception
-                return continuationmonad.from_(main_trampoline.stop())
+                return continuationmonad.from_(main_scheduler.stop())
                 # return main_trampoline.stop()
 
         if connections is None:
             connections = {}
 
-        received_items: list[V] = []
-        received_exception: list[Exception | None] = [None]
-
         observer =  MainObserver[V](
-            received_items=received_items,
-            received_exception=received_exception,
+            received_items=[],
+            received_exception=[None],
         )
 
-        def main_action():
+        def schedule_task():
+            def trampoline_task():
 
-            state = init_state(
-                subscription_trampoline=main_trampoline,
-                scheduler=scheduler,
-                connections={c.child: s for c, s in connections.items()},
-            )
-
-            result = self.child.subscribe(
-                state=state,
-                args=SubscribeArgs(
-                    observer=observer,
-                    schedule_weight=1,
+                state = init_state(
+                    subscription_trampoline=subscribe_trampoline,
+                    scheduler=main_scheduler,
+                    connections={c.child: s for c, s in connections.items()},
                 )
-            )
 
-            return result.certificate
+                result = self.child.subscribe(
+                    state=state,
+                    args=SubscribeArgs(
+                        observer=observer,
+                        schedule_weight=1,
+                    )
+                )
 
-        # state = self.child.discover(state)
-        # state = self.child.assign_weights(state, 1)
-        # for sink in connections.values():
-        #     state = sink.assign_weights(state, 1)
+                return result.certificate
 
-        # def main_action(state=state):
-        #     state, result = self.child.unsafe_subscribe(
-        #         state,
-        #         args = SubscribeArgs(
-        #             observer=MainObserver[V](
-        #                 received_items=received_items,
-        #                 received_exception=received_exception,
-        #             ),
-        #             schedule_weight=1,
-        #         )
-        #     )
-        #     certificate = result.certificate
+            return subscribe_trampoline.run(trampoline_task, weight=1)
+        main_scheduler.run(schedule_task)
 
-        #     # print(state.connectable_observers)
+        if observer.received_exception[0]:
+            raise observer.received_exception[0]
 
-        #     while state.connectable_observers:
-        #         for connectable, observer in state.connectable_observers.items():
-        #             state = state.copy(connectable_observers={})
-        #             state, result = connectable.unsafe_subscribe(
-        #                 state.copy(
-        #                     certificate=result.certificate
-        #                 ),
-        #                 args = SubscribeArgs(
-        #                     observer=observer,
-        #                     schedule_weight=1,
-        #                 )
-        #             )
-        #             observer.certificate = result.certificate
-
-        #     return certificate
-
-        main_trampoline.run(main_action)
-
-        if received_exception[0]:
-            raise received_exception[0]
-
-        return received_items
+        return observer.received_items
 
     @override
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs[V]
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         return self.child.unsafe_subscribe(state, args)
-
-
-# class ConnectableFlowable[V](Flowable[V]):
-#     def connect(self, child: Flowable):
-#         self.child.connect(child)

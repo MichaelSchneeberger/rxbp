@@ -6,7 +6,7 @@ from donotation import do
 from rxbp.exceptions import RxBpException
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.share.states import InitState
 from rxbp.flowabletree.operations.share.transitions import ToStateTransition
@@ -53,7 +53,7 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
     @do()
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs[V]
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         if self in state.shared_observers:
             observer = state.shared_observers[self]
 
@@ -63,7 +63,7 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
             shared = ShareSharedMemory(
                 upstream_cancellation=None,
                 action=None,  # type: ignore
-                upstream_ack_observer=None,  # type: ignore
+                deferred_observer=None,  # type: ignore
                 lock=state.lock,
                 buffer_lock=state.lock,
                 first_index=0,
@@ -119,7 +119,7 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
         )
 
         ack_observer = ShareAckObserver(
-            downstream_observer=args.observer,
+            observer=args.observer,
             shared=shared,
             id=id,
             weight=args.schedule_weight,
@@ -130,7 +130,7 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
 
         assert isinstance(shared.action.state, InitState)
 
-        return state, ObserveResult(
+        return state, SubscriptionResult(
             cancellable=downstream_cancellation,
             certificate=certificate,
         )

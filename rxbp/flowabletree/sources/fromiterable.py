@@ -12,7 +12,7 @@ from rxbp.cancellable import init_cancellation_state
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
-from rxbp.flowabletree.observeresult import ObserveResult
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 
 
 class FromIterable[V](FlowableNode[V]):
@@ -25,7 +25,7 @@ class FromIterable[V](FlowableNode[V]):
         self,
         state: State,
         args: SubscribeArgs[V],
-    ) -> tuple[State, ObserveResult]:
+    ) -> tuple[State, SubscriptionResult]:
         iterator = iter(self.iterable)
 
         @do()
@@ -75,7 +75,7 @@ class FromIterable[V](FlowableNode[V]):
             weight=args.schedule_weight,
         )
 
-        result = ObserveResult(
+        result = SubscriptionResult(
             certificate=certificate,
             cancellable=cancellable,
         )

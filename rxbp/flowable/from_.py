@@ -1,7 +1,9 @@
 from typing import Iterable
 
 from rxbp.flowable.init import init_flowable
+from rxbp.flowabletree.sources.fromrx import FromRx
 from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.sources.connectable import init_connectable
 from rxbp.flowabletree.sources.fromiterable import init_from_iterable
 from rxbp.flowabletree.sources.fromvalue import init_from_value
@@ -22,6 +24,14 @@ def from_iterable(iterable: Iterable):
 def from_value(value):
     return init_flowable(
         child=init_from_value(value=value),
+    )
+
+
+def from_rx(source):
+    return init_flowable(
+        child=init_buffer(
+            child=FromRx(source=source),
+        ),
     )
 
 

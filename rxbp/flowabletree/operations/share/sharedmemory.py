@@ -20,7 +20,7 @@ class ShareSharedMemory[V]:
     upstream_cancellation: Cancellable
 
     # modified synchronously
-    upstream_ack_observer: DeferredObserver
+    deferred_observer: DeferredObserver
 
     # modified using lock
     action: ShareTransition
