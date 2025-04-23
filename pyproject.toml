@@ -1,0 +1,25 @@
+[project]
+name = "rxbp"
+version = "0.1.0"
+description = 'A library that integrates *backpressure* into the *Observable* via *Flowables*. '
+authors = [
+  {name="Michael Schneeberger", email="michael.schneeb@hotmail.com"},
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "dataclassabc>=0.0.15",
+  "donotation>=0.0.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/MichaelSchneeberger/rxbp"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "rxbp",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
