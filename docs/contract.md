@@ -1,5 +1,4 @@
-Contract
---------
+# Contract
 
 Most points in the contract are taken from the Monix documentation:
 
