@@ -5,6 +5,7 @@ from rxbp.flowable.from_ import (
     merge as _merge,
     connectable as _connectable,
     from_rx as _from_rx,
+    schedule_on as _schedule_on,
 )
 from rxbp.flowable.to import to_rx as _to_rx
 
@@ -14,5 +15,6 @@ zip = _zip
 merge = _merge
 connectable = _connectable
 from_rx = _from_rx
+schedule_on = _schedule_on
 
 to_rx = _to_rx
