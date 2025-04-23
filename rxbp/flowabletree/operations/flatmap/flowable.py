@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from threading import RLock
 from typing import Callable
 
@@ -16,9 +15,11 @@ from rxbp.flowabletree.operations.flatmap.cancellable import FlatMapCancellable
 from rxbp.flowabletree.operations.flatmap.observer import FlatMapObserver
 
 
-@dataclass(frozen=True)
-class FlatMap[V](SingleChildFlowableNode[V, V]):
-    func: Callable[[V], FlowableNode]
+
+@dataclassabc(frozen=True)
+class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
+    child: FlowableNode[U]
+    func: Callable[[U], FlowableNode[V]]
 
     def unsafe_subscribe(
         self,
@@ -64,16 +65,11 @@ class FlatMap[V](SingleChildFlowableNode[V, V]):
         )
 
 
-@dataclassabc(frozen=True)
-class FlatMapImpl[V](FlatMap[V]):
-    child: FlowableNode[V]
-
-
-def init_flat_map[V](
-    child: FlowableNode[V],
-    func: Callable[[V], FlowableNode],
+def init_flat_map[U, V](
+    child: FlowableNode[U],
+    func: Callable[[U], FlowableNode[V]],
 ):
-    return FlatMapImpl(
+    return FlatMapFlowable(
         child=child,
         func=func,
     )

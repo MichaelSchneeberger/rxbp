@@ -9,7 +9,6 @@ from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
-from rxbp.flowabletree.operations.buffer.loop import Loop
 from rxbp.flowabletree.operations.buffer.observer import BufferObserver
 from rxbp.flowabletree.operations.buffer.states import LoopInactive
 from rxbp.flowabletree.operations.buffer.transitions import ToStateTransition

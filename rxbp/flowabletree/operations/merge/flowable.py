@@ -22,7 +22,7 @@ from rxbp.flowabletree.operations.merge.observer import MergeObserver
 
 
 @dataclassabc(frozen=True)
-class Merge[V](MultiChildrenFlowableNode[V]):
+class Merge[U](MultiChildrenFlowableNode[U, U]):
     children: tuple[FlowableNode, ...]
 
     @do()
@@ -91,5 +91,5 @@ class Merge[V](MultiChildrenFlowableNode[V]):
         )
 
 
-def init_merge[V](children: tuple[FlowableNode[V], ...]):
-    return Merge[V](children=children)
+def init_merge[U](children: tuple[FlowableNode[U], ...]):
+    return Merge[U](children=children)

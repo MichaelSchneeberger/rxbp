@@ -11,8 +11,8 @@ from rxbp.flowabletree.operations.merge.flowable import init_merge
 from rxbp.flowabletree.operations.zip.flowable import init_zip
 
 
-def connectable(id, init_item):
-    return init_flowable(child=init_connectable(id, init_item))
+def connectable(id, init):
+    return init_flowable(child=init_connectable(id, init))
 
 
 def from_iterable(iterable: Iterable):

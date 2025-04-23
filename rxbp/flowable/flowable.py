@@ -7,6 +7,7 @@ from typing import Callable, override
 import continuationmonad
 from continuationmonad.typing import Scheduler
 
+from rxbp.flowabletree.operations.map import init_map_flowable
 from rxbp.state import State, init_state
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
@@ -36,6 +37,14 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
             )
         )
 
+    def map[U](self, func: Callable[[V], U]):
+        return self.copy(
+            child=init_map_flowable(
+                child=self.child,
+                func=func,
+            )
+        )
+
     def share(self):
         return self.copy(
             child=init_share(
@@ -45,7 +54,6 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
 
     def run(
         self,
-        # scheduler: Scheduler | None = None,
         connections: dict[Flowable, Flowable] | None = None,
     ):
         main_scheduler = continuationmonad.init_main_scheduler()

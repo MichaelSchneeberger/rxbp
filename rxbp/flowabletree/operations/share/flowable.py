@@ -17,7 +17,7 @@ from rxbp.flowabletree.operations.share.observer import SharedObserver
 
 
 @dataclassabc(frozen=True)
-class ShareFlowable[V](SingleChildFlowableNode[V, V]):
+class ShareFlowable[U](SingleChildFlowableNode[U, U]):
     child: FlowableNode
 
     def discover(
@@ -52,7 +52,7 @@ class ShareFlowable[V](SingleChildFlowableNode[V, V]):
 
     @do()
     def unsafe_subscribe(
-        self, state: State, args: SubscribeArgs[V]
+        self, state: State, args: SubscribeArgs[U]
     ) -> tuple[State, SubscriptionResult]:
         if self in state.shared_observers:
             observer = state.shared_observers[self]

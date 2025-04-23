@@ -14,12 +14,15 @@ from rxbp.flowabletree.operations.zip.observer import ZipObserver
 
 
 
-class Zip[V](MultiChildrenFlowableNode[V]):
+@dataclassabc(frozen=True)
+class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
+    children: tuple[FlowableNode, ...]
+
     @do()
     def unsafe_subscribe(
-        self, state: State, args: SubscribeArgs[tuple[V, ...]]
+        self, state: State, args: SubscribeArgs[tuple[U, ...]]
     ) -> tuple[State, SubscriptionResult]:
-        def zip_func(_: dict[int, V]):
+        def zip_func(_: dict[int, U]):
             return tuple()
 
         shared_memory = ZipSharedMemory(
@@ -70,10 +73,5 @@ class Zip[V](MultiChildrenFlowableNode[V]):
         )
 
 
-@dataclassabc(frozen=True)
-class ZipImpl[V](Zip[V]):
-    children: tuple[FlowableNode, ...]
-
-
 def init_zip[V](children: tuple[FlowableNode[V], ...]):
-    return ZipImpl[V](children=children)
+    return ZipFlowable[V](children=children)

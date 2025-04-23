@@ -7,12 +7,12 @@ from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 
 
-class FlowableNode[V](ABC):
+class FlowableNode[U](ABC):
     @abstractmethod
     def unsafe_subscribe(
         self,
         state: State,
-        args: SubscribeArgs[V],
+        args: SubscribeArgs[U],
     ) -> tuple[State, SubscriptionResult]:
         """
         state: object that is passed through the entire tree structure
@@ -21,7 +21,7 @@ class FlowableNode[V](ABC):
     def subscribe(
         self, 
         state: State,
-        args: SubscribeArgs[V],
+        args: SubscribeArgs[U],
     ):
         state = self.discover(state)
         state = self.assign_weights(state, 1)
@@ -63,14 +63,14 @@ class FlowableNode[V](ABC):
         return state
 
 
-class SingleChildFlowableNode[V, ChildV](FlowableNode[V]):
+class SingleChildFlowableNode[U, V](FlowableNode[V]):
     """
     Represents a state monad node with a single child.
     """
 
     @property
     @abstractmethod
-    def child(self) -> FlowableNode[ChildV]: ...
+    def child(self) -> FlowableNode[U]: ...
 
     def discover(
         self,
@@ -86,7 +86,7 @@ class SingleChildFlowableNode[V, ChildV](FlowableNode[V]):
         return self.child.assign_weights(state, weight)
 
 
-class TwoChildrenFlowableNode[V, L, R](FlowableNode[V]):
+class TwoChildrenFlowableNode[L, R, V](FlowableNode[V]):
     """
     Represents a state monad node with two children.
     """
@@ -115,14 +115,14 @@ class TwoChildrenFlowableNode[V, L, R](FlowableNode[V]):
         return self.right.assign_weights(state, weight)
 
 
-class MultiChildrenFlowableNode[V](FlowableNode[V]):
+class MultiChildrenFlowableNode[U, V](FlowableNode[V]):
     """
     Represents a state monad node with two children.
     """
 
     @property
     @abstractmethod
-    def children(self) -> tuple[FlowableNode, ...]: ...
+    def children(self) -> tuple[FlowableNode[U], ...]: ...
 
     def discover(
         self,
