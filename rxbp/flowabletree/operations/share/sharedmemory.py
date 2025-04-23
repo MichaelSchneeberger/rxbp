@@ -23,7 +23,7 @@ class ShareSharedMemory[V]:
     deferred_observer: DeferredObserver
 
     # modified using lock
-    action: ShareTransition
+    transition: ShareTransition
     lock: RLock
 
     buffer_lock: RLock

@@ -11,6 +11,6 @@ from rxbp.flowabletree.operations.merge.transitions import MergeTransition
 @dataclassabc(frozen=False)
 class MergeSharedMemory:
     downstream: Observer
-    action: MergeTransition
+    transition: MergeTransition
     n_children: int
     lock: RLock

@@ -15,7 +15,7 @@ from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.flatmap.states import ActiveState, CancelledState
 from rxbp.flowabletree.operations.flatmap.transitions import (
     ToStateTransition,
-    UpdateCancellableAction,
+    UpdateCancellableTransition,
 )
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 
@@ -40,15 +40,15 @@ class FlatMapNestedObserver[V](Observer[V]):
 
     @do()
     def on_completed(self):
-        action = UpdateCancellableAction(
+        transition = UpdateCancellableTransition(
             child=None,  # type: ignore
             cancellable=self.shared.upstream_cancellable,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            state = action.get_state()
-            self.shared.action = ToStateTransition(state=state)
+            transition.child = self.shared.transition
+            state = transition.get_state()
+            self.shared.transition = ToStateTransition(state=state)
 
         match state:
             case ActiveState():

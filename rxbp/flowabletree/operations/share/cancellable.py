@@ -26,17 +26,17 @@ class ShareCancellation(CancellationState):
     def cancel(self, certificate: ContinuationCertificate):
         super().cancel(certificate)
 
-        action = CancelTransition(
+        transition = CancelTransition(
             child=None,  # type: ignore
             id=self.id,
             certificate=certificate,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match action.get_state():
+        match transition.get_state():
             case CancelledState(certificate=certificate):
                 self.upstream_cancellation.cancel(certificate)
 

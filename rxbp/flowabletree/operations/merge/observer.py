@@ -59,7 +59,7 @@ class MergeObserver[V](Observer[V]):
                     observers=(observer,)
                 )
 
-                action = RequestTransition(
+                transition = RequestTransition(
                     child=None,  # type: ignore
                     id=self.id,
                     certificate=certificate,
@@ -67,9 +67,9 @@ class MergeObserver[V](Observer[V]):
                 )
 
                 with self.shared.lock:
-                    action.child = self.shared.action
-                    state = action.get_state()
-                    self.shared.action = ToStateTransition(state=state)
+                    transition.child = self.shared.transition
+                    state = transition.get_state()
+                    self.shared.transition = ToStateTransition(state=state)
 
                 return self._on_next(state)
 
@@ -85,7 +85,7 @@ class MergeObserver[V](Observer[V]):
     def on_next(self, value: V):
         # wait for upstream observer before continuing to simplify concurrency
         def on_next_ackowledgment(_, observer: DeferredObserver):
-            action = OnNextTransition(
+            transition = OnNextTransition(
                 child=None,  # type: ignore
                 id=self.id,
                 value=value,
@@ -93,19 +93,19 @@ class MergeObserver[V](Observer[V]):
             )
 
             with self.shared.lock:
-                action.child = self.shared.action
-                self.shared.action = action
+                transition.child = self.shared.transition
+                self.shared.transition = transition
 
             # print(f'on_next({value}), id={self.id}')
 
-            return self._on_next(action.get_state())
+            return self._on_next(transition.get_state())
 
         return continuationmonad.defer(on_next_ackowledgment)
 
     @do()
     def on_next_and_complete(self, value: V):
         # print(f'on_next_and_complete({value}), id={self.id}')
-        action = OnNextAndCompleteTransition(
+        transition = OnNextAndCompleteTransition(
             child=None,  # type: ignore
             id=self.id,
             value=value,
@@ -113,23 +113,23 @@ class MergeObserver[V](Observer[V]):
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        return self._on_next(action.get_state())
+        return self._on_next(transition.get_state())
 
     def on_completed(self):
-        action = OnCompletedTransition(
+        transition = OnCompletedTransition(
             child=None,  # type: ignore
             n_children=self.shared.n_children,
             id=self.id,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case CompleteState():
                 return self.shared.downstream.on_completed()
 
@@ -154,7 +154,7 @@ class MergeObserver[V](Observer[V]):
     def on_error(
         self, exception: Exception
     ):
-        action = OnErrorTransition(
+        transition = OnErrorTransition(
             child=None,  # type: ignore
             id=self.id,
             n_children=self.shared.n_children,
@@ -162,10 +162,10 @@ class MergeObserver[V](Observer[V]):
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case ErrorState(exception=exception):
                 return self.shared.downstream.on_error(exception)
 

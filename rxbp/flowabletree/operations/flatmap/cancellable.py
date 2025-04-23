@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.cancellable import CancellationState
-from rxbp.flowabletree.operations.flatmap.transitions import CancelAction
+from rxbp.flowabletree.operations.flatmap.transitions import CancelTransition
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.states import CancelledState
 
@@ -14,15 +14,15 @@ class FlatMapCancellable(CancellationState):
     shared: FlatMapSharedMemory
 
     def cancel(self, certificate: ContinuationCertificate):
-        action = CancelAction(
+        transition = CancelTransition(
             child=None,  # type: ignore
             certificate=certificate,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match action:
+        match transition:
             case CancelledState(cancellable=cancellable):
                 cancellable.cancel(certificate)

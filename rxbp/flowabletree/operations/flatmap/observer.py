@@ -11,13 +11,13 @@ from continuationmonad.typing import (
     DeferredObserver,
 )
 
-from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.state import init_state
+from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.states import CancelledState
-from rxbp.flowabletree.operations.flatmap.transitions import UpdateCancellableAction
+from rxbp.flowabletree.operations.flatmap.transitions import UpdateCancellableTransition
 from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapNestedObserver
 
 
@@ -81,16 +81,16 @@ class FlatMapObserver[V](Observer[V]):
         #     ),
         # )
 
-        action = UpdateCancellableAction(
+        transition = UpdateCancellableTransition(
             child=None,  # type: ignore
             cancellable=result.cancellable,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match action.get_state():
+        match transition.get_state():
             case CancelledState(certificate=certificate, cancellable=cancellable):
                 cancellable.cancel(certificate)
 

@@ -26,7 +26,7 @@ class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
         state: State,
         args: SubscribeArgs[V],
     ) -> tuple[State, SubscriptionResult]:
-        action = ToStateTransition(
+        transition = ToStateTransition(
             state=ActiveState(
                 cancellable=None,  # type: ignore
             ),
@@ -34,7 +34,7 @@ class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
 
         shared = FlatMapSharedMemory(
             upstream_cancellable=None,
-            action=action,
+            transition=transition,
             lock=RLock(),
         )
 

@@ -30,7 +30,7 @@ class ToStateTransition(FlatMapTransition):
 
 
 @dataclass(frozen=False)
-class UpdateCancellableAction(FlatMapTransition):
+class UpdateCancellableTransition(FlatMapTransition):
     child: FlatMapTransition
     cancellable: Cancellable
 
@@ -52,7 +52,7 @@ class UpdateCancellableAction(FlatMapTransition):
 
 
 @dataclassabc(frozen=False)
-class CancelAction(FlatMapTransition):
+class CancelTransition(FlatMapTransition):
     child: FlatMapTransition
     certificate: ContinuationCertificate
 

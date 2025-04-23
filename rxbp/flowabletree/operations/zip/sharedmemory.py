@@ -14,7 +14,7 @@ from rxbp.flowabletree.operations.zip.transitions import ZipTransition
 
 @dataclassabc
 class ZipSharedMemory[V](LockMixin):
-    action: ZipTransition
+    transition: ZipTransition
     downstream: Observer[tuple[V, ...]]
     zip_func: Callable[[dict[int, V]], tuple[int, ...]]
     n_children: int

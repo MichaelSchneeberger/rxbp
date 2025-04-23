@@ -16,17 +16,17 @@ class MergeCancellable(CancellationState):
     shared: MergeSharedMemory
 
     def cancel(self, certificate: ContinuationCertificate):
-        action = CancelTransition(
+        transition = CancelTransition(
             child=None,  # type: ignore
             certificate=certificate,
             n_children=self.n_children,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        state = action.get_state()
+        state = transition.get_state()
 
         for id, certificate in state.certificates.items():
             self.cancellables[id].cancel(certificate)

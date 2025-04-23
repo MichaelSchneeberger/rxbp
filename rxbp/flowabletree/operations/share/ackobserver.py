@@ -38,16 +38,16 @@ class ShareAckObserver:
     ) -> ContinuationCertificate:
         # print(f"request({self.id})")
 
-        action = RequestTransition(
+        transition = RequestTransition(
             child=None,  # type: ignore
             id=self.id,
             weight=self.weight,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
+            transition.child = self.shared.transition
 
-            match state := action.get_state():
+            match state := transition.get_state():
                 case AckUpstream():
                     def trampoline_task():
                         return self.shared.deferred_observer.on_next(
@@ -61,7 +61,7 @@ class ShareAckObserver:
 
                     state.certificate, state.acc_certificate = certificate.take(self.weight)
 
-            self.shared.action = ToStateTransition(state)
+            self.shared.transition = ToStateTransition(state)
 
         match state:
             case AckUpstream() | AwaitOnNext():

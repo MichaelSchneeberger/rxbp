@@ -62,7 +62,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
 
             shared = ShareSharedMemory(
                 upstream_cancellation=None,
-                action=None,  # type: ignore
+                transition=None,  # type: ignore
                 deferred_observer=None,  # type: ignore
                 lock=state.lock,
                 buffer_lock=state.lock,
@@ -89,7 +89,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
             )
             shared.upstream_cancellation = result.cancellable
 
-            shared.action = ToStateTransition(
+            shared.transition = ToStateTransition(
                 InitState(
                     buffer_map={},
                     first_buffer_index=0,
@@ -102,7 +102,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
 
         shared = observer.shared
 
-        init_state = shared.action.state
+        init_state = shared.transition.state
 
         id = len(init_state.buffer_map)
         init_state.buffer_map[id] = 0
@@ -128,7 +128,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
 
         observer.ack_observers[id] = ack_observer
 
-        assert isinstance(shared.action.state, InitState)
+        assert isinstance(shared.transition.state, InitState)
 
         return state, SubscriptionResult(
             cancellable=downstream_cancellation,

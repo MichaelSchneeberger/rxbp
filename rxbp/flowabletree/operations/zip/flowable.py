@@ -30,7 +30,7 @@ class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
             downstream=args.observer,
             zip_func=zip_func,
             n_children=len(self.children),
-            action=None,  # type: ignore
+            transition=None,  # type: ignore
             cancellables=None,  # type: ignore
         )
 
@@ -55,7 +55,7 @@ class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
 
         certificate, *others = certificates
 
-        shared_memory.action = RequestTransition(
+        shared_memory.transition = RequestTransition(
             certificates=tuple(others),
             values={},
             observers={}

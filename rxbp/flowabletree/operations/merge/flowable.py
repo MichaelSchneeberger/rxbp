@@ -33,7 +33,7 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
             downstream=args.observer,
             n_children=len(self.children),
             lock=state.lock,
-            action=None,  # type: ignore
+            transition=None,  # type: ignore
         )
 
         def acc_continuations(
@@ -73,7 +73,7 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
             )
         )
 
-        shared_state.action = InitAction(
+        shared_state.transition = InitAction(
             n_completed=0,
             certificates=tuple(other_certificates),
         )

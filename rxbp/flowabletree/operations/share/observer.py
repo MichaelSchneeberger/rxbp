@@ -46,15 +46,15 @@ class SharedObserver[V](Observer[V]):
 
             self.shared.deferred_observer = deferred_observer
 
-            action = OnNextTransition(
+            transition = OnNextTransition(
                 child=None,  # type: ignore
             )
 
             with self.shared.lock:
-                action.child = self.shared.action
-                self.shared.action = action
+                transition.child = self.shared.transition
+                self.shared.transition = transition
 
-            match state := action.get_state():
+            match state := transition.get_state():
                 case SendItem():
                     if state.buffer_item:
                         self.shared.buffer.append(value)
@@ -91,15 +91,15 @@ class SharedObserver[V](Observer[V]):
     def on_next_and_complete(self, value: V):
         # print(f"on_next_and_complete({value})")
 
-        action = OnNextAndCompleteTransition(
+        transition = OnNextAndCompleteTransition(
             child=None,  # type: ignore
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case SendItem(
                 send_ids=send_ids,
                 acc_certificate=acc_certificate,
@@ -121,15 +121,15 @@ class SharedObserver[V](Observer[V]):
                 raise Exception(f"Unexpected state {state}")
 
     def on_completed(self):
-        action = OnCompletedTransition(
+        transition = OnCompletedTransition(
             child=None,  # type: ignore
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case CompleteState(
                 send_ids=send_ids,
                 acc_certificate=acc_certificate,
@@ -147,16 +147,16 @@ class SharedObserver[V](Observer[V]):
                 raise Exception(f"Unexpected state {state}.")
 
     def on_error(self, exception: Exception):
-        action = OnErrorTransition(
+        transition = OnErrorTransition(
             exception=exception,
             child=None,  # type: ignore
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case ErrorState(
                 send_ids=send_ids,
                 acc_certificate=acc_certificate,

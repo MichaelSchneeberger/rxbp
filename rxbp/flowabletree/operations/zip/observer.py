@@ -43,7 +43,7 @@ class ZipObserver[V](Observer[V]):
         ):
             # print(f'on_next_ack({value}), id={self.id}, weight={observer.weight}')
 
-            action = OnNextTransition(
+            transition = OnNextTransition(
                 id=self.id,
                 value=value,
                 observer=observer,
@@ -52,10 +52,10 @@ class ZipObserver[V](Observer[V]):
             )
 
             with self.shared.lock:
-                action.child = self.shared.action
-                self.shared.action = action
+                transition.child = self.shared.transition
+                self.shared.transition = transition
 
-            match state := action.get_state():
+            match state := transition.get_state():
 
                 # wait for other upstream items
                 case WaitFurtherItemsState(certificate=certificate):
@@ -89,7 +89,7 @@ class ZipObserver[V](Observer[V]):
                             None
                         ).connect(observers)
 
-                        self.shared.action = RequestTransition(
+                        self.shared.transition = RequestTransition(
                             certificates=tuple(certificates),
                             values={
                                 id: value
@@ -117,7 +117,7 @@ class ZipObserver[V](Observer[V]):
     def on_next_and_complete(self, value: V):
         # print(f'on_next_and_complete({value}), id={self.id}')
 
-        action = OnNextAndCompleteTransition(
+        transition = OnNextAndCompleteTransition(
             id=self.id,
             value=value,
             n_children=self.shared.n_children,
@@ -125,10 +125,10 @@ class ZipObserver[V](Observer[V]):
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
 
             # wait for other upstream items
             case WaitFurtherItemsState(certificate=certificate):
@@ -146,13 +146,13 @@ class ZipObserver[V](Observer[V]):
                 raise Exception(f"Unexpected state {state}.")
 
     def on_completed(self):
-        action = OnCompletedTransition(child=None)  # type: ignore
+        transition = OnCompletedTransition(child=None)  # type: ignore
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case OnCompleteState():
                 return self.shared.downstream.on_completed()
 
@@ -165,16 +165,16 @@ class ZipObserver[V](Observer[V]):
     def on_error(
         self, exception: Exception
     ):
-        action = OnErrorTransition(
+        transition = OnErrorTransition(
             child=None,  # type: ignore
             exception=exception,
         )
 
         with self.shared.lock:
-            action.child = self.shared.action
-            self.shared.action = action
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
+        match state := transition.get_state():
             case OnErrorState(exception=exception):
                 return self.shared.downstream.on_error(exception)
 

@@ -11,5 +11,5 @@ from rxbp.flowabletree.operations.flatmap.transitions import FlatMapTransition
 class FlatMapSharedMemory:
     upstream_cancellable: Cancellable
 
-    action: FlatMapTransition
+    transition: FlatMapTransition
     lock: RLock
