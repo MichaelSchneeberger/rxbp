@@ -1,2 +1,0 @@
-class MeasuredState:
-    pass
