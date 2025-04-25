@@ -69,3 +69,10 @@ item in pairs in a strict sequence
 ### Output functions
 
 - `to_rx` - create a rx Observable from a Observable
+
+
+## Reference
+
+Below are some references related to this project:
+
+* [continuationmonad](https://github.com/MichaelSchneeberger/continuationmonad/) is a Python library that implements stack-safe continuations based on schedulers.
