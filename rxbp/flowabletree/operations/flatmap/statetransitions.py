@@ -14,13 +14,13 @@ from rxbp.flowabletree.operations.flatmap.states import CancelledState, FlatMapS
 #########
 
 
-class FlatMapTransition(ABC):
+class FlatMapStateTransition(ABC):
     @abstractmethod
     def get_state(self) -> FlatMapState: ...
 
 
 @dataclass(frozen=True)
-class ToStateTransition(FlatMapTransition):
+class ToStateTransition(FlatMapStateTransition):
     """ Transitions to predefined state """
     
     state: FlatMapState
@@ -30,8 +30,8 @@ class ToStateTransition(FlatMapTransition):
 
 
 @dataclass(frozen=False)
-class UpdateCancellableTransition(FlatMapTransition):
-    child: FlatMapTransition
+class UpdateCancellableTransition(FlatMapStateTransition):
+    child: FlatMapStateTransition
     cancellable: Cancellable
 
     def get_state(self):
@@ -52,8 +52,8 @@ class UpdateCancellableTransition(FlatMapTransition):
 
 
 @dataclassabc(frozen=False)
-class CancelTransition(FlatMapTransition):
-    child: FlatMapTransition
+class CancelTransition(FlatMapStateTransition):
+    child: FlatMapStateTransition
     certificate: ContinuationCertificate
 
     def get_state(self):

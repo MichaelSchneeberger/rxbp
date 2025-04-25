@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from threading import RLock
+from threading import Lock, RLock
 
 from continuationmonad.typing import (
     DeferredObserver,
 )
 
 from rxbp.cancellable import Cancellable
-from rxbp.flowabletree.operations.share.transitions import (
-    ShareTransition,
+from rxbp.flowabletree.operations.share.statetransitions import (
+    ShareStateTransition,
 )
 
 
@@ -23,10 +23,10 @@ class ShareSharedMemory[V]:
     deferred_observer: DeferredObserver
 
     # modified using lock
-    transition: ShareTransition
-    lock: RLock
+    lock: Lock
+    transition: ShareStateTransition
 
-    buffer_lock: RLock
+    buffer_lock: Lock
     first_index: int
     buffer: list[V]
 

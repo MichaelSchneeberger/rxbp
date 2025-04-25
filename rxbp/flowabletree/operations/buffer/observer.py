@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from threading import RLock
+from threading import Lock
 
 from donotation import do
 
@@ -24,14 +24,14 @@ from rxbp.flowabletree.operations.buffer.states import (
     SendItemAndStartLoop,
     StopLoop,
 )
-from rxbp.flowabletree.operations.buffer.transitions import (
+from rxbp.flowabletree.operations.buffer.statetransitions import (
     CancelTransition,
     OnErrorTransition,
     OnNextTransition,
     OnNextAndCompleteTransition,
     OnCompletedTransition,
     RequestTransition,
-    ShareTransition,
+    ShareStateTransition,
 )
 
 
@@ -42,8 +42,8 @@ class BufferObserver[V](Cancellable, Observer[V]):
     loop_cancellation: CancellationState
     weight: int
 
-    transition: ShareTransition
-    lock: RLock
+    transition: ShareStateTransition
+    lock: Lock
 
     buffer: list[V]
 

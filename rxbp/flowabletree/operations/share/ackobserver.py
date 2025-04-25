@@ -16,7 +16,7 @@ from rxbp.flowabletree.operations.share.states import (
     SendItemFromBuffer,
     TerminatedState,
 )
-from rxbp.flowabletree.operations.share.transitions import (
+from rxbp.flowabletree.operations.share.statetransitions import (
     RequestTransition,
     ToStateTransition,
 )

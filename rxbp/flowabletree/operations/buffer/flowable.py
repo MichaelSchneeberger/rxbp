@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from threading import Lock
 from typing import override
 
 from dataclassabc import dataclassabc
@@ -11,7 +12,7 @@ from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.buffer.observer import BufferObserver
 from rxbp.flowabletree.operations.buffer.states import LoopInactive
-from rxbp.flowabletree.operations.buffer.transitions import ToStateTransition
+from rxbp.flowabletree.operations.buffer.statetransitions import ToStateTransition
 
 
 @dataclassabc(frozen=True)
@@ -37,7 +38,7 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
         observer = BufferObserver(
             transition=None,
             upstream_cancellable=None,
-            lock=state.lock,
+            lock=Lock(),
             observer=args.observer,
             loop_cancellation=loop_cancellation,
             weight=args.schedule_weight,

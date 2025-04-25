@@ -11,17 +11,17 @@ from continuationmonad.typing import (
 from rxbp.flowabletree.operations.merge.states import (
     AwaitAckState,
     AwaitNextState,
-    CancelledState,
+    CancelState,
     CompleteState,
     ErrorState,
     MergeState,
     OnNextAndCompleteState,
     OnNextState,
     OnNextNoAckState,
-    TerminatedState,
+    HasTerminatedState,
     UpstreamID,
 )
-from rxbp.flowabletree.operations.merge.transitions import (
+from rxbp.flowabletree.operations.merge.statetransitions import (
     RequestTransition,
     ToStateTransition,
     OnCompletedTransition,
@@ -140,11 +140,11 @@ class MergeObserver[V](Observer[V]):
                 return continuationmonad.from_(certificate)
                 # return certificate
 
-            case TerminatedState(certificate=certificate):
+            case HasTerminatedState(certificate=certificate):
                 return continuationmonad.from_(certificate)
                 # return certificate
 
-            case CancelledState(certificates=certificates):
+            case CancelState(certificates=certificates):
                 return continuationmonad.from_(certificates[self.id])
                 # return certificates[self.id]
 
@@ -169,11 +169,11 @@ class MergeObserver[V](Observer[V]):
             case ErrorState(exception=exception):
                 return self.shared.downstream.on_error(exception)
 
-            case TerminatedState(certificate=certificate):
+            case HasTerminatedState(certificate=certificate):
                 return continuationmonad.from_(certificate)
                 # return certificate
             
-            case CancelledState(certificates=certificates):
+            case CancelState(certificates=certificates):
                 return continuationmonad.from_(certificates[self.id])
                 # return certificates[self.id]
 

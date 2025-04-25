@@ -1,15 +1,17 @@
 from __future__ import annotations
+from threading import Lock
 
 from dataclassabc import dataclassabc
 from donotation import do
 
+from rxbp.flowabletree.operations.zip.states import AwaitOnNextState
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
-from rxbp.flowabletree.operations.zip.transitions import RequestTransition
+from rxbp.flowabletree.operations.zip.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
-from rxbp.flowabletree.operations.zip.cancellable import CompositeCancellable
+from rxbp.flowabletree.operations.zip.cancellable import ZipCancellable
 from rxbp.flowabletree.operations.zip.observer import ZipObserver
 
 
@@ -25,8 +27,8 @@ class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
         def zip_func(_: dict[int, U]):
             return tuple()
 
-        shared_memory = ZipSharedMemory(
-            lock=state.lock,
+        shared = ZipSharedMemory(
+            lock=Lock(),
             downstream=args.observer,
             zip_func=zip_func,
             n_children=len(self.children),
@@ -41,7 +43,7 @@ class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
 
             n_args = args.copy(
                     observer=ZipObserver(
-                    shared=shared_memory,
+                    shared=shared,
                     id=id,
                 ),
             )
@@ -55,20 +57,23 @@ class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
 
         certificate, *others = certificates
 
-        shared_memory.transition = RequestTransition(
-            certificates=tuple(others),
-            values={},
-            observers={}
+        shared.transition = ToStateTransition(
+            state=AwaitOnNextState(
+                certificates=tuple(others),
+                values={},
+                observers={},
+                is_completed=False,
+            )
         )
-        shared_memory.cancellables = tuple(cancellables)
+        shared.cancellables = tuple(cancellables)
 
-        cancellable = CompositeCancellable(
-            cancellables=cancellables,
-            certificates=tuple(others),
-        )
+        # cancellable = ZipCancellable(
+        #     # cancellables=cancellables,
+        #     shared=shared,
+        # )
 
         return state, SubscriptionResult(
-            cancellable=cancellable, 
+            cancellable=shared, 
             certificate=certificate,
         )
 

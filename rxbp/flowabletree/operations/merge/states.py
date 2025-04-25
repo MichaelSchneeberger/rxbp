@@ -52,6 +52,7 @@ class AwaitNextState(AwaitNextBaseState):
 @dataclass(frozen=True)
 class OnNextState[U](AwaitAckBaseState):
     """send item"""
+
     value: U
     observer: DeferredObserver
 
@@ -59,6 +60,7 @@ class OnNextState[U](AwaitAckBaseState):
 @dataclass(frozen=True)
 class OnNextNoAckState[U](AwaitNextBaseState):
     """send item"""
+
     acc_states: tuple[OnNextPreState]
     value: U
     certificate: ContinuationCertificate
@@ -67,6 +69,7 @@ class OnNextNoAckState[U](AwaitNextBaseState):
 @dataclass(frozen=True)
 class AwaitAckState(AwaitAckBaseState):
     """there are other items in the buffer to be sent"""
+
     certificate: ContinuationCertificate
 
 
@@ -97,10 +100,20 @@ class ErrorState(ErrorBaseState):
 
 
 @dataclass(frozen=True)
-class TerminatedState(ErrorBaseState):
+class HasTerminatedState(ErrorBaseState):
     certificate: ContinuationCertificate
 
 
 @dataclass(frozen=True)
-class CancelledState(MergeState):
+class CancelledBaseState(MergeState):
     certificates: dict[UpstreamID, ContinuationCertificate]
+
+
+@dataclass(frozen=True)
+class CancelState(CancelledBaseState):
+    pass
+
+
+@dataclass(frozen=True)
+class HasCancelledState(CancelState):
+    certificate: ContinuationCertificate

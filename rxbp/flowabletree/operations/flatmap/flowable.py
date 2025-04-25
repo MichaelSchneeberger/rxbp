@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from threading import RLock
+from threading import Lock
 from typing import Callable
 
 from dataclassabc import dataclassabc
+
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.flatmap.states import ActiveState
-from rxbp.flowabletree.operations.flatmap.transitions import ToStateTransition
+from rxbp.flowabletree.operations.flatmap.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.cancellable import FlatMapCancellable
 from rxbp.flowabletree.operations.flatmap.observer import FlatMapObserver
@@ -35,7 +36,7 @@ class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
         shared = FlatMapSharedMemory(
             upstream_cancellable=None,
             transition=transition,
-            lock=RLock(),
+            lock=Lock(),
         )
 
         n_state, result = self.child.unsafe_subscribe(
@@ -55,7 +56,6 @@ class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
         shared.upstream_cancellable = result.cancellable
 
         cancellable = FlatMapCancellable(
-            _certificate=None, # type: ignore
             shared=shared,
         )
 

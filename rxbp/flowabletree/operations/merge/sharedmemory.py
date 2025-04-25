@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from threading import RLock
+from threading import Lock
 
 from dataclassabc import dataclassabc
 
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.merge.transitions import MergeTransition
+from rxbp.flowabletree.operations.merge.statetransitions import MergeStateTransition
 
 
 @dataclassabc(frozen=False)
 class MergeSharedMemory:
     downstream: Observer
-    transition: MergeTransition
+    transition: MergeStateTransition
     n_children: int
-    lock: RLock
+    lock: Lock

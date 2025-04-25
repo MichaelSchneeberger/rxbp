@@ -6,7 +6,7 @@ from continuationmonad.typing import (
 )
 
 from rxbp.cancellable import Cancellable, CancellationState
-from rxbp.flowabletree.operations.share.transitions import (
+from rxbp.flowabletree.operations.share.statetransitions import (
     CancelTransition,
 )
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory

@@ -3,15 +3,35 @@ from dataclasses import dataclass
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.cancellable import Cancellable
+from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
+from rxbp.flowabletree.operations.zip.states import CancelledBaseState, CancelledAwaitRequestState
+from rxbp.flowabletree.operations.zip.statetransitions import CancelTransition
 
 
 @dataclass
-class CompositeCancellable(Cancellable):
-    cancellables: tuple[Cancellable]
-    certificates: tuple[ContinuationCertificate]
+class ZipCancellable(Cancellable):
+    # cancellables: tuple[Cancellable]
+    shared: ZipSharedMemory
 
     def cancel(self, certificate: ContinuationCertificate):
-        certificates = self.certificates + (certificate,)
+        transition = CancelTransition(
+            child=None,  # type: ignore
+            certificate=certificate,
+            n_children=self.shared.n_children,
+        )
+        
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        for cancellable, c in zip(self.cancellables, certificates):
-            cancellable.cancel(c)
+        match state := transition.get_state():
+            case CancelledBaseState(certificates=certificates):
+                for id, certificate in certificates.items():
+                    self.shared.cancellables[id].cancel(certificate)
+
+            case CancelledAwaitRequestState():
+                # no active upstream, nothing to cancel
+                pass
+
+            case _:
+                Exception(f"Unexpected state {state}.")

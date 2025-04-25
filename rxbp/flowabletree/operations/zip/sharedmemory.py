@@ -1,22 +1,48 @@
 from __future__ import annotations
 
 
-from threading import RLock
+from threading import Lock
 from typing import Callable
 
 from dataclassabc import dataclassabc
 
-from rxbp.utils.lockmixin import LockMixin
+from continuationmonad.typing import ContinuationCertificate
+
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.zip.transitions import ZipTransition
+from rxbp.flowabletree.operations.zip.statetransitions import ZipStateTransition
+from rxbp.flowabletree.operations.zip.states import CancelledBaseState, CancelledAwaitRequestState
+from rxbp.flowabletree.operations.zip.statetransitions import CancelTransition
 
 
 @dataclassabc
-class ZipSharedMemory[V](LockMixin):
-    transition: ZipTransition
+class ZipSharedMemory[V](Cancellable):
+    transition: ZipStateTransition
     downstream: Observer[tuple[V, ...]]
     zip_func: Callable[[dict[int, V]], tuple[int, ...]]
     n_children: int
     cancellables: tuple[Cancellable, ...]
-    lock: RLock
+    lock: Lock
+
+    def cancel(self, certificate: ContinuationCertificate):
+        transition = CancelTransition(
+            child=None,  # type: ignore
+            certificate=certificate,
+            n_children=self.n_children,
+        )
+        
+        with self.lock:
+            transition.child = self.transition
+            self.transition = transition
+
+        match state := transition.get_state():
+            case CancelledBaseState(certificates=certificates):
+                for id, certificate in certificates.items():
+                    self.cancellables[id].cancel(certificate)
+
+            case CancelledAwaitRequestState():
+                # no active upstream, nothing to cancel
+                pass
+
+            case _:
+                Exception(f"Unexpected state {state}.")

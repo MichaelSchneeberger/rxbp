@@ -14,9 +14,11 @@ from continuationmonad.typing import (
 from rxbp.flowabletree.operations.merge.states import (
     AwaitAckBaseState,
     AwaitNextBaseState,
-    CancelledState,
+    CancelState,
+    CancelledBaseState,
     CompletedBaseState,
     ErrorState,
+    HasCancelledState,
     MergeState,
     OnNextNoAckState,
     ErrorBaseState,
@@ -27,17 +29,17 @@ from rxbp.flowabletree.operations.merge.states import (
     OnNextPreState,
     OnNextAndCompleteState,
     CompleteState,
-    TerminatedState,
+    HasTerminatedState,
 )
 
 
-class MergeTransition(ABC):
+class MergeStateTransition(ABC):
     @abstractmethod
     def get_state(self) -> MergeState: ...
 
 
 @dataclass(frozen=True)
-class ToStateTransition(MergeTransition):
+class ToStateTransition(MergeStateTransition):
     """ Transitions to predefined state """
 
     state: MergeState
@@ -47,7 +49,7 @@ class ToStateTransition(MergeTransition):
 
 
 @dataclass(frozen=True)
-class InitAction(MergeTransition):  # is this needed?
+class InitAction(MergeStateTransition):  # is this needed?
     n_completed: int
     certificates: tuple[ContinuationCertificate, ...]
 
@@ -59,15 +61,41 @@ class InitAction(MergeTransition):  # is this needed?
         )
 
 
+@dataclass
+class InactiveTransitionsMixin():
+    id: int
+
+    def _get_state(self, state: MergeState):
+        match state:
+            case ErrorBaseState(
+                certificates=certificates,
+                awaiting_ids=awaiting_ids,
+            ):
+                return HasTerminatedState(
+                    certificate=certificates[0],
+                    certificates=certificates[1:],
+                    awaiting_ids=tuple(id for id in awaiting_ids if id != self.id),
+                )
+            
+            case CancelledBaseState(certificates=certificates):
+                return HasCancelledState(
+                    certificate=certificates[self.id],
+                    certificates={id: c for id, c in certificates.items() if id != self.id}
+                )
+
+            case _:
+                raise Exception(f"Unexpected state {state}.")
+
+
 @dataclassabc
-class OnNextTransition[U](MergeTransition):
-    child: MergeTransition
+class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
+    child: MergeStateTransition
     id: UpstreamID
     value: U
     observer: DeferredObserver
 
     def get_state(self):
-        match child_state := self.child.get_state():
+        match state := self.child.get_state():
             case AwaitAckBaseState(
                 # id=id,
                 acc_states=acc_states,
@@ -100,23 +128,26 @@ class OnNextTransition[U](MergeTransition):
                     certificates=certificates,
                 )
 
-            case ErrorBaseState(certificates=certificates, awaiting_ids=awaiting_ids):
-                return TerminatedState(
-                    certificate=certificates[0],
-                    certificates=certificates[1:],
-                    awaiting_ids=tuple(filter(lambda id: id != self.id, awaiting_ids)),
-                )
-
-            case CancelledState():
-                return child_state
-
             case _:
-                raise Exception(f"Unexpected state {child_state}.")
+                return self._get_state(state)
+
+            # case ErrorBaseState(certificates=certificates, awaiting_ids=awaiting_ids):
+            #     return HasTerminatedState(
+            #         certificate=certificates[0],
+            #         certificates=certificates[1:],
+            #         awaiting_ids=tuple(filter(lambda id: id != self.id, awaiting_ids)),
+            #     )
+
+            # case CancelState():
+            #     return child_state
+
+            # case _:
+            #     raise Exception(f"Unexpected state {child_state}.")
 
 
 @dataclassabc
-class OnNextAndCompleteTransition[U](MergeTransition):
-    child: MergeTransition
+class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransition):
+    child: MergeStateTransition
     id: UpstreamID
     value: U
     n_children: int
@@ -160,13 +191,13 @@ class OnNextAndCompleteTransition[U](MergeTransition):
                     )
                 
             case ErrorBaseState(certificates=certificates, awaiting_ids=awaiting_ids):
-                return TerminatedState(
+                return HasTerminatedState(
                     certificate=certificates[0],
                     certificates=certificates[1:],
                     awaiting_ids=tuple(filter(lambda id: id != self.id, awaiting_ids)),
                 )
 
-            case CancelledState():
+            case CancelState():
                 return child_state
 
             case _:
@@ -174,26 +205,21 @@ class OnNextAndCompleteTransition[U](MergeTransition):
 
 
 @dataclassabc
-class RequestTransition(MergeTransition):
-    """Downstream request received."""
+class RequestTransition(MergeStateTransition):
+    """Downstream request received"""
 
     id: UpstreamID
-    child: MergeTransition
+    child: MergeStateTransition
     certificate: ContinuationCertificate
     n_children: int
 
     def get_state(self):
         match previous_state := self.child.get_state():
             case AwaitAckBaseState(
-                # id=id,
                 acc_states=acc_states,
                 n_completed=n_completed,
                 certificates=certificates,
             ):
-                # assert self.id == id, f'{self.id} is not {id}'
-
-                # print(acc_states)
-
                 match acc_states:
                     case [
                         OnNextPreState(
@@ -229,13 +255,17 @@ class RequestTransition(MergeTransition):
                             certificate=self.certificate,  # all other upstream flowables are busy
                             certificates=certificates,
                         )
+            
+            case CancelState(certificates=certificates):
+                return CancelState(certificates=certificates | {self.id: self.certificate})
+
             case _:
                 raise Exception(f"Unexpected state {previous_state}.")
 
 
 @dataclassabc
-class OnCompletedTransition(MergeTransition):
-    child: MergeTransition
+class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
+    child: MergeStateTransition
     id: UpstreamID
     n_children: int
 
@@ -265,13 +295,13 @@ class OnCompletedTransition(MergeTransition):
                     )
 
             case ErrorBaseState(certificates=certificates, awaiting_ids=awaiting_ids):
-                return TerminatedState(
+                return HasTerminatedState(
                     certificate=certificates[0],
                     certificates=certificates[1:],
                     awaiting_ids=awaiting_ids,
                 )
 
-            case CancelledState():
+            case CancelState():
                 return child_state
 
             case _:
@@ -279,8 +309,8 @@ class OnCompletedTransition(MergeTransition):
 
 
 @dataclassabc(frozen=False)
-class OnErrorTransition(MergeTransition):
-    child: MergeTransition
+class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
+    child: MergeStateTransition
     id: UpstreamID
     n_children: int
     exception: Exception
@@ -309,22 +339,42 @@ class OnErrorTransition(MergeTransition):
 
             case ErrorBaseState(certificates=certificates, awaiting_ids=awaiting_ids):
                 # mark as terminated to not probagate more than one error
-                return TerminatedState(
+                return HasTerminatedState(
                     certificate=certificates[0],
                     certificates=certificates[1:],
                     awaiting_ids=tuple(filter(lambda id: id != self.id, awaiting_ids)),
                 )
 
-            case CancelledState():
+            case CancelState():
                 return child_state
 
             case _:
                 raise Exception(f"Unexpected state {child_state}.")
 
 
+# @dataclass
+# class AwaitingIDsMixin:
+#     n_children: int
+
+#     def _get_awaiting_ids(
+#         self,
+#         values: dict[int, None],
+#         id: int | None = None,
+#     ):
+#         received_ids = tuple(values.keys())
+
+#         if id is not None:
+#             received_ids += (id,)
+
+#         awaiting_ids = tuple(
+#             id for id in range(self.n_children) if id not in received_ids
+#         )
+#         return awaiting_ids
+
+
 @dataclassabc(frozen=False)
-class CancelTransition(MergeTransition):
-    child: MergeTransition
+class CancelTransition(InactiveTransitionsMixin, MergeStateTransition):
+    child: MergeStateTransition
     n_children: int
     certificate: ContinuationCertificate
 
@@ -337,28 +387,28 @@ class CancelTransition(MergeTransition):
                 )
                 certificates = certificates + (self.certificate,)
 
-                return CancelledState(
+                return CancelState(
                     certificates=dict(zip(awaiting_ids, certificates)),
                 )
 
             case ErrorBaseState(certificates=certificates, awaiting_ids=awaiting_ids):
                 certificates = certificates + (self.certificate,)
 
-                return CancelledState(
+                return CancelState(
                     certificates=dict(zip(awaiting_ids, certificates)),
                 )
 
             case CompletedBaseState():
-                return CancelledState(certificates={})
+                return CancelState(certificates={})
 
             case _:
                 raise Exception(f"Unexpected state {child_state}.")
 
 
 @dataclassabc(frozen=False)
-class SubscribeTransition(MergeTransition):
+class SubscribeTransition(MergeStateTransition):
     id: UpstreamID
-    child: MergeTransition
+    child: MergeStateTransition
     certificate: ContinuationCertificate
 
     def get_state(self):
@@ -387,8 +437,8 @@ class SubscribeTransition(MergeTransition):
             case CompletedBaseState():
                 return CompletedBaseState()
             
-            case CancelledState(certificates=certificates):
-                return CancelledState(certificates | {self.id: self.certificate})
+            case CancelState(certificates=certificates):
+                return CancelState(certificates | {self.id: self.certificate})
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

@@ -13,7 +13,7 @@ from continuationmonad.typing import (
 
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.flatmap.states import ActiveState, CancelledState
-from rxbp.flowabletree.operations.flatmap.transitions import (
+from rxbp.flowabletree.operations.flatmap.statetransitions import (
     ToStateTransition,
     UpdateCancellableTransition,
 )

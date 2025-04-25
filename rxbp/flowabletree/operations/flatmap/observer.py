@@ -17,7 +17,7 @@ from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.states import CancelledState
-from rxbp.flowabletree.operations.flatmap.transitions import UpdateCancellableTransition
+from rxbp.flowabletree.operations.flatmap.statetransitions import UpdateCancellableTransition
 from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapNestedObserver
 
 

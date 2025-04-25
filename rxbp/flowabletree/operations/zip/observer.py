@@ -11,18 +11,21 @@ from continuationmonad.typing import (
 
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.zip.states import (
-    NotActiveState,
-    OnCompleteState,
+    CancelState,
+    OnNextAndCompleteState,
+    TerminatedBaseState,
+    OnCompletedState,
     OnErrorState,
     OnNextState,
-    WaitFurtherItemsState,
+    AwaitFurtherState,
 )
-from rxbp.flowabletree.operations.zip.transitions import (
+from rxbp.flowabletree.operations.zip.statetransitions import (
     RequestTransition,
     OnErrorTransition,
     OnNextTransition,
     OnNextAndCompleteTransition,
     OnCompletedTransition,
+    ToStateTransition,
 )
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
 
@@ -37,10 +40,7 @@ class ZipObserver[V](Observer[V]):
 
         # wait for upstream subscription before continuing to simplify concurrency
         @do()
-        def on_next_ackowledgment(
-            _: Trampoline,
-            observer: DeferredObserver
-        ):
+        def on_next_ackowledgment(_: Trampoline, observer: DeferredObserver):
             # print(f'on_next_ack({value}), id={self.id}, weight={observer.weight}')
 
             transition = OnNextTransition(
@@ -56,14 +56,15 @@ class ZipObserver[V](Observer[V]):
                 self.shared.transition = transition
 
             match state := transition.get_state():
-
                 # wait for other upstream items
-                case WaitFurtherItemsState(certificate=certificate):
+                case AwaitFurtherState(certificate=certificate):
                     return certificate
 
                 # all upstream items received
                 case OnNextState():
                     _, zipped_values = zip(*sorted(state.values.items()))
+
+                    # backpressure selected upstream flowables
                     hold_back = self.shared.zip_func(state.values)
 
                     complete_downstream = [False]
@@ -79,18 +80,21 @@ class ZipObserver[V](Observer[V]):
                     observers = tuple(gen_deferred_observers())
 
                     if complete_downstream[0]:
-                        certificate = self.shared.downstream.on_next_and_complete(zipped_values)
+                        certificate = self.shared.downstream.on_next_and_complete(
+                            zipped_values
+                        )
                         return certificate
 
                     else:
                         _ = yield from self.shared.downstream.on_next(zipped_values)
 
-                        certificate, *certificates = yield from continuationmonad.from_(
+                        certificate, *others = yield from continuationmonad.from_(
                             None
                         ).connect(observers)
 
-                        self.shared.transition = RequestTransition(
-                            certificates=tuple(certificates),
+                        transition = RequestTransition(
+                            child=None,  # type: ignore
+                            certificates=tuple(others),
                             values={
                                 id: value
                                 for id, value in state.values.items()
@@ -101,11 +105,26 @@ class ZipObserver[V](Observer[V]):
                                 for id, value in state.observers.items()
                                 if id in hold_back
                             },
+                            n_children=self.shared.n_children,
                         )
 
+                        with self.shared.lock:
+                            transition.child = self.shared.transition
+                            n_state = transition.get_state()
+                            self.shared.transition = ToStateTransition(
+                                state=n_state
+                            )
+
+                        match n_state:
+                            case CancelState(certificates=certificates):
+                                def cancel_upstream():
+                                    for id, certificate in certificates.items():
+                                        self.shared.cancellables[id].cancel(certificate)
+                                cancel_upstream()
+
                         return continuationmonad.from_(certificate)
-                
-                case NotActiveState(certificate=certificate):
+
+                case TerminatedBaseState(certificate=certificate):
                     return certificate
 
                 case _:
@@ -129,44 +148,52 @@ class ZipObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-
             # wait for other upstream items
-            case WaitFurtherItemsState(certificate=certificate):
+            case AwaitFurtherState(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
-            case OnNextState():
+            case OnNextAndCompleteState():
                 _, zipped_values = zip(*sorted(state.values.items()))
 
                 return self.shared.downstream.on_next_and_complete(zipped_values)
 
-            case NotActiveState(certificate=certificate):
+            case TerminatedBaseState(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
     def on_completed(self):
-        transition = OnCompletedTransition(child=None)  # type: ignore
+        transition = OnCompletedTransition(
+            child=None,
+            n_children=self.shared.n_children,
+            id=self.id,
+        )  # type: ignore
 
         with self.shared.lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case OnCompleteState():
+            case OnCompletedState(
+                certificates=certificates,
+            ):
+                for id, certificate in certificates.items():
+                    self.shared.cancellables[id].cancel(certificate)
+
                 return self.shared.downstream.on_completed()
 
-            case NotActiveState(certificate=certificate):
+            case TerminatedBaseState(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
-    def on_error(
-        self, exception: Exception
-    ):
+    def on_error(self, exception: Exception):
         transition = OnErrorTransition(
             child=None,  # type: ignore
+            n_children=self.shared.n_children,
+            id=self.id,
             exception=exception,
         )
 
@@ -175,11 +202,17 @@ class ZipObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case OnErrorState(exception=exception):
+            case OnErrorState(
+                exception=exception,
+                certificates=certificates,
+            ):
+                for id, certificate in certificates.items():
+                    self.shared.cancellables[id].cancel(certificate)
+
                 return self.shared.downstream.on_error(exception)
 
-            case NotActiveState(certificate=certificate):
+            case TerminatedBaseState(certificate=certificate):
                 return continuationmonad.from_(certificate)
-            
+
             case _:
                 raise Exception(f"Unexpected state {state}.")

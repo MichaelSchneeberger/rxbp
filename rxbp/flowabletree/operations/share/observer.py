@@ -18,7 +18,7 @@ from rxbp.flowabletree.operations.share.states import (
     ErrorState,
     SendItem,
 )
-from rxbp.flowabletree.operations.share.transitions import (
+from rxbp.flowabletree.operations.share.statetransitions import (
     OnErrorTransition,
     OnNextTransition,
     OnNextAndCompleteTransition,

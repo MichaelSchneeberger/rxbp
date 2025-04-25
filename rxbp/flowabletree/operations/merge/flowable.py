@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import accumulate
+from threading import Lock
 
 from dataclassabc import dataclassabc
 from donotation import do
@@ -15,7 +16,7 @@ from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
 from rxbp.flowabletree.operations.merge.states import UpstreamID
-from rxbp.flowabletree.operations.merge.transitions import InitAction
+from rxbp.flowabletree.operations.merge.statetransitions import InitAction
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
 from rxbp.flowabletree.operations.merge.cancellable import MergeCancellable
 from rxbp.flowabletree.operations.merge.observer import MergeObserver
@@ -32,7 +33,7 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
         shared_state = MergeSharedMemory(
             downstream=args.observer,
             n_children=len(self.children),
-            lock=state.lock,
+            lock=Lock(),
             transition=None,  # type: ignore
         )
 
@@ -79,8 +80,6 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
         )
 
         cancellable = MergeCancellable(
-            _certificate=None,
-            n_children=shared_state.n_children,
             cancellables=dict(cancellable_pairs),
             shared=shared_state,
         )

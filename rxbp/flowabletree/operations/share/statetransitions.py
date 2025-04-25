@@ -21,13 +21,13 @@ from rxbp.flowabletree.operations.share.states import (
 )
 
 
-class ShareTransition(ABC):
+class ShareStateTransition(ABC):
     @abstractmethod
     def get_state(self) -> ShareState: ...
 
 
 @dataclassabc(frozen=True)
-class ToStateTransition(ShareTransition):
+class ToStateTransition(ShareStateTransition):
     """Transitions to predefined state"""
 
     state: ShareState
@@ -37,9 +37,9 @@ class ToStateTransition(ShareTransition):
 
 
 @dataclassabc(frozen=False)
-class OnNextAndCompleteTransition(ShareTransition):
+class OnNextAndCompleteTransition(ShareStateTransition):
     """Item received, stream is complete"""
-    child: ShareTransition
+    child: ShareStateTransition
 
     def get_state(self):
         match child_state := self.child.get_state():
@@ -79,9 +79,9 @@ class OnNextAndCompleteTransition(ShareTransition):
 
 
 @dataclassabc(frozen=False)
-class OnNextTransition(ShareTransition):
+class OnNextTransition(ShareStateTransition):
     """Item received"""
-    child: ShareTransition
+    child: ShareStateTransition
 
     def get_state(self):
         match child_state := self.child.get_state():
@@ -124,10 +124,10 @@ class OnNextTransition(ShareTransition):
 
 
 @dataclassabc
-class RequestTransition(ShareTransition):
+class RequestTransition(ShareStateTransition):
     """Downstream request received"""
 
-    child: ShareTransition
+    child: ShareStateTransition
 
     id: int  # downstream id
     weight: int  # downstream weight
@@ -213,10 +213,10 @@ class RequestTransition(ShareTransition):
 
 
 @dataclassabc(frozen=False)
-class OnCompletedTransition(ShareTransition):
+class OnCompletedTransition(ShareStateTransition):
     """Stream is complete"""
 
-    child: ShareTransition
+    child: ShareStateTransition
 
     def get_state(self):
         match child_state := self.child.get_state():
@@ -239,8 +239,8 @@ class OnCompletedTransition(ShareTransition):
 
 
 @dataclassabc(frozen=False)
-class OnErrorTransition(ShareTransition):
-    child: ShareTransition
+class OnErrorTransition(ShareStateTransition):
+    child: ShareStateTransition
     exception: Exception
 
     def get_state(self):
@@ -265,8 +265,8 @@ class OnErrorTransition(ShareTransition):
 
 
 @dataclassabc(frozen=False)
-class CancelTransition(ShareTransition):
-    child: ShareTransition
+class CancelTransition(ShareStateTransition):
+    child: ShareStateTransition
     id: int
     certificate: ContinuationCertificate
 

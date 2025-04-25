@@ -1,15 +1,15 @@
 from __future__ import annotations
+from threading import Lock
 
 from dataclassabc import dataclassabc
 from donotation import do
 
-from rxbp.exceptions import RxBpException
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.share.states import InitState
-from rxbp.flowabletree.operations.share.transitions import ToStateTransition
+from rxbp.flowabletree.operations.share.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 from rxbp.flowabletree.operations.share.cancellable import ShareCancellation
 from rxbp.flowabletree.operations.share.ackobserver import ShareAckObserver
@@ -64,8 +64,8 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
                 upstream_cancellation=None,
                 transition=None,  # type: ignore
                 deferred_observer=None,  # type: ignore
-                lock=state.lock,
-                buffer_lock=state.lock,
+                lock=Lock(),
+                buffer_lock=Lock(),
                 first_index=0,
                 buffer=[],
                 total_weight=total_weight,
