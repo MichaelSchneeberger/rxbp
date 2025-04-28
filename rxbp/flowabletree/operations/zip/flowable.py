@@ -4,7 +4,7 @@ from threading import Lock
 from dataclassabc import dataclassabc
 from donotation import do
 
-from rxbp.flowabletree.operations.zip.states import AwaitOnNextState
+from rxbp.flowabletree.operations.zip.states import AwaitUpstreamStateMixin
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -41,38 +41,40 @@ class ZipFlowable[U](MultiChildrenFlowableNode[U, tuple[U, ...]]):
 
         for id, child in enumerate(self.children):
 
-            n_args = args.copy(
+            state, n_result = child.unsafe_subscribe(
+                state, 
+                args=args.copy(
                     observer=ZipObserver(
-                    shared=shared,
-                    id=id,
+                        shared=shared,
+                        id=id,
+                    ),
                 ),
             )
-
-            state, n_result = child.unsafe_subscribe(state, n_args)
 
             if n_result.certificate:
                 certificates.append(n_result.certificate)
 
-            cancellables.append(n_result.cancellable)
+            cancellables.append((id, n_result.cancellable))
 
         certificate, *others = certificates
 
         shared.transition = ToStateTransition(
-            state=AwaitOnNextState(
+            state=AwaitUpstreamStateMixin(
                 certificates=tuple(others),
                 values={},
                 observers={},
                 is_completed=False,
             )
         )
-        shared.cancellables = tuple(cancellables)
+        shared.cancellables=dict(cancellables)
 
         # cancellable = ZipCancellable(
-        #     # cancellables=cancellables,
+        #     cancellables=tuple(cancellables),
         #     shared=shared,
         # )
 
         return state, SubscriptionResult(
+            # cancellable=cancellable, 
             cancellable=shared, 
             certificate=certificate,
         )

@@ -9,16 +9,16 @@ from continuationmonad.typing import (
 )
 
 from rxbp.flowabletree.operations.merge.states import (
-    AwaitAckState,
-    AwaitNextState,
-    CancelState,
-    CompleteState,
-    ErrorState,
+    CancelledStopRequestState,
+    KeepWaitingState,
+    AwaitOnNextState,
     MergeState,
+    OnCompletedState,
+    OnErrorState,
     OnNextAndCompleteState,
     OnNextState,
-    OnNextNoAckState,
     HasTerminatedState,
+    StopContinuationStateMixin,
     UpstreamID,
 )
 from rxbp.flowabletree.operations.merge.statetransitions import (
@@ -40,24 +40,20 @@ class MergeObserver[V](Observer[V]):
 
     @do()
     def _on_next(self, state: MergeState):
-        # print(state.__class__.__name__)
-
         match state:
-            case AwaitNextState(certificate=certificate):
-                return continuationmonad.from_(certificate)
-
-            case AwaitAckState(certificate=certificate):
-                return continuationmonad.from_(certificate)
-
-            case OnNextAndCompleteState(value=value):
-                return self.shared.downstream.on_next_and_complete(value)
-
-            case OnNextState(value=value, observer=observer):
+            case OnNextState(
+                value=value,
+                observer=observer,
+            ):
                 _ = yield from self.shared.downstream.on_next(value)
-                
-                certificate, *_ = yield from continuationmonad.from_(None).connect(
-                    observers=(observer,)
-                )
+
+                if observer is None:
+                    certificate = None
+
+                else:
+                    certificate, *_ = yield from continuationmonad.from_(None).connect(
+                        observers=(observer,)
+                    )
 
                 transition = RequestTransition(
                     child=None,  # type: ignore
@@ -71,11 +67,29 @@ class MergeObserver[V](Observer[V]):
                     state = transition.get_state()
                     self.shared.transition = ToStateTransition(state=state)
 
+                match state:
+                    case CancelledStopRequestState(
+                        certificates=certificates, 
+                        certificate=certificate,
+                    ):
+                        self.shared.cancellables[self.id].cancel(certificates[self.id])
+                        return continuationmonad.from_(certificate)
+                    
+                    case _:
+                        pass
+
                 return self._on_next(state)
 
-            case OnNextNoAckState(value=value, certificate=certificate):
-                _ = yield from self.shared.downstream.on_next(value)
+            case KeepWaitingState(certificate=certificate):
+                return continuationmonad.from_(certificate)
 
+            case AwaitOnNextState(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case OnNextAndCompleteState(value=value):
+                return self.shared.downstream.on_next_and_complete(value)
+
+            case HasTerminatedState(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
             case _:
@@ -83,6 +97,8 @@ class MergeObserver[V](Observer[V]):
 
     @do()
     def on_next(self, value: V):
+        # print(f'on_next({value}), id={self.id}')
+
         # wait for upstream observer before continuing to simplify concurrency
         def on_next_ackowledgment(_, observer: DeferredObserver):
             transition = OnNextTransition(
@@ -96,9 +112,8 @@ class MergeObserver[V](Observer[V]):
                 transition.child = self.shared.transition
                 self.shared.transition = transition
 
-            # print(f'on_next({value}), id={self.id}')
-
-            return self._on_next(transition.get_state())
+            state = transition.get_state()
+            return self._on_next(state)
 
         return continuationmonad.defer(on_next_ackowledgment)
 
@@ -116,7 +131,8 @@ class MergeObserver[V](Observer[V]):
             transition.child = self.shared.transition
             self.shared.transition = transition
 
-        return self._on_next(transition.get_state())
+        state = transition.get_state()
+        return self._on_next(state)
 
     def on_completed(self):
         transition = OnCompletedTransition(
@@ -130,30 +146,16 @@ class MergeObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case CompleteState():
+            case OnCompletedState():
                 return self.shared.downstream.on_completed()
 
-            case (
-                AwaitNextState(certificate=certificate)
-                | AwaitAckState(certificate=certificate)
-            ):
+            case StopContinuationStateMixin(certificate=certificate):
                 return continuationmonad.from_(certificate)
-                # return certificate
-
-            case HasTerminatedState(certificate=certificate):
-                return continuationmonad.from_(certificate)
-                # return certificate
-
-            case CancelState(certificates=certificates):
-                return continuationmonad.from_(certificates[self.id])
-                # return certificates[self.id]
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
-    def on_error(
-        self, exception: Exception
-    ):
+    def on_error(self, exception: Exception):
         transition = OnErrorTransition(
             child=None,  # type: ignore
             id=self.id,
@@ -166,17 +168,11 @@ class MergeObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case ErrorState(exception=exception):
+            case OnErrorState(exception=exception):
                 return self.shared.downstream.on_error(exception)
 
             case HasTerminatedState(certificate=certificate):
                 return continuationmonad.from_(certificate)
-                # return certificate
-            
-            case CancelState(certificates=certificates):
-                return continuationmonad.from_(certificates[self.id])
-                # return certificates[self.id]
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
-

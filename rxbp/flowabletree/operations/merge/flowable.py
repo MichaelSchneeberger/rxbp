@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-from itertools import accumulate
 from threading import Lock
 
 from dataclassabc import dataclassabc
 from donotation import do
-
-from continuationmonad.typing import (
-    ContinuationCertificate,
-)
 
 from rxbp.cancellable import Cancellable
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
-from rxbp.flowabletree.operations.merge.states import UpstreamID
-from rxbp.flowabletree.operations.merge.statetransitions import InitAction
+from rxbp.flowabletree.operations.merge.states import InitState, UpstreamID
+from rxbp.flowabletree.operations.merge.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
-from rxbp.flowabletree.operations.merge.cancellable import MergeCancellable
 from rxbp.flowabletree.operations.merge.observer import MergeObserver
 
 
@@ -28,35 +22,30 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
 
     @do()
     def unsafe_subscribe(
-        self, state: State, args: SubscribeArgs,
+        self,
+        state: State,
+        args: SubscribeArgs,
     ) -> tuple[State, SubscriptionResult]:
-        shared_state = MergeSharedMemory(
+        shared = MergeSharedMemory(
             downstream=args.observer,
             n_children=len(self.children),
             lock=Lock(),
             transition=None,  # type: ignore
+            cancellables=None,
         )
 
-        def acc_continuations(
-            acc: tuple[
-                State,
-                list[ContinuationCertificate],
-                list[tuple[UpstreamID, Cancellable]],
-            ],
-            value: tuple[int, FlowableNode],
-        ):
-            state, certificates, cancellables = acc
-            id, child = value
+        certificates = []
+        cancellables: list[tuple[int, Cancellable]] = []
 
+        for id, child in enumerate(self.children):
             n_state, n_result = child.unsafe_subscribe(
-                state,
-                SubscribeArgs(
+                state=state,
+                args=args.copy(
                     observer=MergeObserver(
-                        shared=shared_state,
+                        shared=shared,
                         id=id,
                     ),
-                    schedule_weight=args.schedule_weight
-                )
+                ),
             )
 
             if n_result.certificate:
@@ -64,29 +53,24 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
 
             cancellables.append((id, n_result.cancellable))
 
-            return n_state, certificates, cancellables
+        certificate, *others = certificates
 
-        *_, (n_state, (first_certificate, *other_certificates), cancellable_pairs) = (
-            accumulate(
-                func=acc_continuations,
-                iterable=enumerate(self.children),
-                initial=(state, [], []),
-            )
+        shared.transition = ToStateTransition(
+            state=InitState(
+                n_completed=0,
+                certificates=tuple(others),
+            ),
         )
+        shared.cancellables = dict(cancellables)
 
-        shared_state.transition = InitAction(
-            n_completed=0,
-            certificates=tuple(other_certificates),
-        )
-
-        cancellable = MergeCancellable(
-            cancellables=dict(cancellable_pairs),
-            shared=shared_state,
-        )
+        # cancellable = MergeCancellable(
+        #     cancellables=dict(cancellable_pairs),
+        #     shared=shared_state,
+        # )
 
         return n_state, SubscriptionResult(
-            cancellable=cancellable, 
-            certificate=first_certificate,
+            cancellable=shared,
+            certificate=certificate,
         )
 
 

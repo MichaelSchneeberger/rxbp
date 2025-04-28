@@ -11,9 +11,9 @@ from continuationmonad.typing import (
 
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.zip.states import (
-    CancelState,
+    CancelledState,
     OnNextAndCompleteState,
-    TerminatedBaseState,
+    TerminatedStateMixin,
     OnCompletedState,
     OnErrorState,
     OnNextState,
@@ -116,7 +116,7 @@ class ZipObserver[V](Observer[V]):
                             )
 
                         match n_state:
-                            case CancelState(certificates=certificates):
+                            case CancelledState(certificates=certificates):
                                 def cancel_upstream():
                                     for id, certificate in certificates.items():
                                         self.shared.cancellables[id].cancel(certificate)
@@ -124,7 +124,7 @@ class ZipObserver[V](Observer[V]):
 
                         return continuationmonad.from_(certificate)
 
-                case TerminatedBaseState(certificate=certificate):
+                case TerminatedStateMixin(certificate=certificate):
                     return certificate
 
                 case _:
@@ -157,7 +157,7 @@ class ZipObserver[V](Observer[V]):
 
                 return self.shared.downstream.on_next_and_complete(zipped_values)
 
-            case TerminatedBaseState(certificate=certificate):
+            case TerminatedStateMixin(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
             case _:
@@ -183,7 +183,7 @@ class ZipObserver[V](Observer[V]):
 
                 return self.shared.downstream.on_completed()
 
-            case TerminatedBaseState(certificate=certificate):
+            case TerminatedStateMixin(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
             case _:
@@ -211,7 +211,7 @@ class ZipObserver[V](Observer[V]):
 
                 return self.shared.downstream.on_error(exception)
 
-            case TerminatedBaseState(certificate=certificate):
+            case TerminatedStateMixin(certificate=certificate):
                 return continuationmonad.from_(certificate)
 
             case _:

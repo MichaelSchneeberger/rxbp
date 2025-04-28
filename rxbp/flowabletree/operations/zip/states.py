@@ -3,8 +3,6 @@ from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass
 
-from dataclassabc import dataclassabc
-
 from continuationmonad.typing import (
     ContinuationCertificate,
     DeferredObserver,
@@ -15,98 +13,96 @@ class ZipState(ABC): ...
 
 
 @dataclass
-class ActiveState[U](ZipState):
-    # Depending on the provided selector, some upstream flowables are hold back (backpressured).
-    # In this case, observers and values attribute are initially not empty.
+class ActiveStateMixin[U](ZipState):
+    """
+    Represents states where the Zip operator is active.
 
-    # - deferred continuationmonad observers
+    Depending on the provided selector, some upstream flowables are hold back (backpressured).
+    In this case, observers and values attribute are initially not empty.
+    """
+
+    # Deferred continuationmonad observers used to request a new item from inactive upstream flowables.
     observers: dict[int, DeferredObserver]
 
-    # - use previous values instead
+    # Received values
     values: dict[int, U]
 
 
 @dataclass
-class AwaitOnNextState(ActiveState):
-    # equals the number of active upstream flowables minus one
+class StopContinuationStateMixin:
+    """Stop continuations associated with incoming upstream call"""
+
+    # Certificate is used to stop continuation of calling upstream flowable.
+    certificate: ContinuationCertificate
+
+
+@dataclass
+class AwaitUpstreamStateMixin(ActiveStateMixin):
+    """Represents states where the Zip operator is awaiting upstream items."""
+
+    # Certificates returned when requesting new upstream item, one is returned to downstream flowable during subscription.
+    # Hence, the number qquals the number of active upstream flowables minus one.
     certificates: tuple[ContinuationCertificate, ...]
 
+    # Zip operator is scheduled to complete when all upstream items are received.
     is_completed: bool
 
 
 @dataclass
-class RequestState(AwaitOnNextState):
-    """Request a new item from n upstream flowables"""
-
-    pass
+class AwaitOnNextState(AwaitUpstreamStateMixin):
+    """Request a new item from all non-backpressured upstream flowables"""
 
 
 @dataclass
-class AwaitFurtherState(AwaitOnNextState):
-    # used to stop calling upstream flowable
-    certificate: ContinuationCertificate
+class AwaitFurtherState(StopContinuationStateMixin, AwaitUpstreamStateMixin):
+    """At least one upstream item received, await futher items."""
 
 
 @dataclass
-class OnNextState(ActiveState):
-    pass
+class OnNextState(ActiveStateMixin):
+    """Send item downstream."""
 
 
-@dataclassabc
-class TerminatedBaseState(ZipState):
-    """Flowable either completed or errored"""
+@dataclass
+class TerminatedStateMixin(ZipState):
+    """Flowable either completed, errored, or cancelled"""
 
-    # certificates required to stop upstream flowables
-    # certificates: tuple[ContinuationCertificate, ...]
+    # Assign certificate to each active upstream flowable.
+    # This is important as the certificate is either used:
+    # - to stop calling upsream flowable (on_next, on_next_and_complete, ...), or
+    # - to cancel upstream flowable
     certificates: dict[int, ContinuationCertificate]
 
-    # needed to cancel upstream flowables
-    # awaiting_ids: tuple[int, ...]
+
+@dataclass
+class OnNextAndCompleteState(ActiveStateMixin, TerminatedStateMixin):
+    """Send item and complete downstream observer."""
 
 
 @dataclass
-class OnNextAndCompleteState(ActiveState, TerminatedBaseState):
-    pass
+class OnCompletedState(TerminatedStateMixin):
+    """Complete downstream observer."""
 
 
-@dataclassabc
-class OnCompletedState(TerminatedBaseState):
-    pass
+@dataclass
+class OnErrorState(TerminatedStateMixin):
+    """Error downstream observer."""
 
-
-@dataclassabc
-class OnErrorState(TerminatedBaseState):
     exception: Exception
 
 
-@dataclassabc
-class HasTerminatedState(TerminatedBaseState):
-    """Has previously either completed or errored"""
+@dataclass
+class CancelledState(TerminatedStateMixin):
+    """Flowable is cancelled."""
+
+
+@dataclass
+class CancelledAwaitRequestState(ZipState):
+    """Flowable is cancelled, but downstream request pending."""
+
     certificate: ContinuationCertificate
 
 
 @dataclass
-class CancelledBaseState(TerminatedBaseState):
-    pass
-    # Assign certificate to each upstream flowable.
-    # This is important as the certificate is either consumed:
-    # - when upstream calls Zip observer methods, or
-    # - when cancelling happens upstream
-    # certificates: dict[int, ContinuationCertificate]
-
-
-@dataclass
-class CancelledAwaitRequestState(CancelledBaseState):
-    pass
-    # no active upstream, await next request
-    # certificate: ContinuationCertificate
-
-
-@dataclass
-class CancelState(CancelledBaseState):
-    pass
-
-
-# @dataclass
-# class HasCancelledState(CancelledBaseState):
-#     certificate: ContinuationCertificate
+class HasTerminatedState(StopContinuationStateMixin, TerminatedStateMixin):
+    """Has previously been terminated"""

@@ -11,11 +11,10 @@ from continuationmonad.typing import (
 )
 
 from rxbp.flowabletree.operations.zip.states import (
-    AwaitOnNextState,
-    CancelState,
-    CancelledBaseState,
+    AwaitUpstreamStateMixin,
     CancelledAwaitRequestState,
-    TerminatedBaseState,
+    CancelledState,
+    TerminatedStateMixin,
     OnNextAndCompleteState,
     HasTerminatedState,
     OnCompletedState,
@@ -23,36 +22,52 @@ from rxbp.flowabletree.operations.zip.states import (
     OnNextState,
     AwaitFurtherState,
     ZipState,
-    RequestState,
+    AwaitOnNextState,
 )
 
 """
-State Machine:
+State Machine
+-------------
 
-States: 
-- Request: Request item from non-backpressured upstream Flowables.
-- AwaitFurther: Await further on_next calls from upstream.
-- OnNext: Either call downstream on_next or on_next_and_complete method.
-- OnCompleted: Call downstream on_completed method.
-- OnError: Call downstream on_error method.
-- Terminated (Zip is either completed or errors): Suppress any continuations from upstream.
-- CancelAwaitRequest: Await request to assign certificates to each active upstream.
-- Cancel: Cancel upstream Flowables.
+State groups (-), states (>):
+- Active - AwaitUpstream:
+  > AwaitOnNext
+  > AwaitFurther
+- Active - AwaitDownstream:
+  > OnNext
+- Terminated:
+  > OnNextAndComplete
+  > OnCompleted
+  > OnError
+  > Cancelled
+  > CancelledAwaitRequest
+  > HasTerminated
 
-Transitions:
-- on_next: Request, AwaitFurther -> OnNext          if all values have been received
-                                 -> AwaitFurther
-           _                     -> StopContinuation
-- request: OnNext -> Request
-           Cancel -> Cancel
-- on_next_and_complete: Request, AwaitFurther -> OnNext     if all values have been received
-                                              -> AwaitFurther
-                        _                     -> StopContinuation
-- on_completed: Request, AwaitFurther                          -> OnCompleted
-                OnError, OnCompleted, Cancel, StopContinuation -> StopContinuation
-- on_error: Request, AwaitFurther                          -> OnError
-            OnError, OnCompleted, Cancel, StopContinuation -> StopContinuation
-- cancel: Request, AwaitFurther, OnNext, OnCompleted, OnError, StopContinuation -> Cancel
+
+  Transitions:
+  - on_next:
+        AwaitUpstream           -> OnNext
+                                -> OnNextAndComplete        if one upstream completed
+                                -> AwaitFurther             if not all items are received
+        Terminated              -> HasTerminated
+- request:
+        AwaitDownstream          -> AwaitOnNext
+        CancelledAwaitRequest   -> Cancelled
+        Terminated              -> HasTerminated
+- on_next_and_complete: 
+        AwaitUpstream           -> AwaitFuther
+                                -> OnNextAndComplete        if all upstream completed
+        Terminated              -> HasTerminated
+- on_completed:
+        AwaitUpstream           -> OnCompleted
+        Terminated              -> HasTerminated
+- on_error:
+        AwaitUpstream           -> OnError
+        Terminated              -> HasTerminated
+- cancel:
+        AwaitUpstream           -> Cancelled
+        AwaitDownstream         -> CancelledAwaitRequest
+        Terminated              -> Cancelled
 """
 
 
@@ -72,7 +87,7 @@ class ToStateTransition(ZipStateTransition):
 
 
 @dataclass
-class AwaitingIDsMixin:
+class AssignCertificatesMixin:
     n_children: int
 
     def _get_awaiting_ids(
@@ -106,17 +121,9 @@ class InactiveTransitionsMixin():
 
     def _get_state(self, state: ZipState):
         match state:
-            case TerminatedBaseState(
+            case TerminatedStateMixin(
                 certificates=certificates,
-                # awaiting_ids=awaiting_ids,
             ):
-            #     return HasTerminatedState(
-            #         certificate=certificates[0],
-            #         certificates=certificates[1:],
-            #         awaiting_ids=tuple(id for id in awaiting_ids if id != self.id),
-            #     )
-            
-            # case CancelledBaseState(certificates=certificates):
                 return HasTerminatedState(
                     certificate=certificates[self.id],
                     certificates={id: c for id, c in certificates.items() if id != self.id}
@@ -134,7 +141,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, ZipStateTransition):
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitOnNextState(
+            case AwaitUpstreamStateMixin(
                 certificates=certificates,
                 is_completed=is_completed,
             ):
@@ -149,8 +156,6 @@ class OnNextTransition[U](InactiveTransitionsMixin, ZipStateTransition):
                             values=values,
                             observers=observers,
                             certificates={},
-                            # certificates=tuple(),
-                            # awaiting_ids=tuple(),
                         )
 
                     else:
@@ -173,7 +178,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, ZipStateTransition):
 
 
 @dataclass
-class RequestTransition(AwaitingIDsMixin, ZipStateTransition):
+class RequestTransition(AssignCertificatesMixin, ZipStateTransition):
     """Downstream requests new item"""
 
     child: ZipStateTransition
@@ -184,7 +189,7 @@ class RequestTransition(AwaitingIDsMixin, ZipStateTransition):
     def get_state(self):
         match state := self.child.get_state():
             case OnNextState():
-                return RequestState(
+                return AwaitOnNextState(
                     values=self.values,
                     observers=self.observers,
                     certificates=self.certificates,
@@ -192,9 +197,7 @@ class RequestTransition(AwaitingIDsMixin, ZipStateTransition):
                 )
 
             case CancelledAwaitRequestState(certificate=certificate):
-                # awaiting_ids = self._get_awaiting_ids(self.values)
-                # certificates = self.certificates + (certificate,)
-                return CancelState(
+                return CancelledState(
                     certificates=self._assign_certificates(
                         values=self.values, 
                         certificates=self.certificates + (certificate,),
@@ -213,7 +216,7 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, ZipStateTransitio
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitOnNextState(
+            case AwaitUpstreamStateMixin(
                 certificates=certificates,
             ):
                 values = state.values | {self.id: self.value}
@@ -226,7 +229,6 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, ZipStateTransitio
                         values=values,
                         observers=observers,
                         certificates={},
-                        # awaiting_ids=tuple(),
                     )
 
                 else:
@@ -243,12 +245,12 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, ZipStateTransitio
 
 
 @dataclass
-class OnCompletedTransition(InactiveTransitionsMixin, AwaitingIDsMixin, ZipStateTransition):
+class OnCompletedTransition(InactiveTransitionsMixin, AssignCertificatesMixin, ZipStateTransition):
     child: ZipStateTransition
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitOnNextState(
+            case AwaitUpstreamStateMixin(
                 values=values,
                 certificates=certificates,
             ):
@@ -257,8 +259,6 @@ class OnCompletedTransition(InactiveTransitionsMixin, AwaitingIDsMixin, ZipState
                         values=values, 
                         certificates=certificates,
                     ),
-                    # certificates=certificates,
-                    # awaiting_ids=self._get_awaiting_ids(values, id=self.id),
                 )
 
             case _:
@@ -266,13 +266,13 @@ class OnCompletedTransition(InactiveTransitionsMixin, AwaitingIDsMixin, ZipState
 
 
 @dataclass
-class OnErrorTransition(InactiveTransitionsMixin, AwaitingIDsMixin, ZipStateTransition):
+class OnErrorTransition(InactiveTransitionsMixin, AssignCertificatesMixin, ZipStateTransition):
     child: ZipStateTransition
     exception: Exception
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitFurtherState(
+            case AwaitUpstreamStateMixin(
                 certificates=certificates,
                 values=values,
             ):
@@ -282,38 +282,20 @@ class OnErrorTransition(InactiveTransitionsMixin, AwaitingIDsMixin, ZipStateTran
                         values=values, 
                         certificates=certificates,
                     ),
-                    # certificates=certificates,
-                    # awaiting_ids=self._get_awaiting_ids(values, id=self.id),
                 )
-
-            # case TerminatedBaseState(
-            #     certificates=certificates,
-            #     awaiting_ids=awaiting_ids,
-            # ):
-            #     return HasTerminatedState(
-            #         certificate=certificates[0],
-            #         certificates=certificates[1:],
-            #         awaiting_ids=tuple(id for id in awaiting_ids if id != self.id),
-            #     )
-            
-            # case CancelledBaseState(certificates=certificates):
-            #     return HasCancelledState(
-            #         certificate=certificates[self.id],
-            #         certificates={id: c for id, c in certificates.items() if id != self.id}
-            #     )
 
             case _:
                 return self._get_state(state)
 
 
 @dataclass
-class CancelTransition(AwaitingIDsMixin, ZipStateTransition):
+class CancelTransition(AssignCertificatesMixin, ZipStateTransition):
     child: ZipStateTransition
     certificate: ContinuationCertificate
 
     def get_state(self):
-        match child_state := self.child.get_state():
-            case AwaitOnNextState(
+        match state := self.child.get_state():
+            case AwaitUpstreamStateMixin(
                 values=values,
                 certificates=certificates,
             ):
@@ -321,28 +303,19 @@ class CancelTransition(AwaitingIDsMixin, ZipStateTransition):
                     values=values, 
                     certificates=certificates + (self.certificate,),
                 )
-                return CancelState(
+                return CancelledState(
                     certificates=certificates,
                 )
 
             case OnNextState():
                 return CancelledAwaitRequestState(
-                    # certificate=self.certificate,
-                    certificates={},
+                    certificate=self.certificate,
                 )
 
-            case TerminatedBaseState(
-                # awaiting_ids=awaiting_ids,
-                certificates=certificates,
-            ):
-                return CancelState(
+            case TerminatedStateMixin(certificates=certificates):
+                return CancelledState(
                     certificates=certificates,
                 )
 
             case _:
-                raise Exception(f"Unexpected state {child_state}.")
-
-        # certificates = certificates + (self.certificate,)
-        # return CancelledBaseState(
-        #     certificates=dict(zip(awaiting_ids, certificates)),
-        # )
+                raise Exception(f"Unexpected state {state}.")

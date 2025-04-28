@@ -11,11 +11,11 @@ type UpstreamID = int
 
 
 @dataclass(frozen=True)
-class OnNextPreState[U]:
+class BackpressuredOnNextCalls[U]:
     id: UpstreamID
     value: U
     observer: DeferredObserver | None
-    n_completed: int
+    # completed: bool
 
 
 @dataclass(frozen=True)
@@ -24,8 +24,9 @@ class MergeState:
 
 
 @dataclass(frozen=True)
-class ActiveState(MergeState):
+class ActiveStateMixin(MergeState):
     # number of completed upstream observables
+    # State is active as long as n_completed < n_children
     n_completed: int
 
     # upstream continuation certificates
@@ -33,87 +34,99 @@ class ActiveState(MergeState):
 
 
 @dataclass(frozen=True)
-class AwaitNextBaseState(ActiveState):
-    """Wait for upstream item"""
+class StopContinuationStateMixin:
+    """Stop continuations associated with incoming upstream call"""
 
-
-@dataclass(frozen=True)
-class AwaitAckBaseState(ActiveState):
-    """Wait for downstream ack"""
-
-    acc_states: tuple[OnNextPreState]
-
-
-@dataclass(frozen=True)
-class AwaitNextState(AwaitNextBaseState):
+    # Certificate is used to stop continuation of calling upstream flowable.
     certificate: ContinuationCertificate
 
 
 @dataclass(frozen=True)
-class OnNextState[U](AwaitAckBaseState):
+class AwaitUpstreamStateMixin(ActiveStateMixin):
+    """Await upstream items"""
+
+
+@dataclass(frozen=True)
+class InitState(AwaitUpstreamStateMixin):
+    """Await first upstream item"""
+
+
+@dataclass(frozen=True)
+class AwaitOnNextState(StopContinuationStateMixin, AwaitUpstreamStateMixin):
+    """Await futher items."""
+
+
+@dataclass(frozen=True)
+class AwaitDownstreamStateMixin(ActiveStateMixin):
+    """Await downstream request"""
+
+    on_next_calls: tuple[BackpressuredOnNextCalls, ...]
+
+
+@dataclass(frozen=True)
+class OnNextState[U](AwaitDownstreamStateMixin):
     """send item"""
 
     value: U
-    observer: DeferredObserver
+    observer: DeferredObserver | None
 
 
 @dataclass(frozen=True)
-class OnNextNoAckState[U](AwaitNextBaseState):
-    """send item"""
+class KeepWaitingState(StopContinuationStateMixin, AwaitDownstreamStateMixin):
+    """Await for downstream to request new item"""
 
-    acc_states: tuple[OnNextPreState]
-    value: U
-    certificate: ContinuationCertificate
+    # certificate: ContinuationCertificate
 
 
 @dataclass(frozen=True)
-class AwaitAckState(AwaitAckBaseState):
-    """there are other items in the buffer to be sent"""
+class TerminatedStateMixin(MergeState):
+    """Flowable either completed, errored, or cancelled"""
 
-    certificate: ContinuationCertificate
-
-
-class CompletedBaseState(MergeState):
-    pass
+    # Assign certificate to each active upstream flowable.
+    # This is important as the certificate is either used:
+    # - to stop calling upsream flowable (on_next, on_next_and_complete, ...), or
+    # - to cancel upstream flowable
+    certificates: dict[int, ContinuationCertificate]
 
 
 @dataclass(frozen=True)
-class OnNextAndCompleteState[U](CompletedBaseState):
-    """send item and complete downstream"""
+class OnNextAndCompleteState[U](TerminatedStateMixin):
+    """Send item and complete downstream observer."""
 
     value: U
 
 
-class CompleteState(CompletedBaseState):
-    pass
+@dataclass(frozen=True)
+class OnCompletedState(TerminatedStateMixin):
+    """Complete downstream observer."""
 
 
 @dataclass(frozen=True)
-class ErrorBaseState(MergeState):
-    certificates: tuple[ContinuationCertificate, ...]
-    awaiting_ids: tuple[UpstreamID, ...]
+class OnErrorState(TerminatedStateMixin):
+    """Error downstream observer."""
 
-
-@dataclass(frozen=True)
-class ErrorState(ErrorBaseState):
     exception: Exception
 
 
 @dataclass(frozen=True)
-class HasTerminatedState(ErrorBaseState):
+class CancelledState(TerminatedStateMixin):
+    """Flowable is cancelled."""
+
+
+@dataclass(frozen=True)
+class CancelledAwaitRequestState(TerminatedStateMixin):
+    """Flowable is cancelled, but upstream pending."""
+
+    # The certificate is used to stop the downstream request.
+    # It is not used to stop the current upstream.
     certificate: ContinuationCertificate
 
 
 @dataclass(frozen=True)
-class CancelledBaseState(MergeState):
-    certificates: dict[UpstreamID, ContinuationCertificate]
+class CancelledStopRequestState(StopContinuationStateMixin, TerminatedStateMixin):
+    """Flowable is cancelled."""
 
 
 @dataclass(frozen=True)
-class CancelState(CancelledBaseState):
-    pass
-
-
-@dataclass(frozen=True)
-class HasCancelledState(CancelState):
-    certificate: ContinuationCertificate
+class HasTerminatedState(StopContinuationStateMixin, TerminatedStateMixin):
+    """Has previously been terminated"""
