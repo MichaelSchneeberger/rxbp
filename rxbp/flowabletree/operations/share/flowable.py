@@ -63,7 +63,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
             shared = ShareSharedMemory(
                 upstream_cancellation=None,
                 transition=None,  # type: ignore
-                deferred_observer=None,  # type: ignore
+                deferred_handler=None,  # type: ignore
                 lock=Lock(),
                 buffer_lock=Lock(),
                 first_index=0,

@@ -7,7 +7,7 @@ from dataclassabc import dataclassabc
 
 from continuationmonad.typing import (
     ContinuationCertificate,
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.flowabletree.operations.merge.states import (
@@ -119,7 +119,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: UpstreamID
     value: U
-    observer: DeferredObserver
+    observer: DeferredHandler
 
     def get_state(self):
         match state := self.child.get_state():

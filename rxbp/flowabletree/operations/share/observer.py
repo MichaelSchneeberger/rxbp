@@ -8,14 +8,14 @@ import continuationmonad
 from continuationmonad.typing import (
     ContinuationCertificate,
     Trampoline,
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.cancellable import CancellationState
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.share.states import (
-    CompleteState,
-    ErrorState,
+    OnCompletedState,
+    OnErrorState,
     SendItem,
 )
 from rxbp.flowabletree.operations.share.statetransitions import (
@@ -39,12 +39,12 @@ class SharedObserver[V](Observer[V]):
     def on_next(self, value: V):
         # print(f"on_next({value})")
 
-        def on_next_ackowledgment(
-            trampoline: Trampoline, deferred_observer: DeferredObserver
+        def on_next_subscription(
+            trampoline: Trampoline, handler: DeferredHandler
         ):
             # print(f"on_next_subscription({value}), weight={deferred_observer.weight}")
 
-            self.shared.deferred_observer = deferred_observer
+            self.shared.deferred_handler = handler
 
             transition = OnNextTransition(
                 child=None,  # type: ignore
@@ -67,7 +67,7 @@ class SharedObserver[V](Observer[V]):
                                 value
                             ).subscribe(
                                 args=continuationmonad.init_subscribe_args(
-                                    on_next=ack_observer.on_next,
+                                    observer=ack_observer,
                                     weight=ack_observer.weight,
                                     cancellation=ack_observer.cancellation,
                                     trampoline=trampoline,
@@ -85,7 +85,7 @@ class SharedObserver[V](Observer[V]):
                 case _:
                     raise Exception(f"Unexpected state {state}")
 
-        return continuationmonad.defer(on_next_ackowledgment)
+        return continuationmonad.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
@@ -130,7 +130,7 @@ class SharedObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case CompleteState(
+            case OnCompletedState(
                 send_ids=send_ids,
                 acc_certificate=acc_certificate,
             ):
@@ -157,7 +157,7 @@ class SharedObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case ErrorState(
+            case OnErrorState(
                 send_ids=send_ids,
                 acc_certificate=acc_certificate,
             ):

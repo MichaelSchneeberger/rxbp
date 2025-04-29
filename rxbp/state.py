@@ -3,6 +3,7 @@ from dataclasses import replace
 from threading import RLock
 from typing import override
 
+import continuationmonad
 from dataclassabc import dataclassabc
 
 from continuationmonad.typing import Scheduler, Trampoline, ContinuationCertificate
@@ -23,7 +24,7 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def scheduler(self) -> Scheduler:
+    def scheduler(self) -> Scheduler | None:
         """
         Scheduler is propagated from downstream to upstream
         """
@@ -60,7 +61,7 @@ class State(ABC):
 class StateImpl(State):
     lock: RLock
     subscription_trampoline: Trampoline
-    scheduler: Scheduler
+    scheduler: Scheduler | None
     shared_observers: dict
     shared_weights: dict
     connections: dict
@@ -74,8 +75,8 @@ class StateImpl(State):
     
 
 def init_state(
-    subscription_trampoline: Trampoline,
-    scheduler: Scheduler,
+    subscription_trampoline: Trampoline | None = None,
+    scheduler: Scheduler | None = None,
     shared_observers: dict | None = None,
     shared_weights: dict | None = None,
     subscriber_count: dict | None = None,
@@ -83,6 +84,9 @@ def init_state(
     connectable_observers: dict | None = None,
     certificate: ContinuationCertificate | None = None,
 ):
+    if subscription_trampoline is None:
+        subscription_trampoline = continuationmonad.init_trampoline()
+
     if subscriber_count is None:
         subscriber_count = {}
 

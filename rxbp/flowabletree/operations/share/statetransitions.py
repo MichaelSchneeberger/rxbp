@@ -6,18 +6,20 @@ from dataclassabc import dataclassabc
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.flowabletree.operations.share.states import (
-    AckUpstream,
-    ActiveState,
+    HasTerminatedState,
+    RequestUpstream,
+    ActiveStateMixin,
     AwaitOnNext,
-    AwaitOnNextBase,
+    AwaitUpstreamStateMixin,
     CancelledState,
-    CompleteState,
-    ErrorState,
+    OnCompletedState,
+    OnErrorState,
     SendItemFromBuffer,
     SendItem,
     ShareState,
-    TerminatedBaseState,
-    TerminatedState,
+    ErrorStateMixin,
+    HasErroredState,
+    TerminatedStateMixin,
 )
 
 
@@ -43,7 +45,7 @@ class OnNextAndCompleteTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-            case AwaitOnNextBase(
+            case AwaitUpstreamStateMixin(
                 buffer_map=buffer_map,
                 first_buffer_index=first_buffer_index,
                 last_buffer_index=last_buffer_index,
@@ -85,7 +87,7 @@ class OnNextTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-            case AwaitOnNextBase(
+            case AwaitUpstreamStateMixin(
                 buffer_map=buffer_map,
                 first_buffer_index=first_buffer_index,
                 last_buffer_index=last_buffer_index,
@@ -134,7 +136,7 @@ class RequestTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-            case ActiveState(
+            case ActiveStateMixin(
                 buffer_map=buffer_map,
                 first_buffer_index=first_buffer_index,
                 last_buffer_index=last_buffer_index,
@@ -156,7 +158,7 @@ class RequestTransition(ShareStateTransition):
                     """ there is no item in the buffer """
 
                     if not is_ack:
-                        return AckUpstream(
+                        return RequestUpstream(
                             buffer_map=n_buffer_map,
                             first_buffer_index=first_buffer_index,
                             last_buffer_index=last_buffer_index,
@@ -205,8 +207,8 @@ class RequestTransition(ShareStateTransition):
                         pop_item=pop_item,
                     )
 
-            case TerminatedBaseState(exception=exception):
-                return TerminatedState(exception=exception)
+            case ErrorStateMixin(exception=exception):
+                return HasErroredState(exception=exception)
 
             case _:
                 raise Exception(f"Unexpected state {child_state}.")
@@ -220,7 +222,7 @@ class OnCompletedTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-            case ActiveState(
+            case ActiveStateMixin(
                 buffer_map=buffer_map,
                 last_buffer_index=last_buffer_index,
                 acc_certificate=acc_certificate,
@@ -229,7 +231,7 @@ class OnCompletedTransition(ShareStateTransition):
                     id for id, index in buffer_map.items() if last_buffer_index <= index
                 )
 
-                return CompleteState(
+                return OnCompletedState(
                     send_ids=send_ids,
                     acc_certificate=acc_certificate,
                 )
@@ -245,7 +247,7 @@ class OnErrorTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-            case ActiveState(
+            case ActiveStateMixin(
                 buffer_map=buffer_map,
                 last_buffer_index=last_buffer_index,
                 acc_certificate=acc_certificate,
@@ -254,7 +256,7 @@ class OnErrorTransition(ShareStateTransition):
                     id for id, index in buffer_map.items() if index == last_buffer_index
                 )
 
-                return ErrorState(
+                return OnErrorState(
                     exception=self.exception,
                     send_ids=send_ids,
                     acc_certificate=acc_certificate,
@@ -272,33 +274,33 @@ class CancelTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-            case ActiveState(
+            case ActiveStateMixin(
                 buffer_map=buffer_map,
                 acc_certificate=acc_certificate,
+                # is_ack=is_ack,
+                # first_buffer_index=first_buffer_index,
+                # last_buffer_index=last_buffer_index,
             ):
-                # filter out downstream observer
                 n_buffer_map = {
                     id: index for id, index in buffer_map.items() if id != self.id
                 }
                 n_acc_certificate = self.certificate.merge((acc_certificate,))
 
                 if len(n_buffer_map) == 0:
+                    # no active downstream observers
+
                     return CancelledState(
                         certificate=n_acc_certificate,
                     )
 
                 else:
-                    # return ActiveState(
-                    #     buffer_map=n_buffer_map,
-                    #     first_buffer_index=first_buffer_index,
-                    #     last_buffer_index=last_buffer_index,
-                    #     is_ack=is_ack,
-                    #     acc_certificate=n_acc_certificate,
-                    # )
-                    replace(
+                    return replace(
                         child_state,
                         acc_certificate=n_acc_certificate,
                     )
+
+            case TerminatedStateMixin():
+                return HasTerminatedState()
 
             case _:
                 raise Exception(f"Unexpected state {child_state}.")

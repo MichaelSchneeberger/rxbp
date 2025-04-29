@@ -8,6 +8,7 @@ import continuationmonad
 from continuationmonad.typing import Scheduler
 
 from rxbp.flowabletree.operations.map import init_map_flowable
+from rxbp.flowabletree.subscribe import subscribe
 from rxbp.state import State, init_state
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
@@ -101,15 +102,24 @@ class Flowable[V](SingleChildFlowableNode[V, V]):
                     connections={c.child: s for c, s in connections.items()},
                 )
 
-                result = self.child.subscribe(
-                    state=state,
-                    args=SubscribeArgs(
+                results = subscribe(
+                    sources=(self.child,),
+                    sinks=(SubscribeArgs(
                         observer=observer,
                         schedule_weight=1,
-                    )
+                    ),),
+                    state=state,
                 )
 
-                return result.certificate
+                # results = self.child.subscribe(
+                #     state=state,
+                #     args=SubscribeArgs(
+                #         observer=observer,
+                #         schedule_weight=1,
+                #     )
+                # )
+
+                return results[0].certificate
 
             return subscribe_trampoline.run(trampoline_task, weight=1)
         main_scheduler.run(schedule_task)

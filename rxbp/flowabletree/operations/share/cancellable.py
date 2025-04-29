@@ -11,8 +11,9 @@ from rxbp.flowabletree.operations.share.statetransitions import (
 )
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 from rxbp.flowabletree.operations.share.states import (
-    ActiveState,
+    ActiveStateMixin,
     CancelledState,
+    HasTerminatedState,
 )
 
 
@@ -40,5 +41,9 @@ class ShareCancellation(CancellationState):
             case CancelledState(certificate=certificate):
                 self.upstream_cancellation.cancel(certificate)
 
-            case ActiveState():
+            case ActiveStateMixin():
+                # active downstream observers remaining
+                pass
+
+            case HasTerminatedState():
                 pass

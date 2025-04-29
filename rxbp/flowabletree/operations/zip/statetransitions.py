@@ -7,7 +7,7 @@ from dataclassabc import dataclassabc
 
 from continuationmonad.typing import (
     ContinuationCertificate,
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.flowabletree.operations.zip.states import (
@@ -89,29 +89,18 @@ class ToStateTransition(ZipStateTransition):
 @dataclass
 class AssignCertificatesMixin:
     n_children: int
-
-    def _get_awaiting_ids(
-        self,
-        values: dict[int, None],
-        id: int | None = None,
-    ):
-        received_ids = tuple(values.keys())
-
-        if id is not None:
-            received_ids += (id,)
-
-        awaiting_ids = tuple(
-            id for id in range(self.n_children) if id not in received_ids
-        )
-        return awaiting_ids
     
     def _assign_certificates(
         self,
-        values: dict[int, None],
+        received_ids: tuple[int, ...],
         certificates: tuple[ContinuationCertificate, ...],
-        id: int | None = None,
     ):
-        awaiting_ids = self._get_awaiting_ids(values, id)
+        awaiting_ids = tuple(
+            id for id in range(self.n_children) if id not in received_ids
+        )
+
+        assert len(awaiting_ids) == len(certificates), f'{awaiting_ids}, {certificates}'
+
         return dict(zip(awaiting_ids, certificates))
     
 
@@ -136,7 +125,7 @@ class InactiveTransitionsMixin():
 class OnNextTransition[U](InactiveTransitionsMixin, ZipStateTransition):
     child: ZipStateTransition
     value: U
-    observer: DeferredObserver
+    observer: DeferredHandler
     n_children: int
 
     def get_state(self):
@@ -183,7 +172,7 @@ class RequestTransition(AssignCertificatesMixin, ZipStateTransition):
 
     child: ZipStateTransition
     values: dict[int, None]
-    observers: dict[int, DeferredObserver]
+    observers: dict[int, DeferredHandler]
     certificates: tuple[ContinuationCertificate, ...]
 
     def get_state(self):
@@ -199,7 +188,7 @@ class RequestTransition(AssignCertificatesMixin, ZipStateTransition):
             case CancelledAwaitRequestState(certificate=certificate):
                 return CancelledState(
                     certificates=self._assign_certificates(
-                        values=self.values, 
+                        received_ids=tuple(self.values),
                         certificates=self.certificates + (certificate,),
                     ),
                 )
@@ -254,11 +243,12 @@ class OnCompletedTransition(InactiveTransitionsMixin, AssignCertificatesMixin, Z
                 values=values,
                 certificates=certificates,
             ):
+                certificates = self._assign_certificates(
+                    received_ids=tuple(values) + (self.id,),
+                    certificates=certificates,
+                )
                 return OnCompletedState(
-                    certificates=self._assign_certificates(
-                        values=values, 
-                        certificates=certificates,
-                    ),
+                    certificates=certificates,
                 )
 
             case _:
@@ -279,7 +269,7 @@ class OnErrorTransition(InactiveTransitionsMixin, AssignCertificatesMixin, ZipSt
                 return OnErrorState(
                     exception=self.exception,
                     certificates=self._assign_certificates(
-                        values=values, 
+                        received_ids=tuple(values) + (self.id,),
                         certificates=certificates,
                     ),
                 )
@@ -300,7 +290,7 @@ class CancelTransition(AssignCertificatesMixin, ZipStateTransition):
                 certificates=certificates,
             ):
                 certificates=self._assign_certificates(
-                    values=values, 
+                    received_ids=tuple(values),
                     certificates=certificates + (self.certificate,),
                 )
                 return CancelledState(

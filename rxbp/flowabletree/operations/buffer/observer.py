@@ -7,7 +7,7 @@ from donotation import do
 
 import continuationmonad
 from continuationmonad.typing import (
-    DeferredObserver,
+    DeferredHandler,
     ContinuationCertificate,
 )
 
@@ -66,16 +66,16 @@ class BufferObserver[V](Cancellable, Observer[V]):
             case SendItemAndComplete():
                 item = self.buffer.pop()
                 return self.observer.on_next_and_complete(item)
-            
+
             case StopLoop(certificate=certificate):
                 return continuationmonad.from_(certificate)
-            
+
             case CompleteState():
                 return self.observer.on_completed()
 
             case SendErrorState(exception=exception):
                 return self.observer.on_error(exception)
-            
+
             case _:
                 raise Exception(f"Unexpected state {state}")
 
@@ -85,10 +85,12 @@ class BufferObserver[V](Cancellable, Observer[V]):
         self.buffer.append(value)
 
         @do()
-        def on_ack_subscription(_, observer: DeferredObserver):
+        def on_ack_subscription(_, handler: DeferredHandler):
             # print(f"on_next_subscription({value})")
 
-            certificate, *_ = yield from continuationmonad.from_(None).connect((observer,))
+            certificate, *_ = yield from continuationmonad.from_(None).connect(
+                (handler,)
+            )
 
             transition = OnNextTransition(
                 child=None,  # type: ignore
@@ -107,6 +109,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
 
                     r_certificate = continuationmonad.fork(
                         source=self.run(),
+                        on_error=lambda e: self.observer.on_error(e),
                         scheduler=trampoline,
                         cancellation=self.loop_cancellation,
                         weight=self.weight,
@@ -148,7 +151,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 raise Exception(f"Unexpected state {state}")
 
     def on_completed(self):
-        print('on completed')
+        print("on completed")
         transition = OnCompletedTransition(
             child=None,  # type: ignore
         )
@@ -182,7 +185,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 exception=exception,
             ):
                 return self.observer.on_error(exception)
-            
+
             case ErrorState(certificate=certificate):
                 return continuationmonad.from_(certificate)
 

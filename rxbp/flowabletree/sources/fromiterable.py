@@ -56,12 +56,17 @@ class FromIterable[V](FlowableNode[V]):
         def starting_procedure(iterator):
             try:
                 next_item = next(iterator)
+                has_elem = True
 
             except StopIteration:
-                return args.observer.on_completed()
+                next_item = None
+                has_elem = False
 
-            else:
+            if has_elem:
                 return schedule_and_send_next(next_item, iterator)
+                
+            else:
+                return args.observer.on_completed()
 
         cancellable = init_cancellation_state()
 
@@ -70,6 +75,7 @@ class FromIterable[V](FlowableNode[V]):
                 continuationmonad.from_(None)
                 .flat_map(lambda _: starting_procedure(iterator))
             ),
+            on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
             weight=args.schedule_weight,

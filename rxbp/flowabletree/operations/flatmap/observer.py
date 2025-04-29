@@ -8,7 +8,7 @@ from donotation import do
 import continuationmonad
 from continuationmonad.typing import (
     Scheduler,
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.state import init_state
@@ -24,62 +24,37 @@ from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapNestedObse
 @dataclass
 class FlatMapObserver[V](Observer[V]):
     downstream: Observer
-    func: Callable[[V], FlowableNode]
+    func: Callable[[V], FlowableNode[V]]
     scheduler: Scheduler | None
     shared: FlatMapSharedMemory
     schedule_weight: int
 
     @do()
-    def _on_next(self, value: V, deferred_observer: DeferredObserver | None):
+    def _on_next(self, value: V, handler: DeferredHandler | None):
+        # print('apply func')
+
         flowable = self.func(value)
-
-        # subscriber_count = {}
-        # shared_weights = {}
-
-        # flowable.discover(subscriber_count)
-        # flowable.assign_weights(1, shared_weights, subscriber_count)
-
-        # raise NotImplementedError
 
         trampoline = yield from continuationmonad.get_trampoline()
 
-        # state = init_state(
-        #     subscription_trampoline=trampoline,
-        #     scheduler=self.scheduler,
-        # )
-
-        # observer = FlatMapNestedObserver(
-        #     downstream=self.downstream,
-        #     upstream=deferred_observer,
-        #     shared=self.shared,
-        # )
-
-        result = flowable.subscribe(
-            state=init_state(
-                subscription_trampoline=trampoline,
-                scheduler=self.scheduler,
-            ),
-            args=SubscribeArgs(
-                observer=FlatMapNestedObserver(
-                    downstream=self.downstream,
-                    upstream=deferred_observer,
-                    shared=self.shared,
+        try:
+            result = flowable.subscribe(
+                state=init_state(
+                    subscription_trampoline=trampoline,
+                    scheduler=self.scheduler,
                 ),
-                schedule_weight=self.schedule_weight,
+                args=SubscribeArgs(
+                    observer=FlatMapNestedObserver(
+                        downstream=self.downstream,
+                        upstream=handler,
+                        shared=self.shared,
+                    ),
+                    schedule_weight=self.schedule_weight,
+                )
             )
-        )
 
-        # certificate = subscrption_task()
-
-        # certificate = trampoline.schedule(subscrption_task, weight=self.schedule_weight)
-
-        # _, result = flowable.unsafe_subscribe(
-        #     state,
-        #     SubscribeArgs(
-        #         observer=observer,
-        #         schedule_weight=self.schedule_weight,
-        #     ),
-        # )
+        except Exception as exception:
+            return self.downstream.on_error(exception)
 
         transition = UpdateCancellableTransition(
             child=None,  # type: ignore
@@ -97,10 +72,12 @@ class FlatMapObserver[V](Observer[V]):
         return continuationmonad.from_(result.certificate)
 
     def on_next(self, value: V):
-        def on_next_ackowledgment(_, subscription: DeferredObserver):
-            return self._on_next(value, subscription)
+        # print('on_next')
+        def on_next_subscription(_, handler: DeferredHandler):
+            # print('on_next_subscription')
+            return self._on_next(value, handler)
 
-        return continuationmonad.defer(on_next_ackowledgment)
+        return continuationmonad.defer(on_next_subscription)
 
     def on_next_and_complete(
         self, value: V

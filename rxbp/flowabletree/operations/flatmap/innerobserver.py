@@ -7,7 +7,7 @@ from donotation import do
 import continuationmonad
 from continuationmonad.typing import (
     ContinuationMonad,
-    DeferredObserver,
+    DeferredHandler,
     ContinuationCertificate,
 )
 
@@ -23,7 +23,7 @@ from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemor
 @dataclass
 class FlatMapNestedObserver[V](Observer[V]):
     downstream: Observer
-    upstream: DeferredObserver | None
+    upstream: DeferredHandler | None
     shared: FlatMapSharedMemory
 
     def on_next(self, value: V) -> ContinuationMonad[None]:
@@ -56,7 +56,7 @@ class FlatMapNestedObserver[V](Observer[V]):
                     case None:
                         return self.downstream.on_completed()
 
-                    case DeferredObserver():
+                    case DeferredHandler():
                         return (
                             continuationmonad.from_(None)
                             .connect((self.upstream,))

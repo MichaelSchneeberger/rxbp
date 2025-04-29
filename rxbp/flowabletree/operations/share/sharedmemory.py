@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from threading import Lock, RLock
 
 from continuationmonad.typing import (
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.cancellable import Cancellable
@@ -20,7 +20,7 @@ class ShareSharedMemory[V]:
     upstream_cancellation: Cancellable
 
     # modified synchronously
-    deferred_observer: DeferredObserver
+    deferred_handler: DeferredHandler
 
     # modified using lock
     lock: Lock

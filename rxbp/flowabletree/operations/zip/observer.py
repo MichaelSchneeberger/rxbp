@@ -6,7 +6,7 @@ from donotation import do
 import continuationmonad
 from continuationmonad.typing import (
     Trampoline,
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.flowabletree.observer import Observer
@@ -40,13 +40,13 @@ class ZipObserver[V](Observer[V]):
 
         # wait for upstream subscription before continuing to simplify concurrency
         @do()
-        def on_next_ackowledgment(_: Trampoline, observer: DeferredObserver):
+        def on_next_subscription(_: Trampoline, handler: DeferredHandler):
             # print(f'on_next_ack({value}), id={self.id}, weight={observer.weight}')
 
             transition = OnNextTransition(
                 id=self.id,
                 value=value,
-                observer=observer,
+                observer=handler,
                 n_children=self.shared.n_children,
                 child=None,  # type: ignore
             )
@@ -69,7 +69,7 @@ class ZipObserver[V](Observer[V]):
 
                     complete_downstream = [False]
 
-                    def gen_deferred_observers():
+                    def gen_deferred_handlers():
                         for id in state.values:
                             if id not in hold_back:
                                 if id in state.observers:
@@ -77,7 +77,7 @@ class ZipObserver[V](Observer[V]):
                                 else:
                                     complete_downstream[0] = True
 
-                    observers = tuple(gen_deferred_observers())
+                    handlers = tuple(gen_deferred_handlers())
 
                     if complete_downstream[0]:
                         certificate = self.shared.downstream.on_next_and_complete(
@@ -90,7 +90,7 @@ class ZipObserver[V](Observer[V]):
 
                         certificate, *others = yield from continuationmonad.from_(
                             None
-                        ).connect(observers)
+                        ).connect(handlers)
 
                         transition = RequestTransition(
                             child=None,  # type: ignore
@@ -130,7 +130,7 @@ class ZipObserver[V](Observer[V]):
                 case _:
                     raise Exception(f"Unexpected state {state}.")
 
-        return continuationmonad.defer(on_next_ackowledgment)
+        return continuationmonad.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):

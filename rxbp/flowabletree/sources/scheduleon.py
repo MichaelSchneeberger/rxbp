@@ -29,6 +29,7 @@ class ScheduleOnFlowable(FlowableNode[Scheduler]):
                 continuationmonad.schedule_on(self.scheduler)
                 .flat_map(lambda _: args.observer.on_next_and_complete(self.scheduler))
             ),
+            on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
             weight=args.schedule_weight,

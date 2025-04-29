@@ -5,7 +5,7 @@ from donotation import do
 
 import continuationmonad
 from continuationmonad.typing import (
-    DeferredObserver,
+    DeferredHandler,
 )
 
 from rxbp.flowabletree.operations.merge.states import (
@@ -52,7 +52,7 @@ class MergeObserver[V](Observer[V]):
 
                 else:
                     certificate, *_ = yield from continuationmonad.from_(None).connect(
-                        observers=(observer,)
+                        (observer,)
                     )
 
                 transition = RequestTransition(
@@ -100,12 +100,12 @@ class MergeObserver[V](Observer[V]):
         # print(f'on_next({value}), id={self.id}')
 
         # wait for upstream observer before continuing to simplify concurrency
-        def on_next_ackowledgment(_, observer: DeferredObserver):
+        def on_next_subscription(_, handler: DeferredHandler):
             transition = OnNextTransition(
                 child=None,  # type: ignore
                 id=self.id,
                 value=value,
-                observer=observer,
+                observer=handler,
             )
 
             with self.shared.lock:
@@ -115,7 +115,7 @@ class MergeObserver[V](Observer[V]):
             state = transition.get_state()
             return self._on_next(state)
 
-        return continuationmonad.defer(on_next_ackowledgment)
+        return continuationmonad.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
@@ -168,7 +168,13 @@ class MergeObserver[V](Observer[V]):
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case OnErrorState(exception=exception):
+            case OnErrorState(
+                exception=exception,
+                certificates=certificates,
+            ):
+                for id, certificate in certificates.items():
+                    self.shared.cancellables[id].cancel(certificate)
+        
                 return self.shared.downstream.on_error(exception)
 
             case HasTerminatedState(certificate=certificate):

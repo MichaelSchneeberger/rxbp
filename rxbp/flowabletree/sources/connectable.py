@@ -119,6 +119,7 @@ class ConnectableImpl[V](FlowableNode[V]):
                 continuationmonad.from_(None)
                 .flat_map(lambda _: schedule_and_send_next())
             ),
+            on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
             weight=args.schedule_weight,

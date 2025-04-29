@@ -5,14 +5,14 @@ from dataclasses import dataclass
 
 from continuationmonad.typing import (
     ContinuationCertificate,
-    DeferredObserver,
+    DeferredHandler,
 )
 
 
 class ZipState(ABC): ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActiveStateMixin[U](ZipState):
     """
     Represents states where the Zip operator is active.
@@ -22,13 +22,13 @@ class ActiveStateMixin[U](ZipState):
     """
 
     # Deferred continuationmonad observers used to request a new item from inactive upstream flowables.
-    observers: dict[int, DeferredObserver]
+    observers: dict[int, DeferredHandler]
 
     # Received values
     values: dict[int, U]
 
 
-@dataclass
+@dataclass(frozen=True)
 class StopContinuationStateMixin:
     """Stop continuations associated with incoming upstream call"""
 
@@ -36,7 +36,7 @@ class StopContinuationStateMixin:
     certificate: ContinuationCertificate
 
 
-@dataclass
+@dataclass(frozen=True)
 class AwaitUpstreamStateMixin(ActiveStateMixin):
     """Represents states where the Zip operator is awaiting upstream items."""
 
@@ -48,22 +48,22 @@ class AwaitUpstreamStateMixin(ActiveStateMixin):
     is_completed: bool
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AwaitOnNextState(AwaitUpstreamStateMixin):
     """Request a new item from all non-backpressured upstream flowables"""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AwaitFurtherState(StopContinuationStateMixin, AwaitUpstreamStateMixin):
     """At least one upstream item received, await futher items."""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class OnNextState(ActiveStateMixin):
     """Send item downstream."""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TerminatedStateMixin(ZipState):
     """Flowable either completed, errored, or cancelled"""
 
@@ -74,35 +74,35 @@ class TerminatedStateMixin(ZipState):
     certificates: dict[int, ContinuationCertificate]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class OnNextAndCompleteState(ActiveStateMixin, TerminatedStateMixin):
     """Send item and complete downstream observer."""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class OnCompletedState(TerminatedStateMixin):
     """Complete downstream observer."""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class OnErrorState(TerminatedStateMixin):
     """Error downstream observer."""
 
     exception: Exception
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CancelledState(TerminatedStateMixin):
     """Flowable is cancelled."""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CancelledAwaitRequestState(ZipState):
     """Flowable is cancelled, but downstream request pending."""
 
     certificate: ContinuationCertificate
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class HasTerminatedState(StopContinuationStateMixin, TerminatedStateMixin):
     """Has previously been terminated"""

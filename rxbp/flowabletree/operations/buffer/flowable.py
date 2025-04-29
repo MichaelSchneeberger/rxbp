@@ -24,15 +24,7 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
         self,
         state: State,
         args: SubscribeArgs[V],
-    ): # -> tuple[State, ObserveResult]:
-        # loop = Loop(
-        #     observer=args.observer,
-        #     transition=None,
-        #     lock=state.lock,
-        #     buffer=[]
-        # )
-
-        # upstream_cancellable = init_cancellation_state()
+    ):
         loop_cancellation = init_cancellation_state()
 
         observer = BufferObserver(

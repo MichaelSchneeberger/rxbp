@@ -6,15 +6,16 @@ import continuationmonad
 from continuationmonad.typing import (
     ContinuationCertificate,
     Trampoline,
+    Observer as CMObserver,
 )
 
 from rxbp.cancellable import CancellationState
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.share.states import (
-    AckUpstream,
+    RequestUpstream,
     AwaitOnNext,
     SendItemFromBuffer,
-    TerminatedState,
+    HasErroredState,
 )
 from rxbp.flowabletree.operations.share.statetransitions import (
     RequestTransition,
@@ -24,14 +25,14 @@ from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 
 
 @dataclass(frozen=False)
-class ShareAckObserver:
+class ShareAckObserver(CMObserver):
     shared: ShareSharedMemory
     observer: Observer
     id: int
     weight: int
     cancellation: CancellationState
 
-    def on_next(
+    def on_success(
         self,
         trampoline: Trampoline,
         value: None,
@@ -48,9 +49,9 @@ class ShareAckObserver:
             transition.child = self.shared.transition
 
             match state := transition.get_state():
-                case AckUpstream():
+                case RequestUpstream():
                     def trampoline_task():
-                        return self.shared.deferred_observer.on_next(
+                        return self.shared.deferred_handler.resume(
                             trampoline, None
                         )
                     
@@ -64,7 +65,7 @@ class ShareAckObserver:
             self.shared.transition = ToStateTransition(state)
 
         match state:
-            case AckUpstream() | AwaitOnNext():
+            case RequestUpstream() | AwaitOnNext():
                 return state.certificate
 
             case SendItemFromBuffer():
@@ -75,15 +76,36 @@ class ShareAckObserver:
 
                 return self.observer.on_next(value).subscribe(
                     args=continuationmonad.init_subscribe_args(
-                        on_next=self.on_next,
+                        observer=self,
                         weight=self.weight,
                         cancellation=self.cancellation,
                         trampoline=trampoline,
                     )
                 )
             
-            case TerminatedState(exception=exception):
-                return self.observer.on_error(exception=exception)
+            case HasErroredState(exception=exception):
+                return self.observer.on_error(exception=exception).subscribe(
+                    args=continuationmonad.init_subscribe_args(
+                        observer=self,
+                        weight=self.weight,
+                        cancellation=self.cancellation,
+                        trampoline=trampoline,
+                    )
+                )
 
             case _:
                 raise Exception(f"Unexpected state {state}")
+
+    def on_error(
+        self,
+        trampoline: Trampoline,
+        exception: Exception,
+    ) -> ContinuationCertificate:
+        return self.observer.on_error(exception).subscribe(
+            args=continuationmonad.init_subscribe_args(
+                observer=self,
+                weight=self.weight,
+                cancellation=self.cancellation,
+                trampoline=trampoline,
+            )
+        )
