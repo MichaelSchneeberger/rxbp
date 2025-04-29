@@ -5,10 +5,11 @@
 
 ## Features
 
-- **Observable Pattern** - built on the reactive programming model.
-- **Backpressure** - enables memory-safe handling of fast data producers and slow consumers.
-- **RxPY compatibility** - interoperates with [RxPY](https://github.com/ReactiveX/RxPY/tree/master), bridging classic observables and backpressure-aware *Flowables*.
-* **Continuation certificate**: ensures the execution of a Flowable completes, albeit with some computational overhead.
+- **Observable Pattern**: built on the reactive programming model.
+- **Backpressure**: enables memory-safe handling of fast data producers and slow consumers.
+- **RxPY compatibility**: interoperates with [RxPY](https://github.com/ReactiveX/RxPY/tree/master), bridging classic observables and backpressure-aware Flowables.
+- **Continuation certificate**: ensures the execution of a Flowable completes, avoiding any continuation deadlock.
+- **Favor usability** - Favor an implementation that is simple, safe, and user-friendly, while accepting some computational overhead.
 
 
 <!-- ## Installation -->
@@ -34,7 +35,7 @@ flowable = rxbp.zip((range5, range7, range5))
 # Run flowable and collect received items in a list
 result = flowable.run()
 
-#The output will be [(0, 0, 0), (1, 1, 1), (2, 2, 2)]
+# The output will be [(0, 0, 0), (1, 1, 1), (2, 2, 2)]
 print(result)
 ```
 
