@@ -18,6 +18,7 @@ from rxbp.flowabletree.operations.buffer.statetransitions import ToStateTransiti
 @dataclassabc(frozen=True)
 class BufferImpl[V](SingleChildFlowableNode[V, V]):
     child: FlowableNode[V]
+    buffer_size: int | None
     
     @override
     def unsafe_subscribe(
@@ -35,6 +36,7 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
             loop_cancellation=loop_cancellation,
             weight=args.schedule_weight,
             buffer=[],
+            buffer_size=self.buffer_size,
         )
 
         state, result = self.child.unsafe_subscribe(
@@ -57,7 +59,9 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
     
 def init_buffer[V](
     child: FlowableNode[V],
+    buffer_size: int | None = None,
 ):
     return BufferImpl(
         child=child,
+        buffer_size=buffer_size,
     )

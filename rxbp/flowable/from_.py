@@ -1,3 +1,4 @@
+import datetime
 from typing import Iterable
 
 from continuationmonad.typing import Scheduler
@@ -7,27 +8,43 @@ from rxbp.flowabletree.sources.fromrx import FromRx
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.sources.connectable import init_connectable
-from rxbp.flowabletree.sources.fromiterable import init_from_iterable
-from rxbp.flowabletree.sources.fromvalue import init_from_value
 from rxbp.flowabletree.operations.merge.flowable import init_merge
 from rxbp.flowabletree.operations.zip.flowable import init_zip
-from rxbp.flowabletree.sources.scheduleon import init_schedule_on
+from rxbp.flowabletree.from_ import (
+    count as _count,
+    empty as _empty,
+    error as _error,
+    from_iterable as _from_iterable,
+    from_value as _from_value,
+    interval as _interval,
+    schedule_on as _schedule_on,
+    schedule_relative as _schedule_relative,
+    schedule_absolute as _schedule_absolute,
+)
 
 
 def connectable(id, init):
     return init_flowable(child=init_connectable(id, init))
 
 
-def from_iterable(iterable: Iterable):
-    return init_flowable(
-        child=init_from_iterable(iterable=iterable)
-    )
+def count():
+    return init_flowable(_count())
+
+
+def empty():
+    return init_flowable(_empty())
+
+
+def error(exception: Exception):
+    return init_flowable(_error(exception))
+
+
+def from_iterable[U](iterable: Iterable[U]):
+    return init_flowable(_from_iterable(iterable))
 
 
 def from_value(value):
-    return init_flowable(
-        child=init_from_value(value=value),
-    )
+    return init_flowable(_from_value(value))
 
 
 def from_rx(source):
@@ -38,6 +55,10 @@ def from_rx(source):
     )
 
 
+def interval(scheduler: Scheduler, seconds: float):
+    return init_flowable(_interval(scheduler, seconds))
+
+
 def merge(observables: tuple[FlowableNode, ...]):
     return init_flowable(
         child=init_merge(children=observables),
@@ -45,7 +66,15 @@ def merge(observables: tuple[FlowableNode, ...]):
 
 
 def schedule_on(scheduler: Scheduler):
-    return init_flowable(init_schedule_on(scheduler=scheduler))
+    return init_flowable(_schedule_on(scheduler))
+
+
+def schedule_relative(scheduler: Scheduler, duetime: float):
+    return init_flowable(_schedule_relative(scheduler, duetime))
+
+
+def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
+    return init_flowable(_schedule_absolute(scheduler, duetime))
 
 
 def zip(observables: tuple[FlowableNode, ...]):

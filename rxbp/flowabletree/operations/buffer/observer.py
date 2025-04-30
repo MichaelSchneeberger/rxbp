@@ -19,6 +19,7 @@ from rxbp.flowabletree.operations.buffer.states import (
     CompleteState,
     ErrorState,
     LoopActive,
+    LoopActivePopBuffer,
     SendErrorState,
     SendItemAndComplete,
     SendItemAndStartLoop,
@@ -41,6 +42,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
     upstream_cancellable: Cancellable
     loop_cancellation: CancellationState
     weight: int
+    buffer_size: int | None
 
     transition: ShareStateTransition
     lock: Lock
@@ -64,7 +66,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 return self.run()
 
             case SendItemAndComplete():
-                item = self.buffer.pop()
+                item = self.buffer.pop(0)
                 return self.observer.on_next_and_complete(item)
 
             case StopLoop(certificate=certificate):
@@ -95,6 +97,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
             transition = OnNextTransition(
                 child=None,  # type: ignore
                 certificate=certificate,
+                buffer_size=self.buffer_size,
             )
 
             with self.lock:
@@ -115,6 +118,10 @@ class BufferObserver[V](Cancellable, Observer[V]):
                         weight=self.weight,
                     )
 
+                case LoopActivePopBuffer():
+                    self.buffer.pop(0)
+                    r_certificate = certificate
+
                 case LoopActive():
                     r_certificate = certificate
 
@@ -133,6 +140,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
 
         transition = OnNextAndCompleteTransition(
             child=None,  # type: ignore
+            buffer_size=self.buffer_size,
         )
 
         with self.lock:
@@ -140,6 +148,10 @@ class BufferObserver[V](Cancellable, Observer[V]):
             self.transition = transition
 
         match state := transition.get_state():
+            case LoopActivePopBuffer(certificate=certificate):
+                self.buffer.pop(0)
+                return continuationmonad.from_(certificate)
+
             case LoopActive(certificate=certificate):
                 # there are still items in the buffer
                 return continuationmonad.from_(certificate)

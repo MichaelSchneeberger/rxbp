@@ -11,6 +11,7 @@ from rxbp.flowabletree.operations.buffer.states import (
     CancelledState,
     CompleteState,
     ErrorState,
+    LoopActivePopBuffer,
     LoopInactive,
     SendErrorState,
     SendItemAndStartLoop,
@@ -40,21 +41,29 @@ class OnNextTransition(ShareStateTransition):
 
     child: ShareStateTransition
     certificate: ContinuationCertificate
+    buffer_size: int | None
 
     def get_state(self):
         match child_state := self.child.get_state():
-
             case LoopActive(
                 num_items=num_items,
                 is_completed=is_completed,
                 certificate=certificate,
             ):
-                return LoopActive(
-                    num_items=num_items + 1,
-                    is_completed=is_completed,
-                    certificate=certificate,
-                )
-            
+                if self.buffer_size is not None and num_items == self.buffer_size:
+                    return LoopActivePopBuffer(
+                        num_items=num_items,
+                        is_completed=is_completed,
+                        certificate=certificate,
+                    )
+
+                else:
+                    return LoopActive(
+                        num_items=num_items + 1,
+                        is_completed=is_completed,
+                        certificate=certificate,
+                    )
+
             case LoopInactive():
                 return SendItemAndStartLoop(
                     num_items=1,
@@ -73,20 +82,28 @@ class OnNextAndCompleteTransition(ShareStateTransition):
     """Item received, stream is complete"""
 
     child: ShareStateTransition
+    buffer_size: int | None
 
     def get_state(self):
         match child_state := self.child.get_state():
-
             case LoopActive(
                 num_items=num_items,
                 certificate=certificate,
             ):
-                return LoopActive(
-                    num_items=num_items + 1,
-                    is_completed=True,
-                    certificate=certificate,
-                )
-            
+                if self.buffer_size is not None and num_items == self.buffer_size:
+                    return LoopActivePopBuffer(
+                        num_items=num_items,
+                        is_completed=True,
+                        certificate=certificate,
+                    )
+
+                else:
+                    return LoopActive(
+                        num_items=num_items + 1,
+                        is_completed=True,
+                        certificate=certificate,
+                    )
+
             case LoopInactive():
                 return SendItemAndComplete()
 
@@ -115,14 +132,14 @@ class RequestTransition(ShareStateTransition):
 
                 if num_items == 1 and is_completed:
                     return SendItemAndComplete()
-                
+
                 else:
                     return LoopActive(
                         num_items=num_items - 1,
                         is_completed=is_completed,
                         certificate=certificate,
                     )
-                
+
             case ErrorState(exception=exception):
                 return SendErrorState(
                     exception=exception,
@@ -140,7 +157,6 @@ class OnCompletedTransition(ShareStateTransition):
 
     def get_state(self):
         match child_state := self.child.get_state():
-
             case LoopActive(
                 num_items=num_items,
                 certificate=certificate,
@@ -150,7 +166,7 @@ class OnCompletedTransition(ShareStateTransition):
                     is_completed=True,
                     certificate=certificate,
                 )
-            
+
             case LoopInactive():
                 return CompleteState()
 
@@ -170,7 +186,7 @@ class OnErrorTransition(ShareStateTransition):
                     exception=self.exception,
                     certificate=certificate,
                 )
-            
+
             case LoopInactive():
                 return SendErrorState(
                     exception=self.exception,
@@ -189,7 +205,7 @@ class CancelTransition(ShareStateTransition):
         match child_state := self.child.get_state():
             case LoopActive(certificate=certificate):
                 return CancelLoopState(certificate=certificate)
-            
+
             case LoopInactive():
                 return CancelledState()
 

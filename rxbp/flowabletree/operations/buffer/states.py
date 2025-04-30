@@ -22,13 +22,18 @@ class LoopActive(BufferState):
 
 
 @dataclass
-class LoopInactive(BufferState):
-    """Either the loop is not running or it needs to be stopped"""
+class LoopActivePopBuffer(LoopActive):
     pass
 
 
 @dataclass
 class SendItemAndStartLoop(LoopActive):
+    pass
+
+
+@dataclass
+class LoopInactive(BufferState):
+    """Either the loop is not running or it needs to be stopped"""
     pass
 
 

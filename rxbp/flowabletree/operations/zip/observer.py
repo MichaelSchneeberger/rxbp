@@ -61,9 +61,7 @@ class ZipObserver[V](Observer[V]):
                     return certificate
 
                 # all upstream items received
-                case OnNextState():
-                    _, zipped_values = zip(*sorted(state.values.items()))
-
+                case OnNextState(values=values):
                     # backpressure selected upstream flowables
                     hold_back = self.shared.zip_func(state.values)
 
@@ -79,11 +77,12 @@ class ZipObserver[V](Observer[V]):
 
                     handlers = tuple(gen_deferred_handlers())
 
+                    _, zipped_values = zip(*sorted(values.items()))
+
                     if complete_downstream[0]:
-                        certificate = self.shared.downstream.on_next_and_complete(
+                        return self.shared.downstream.on_next_and_complete(
                             zipped_values
                         )
-                        return certificate
 
                     else:
                         _ = yield from self.shared.downstream.on_next(zipped_values)
@@ -123,6 +122,11 @@ class ZipObserver[V](Observer[V]):
                                 cancel_upstream()
 
                         return continuationmonad.from_(certificate)
+
+                case OnNextAndCompleteState(values=values):
+                    _, zipped_values = zip(*sorted(values.items()))
+
+                    return self.shared.downstream.on_next_and_complete(zipped_values)
 
                 case TerminatedStateMixin(certificate=certificate):
                     return certificate

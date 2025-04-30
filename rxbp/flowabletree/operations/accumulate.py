@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+import continuationmonad
 from dataclassabc import dataclassabc
 
 from rxbp.state import State
@@ -13,9 +14,10 @@ from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 
 
 @dataclassabc(frozen=True)
-class MapFlowable[U, V](SingleChildFlowableNode[U, V]):
+class AccumulateFlowable[U, V](SingleChildFlowableNode[U, U]):
     child: FlowableNode[U]
-    func: Callable[[U], V]
+    func: Callable[[V, U], V]
+    init: V
 
     def unsafe_subscribe(
         self,
@@ -25,12 +27,16 @@ class MapFlowable[U, V](SingleChildFlowableNode[U, V]):
         outer_self = self
 
         @dataclass
-        class MapObserver(Observer):
+        class AccumulateObserver(Observer[U]):
+            acc: V
+
             def on_next(self, item: U):
-                return args.observer.on_next(outer_self.func(item))
+                self.acc = outer_self.func(self.acc, item)
+                return args.observer.on_next(self.acc)
 
             def on_next_and_complete(self, item: U):
-                return args.observer.on_next_and_complete(outer_self.func(item))
+                self.acc = outer_self.func(self.acc, item)
+                return args.observer.on_next_and_complete(self.acc)
 
             def on_completed(self):
                 return args.observer.on_completed()
@@ -38,23 +44,22 @@ class MapFlowable[U, V](SingleChildFlowableNode[U, V]):
             def on_error(self, exception: Exception):
                 return args.observer.on_error(exception)
 
-            # on_completed = args.observer.on_completed
-            # on_error = args.observer.on_error
-
         return self.child.unsafe_subscribe(
             state=state,
             args=SubscribeArgs(
-                observer=MapObserver(),
+                observer=AccumulateObserver(acc=self.init),
                 schedule_weight=args.schedule_weight,
             ),
         )
 
 
-def init_map_flowable[U, V](
+def init_accumulate_flowable[U, V](
     child: FlowableNode[U],
-    func: Callable[[U], V],
+    func: Callable[[V, U], V],
+    init: V,
 ):
-    return MapFlowable[U, V](
+    return AccumulateFlowable[U, V](
         child=child,
         func=func,
+        init=init,
     )
