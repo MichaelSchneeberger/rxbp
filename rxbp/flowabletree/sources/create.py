@@ -32,7 +32,7 @@ class Create[V](FlowableNode[V]):
             )
         
         else:
-            source = self.func(args.observer)
+            source = continuationmonad.from_(None).flat_map(lambda _: self.func(args.observer))
 
         cancellable = init_cancellation_state()
 

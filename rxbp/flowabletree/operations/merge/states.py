@@ -22,11 +22,18 @@ class MergeState:
     pass
 
 
+@dataclass(frozen=True, slots=True)
+class InitState(MergeState):
+    """No subscriptions"""
+
+
 @dataclass(frozen=True)
 class ActiveStateMixin(MergeState):
     # number of completed upstream observables
     # State is active as long as n_completed < n_children
     n_completed: int
+    
+    n_children: int
 
     # upstream continuation certificates
     certificates: tuple[ContinuationCertificate, ...]
@@ -46,7 +53,12 @@ class AwaitUpstreamStateMixin(ActiveStateMixin):
 
 
 @dataclass(frozen=True, slots=True)
-class InitState(AwaitUpstreamStateMixin):
+class FirstSubscription(AwaitUpstreamStateMixin):
+    certificate: ContinuationCertificate
+
+
+@dataclass(frozen=True, slots=True)
+class SubscribedState(AwaitUpstreamStateMixin):
     """Await first upstream item"""
 
 

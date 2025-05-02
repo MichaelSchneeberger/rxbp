@@ -46,7 +46,11 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def connections(self) -> dict: ...
+    def connections(self) -> dict: ...    # remove?
+
+    @property
+    @abstractmethod
+    def discovered_connectables(self) -> list: ...
 
     @property
     @abstractmethod
@@ -68,6 +72,7 @@ class StateImpl(State):
     connectable_observers: dict
     subscriber_count: dict
     certificate: ContinuationCertificate | None
+    discovered_connectables: list
 
     @override
     def copy(self, /, **changes):
@@ -110,6 +115,7 @@ def init_state(
         shared_observers=shared_observers,
         shared_weights=shared_weights,
         connections=connections,
+        discovered_connectables=[],
         connectable_observers=connectable_observers,
         certificate=certificate,
     )

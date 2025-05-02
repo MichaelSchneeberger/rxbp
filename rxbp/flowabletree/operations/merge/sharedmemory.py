@@ -15,7 +15,6 @@ from rxbp.flowabletree.operations.merge.statetransitions import CancelTransition
 class MergeSharedMemory(Cancellable):
     downstream: Observer
     transition: MergeStateTransition
-    n_children: int
     lock: Lock
     cancellables: dict[int, Cancellable]
 
@@ -23,7 +22,6 @@ class MergeSharedMemory(Cancellable):
         transition = CancelTransition(
             child=None,  # type: ignore
             certificate=certificate,
-            n_children=self.n_children,
         )
 
         with self.lock:

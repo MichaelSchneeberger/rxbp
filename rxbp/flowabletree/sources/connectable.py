@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from threading import RLock
+from threading import Lock, RLock
 from typing import override
 
 from dataclassabc import dataclassabc
@@ -25,6 +25,18 @@ class ConnectableObserver[V](Observer):
     certificate: ContinuationCertificate
     is_completed: bool
     exception: Exception | None
+
+    def connect(self, state: State, source: FlowableNode):
+        state, result = source.unsafe_subscribe(
+            state=state,  # .copy(connectable_observers={}),
+            # state.copy(certificate=result.certificate),
+            args=SubscribeArgs(
+                observer=self,
+                schedule_weight=1,
+            ),
+        )
+        self.certificate = result.certificate
+        return state
 
     def on_next(self, value: V):
         with self.lock:
@@ -52,9 +64,15 @@ class ConnectableObserver[V](Observer):
 
 
 @dataclassabc(frozen=True)
-class ConnectableImpl[V](FlowableNode[V]):
+class ConnectableFlowable[V](FlowableNode[V]):
     id: None
     init_item: V
+
+    def discover(self, state: State):
+        state = state.copy(
+            discovered_connectables=state.discovered_connectables + [self]
+        )
+        return state.connections[self].discover(state)
 
     @override
     def unsafe_subscribe(
@@ -63,7 +81,7 @@ class ConnectableImpl[V](FlowableNode[V]):
         args: SubscribeArgs[V],
     ) -> tuple[State, SubscriptionResult]:
         observer = ConnectableObserver(
-            lock=state.lock,
+            lock=Lock(),
             downstream=args.observer,
             item_received=True,
             item=self.init_item,
@@ -71,13 +89,12 @@ class ConnectableImpl[V](FlowableNode[V]):
             exception=None,
             certificate=None,
         )
-        
-        if self not in state.connections:
-            raise AssertionError("Connectable observable is not connected.")
+
+        # if self not in state.connections:
+        #     raise AssertionError("Connectable observable is not connected.")
 
         state = state.copy(
-            connectable_observers=state.connectable_observers
-            | {state.connections[self]: observer}
+            connectable_observers=state.connectable_observers | {self: observer}
         )
 
         @do()
@@ -116,8 +133,9 @@ class ConnectableImpl[V](FlowableNode[V]):
 
         certificate = continuationmonad.fork(
             source=(
-                continuationmonad.from_(None)
-                .flat_map(lambda _: schedule_and_send_next())
+                continuationmonad.from_(None).flat_map(
+                    lambda _: schedule_and_send_next()
+                )
             ),
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
@@ -134,4 +152,4 @@ class ConnectableImpl[V](FlowableNode[V]):
 
 
 def init_connectable[V](id, init_item):
-    return ConnectableImpl[V](id, init_item)
+    return ConnectableFlowable[V](id, init_item)

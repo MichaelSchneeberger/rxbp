@@ -3,11 +3,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from rxbp.state import State
+from rxbp.flowabletree.assignweightmixin import AssignWeightMixin
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 
 
-class FlowableNode[U](ABC):
+class FlowableNode[U](AssignWeightMixin):
     @abstractmethod
     def unsafe_subscribe(
         self,
@@ -35,31 +36,25 @@ class FlowableNode[U](ABC):
         main_result = result
 
         while state.connectable_observers:
-            for connectable, observer in state.connectable_observers.items():
-                # state = state.copy(connectable_observers={})
-                state, result = connectable.unsafe_subscribe(
-                    state=state.copy(connectable_observers={}),
-                    # state.copy(certificate=result.certificate),
-                    args=SubscribeArgs(
-                        observer=observer,
-                        schedule_weight=1,
-                    ),
-                )
-                observer.certificate = result.certificate
+            for source, observer in state.connectable_observers.items():
+                state = observer.connect(state, source)
+                # # state = state.copy(connectable_observers={})
+                # state, result = connectable.unsafe_subscribe(
+                #     state=state.copy(connectable_observers={}),
+                #     # state.copy(certificate=result.certificate),
+                #     args=SubscribeArgs(
+                #         observer=observer,
+                #         schedule_weight=1,
+                #     ),
+                # )
+                # observer.certificate = result.certificate
 
         return main_result
 
-    def discover(
-        self,
-        state: State,
-    ) -> State:
+    def discover(self, state: State) -> State:
         return state
 
-    def assign_weights(
-        self,
-        state: State,
-        weight: int,
-    ) -> State:
+    def assign_weights(self, state: State, weight: int) -> State:
         return state
 
 

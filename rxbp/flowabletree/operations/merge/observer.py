@@ -59,7 +59,6 @@ class MergeObserver[V](Observer[V]):
                     child=None,  # type: ignore
                     id=self.id,
                     certificate=certificate,
-                    n_children=self.shared.n_children,
                 )
 
                 with self.shared.lock:
@@ -124,7 +123,6 @@ class MergeObserver[V](Observer[V]):
             child=None,  # type: ignore
             id=self.id,
             value=value,
-            n_children=self.shared.n_children,
         )
 
         with self.shared.lock:
@@ -137,7 +135,6 @@ class MergeObserver[V](Observer[V]):
     def on_completed(self):
         transition = OnCompletedTransition(
             child=None,  # type: ignore
-            n_children=self.shared.n_children,
             id=self.id,
         )
 
@@ -159,7 +156,6 @@ class MergeObserver[V](Observer[V]):
         transition = OnErrorTransition(
             child=None,  # type: ignore
             id=self.id,
-            n_children=self.shared.n_children,
             exception=exception,
         )
 

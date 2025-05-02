@@ -17,7 +17,6 @@ class MergeCancellable(Cancellable):
         transition = CancelTransition(
             child=None,  # type: ignore
             certificate=certificate,
-            n_children=self.shared.n_children,
         )
 
         with self.shared.lock:

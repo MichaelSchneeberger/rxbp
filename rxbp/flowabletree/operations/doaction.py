@@ -41,6 +41,13 @@ class DoActionFlowable[U](SingleChildFlowableNode[U, U]):
                 if outer_self.on_next_and_complete:
                     outer_self.on_next_and_complete(item)
 
+                else:
+                    if outer_self.on_next:
+                        outer_self.on_next(item)
+
+                    if outer_self.on_completed:
+                        outer_self.on_completed()
+
                 return args.observer.on_next_and_complete(item)
 
             def on_completed(self) -> ContinuationMonad[ContinuationCertificate]:

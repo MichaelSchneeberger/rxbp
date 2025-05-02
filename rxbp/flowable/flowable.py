@@ -10,6 +10,7 @@ from continuationmonad.typing import Scheduler, MainScheduler
 from rxbp.flowabletree.operations.reduce import init_reduce_flowable
 from rxbp.flowabletree.operations.repeatfirst import init_repeat_first_flowable
 from rxbp.flowabletree.operations.tolist import init_to_list_flowable
+from rxbp.flowabletree.subscription import StandardSubscription
 from rxbp.state import State, init_state
 from rxbp.flowabletree.operations.accumulate import init_accumulate_flowable
 from rxbp.flowabletree.operations.defaultifempty import init_default_if_empty_flowable
@@ -182,17 +183,15 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
                 state = init_state(
                     subscription_trampoline=subscribe_trampoline,
                     scheduler=scheduler,
-                    connections={c.child: s for c, s in connections.items()},
+                    # connections={c.child: s for c, s in connections.items()},
                 )
 
-                results = subscribe(
-                    sources=(self.child,),
-                    sinks=(
-                        SubscribeArgs(
-                            observer=observer,
-                            schedule_weight=1,
-                        ),
-                    ),
+                state, results = subscribe(
+                    subscriptions=(StandardSubscription(
+                        source=self.child, 
+                        sink=observer,
+                    ),),
+                    connections={c.child: s for c, s in connections.items()},
                     state=state,
                 )
 

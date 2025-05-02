@@ -14,7 +14,9 @@ from rxbp.flowabletree.operations.merge.states import (
     AwaitDownstreamStateMixin,
     AwaitUpstreamStateMixin,
     CancelledStopRequestState,
+    FirstSubscription,
     InitState,
+    SubscribedState,
     CancelledAwaitRequestState,
     CancelledState,
     HasTerminatedState,
@@ -125,6 +127,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
                 n_completed=n_completed,
+                n_children=n_children,
                 certificates=certificates,
             ):
                 return OnNextState(
@@ -132,6 +135,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
                     observer=self.observer,
                     on_next_calls=tuple(),
                     n_completed=n_completed,
+                    n_children=n_children,
                     certificates=certificates,
                 )
 
@@ -139,6 +143,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
                 on_next_calls=on_next_calls,
                 n_completed=n_completed,
                 certificates=certificates,
+                n_children=n_children,
             ):
                 # backpressure on_next call
 
@@ -146,12 +151,12 @@ class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
                     id=self.id,
                     value=self.value,
                     observer=self.observer,
-                    # completed=False,
                 )
                 n_on_next_calls = on_next_calls + (pre_state,)
 
                 return KeepWaitingState(
                     n_completed=n_completed,
+                    n_children=n_children,
                     on_next_calls=n_on_next_calls,
                     certificate=certificates[0],
                     certificates=certificates[1:],
@@ -166,15 +171,15 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransit
     child: MergeStateTransition
     id: UpstreamID
     value: U
-    n_children: int
 
     def get_state(self):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
                 n_completed=n_completed,
+                n_children=n_children,
                 certificates=certificates,
             ):
-                if self.n_children == n_completed + 1:
+                if n_children == n_completed + 1:
                     return OnNextAndCompleteState(
                         value=self.value,
                         certificates={},
@@ -185,14 +190,15 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransit
                         value=self.value,
                         observer=None,
                         on_next_calls=tuple(),
-                        # certificate=certificates[0],
                         n_completed=n_completed + 1,
+                        n_children=n_children,
                         certificates=certificates,
                     )
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
                 n_completed=n_completed,
+                n_children=n_children,
                 certificates=certificates,
             ):
                 # backpressure on_next call
@@ -201,12 +207,12 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransit
                     id=self.id,
                     value=self.value,
                     observer=None,
-                    # completed=True,
                 )
                 n_on_next_calls = on_next_calls + (pre_state,)
 
                 return KeepWaitingState(
                     n_completed=n_completed,
+                    n_children=n_children,
                     on_next_calls=n_on_next_calls,
                     certificate=certificates[0],
                     certificates=certificates[1:],
@@ -223,13 +229,13 @@ class RequestTransition(MergeStateTransition):
     id: UpstreamID
     child: MergeStateTransition
     certificate: ContinuationCertificate | None
-    n_children: int
 
     def get_state(self):
         match previous_state := self.child.get_state():
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
                 n_completed=n_completed,
+                n_children=n_children,
                 certificates=certificates,
             ):
                 match on_next_calls:
@@ -246,7 +252,7 @@ class RequestTransition(MergeStateTransition):
                             # is on_next_and_complete
 
                             # last element in buffer
-                            if len(others) == 0 and self.n_children == n_completed + 1:
+                            if len(others) == 0 and n_children == n_completed + 1:
                                 return OnNextAndCompleteState(
                                     certificates={},
                                     value=value,
@@ -258,6 +264,7 @@ class RequestTransition(MergeStateTransition):
                                     value=value,
                                     on_next_calls=tuple(others),
                                     n_completed=n_completed,
+                                    n_children=n_children,
                                     certificates=certificates + (self.certificate,)
                                     if self.certificate
                                     else certificates,
@@ -269,6 +276,7 @@ class RequestTransition(MergeStateTransition):
                                 observer=observer,
                                 on_next_calls=tuple(others),
                                 n_completed=n_completed,
+                                n_children=n_children,
                                 certificates=certificates + (self.certificate,)
                                 if self.certificate
                                 else certificates,
@@ -280,6 +288,7 @@ class RequestTransition(MergeStateTransition):
                         if self.certificate:
                             return AwaitOnNextState(
                                 n_completed=n_completed,
+                                n_children=n_children,
                                 certificate=self.certificate,
                                 certificates=certificates,
                             )
@@ -287,6 +296,7 @@ class RequestTransition(MergeStateTransition):
                         else:
                             return AwaitOnNextState(
                                 n_completed=n_completed,
+                                n_children=n_children,
                                 certificate=certificates[0],
                                 certificates=certificates[1:],
                             )
@@ -314,20 +324,21 @@ class RequestTransition(MergeStateTransition):
 class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: UpstreamID
-    n_children: int
 
     def get_state(self):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
                 n_completed=n_completed,
+                n_children=n_children,
                 certificates=certificates,
             ):
-                if self.n_children == n_completed + 1:
+                if n_children == n_completed + 1:
                     return OnCompletedState(certificates={})
 
                 else:
                     return AwaitOnNextState(
                         n_completed=n_completed + 1,
+                        n_children=n_children,
                         certificate=certificates[0],
                         certificates=certificates[1:],
                     )
@@ -335,11 +346,13 @@ class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
                 n_completed=n_completed,
+                n_children=n_children,
                 certificates=certificates,
             ):
                 return KeepWaitingState(
                     on_next_calls=on_next_calls,
                     n_completed=n_completed + 1,
+                    n_children=n_children,
                     certificate=certificates[0],
                     certificates=certificates[1:],
                 )
@@ -352,13 +365,15 @@ class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
 class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: UpstreamID
-    n_children: int
     exception: Exception
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitUpstreamStateMixin(certificates=certificates):
-                awaiting_ids = tuple(range(self.n_children))
+            case AwaitUpstreamStateMixin(
+                certificates=certificates,
+                n_children=n_children,
+            ):
+                awaiting_ids = tuple(range(n_children))
 
                 return OnErrorState(
                     exception=self.exception,
@@ -366,16 +381,17 @@ class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
                 )
 
             case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls, certificates=certificates
+                on_next_calls=on_next_calls, 
+                certificates=certificates,
+                n_children=n_children,
             ):
                 received_ids = tuple(call.id for call in on_next_calls)
                 awaiting_ids = tuple(
-                    id for id in range(self.n_children) if id not in received_ids
+                    id for id in range(n_children) if id not in received_ids
                 )
                 return OnErrorState(
                     exception=self.exception,
                     certificates=dict(zip(awaiting_ids, certificates)),
-                    # awaiting_ids=awaiting_ids,
                 )
 
             case _:
@@ -385,16 +401,16 @@ class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
 @dataclassabc(frozen=False)
 class CancelTransition(MergeStateTransition):
     child: MergeStateTransition
-    n_children: int
+    # n_children: int
     certificate: ContinuationCertificate
 
     def get_state(self):
         match child_state := self.child.get_state():
             case AwaitUpstreamStateMixin(
-                # on_next_calls=on_next_calls,
                 certificates=certificates,
+                n_children=n_children,
             ):
-                awaiting_ids = tuple(range(self.n_children))
+                awaiting_ids = tuple(range(n_children))
                 certificates = certificates + (self.certificate,)
 
                 return CancelledState(
@@ -404,10 +420,11 @@ class CancelTransition(MergeStateTransition):
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
                 certificates=certificates,
+                n_children=n_children,
             ):
                 received_ids = tuple(call.id for call in on_next_calls)
                 awaiting_ids = tuple(
-                    id for id in range(self.n_children) if id not in received_ids
+                    id for id in range(n_children) if id not in received_ids
                 )
                 return CancelledAwaitRequestState(
                     certificate=self.certificate,
@@ -433,33 +450,35 @@ class SubscribeTransition(MergeStateTransition):
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitDownstreamStateMixin():
+            case InitState():
+                return FirstSubscription(
+                    n_completed=0,
+                    n_children=1,
+                    certificates=tuple(),
+                    certificate=self.certificate,
+                )
+
+            case AwaitUpstreamStateMixin(n_children=n_children):
+                return SubscribedState(
+                    n_completed=state.n_completed,
+                    certificates=state.certificates + (self.certificate,),
+                    n_children=n_children + 1,
+                )
+
+            case AwaitDownstreamStateMixin(n_children=n_children):
                 return AwaitDownstreamStateMixin(
                     n_completed=state.n_completed,
                     certificates=state.certificates + (self.certificate,),
                     on_next_calls=state.on_next_calls,
-                )
-
-            case AwaitItemsStateMixin():
-                return InitState(
-                    n_completed=state.n_completed,
-                    certificates=state.certificates + (self.certificate,),
+                    n_children=n_children + 1,
                 )
 
             case TerminatedStateMixin(
-                certificates=certificates, awaiting_ids=awaiting_ids
+                certificates=certificates,
             ):
-                certificates = certificates + (self.certificate,)
-
                 return TerminatedStateMixin(
-                    certificates=certificates, awaiting_ids=awaiting_ids + (self.id,)
+                    certificates=certificates | {self.id: self.certificate},
                 )
-
-            case CompletedBaseState():
-                return CompletedBaseState()
-
-            case CancelledState(certificates=certificates):
-                return CancelledState(certificates | {self.id: self.certificate})
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
