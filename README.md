@@ -18,24 +18,21 @@
 ``` python
 import rxbp
 
-# Defines a flowable that emits up to 7 elements
-range7 = rxbp.from_iterable(range(7))
+source = rxbp.from_iterable(("Alpha", "Beta", "Gamma", "Delta", "Epsilon"))
 
-# Defines a shared flowable that emits up to 5 elements
-# The shared operator ensures that the downstream flowable is subscribed once
-range5 = rxbp.from_iterable(range(3)).share()
+flowable = (
+    source
+    .map(lambda s: len(s))
+    .filter(lambda i: i >= 5)
+    .do_action(on_next=lambda v: print(f'Received {v}'))
+)
 
-# Zip elements of the three flowables
-flowable = rxbp.zip((range5, range7, range5))
-
-# Run flowable and collect received items in a list
-result = flowable.run()
-
-# The output will be [(0, 0, 0), (1, 1, 1), (2, 2, 2)]
-print(result)
+# execute the flowable
+flowable.run()
 ```
 
-<!-- ## RxPY Compatibility -->
+## Share Flowables
+
 
 ## Operations
 
@@ -91,3 +88,4 @@ item in pairs in a strict sequence
 Below are some references related to this project:
 
 * [continuationmonad](https://github.com/MichaelSchneeberger/continuationmonad/) is a Python library that implements stack-safe continuations based on schedulers.
+<!-- * [donotation](https://github.com/MichaelSchneeberger/continuationmonad/) is a Python library that implements stack-safe continuations based on schedulers. -->
