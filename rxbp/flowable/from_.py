@@ -17,6 +17,7 @@ from rxbp.flowabletree.from_ import (
     from_iterable as _from_iterable,
     from_value as _from_value,
     interval as _interval,
+    repeat_value as _repeat,
     schedule_on as _schedule_on,
     schedule_relative as _schedule_relative,
     schedule_absolute as _schedule_absolute,
@@ -62,6 +63,12 @@ def interval(scheduler: Scheduler, seconds: float):
 def merge(observables: tuple[FlowableNode, ...]):
     return init_flowable(
         child=init_merge(children=observables),
+    )
+
+
+def repeat(value):
+    return init_flowable(
+        child=_repeat(value=value),
     )
 
 

@@ -39,10 +39,8 @@ def error(exception: Exception):
 
 
 def from_iterable[U](iterable: Iterable[U]):
-    iterator = iter(iterable)
-
     @do()
-    def schedule_and_send_next(current_item: U, observer: Observer, iterator=iterator):
+    def schedule_and_send_next(current_item: U, observer: Observer, iterator):
         try:
             next_item, has_item = next(iterator), True
 
@@ -59,7 +57,9 @@ def from_iterable[U](iterable: Iterable[U]):
         else:
             return observer.on_next_and_complete(current_item)
 
-    def start_procedure(observer: Observer, iterator=iterator):
+    def start_procedure(observer: Observer):
+        iterator = iter(iterable)
+
         try:
             next_item = next(iterator)
             return schedule_and_send_next(next_item, observer, iterator)
@@ -96,10 +96,10 @@ def interval(scheduler: Scheduler, seconds: float):
     )
 
 
-def repeat_value[U](item: U):
+def repeat_value[U](value: U):
     @do()
-    def schedule_and_send_item(observer: Observer):
-        yield observer.on_next(item)
+    def schedule_and_send_item(observer: Observer[U]):
+        yield observer.on_next(value)
 
         yield from continuationmonad.schedule_trampoline()
 

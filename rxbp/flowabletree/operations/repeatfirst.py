@@ -25,6 +25,7 @@ class RepeatFirstFlowable[U](SingleChildFlowableNode[U, U]):
         state: State,
         args: SubscribeArgs[U],
     ) -> tuple[State, SubscriptionResult]:
+        
         @dataclass
         class RepeatFirstObserver(Observer):
             def _fork_continuation(self, item: U):

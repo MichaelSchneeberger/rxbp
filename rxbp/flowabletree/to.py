@@ -146,7 +146,7 @@ def to_rx[U](source: FlowableNode[U]) -> RxObservable[U]:
         subscribe_trampoline = continuationmonad.init_trampoline()
 
         @dataclass()
-        class MainObserver(Observer[U]):
+        class RxBPObserver(Observer[U]):
             def on_next(self, value: U):
                 observer.on_next(value)
                 return continuationmonad.from_(None)
@@ -174,8 +174,6 @@ def to_rx[U](source: FlowableNode[U]) -> RxObservable[U]:
                 )
                 return continuationmonad.from_(certificate)
 
-        observer = MainObserver()
-
         def trampoline_task():
             state = init_state(
                 subscription_trampoline=subscribe_trampoline,
@@ -185,7 +183,7 @@ def to_rx[U](source: FlowableNode[U]) -> RxObservable[U]:
             result = source.subscribe(
                 state=state,
                 args=SubscribeArgs(
-                    observer=observer,
+                    observer=RxBPObserver(),
                     schedule_weight=1,
                 ),
             )

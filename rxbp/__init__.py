@@ -7,6 +7,7 @@ from rxbp.flowable.from_ import (
     from_rx as _from_rx,
     interval as _interval,
     merge as _merge,
+    repeat as _repeat,
     schedule_on as _schedule_on,
     schedule_relative as _schedule_relative,
     schedule_absolute as _schedule_absolute,
@@ -25,6 +26,7 @@ from_value = _from_value
 from_rx = _from_rx
 interval = _interval
 merge = _merge
+repeat = _repeat
 schedule_on = _schedule_on
 schedule_relative = _schedule_relative
 schedule_absolute = _schedule_absolute

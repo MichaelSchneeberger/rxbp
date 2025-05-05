@@ -72,9 +72,7 @@ class FlatMapObserver[V](Observer[V]):
         return continuationmonad.from_(result.certificate)
 
     def on_next(self, value: V):
-        # print('on_next')
         def on_next_subscription(_, handler: DeferredHandler):
-            # print('on_next_subscription')
             return self._on_next(value, handler)
 
         return continuationmonad.defer(on_next_subscription)

@@ -163,7 +163,6 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 raise Exception(f"Unexpected state {state}")
 
     def on_completed(self):
-        print("on completed")
         transition = OnCompletedTransition(
             child=None,  # type: ignore
         )

@@ -7,9 +7,13 @@ from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
-from rxbp.flowabletree.from_ import count as _count
+from rxbp.flowabletree.from_ import (
+    count as _count,
+    repeat_value as _repeat_value,
+)
 from rxbp.flowabletree.operations.reduce import init_reduce_flowable
-from rxbp.flowabletree.operations.repeatfirst import init_repeat_first_flowable
+
+# from rxbp.flowabletree.operations.repeatfirst import init_repeat_first_flowable
 from rxbp.flowabletree.operations.tolist import init_to_list_flowable
 from rxbp.flowabletree.operations.accumulate import init_accumulate_flowable
 from rxbp.flowabletree.operations.defaultifempty import init_default_if_empty_flowable
@@ -64,6 +68,9 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
                 func=func,
             )
         )
+    
+    def flatten(self):
+        return self.flat_map(lambda f: f)
 
     def last(self):
         return self.to_list(size=1).map(lambda v: v[0])
@@ -80,8 +87,15 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def reduce(self, func):
         return self.copy(child=init_reduce_flowable(self.child, func))
 
+    def repeat(self, count: int | None = None):
+        return (
+            self.copy(child=_repeat_value(self))
+            .take(count)
+            .flatten()
+        )
+
     def repeat_first(self):
-        return self.copy(child=init_repeat_first_flowable(child=self.child))
+        return self.first().flat_map(lambda v: _repeat_value(v))
 
     def share(self):
         return self.copy(
@@ -102,7 +116,10 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
             child=init_skip_while_flowable(child=self.child, predicate=predicate)
         )
 
-    def take(self, count: int):
+    def take(self, count: int | None = None):
+        if count is None:
+            return self
+
         return (
             self.zip_with_index().take_while(lambda v: v[1] < count).map(lambda v: v[0])
         )
