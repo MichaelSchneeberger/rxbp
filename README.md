@@ -11,7 +11,14 @@
 - **RxPY compatibility**: interoperates with [RxPY](https://github.com/ReactiveX/RxPY/tree/master), bridging classic observables and backpressure-aware *Flowables*.
 - **Favor usability** - Favor an implementation that is simple, safe, and user-friendly, while accepting some computational overhead.
 
-<!-- ## Installation -->
+## Installation
+
+You can install *rxbp* using pip:
+
+```
+pip install rxbp
+```
+
 
 ## Example
 
