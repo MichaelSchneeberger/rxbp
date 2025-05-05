@@ -14,7 +14,7 @@ from rxbp.flowabletree.subscription import StandardSubscription
 from rxbp.state import State, init_state
 from rxbp.flowabletree.operations.accumulate import init_accumulate_flowable
 from rxbp.flowabletree.operations.defaultifempty import init_default_if_empty_flowable
-from rxbp.flowabletree.operations.doaction import init_do_action_flowable
+from rxbp.flowabletree.operations.doaction import init_tap_flowable
 from rxbp.flowabletree.operations.filter import init_filter_flowable
 from rxbp.flowabletree.operations.map import init_map_flowable
 from rxbp.flowabletree.operations.skipwhile import init_skip_while_flowable
@@ -50,19 +50,6 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
             child=init_default_if_empty_flowable(
                 child=self.child,
                 value=value,
-            )
-        )
-
-    def do_action(
-        self, on_next=None, on_next_and_completed=None, on_completed=None, on_error=None
-    ):
-        return self.copy(
-            child=init_do_action_flowable(
-                self.child,
-                on_next,
-                on_next_and_completed,
-                on_completed,
-                on_error,
             )
         )
 
@@ -130,6 +117,19 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def take_while(self, predicate):
         return self.copy(
             child=init_take_while_flowable(child=self.child, predicate=predicate)
+        )
+    
+    def tap(
+        self, on_next=None, on_next_and_completed=None, on_completed=None, on_error=None
+    ):
+        return self.copy(
+            child=init_tap_flowable(
+                self.child,
+                on_next,
+                on_next_and_completed,
+                on_completed,
+                on_error,
+            )
         )
 
     def to_list(self, size: int | None = None):

@@ -15,7 +15,7 @@ from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 
 
 @dataclassabc(frozen=True)
-class DoActionFlowable[U](SingleChildFlowableNode[U, U]):
+class TapFlowable[U](SingleChildFlowableNode[U, U]):
     child: FlowableNode[U]
     on_next: Callable[[U], None] | None
     on_next_and_complete: Callable[[U], None] | None
@@ -30,7 +30,7 @@ class DoActionFlowable[U](SingleChildFlowableNode[U, U]):
         outer_self = self
 
         @dataclass
-        class DoActionObserver(Observer):
+        class TapObserver(Observer):
             def on_next(self, item: U):
                 if outer_self.on_next:
                     outer_self.on_next(item)
@@ -65,20 +65,20 @@ class DoActionFlowable[U](SingleChildFlowableNode[U, U]):
         return self.child.unsafe_subscribe(
             state=state,
             args=SubscribeArgs(
-                observer=DoActionObserver(),
+                observer=TapObserver(),
                 schedule_weight=args.schedule_weight,
             ),
         )
 
 
-def init_do_action_flowable[U](
+def init_tap_flowable[U](
     child: FlowableNode[U],
     on_next: Callable[[U], None] | None = None,
     on_next_and_complete: Callable[[U], None] | None = None,
     on_completed: Callable[[], None] | None = None,
     on_error: Callable[[Exception], None] | None = None,
 ):
-    return DoActionFlowable[U](
+    return TapFlowable[U](
         child=child,
         on_next=on_next,
         on_next_and_complete=on_next_and_complete,
