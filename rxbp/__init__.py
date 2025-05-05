@@ -12,7 +12,10 @@ from rxbp.flowable.from_ import (
     schedule_absolute as _schedule_absolute,
     zip as _zip,
 )
-from rxbp.flowable.to import to_rx as _to_rx
+from rxbp.flowable.to import (
+    to_rx as _to_rx,
+    run as _run,
+)
 
 connectable = _connectable
 empty = _empty
@@ -27,4 +30,5 @@ schedule_relative = _schedule_relative
 schedule_absolute = _schedule_absolute
 zip = _zip
 
+run = _run
 to_rx = _to_rx
