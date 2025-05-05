@@ -22,13 +22,16 @@ connectable = _connectable
 empty = _empty
 error = _error
 from_iterable = _from_iterable
+from_ = _from_iterable
 from_value = _from_value
+return_ = _from_value
 from_rx = _from_rx
 interval = _interval
 merge = _merge
 repeat = _repeat
 schedule_on = _schedule_on
 schedule_relative = _schedule_relative
+delay = _schedule_relative
 schedule_absolute = _schedule_absolute
 zip = _zip
 

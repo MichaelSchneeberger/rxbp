@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from typing import Callable, override
 
-from dataclassabc import dataclassabc
-from donotation import do
-
 import continuationmonad
-from continuationmonad.typing import ContinuationMonad, ContinuationCertificate
+from continuationmonad.typing import (
+    ContinuationMonad,
+    ContinuationCertificate,
+    Scheduler,
+)
 
 from rxbp.cancellable import init_cancellation_state
 from rxbp.flowabletree.observer import Observer
@@ -17,7 +18,7 @@ from rxbp.flowabletree.nodes import FlowableNode
 
 @dataclass(frozen=True)
 class Create[V](FlowableNode[V]):
-    func: Callable[[Observer], ContinuationMonad[ContinuationCertificate]]
+    func: Callable[[Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]]
 
     @override
     def unsafe_subscribe(
@@ -25,21 +26,12 @@ class Create[V](FlowableNode[V]):
         state: State,
         args: SubscribeArgs[V],
     ) -> tuple[State, SubscriptionResult]:
-        # if state.scheduler:
-        #     source = (
-        #         continuationmonad.schedule_on(state.scheduler)
-        #         .flat_map(lambda _: self.func(args.observer))
-        #     )
-        # else:
-
-        source = continuationmonad.from_(None).flat_map(
-            lambda _: self.func(args.observer)
-        )
-
         cancellable = init_cancellation_state()
 
         certificate = continuationmonad.fork(
-            source=source,
+            source=continuationmonad.from_(None).flat_map(
+                lambda _: self.func(args.observer, state.scheduler)
+            ),
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
@@ -54,5 +46,5 @@ class Create[V](FlowableNode[V]):
         return state, result
 
 
-def init_create(func: Callable[[Observer], ContinuationMonad[ContinuationCertificate]]):
+def init_create(func: Callable[[Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]]):
     return Create(func=func)

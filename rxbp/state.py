@@ -12,7 +12,7 @@ from continuationmonad.typing import Scheduler, Trampoline, ContinuationCertific
 class State(ABC):
     @property
     @abstractmethod
-    def lock(self) -> RLock:
+    def lock(self) -> RLock:        # Remove?
         ...
 
     @property

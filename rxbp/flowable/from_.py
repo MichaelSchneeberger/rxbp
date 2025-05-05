@@ -56,8 +56,8 @@ def from_rx(source):
     )
 
 
-def interval(scheduler: Scheduler, seconds: float):
-    return init_flowable(_interval(scheduler, seconds))
+def interval(seconds: float, scheduler: Scheduler | None = None):
+    return init_flowable(_interval(seconds, scheduler))
 
 
 def merge(observables: tuple[FlowableNode, ...]):
@@ -72,16 +72,16 @@ def repeat(value):
     )
 
 
-def schedule_on(scheduler: Scheduler):
+def schedule_on(scheduler: Scheduler | None = None):
     return init_flowable(_schedule_on(scheduler))
 
 
-def schedule_relative(scheduler: Scheduler, duetime: float):
-    return init_flowable(_schedule_relative(scheduler, duetime))
+def schedule_relative(duetime: float, scheduler: Scheduler | None = None):
+    return init_flowable(_schedule_relative(duetime, scheduler))
 
 
-def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
-    return init_flowable(_schedule_absolute(scheduler, duetime))
+def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler | None = None):
+    return init_flowable(_schedule_absolute(duetime, scheduler))
 
 
 def zip(observables: tuple[FlowableNode, ...]):
