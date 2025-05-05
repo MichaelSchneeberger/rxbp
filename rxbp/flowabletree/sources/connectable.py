@@ -64,7 +64,7 @@ class ConnectableObserver[V](Observer):
 
 
 @dataclassabc(frozen=True)
-class ConnectableFlowable[V](FlowableNode[V]):
+class ConnectableFlowableNode[V](FlowableNode[V]):
     id: None
     init_item: V
 
@@ -152,4 +152,4 @@ class ConnectableFlowable[V](FlowableNode[V]):
 
 
 def init_connectable[V](id, init_item):
-    return ConnectableFlowable[V](id, init_item)
+    return ConnectableFlowableNode[V](id, init_item)

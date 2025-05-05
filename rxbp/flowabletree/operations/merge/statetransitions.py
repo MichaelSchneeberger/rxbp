@@ -211,7 +211,7 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransit
                 n_on_next_calls = on_next_calls + (pre_state,)
 
                 return KeepWaitingState(
-                    n_completed=n_completed,
+                    n_completed=n_completed + 1,
                     n_children=n_children,
                     on_next_calls=n_on_next_calls,
                     certificate=certificates[0],
@@ -246,13 +246,13 @@ class RequestTransition(MergeStateTransition):
                         ),
                         *others,
                     ]:
-                        # backpressure on_next call exist
+                        # backpressured upstream exist
 
                         if observer is None:
-                            # is on_next_and_complete
+                            # upstream called on_next_and_complete
 
                             # last element in buffer
-                            if len(others) == 0 and n_children == n_completed + 1:
+                            if len(others) == 0 and n_children == n_completed:
                                 return OnNextAndCompleteState(
                                     certificates={},
                                     value=value,
@@ -283,7 +283,7 @@ class RequestTransition(MergeStateTransition):
                             )
 
                     case _:
-                        # no backpressured on_next call exist
+                        # no backpressured upstream exist
 
                         if self.certificate:
                             return AwaitOnNextState(

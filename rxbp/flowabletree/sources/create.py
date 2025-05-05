@@ -25,14 +25,16 @@ class Create[V](FlowableNode[V]):
         state: State,
         args: SubscribeArgs[V],
     ) -> tuple[State, SubscriptionResult]:
-        if state.scheduler:
-            source = (
-                continuationmonad.schedule_on(state.scheduler)
-                .flat_map(lambda _: self.func(args.observer))
-            )
-        
-        else:
-            source = continuationmonad.from_(None).flat_map(lambda _: self.func(args.observer))
+        # if state.scheduler:
+        #     source = (
+        #         continuationmonad.schedule_on(state.scheduler)
+        #         .flat_map(lambda _: self.func(args.observer))
+        #     )
+        # else:
+
+        source = continuationmonad.from_(None).flat_map(
+            lambda _: self.func(args.observer)
+        )
 
         cancellable = init_cancellation_state()
 

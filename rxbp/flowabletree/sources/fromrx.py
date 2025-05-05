@@ -6,7 +6,7 @@ import reactivex
 
 import continuationmonad
 
-from rxbp.cancellable import CancellationState, init_cancellation_state
+from rxbp.cancellable import init_cancellation_state
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult

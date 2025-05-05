@@ -1,7 +1,6 @@
 from typing import Callable, Generator, override
 
-from continuationmonad.typing import MainScheduler
-
+from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
 from rxbp.state import State
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -36,12 +35,11 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def to_list(self) -> Flowable[list[U]]: ...
     def zip(self, others: tuple[Flowable[U], ...]) -> Flowable[tuple[U, ...]]: ...
     def zip_with_index(self) -> Flowable[tuple[U, int]]: ...
-
     @override
     def unsafe_subscribe(
         self, state: State, observer: Observer[U]
     ) -> tuple[State, SubscriptionResult]: ...
 
-class ConnectableFlowable[V](Flowable[V]):
-    # def connect(self, child: Flowable) -> Flowable: ...
-    pass
+class ConnectableFlowable[U](Flowable[U]):
+    @property
+    def child(self) -> ConnectableFlowableNode[U]: ...

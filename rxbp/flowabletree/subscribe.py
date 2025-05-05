@@ -1,12 +1,12 @@
 from rxbp.flowabletree.subscription import Subscription
 from rxbp.state import State
 from rxbp.flowabletree.nodes import FlowableNode
-from rxbp.flowabletree.sources.connectable import ConnectableFlowable
+from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
 
 
 def subscribe(
     subscriptions: tuple[Subscription, ...],
-    connections: dict[ConnectableFlowable, FlowableNode],
+    connections: dict[ConnectableFlowableNode, FlowableNode],
     state: State,
 ):
     results = []

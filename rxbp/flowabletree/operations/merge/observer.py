@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from donotation import do
 
 import continuationmonad
@@ -77,7 +78,8 @@ class MergeObserver[V](Observer[V]):
                     case _:
                         pass
 
-                return self._on_next(state)
+                continuation = self._on_next(state)
+                return continuation
 
             case KeepWaitingState(certificate=certificate):
                 return continuationmonad.from_(certificate)
@@ -112,13 +114,15 @@ class MergeObserver[V](Observer[V]):
                 self.shared.transition = transition
 
             state = transition.get_state()
-            return self._on_next(state)
+            certificate = self._on_next(state)
+            return certificate
 
         return continuationmonad.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
         # print(f'on_next_and_complete({value}), id={self.id}')
+
         transition = OnNextAndCompleteTransition(
             child=None,  # type: ignore
             id=self.id,

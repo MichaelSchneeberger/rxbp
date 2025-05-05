@@ -28,10 +28,8 @@ flowable = (
 )
 
 # execute the flowable
-flowable.run()
+rxbp.run(flowable)
 ```
-
-## Share Flowables
 
 
 ## Operations
@@ -39,6 +37,7 @@ flowable.run()
 ### Create a Flowable
 
 - `count` - create a *Flowable* emitting 0, 1, 2, ...
+- `connectable` - create a *Flowable* whose source must be specified by the `connections` argument when calling the `run` function
 - `empty` - create a *Flowable* emitting no items
 - `error` - create a *Flowable* emitting an exception
 - `from_iterable` - create a *Flowable* that emits each element of an iterable
@@ -52,8 +51,7 @@ flowable.run()
 ### Transforming operators
 
 - `accumulate` - apply an accumulator function over a *Flowable* sequence and returns each intermediate result.
-- `default_if_empty` -
-- `do_action` -
+- `default_if_empty` - emits a given value if the source completes without emitting anything
 - `filter` - emit only those items for which the given predicate holds
 - `first` - emit the first element only
 - `flat_map` - apply a function to each item emitted by the source and flattens the result
@@ -65,6 +63,7 @@ flowable.run()
 - `skip_while` - skip the first items while the given predicate holds
 - `take` - take the first n items
 - `take_while` - take the first item while the given predicate holds
+- `tap` - used to perform side-effects for notifications from the source *Flowable*
 - `to_list` - create a new *Flowable* that collects the elements from the source sequence, and emits a single item
 - `zip_with_index` - zip each item emitted by the source with the enumerated index
 

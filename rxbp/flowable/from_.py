@@ -3,7 +3,7 @@ from typing import Iterable
 
 from continuationmonad.typing import Scheduler
 
-from rxbp.flowable.init import init_flowable
+from rxbp.flowable.init import init_connectable_flowable, init_flowable
 from rxbp.flowabletree.sources.fromrx import FromRx
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
@@ -24,7 +24,7 @@ from rxbp.flowabletree.from_ import (
 
 
 def connectable(id, init):
-    return init_flowable(child=init_connectable(id, init))
+    return init_connectable_flowable(child=init_connectable(id, init))
 
 
 def count():

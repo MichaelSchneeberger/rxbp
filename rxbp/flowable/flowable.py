@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from dataclasses import dataclass
 from typing import Callable, override
 
-import continuationmonad
-from continuationmonad.typing import Scheduler, MainScheduler
-
+from rxbp.state import State
+from rxbp.flowabletree.subscribeargs import SubscribeArgs
+from rxbp.flowabletree.subscriptionresult import SubscriptionResult
+from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.from_ import count as _count
 from rxbp.flowabletree.operations.reduce import init_reduce_flowable
 from rxbp.flowabletree.operations.repeatfirst import init_repeat_first_flowable
 from rxbp.flowabletree.operations.tolist import init_to_list_flowable
-from rxbp.flowabletree.subscription import StandardSubscription
-from rxbp.state import State, init_state
 from rxbp.flowabletree.operations.accumulate import init_accumulate_flowable
 from rxbp.flowabletree.operations.defaultifempty import init_default_if_empty_flowable
 from rxbp.flowabletree.operations.doaction import init_tap_flowable
@@ -20,15 +19,9 @@ from rxbp.flowabletree.operations.map import init_map_flowable
 from rxbp.flowabletree.operations.skipwhile import init_skip_while_flowable
 from rxbp.flowabletree.operations.takewhile import init_take_while_flowable
 from rxbp.flowabletree.operations.zip.flowable import init_zip
-from rxbp.flowabletree.subscribe import subscribe
-from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
 from rxbp.flowabletree.operations.share.flowable import init_share
-from rxbp.flowabletree.from_ import count as _count
 
 
 class Flowable[U](SingleChildFlowableNode[U, U]):
@@ -118,7 +111,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
         return self.copy(
             child=init_take_while_flowable(child=self.child, predicate=predicate)
         )
-    
+
     def tap(
         self, on_next=None, on_next_and_completed=None, on_completed=None, on_error=None
     ):
@@ -148,3 +141,6 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
         self, state: State, args: SubscribeArgs[U]
     ) -> tuple[State, SubscriptionResult]:
         return self.child.unsafe_subscribe(state, args)
+
+
+class ConnectableFlowable[V](Flowable[V]): ...
