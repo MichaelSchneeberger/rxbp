@@ -6,8 +6,8 @@ flowable = (
     source
     .map(lambda s: len(s))
     .filter(lambda i: i >= 5)
-    .do_action(on_next=lambda v: print(f'Received {v}'))
+    .tap(on_next=lambda v: print(f'Received {v}'))
 )
 
 # execute the flowable
-result = flowable.run()
+result = rxbp.run(flowable)
