@@ -6,13 +6,13 @@ import continuationmonad
 
 from rxbp.state import init_state
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.flatmap.flowable import FlatMapFlowable
+from rxbp.flowabletree.operations.concatmap.flowable import ConcatMapFlowable
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.testing.tflowable import init_test_flowable
 from rxbp.testing.tobserver import init_test_observer
 
 
-class TestFlatMap(TestCase):
+class TestConcatMap(TestCase):
 
     def test_1(self):
         scheduler = continuationmonad.init_virtual_time_scheduler()
@@ -20,9 +20,9 @@ class TestFlatMap(TestCase):
         @do()
         def schedule_inner_source1(observer: Observer):
             # print('start inner')
-            yield continuationmonad.schedule_with_delay(scheduler, 1)
+            yield continuationmonad.schedule_relative(scheduler, 1)
             _ = yield observer.on_next(1)
-            yield continuationmonad.schedule_with_delay(scheduler, 1)
+            yield continuationmonad.schedule_relative(scheduler, 1)
             # _ = yield observer.on_next(2)
             return observer.on_next_and_complete(2)
 
@@ -42,7 +42,7 @@ class TestFlatMap(TestCase):
 
         def trampoline_task(state=state):
 
-            state, result = FlatMapFlowable(
+            state, result = ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,
             ).unsafe_subscribe(state, SubscribeArgs(
