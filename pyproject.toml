@@ -8,8 +8,10 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "reactivex>=4.0.0",
   "dataclassabc>=0.0.15",
   "donotation>=0.0.10",
+  "continuationmonad>=0.0.3",
 ]
 
 [project.urls]
