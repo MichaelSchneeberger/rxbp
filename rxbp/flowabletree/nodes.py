@@ -51,10 +51,10 @@ class FlowableNode[U](AssignWeightMixin):
 
         return main_result
 
-    def discover(self, state: State) -> State:
+    def discover(self, state: State):
         return state
 
-    def assign_weights(self, state: State, weight: int) -> State:
+    def assign_weights(self, state: State, weight: int):
         return state
 
 
@@ -67,17 +67,10 @@ class SingleChildFlowableNode[U, V](FlowableNode[V]):
     @abstractmethod
     def child(self) -> FlowableNode[U]: ...
 
-    def discover(
-        self,
-        state: State,
-    ):
+    def discover(self, state: State):
         return self.child.discover(state)
 
-    def assign_weights(
-        self,
-        state: State,
-        weight: int,
-    ):
+    def assign_weights(self, state: State, weight: int):
         return self.child.assign_weights(state, weight)
 
 

@@ -6,6 +6,7 @@ from dataclassabc import dataclassabc
 from donotation import do
 
 from rxbp.cancellable import Cancellable
+from rxbp.flowabletree.operations.merge.cancellable import MergeCancellable
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -63,8 +64,10 @@ class Merge[U](MultiChildrenFlowableNode[U, U]):
         )
         shared.cancellables = dict(cancellables)
 
+        cancellable = MergeCancellable(shared=shared)
+
         return n_state, SubscriptionResult(
-            cancellable=shared,
+            cancellable=cancellable,
             certificate=certificate,
         )
 

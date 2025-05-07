@@ -1,91 +1,157 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
+from threading import Lock
 from typing import Callable
 
 from donotation import do
 
 import continuationmonad
 from continuationmonad.typing import (
-    Scheduler,
     DeferredHandler,
+    Scheduler,
 )
 
 from rxbp.state import init_state
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapInnerObserver
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
-from rxbp.flowabletree.operations.flatmap.states import CancelledState
-from rxbp.flowabletree.operations.flatmap.statetransitions import UpdateCancellableTransition
-from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapNestedObserver
+from rxbp.flowabletree.operations.flatmap.states import (
+    ActiveStateMixin,
+    HasTerminatedState,
+    OnCompletedState,
+    OnErrorState,
+    StopContinuationStateMixin,
+    TerminatedStateMixin,
+)
+from rxbp.flowabletree.operations.flatmap.statetransitions import (
+    OnCompletedOuterTransition,
+    OnErrorOuterTransition,
+    OnNextAndCompleteOuterTransition,
+    OnNextOuterTransition,
+)
 
 
 @dataclass
-class FlatMapObserver[V](Observer[V]):
-    downstream: Observer
-    func: Callable[[V], FlowableNode[V]]
-    scheduler: Scheduler | None
+class FlatMapObserver[U, V](Observer):
     shared: FlatMapSharedMemory
+    lock: Lock
+    last_id: int
+    weight: int
+    scheduler: Scheduler | None
+    func: Callable[[U], FlowableNode[V]]
     schedule_weight: int
 
     @do()
-    def _on_next(self, value: V, handler: DeferredHandler | None):
-        # print('apply func')
-
-        flowable = self.func(value)
+    def _on_next(self, item: U, handler: DeferredHandler | None):
+        flowable = self.func(item)
 
         trampoline = yield from continuationmonad.get_trampoline()
 
-        try:
-            result = flowable.subscribe(
-                state=init_state(
-                    subscription_trampoline=trampoline,
-                    scheduler=self.scheduler,
+        with self.lock:
+            id = self.last_id
+            self.last_id += 1
+
+        state, result = flowable.unsafe_subscribe(
+            state=init_state(
+                subscription_trampoline=trampoline,
+                scheduler=self.scheduler,
+            ),
+            args=SubscribeArgs(
+                observer=FlatMapInnerObserver(
+                    id=id,
+                    shared=self.shared,
                 ),
-                args=SubscribeArgs(
-                    observer=FlatMapNestedObserver(
-                        downstream=self.downstream,
-                        upstream=handler,
-                        shared=self.shared,
-                    ),
-                    schedule_weight=self.schedule_weight,
-                )
+                schedule_weight=self.schedule_weight,
+            ),
+        )
+
+        if handler is None:
+            transition = OnNextAndCompleteOuterTransition(
+                child=None,  # type: ignore
+                certificate=result.certificate,
+            )
+        else:
+            transition = OnNextOuterTransition(
+                child=None,  # type: ignore
+                certificate=result.certificate,
             )
 
-        except Exception as exception:
-            return self.downstream.on_error(exception)
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        transition = UpdateCancellableTransition(
+        match state := transition.get_state():
+            case StopContinuationStateMixin(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case ActiveStateMixin():
+                if handler is None:
+                    raise Exception(f"Unexpected state {state}.")
+
+                else:
+                    certificate = handler.resume(trampoline, None)
+                    return continuationmonad.from_(certificate)
+
+            case TerminatedStateMixin(outer_certificate=outer_certificate):
+                return continuationmonad.from_(outer_certificate)
+
+            case _:
+                raise Exception(f"Unexpected state {state}.")
+
+    def on_next(self, item: U):
+        # print(f"on_next({item})")
+
+        def on_next_subscription(_, handler: DeferredHandler):
+            return self._on_next(item, handler)
+
+        return continuationmonad.defer(on_next_subscription)
+
+    def on_next_and_complete(self, item: U):
+        # print(f"on_next_and_completed({item})")
+        return self._on_next(item, None)
+
+    def on_completed(self):
+        transition = OnCompletedOuterTransition(
             child=None,  # type: ignore
-            cancellable=result.cancellable,
         )
 
         with self.shared.lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
-        match transition.get_state():
-            case CancelledState(certificate=certificate, cancellable=cancellable):
-                cancellable.cancel(certificate)
+        match state := transition.get_state():
+            case OnCompletedState():
+                return self.shared.downstream.on_completed()
 
-        return continuationmonad.from_(result.certificate)
+            case StopContinuationStateMixin(certificate=certificate):
+                return continuationmonad.from_(certificate)
 
-    def on_next(self, value: V):
-        def on_next_subscription(_, handler: DeferredHandler):
-            return self._on_next(value, handler)
+            case _:
+                raise Exception(f"Unexpected state {state}.")
 
-        return continuationmonad.defer(on_next_subscription)
+    def on_error(self, exception: Exception):
+        transition = OnErrorOuterTransition(
+            child=None,  # type: ignore
+            exception=exception,
+        )
 
-    def on_next_and_complete(
-        self, value: V
-    ):
-        return self._on_next(value, None)
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-    def on_completed(self):
-        return self.downstream.on_completed()
+        match state := transition.get_state():
+            case OnErrorState(
+                exception=exception,
+                certificates=certificates,
+            ):
+                for id, certificate in certificates.items():
+                    self.shared.cancellables[id].cancel(certificate)
 
-    def on_error(
-        self, exception: Exception
-    ):
-        return self.downstream.on_error(exception)
+                return self.shared.downstream.on_error(exception)
+
+            case HasTerminatedState(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case _:
+                raise Exception(f"Unexpected state {state}.")

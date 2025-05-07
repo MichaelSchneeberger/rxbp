@@ -6,69 +6,177 @@ from donotation import do
 
 import continuationmonad
 from continuationmonad.typing import (
-    ContinuationMonad,
     DeferredHandler,
-    ContinuationCertificate,
 )
 
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.flatmap.states import ActiveState, CancelledState
+from rxbp.flowabletree.operations.flatmap.states import (
+    CancelledStopRequestState,
+    KeepWaitingState,
+    AwaitOnNextState,
+    FlatMapState,
+    OnCompletedState,
+    OnErrorState,
+    OnNextAndCompleteState,
+    OnNextState,
+    HasTerminatedState,
+    StopContinuationStateMixin,
+)
 from rxbp.flowabletree.operations.flatmap.statetransitions import (
+    RequestTransition,
     ToStateTransition,
-    UpdateCancellableTransition,
+    OnCompletedTransition,
+    OnErrorTransition,
+    OnNextTransition,
+    OnNextAndCompleteTransition,
 )
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 
 
 @dataclass
-class FlatMapNestedObserver[V](Observer[V]):
-    downstream: Observer
-    upstream: DeferredHandler | None
+class FlatMapInnerObserver[V](Observer[V]):
     shared: FlatMapSharedMemory
+    id: int
 
-    def on_next(self, value: V) -> ContinuationMonad[None]:
-        return self.downstream.on_next(value)
+    @do()
+    def _on_next(self, state: FlatMapState):
+        match state:
+            case OnNextState(
+                value=value,
+                observer=observer,
+            ):
+                _ = yield from self.shared.downstream.on_next(value)
+
+                if observer is None:
+                    certificate = None
+
+                else:
+                    certificate, *_ = yield from continuationmonad.from_(None).connect(
+                        (observer,)
+                    )
+
+                transition = RequestTransition(
+                    child=None,  # type: ignore
+                    id=self.id,
+                    certificate=certificate,
+                )
+
+                with self.shared.lock:
+                    transition.child = self.shared.transition
+                    state = transition.get_state()
+                    self.shared.transition = ToStateTransition(state=state)
+
+                match state:
+                    case CancelledStopRequestState(
+                        certificates=certificates, 
+                        certificate=certificate,
+                    ):
+                        self.shared.cancellables[self.id].cancel(certificates[self.id])
+                        return continuationmonad.from_(certificate)
+                    
+                    case _:
+                        pass
+
+                continuation = self._on_next(state)
+                return continuation
+
+            case KeepWaitingState(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case AwaitOnNextState(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case OnNextAndCompleteState(value=value):
+                return self.shared.downstream.on_next_and_complete(value)
+
+            case HasTerminatedState(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case _:
+                raise Exception(f"Unexpected state {state}.")
+
+    @do()
+    def on_next(self, value: V):
+        # print(f'on_next({value}), id={self.id}')
+
+        # wait for upstream observer before continuing to simplify concurrency
+        def on_next_subscription(_, handler: DeferredHandler):
+            transition = OnNextTransition(
+                child=None,  # type: ignore
+                id=self.id,
+                value=value,
+                observer=handler,
+            )
+
+            with self.shared.lock:
+                transition.child = self.shared.transition
+                self.shared.transition = transition
+
+            state = transition.get_state()
+            certificate = self._on_next(state)
+            return certificate
+
+        return continuationmonad.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
-        yield from self.downstream.on_next(value)
-        match result := self.on_completed():
-            case ContinuationCertificate():
-                return continuationmonad.from_(result)
-            case _:
-                return result
+        # print(f'on_next_and_complete({value}), id={self.id}')
 
-    @do()
-    def on_completed(self):
-        transition = UpdateCancellableTransition(
+        transition = OnNextAndCompleteTransition(
             child=None,  # type: ignore
-            cancellable=self.shared.upstream_cancellable,
+            id=self.id,
+            value=value,
         )
 
         with self.shared.lock:
             transition.child = self.shared.transition
-            state = transition.get_state()
-            self.shared.transition = ToStateTransition(state=state)
+            self.shared.transition = transition
 
-        match state:
-            case ActiveState():
-                match self.upstream:
-                    case None:
-                        return self.downstream.on_completed()
+        state = transition.get_state()
+        return self._on_next(state)
 
-                    case DeferredHandler():
-                        return (
-                            continuationmonad.from_(None)
-                            .connect((self.upstream,))
-                            .map(lambda c: c[0])
-                        )
+    def on_completed(self):
+        transition = OnCompletedTransition(
+            child=None,  # type: ignore
+            id=self.id,
+        )
 
-            case CancelledState(certificate=certificate):
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
+
+        match state := transition.get_state():
+            case OnCompletedState():
+                return self.shared.downstream.on_completed()
+
+            case StopContinuationStateMixin(certificate=certificate):
                 return continuationmonad.from_(certificate)
-                # return certificate
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
     def on_error(self, exception: Exception):
-        return self.downstream.on_error(exception)
+        transition = OnErrorTransition(
+            child=None,  # type: ignore
+            exception=exception,
+        )
+
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
+
+        match state := transition.get_state():
+            case OnErrorState(
+                exception=exception,
+                certificates=certificates,
+            ):
+                for id, certificate in certificates.items():
+                    self.shared.cancellables[id].cancel(certificate)
+        
+                return self.shared.downstream.on_error(exception)
+
+            case HasTerminatedState(certificate=certificate):
+                return continuationmonad.from_(certificate)
+
+            case _:
+                raise Exception(f"Unexpected state {state}.")

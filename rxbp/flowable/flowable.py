@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Callable, override
 
+from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -24,7 +25,7 @@ from rxbp.flowabletree.operations.skipwhile import init_skip_while_flowable
 from rxbp.flowabletree.operations.takewhile import init_take_while_flowable
 from rxbp.flowabletree.operations.zip.flowable import init_zip
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
-from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
+from rxbp.flowabletree.operations.concatmap.flowable import init_concat_map
 from rxbp.flowabletree.operations.share.flowable import init_share
 
 
@@ -39,6 +40,14 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
         return self.copy(
             child=init_buffer(
                 child=self.child,
+            )
+        )
+    
+    def concat_map(self, func: Callable[[U], FlowableNode]):
+        return self.copy(
+            child=init_concat_map(
+                child=self.child,
+                func=func,
             )
         )
 
@@ -96,6 +105,10 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
 
     def repeat_first(self):
         return self.first().flat_map(lambda v: _repeat_value(v))
+
+    @abstractmethod
+    def seq(self):
+        ...
 
     def share(self):
         return self.copy(
@@ -160,4 +173,19 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
         return self.child.unsafe_subscribe(state, args)
 
 
-class ConnectableFlowable[V](Flowable[V]): ...
+class SeqFlowable[U](Flowable[U]):
+    @override
+    def flat_map(self, func: Callable[[U], FlowableNode]):
+        return self.copy(
+            child=init_concat_map(
+                child=self.child,
+                func=func,
+            )
+        )
+    
+    @override
+    def seq(self):
+        return self
+
+
+class ConnectableFlowable[U](Flowable[U]): ...

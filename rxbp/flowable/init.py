@@ -1,35 +1,52 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import override
 from dataclassabc import dataclassabc
 
-from rxbp.flowable.flowable import ConnectableFlowable, Flowable
+from rxbp.flowable.flowable import ConnectableFlowable, Flowable, SeqFlowable
 from rxbp.flowabletree.nodes import FlowableNode
 
 
 @dataclassabc(frozen=True)
-class FlowableImpl[V](Flowable[V]):
-    child: FlowableNode[V]
+class FlowableImpl[U](Flowable[U]):
+    child: FlowableNode[U]
 
     @override
-    def copy(self, /, **changes) -> FlowableImpl[V]:
-        return replace(self, **changes)
+    def copy[V](self, /, child: FlowableNode[V]) -> FlowableImpl[V]:
+        return init_flowable(child=child)
+    
+    @override
+    def seq(self):
+        return init_seq_flowable(child=self.child)
 
 
-def init_flowable[V](child: FlowableNode[V]):
-    return FlowableImpl[V](child=child)
+def init_flowable[U](child: FlowableNode[U]):
+    return FlowableImpl[U](child=child)
 
 
 
 @dataclassabc(frozen=True)
-class ConnectableFlowableImpl[V](ConnectableFlowable[V]):
-    child: FlowableNode[V]
+class SeqFlowableImpl[U](SeqFlowable[U]):
+    child: FlowableNode[U]
 
     @override
-    def copy(self, /, **changes) -> FlowableImpl[V]:
-        return replace(self, **changes)
+    def copy[V](self, /, child: FlowableNode[V]) -> FlowableImpl[V]:
+        return init_flowable(child=child)
 
 
-def init_connectable_flowable[V](child: FlowableNode[V]):
-    return ConnectableFlowableImpl[V](child=child)
+def init_seq_flowable[U](child: FlowableNode[U]):
+    return SeqFlowableImpl[U](child=child)
+
+
+
+@dataclassabc(frozen=True)
+class ConnectableFlowableImpl[U](ConnectableFlowable[U]):
+    child: FlowableNode[U]
+
+    @override
+    def copy[V](self, /, child: FlowableNode[V]) -> FlowableImpl[V]:
+        return init_flowable(child=child)
+
+
+def init_connectable_flowable[U](child: FlowableNode[U]):
+    return ConnectableFlowableImpl[U](child=child)

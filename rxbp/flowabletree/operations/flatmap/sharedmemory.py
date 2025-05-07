@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from threading import Lock
 
+from dataclassabc import dataclassabc
+
 from rxbp.cancellable import Cancellable
-from rxbp.flowabletree.operations.flatmap.statetransitions import FlatMapStateTransition
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.flatmap.statetransitions import (
+    FlatMapStateTransition,
+)
 
 
-@dataclass
+@dataclassabc(frozen=False)
 class FlatMapSharedMemory:
-    upstream_cancellable: Cancellable
-
+    downstream: Observer
     transition: FlatMapStateTransition
     lock: Lock
+    cancellables: dict[int, Cancellable]
