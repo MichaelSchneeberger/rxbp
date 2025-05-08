@@ -34,7 +34,7 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
             lock=Lock(),
             observer=args.observer,
             loop_cancellation=loop_cancellation,
-            weight=args.schedule_weight,
+            weight=args.weight,
             buffer=[],
             buffer_size=self.buffer_size,
         )
@@ -43,7 +43,7 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
             state=state, 
             args=SubscribeArgs(
                 observer=observer,
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

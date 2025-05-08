@@ -1,5 +1,6 @@
 from rxbp.flowable.from_ import (
     connectable as _connectable,
+    create as _create,
     empty as _empty,
     error as _error,
     from_iterable as _from_iterable,
@@ -9,6 +10,7 @@ from rxbp.flowable.from_ import (
     merge as _merge,
     repeat as _repeat,
     schedule_on as _schedule_on,
+    sleep as _sleep,
     schedule_relative as _schedule_relative,
     schedule_absolute as _schedule_absolute,
     zip as _zip,
@@ -19,6 +21,7 @@ from rxbp.flowable.to import (
 )
 
 connectable = _connectable
+create = _create
 empty = _empty
 error = _error
 from_iterable = _from_iterable
@@ -30,9 +33,10 @@ interval = _interval
 merge = _merge
 repeat = _repeat
 schedule_on = _schedule_on
-schedule_relative = _schedule_relative
+sleep = _sleep
+schedule_relative = _schedule_relative  # depricated
 delay = _schedule_relative
-schedule_absolute = _schedule_absolute
+schedule_absolute = _schedule_absolute  # depricated
 zip = _zip
 
 run = _run

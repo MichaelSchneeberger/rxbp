@@ -42,10 +42,9 @@ class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
                 shared=shared,
                 lock=Lock(),
                 last_id=0,
-                weight=args.schedule_weight,
+                weight=args.weight,
                 func=self.func,
                 scheduler=state.scheduler,
-                schedule_weight=args.schedule_weight,
             ))
         )
 

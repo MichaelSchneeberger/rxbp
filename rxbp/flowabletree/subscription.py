@@ -11,7 +11,12 @@ from rxbp.flowabletree.assignweightmixin import AssignWeightMixin
 
 class Subscription(AssignWeightMixin):
     @abstractmethod
-    def apply(self, state: State) -> tuple[State, SubscriptionResult]: ...
+    def subscribe(self, state: State) -> State: ...
+
+
+# class Subscription(AssignWeightMixin):
+#     @abstractmethod
+#     def apply(self, state: State) -> tuple[State, SubscriptionResult]: ...
 
 
 @dataclass
@@ -30,6 +35,6 @@ class StandardSubscription(Subscription):
             state,
             args=SubscribeArgs(
                 observer=self.sink,
-                schedule_weight=1,
+                weight=1,
             ),
         )

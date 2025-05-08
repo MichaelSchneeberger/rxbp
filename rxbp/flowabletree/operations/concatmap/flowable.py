@@ -47,9 +47,9 @@ class ConcatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
                     func=self.func,
                     scheduler=state.scheduler,
                     shared=shared,
-                    schedule_weight=args.schedule_weight,
+                    weight=args.weight,
                 ),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

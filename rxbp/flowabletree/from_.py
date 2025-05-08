@@ -25,7 +25,6 @@ def count():
     )
 
 
-
 def empty():
     return init_create(
         func=lambda observer, _: observer.on_completed(),
@@ -104,12 +103,12 @@ def interval(seconds: float, scheduler: Scheduler | None = None):
 
 def repeat_value[U](value: U):
     @do()
-    def schedule_and_send_item(observer: Observer[U], _):
+    def schedule_and_send_item(observer: Observer[U], scheduler):
         yield observer.on_next(value)
 
         yield from continuationmonad.schedule_trampoline()
 
-        return schedule_and_send_item(observer)
+        return schedule_and_send_item(observer, scheduler)
 
     return init_create(
         func=schedule_and_send_item,

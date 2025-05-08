@@ -1,14 +1,28 @@
 import datetime
-from typing import Iterable
+from typing import Callable, Iterable
 
-from continuationmonad.typing import Scheduler
+from continuationmonad.typing import (
+    Scheduler,
+    ContinuationMonad,
+    ContinuationCertificate,
+)
 
 import reactivex
 
 from rxbp.flowable.flowable import Flowable, ConnectableFlowable
+from rxbp.flowabletree.observer import Observer
 
 def connectable[U](id, init: U) -> ConnectableFlowable[U]: ...
 def count() -> Flowable[int]: ...
+
+class create[U]:
+    def __new__(
+        cls,
+        func: Callable[
+            [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
+        ],
+    ) -> Flowable[U]: ...
+
 def empty() -> Flowable[None]: ...
 def error() -> Flowable[None]: ...
 def from_iterable[U](iterable: Iterable[U]) -> Flowable[U]: ...
@@ -20,6 +34,11 @@ def interval(
 def merge[U](observables: tuple[Flowable[U], ...]) -> Flowable[tuple[U, ...]]: ...
 def repeat[U](value: U) -> Flowable[U]: ...
 def schedule_on(scheduler: Scheduler | None = None) -> Flowable[Scheduler]: ...
+def sleep(
+    seconds: float | None = None,
+    scheduler: Scheduler | None = None,
+    until: datetime.datetime | None = None,
+) -> Flowable[Scheduler]: ...
 def schedule_relative(
     duetime: float, scheduler: Scheduler | None = None
 ) -> Flowable[Scheduler]: ...

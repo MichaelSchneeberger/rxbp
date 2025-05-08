@@ -11,6 +11,7 @@
 - **RxPY compatibility**: interoperates with [RxPY](https://github.com/ReactiveX/RxPY/tree/master), bridging classic observables and backpressure-aware *Flowables*.
 - **Favor usability** - Favor an implementation that is simple, safe, and user-friendly, while accepting some computational overhead.
 
+
 ## Installation
 
 You can install *rxbp* using pip:
@@ -67,7 +68,7 @@ rxbp.to_rx(flowable).subscribe(lambda v: print(f"Received {v}"))
 ## Run a *Flowable*
 
 A *Flowable* is executed by calling the `rxbp.run()` function. 
-This call blocks program execution until the *Flowable* terminates (either by completing or erroring) and returns a list of the emitted elements.
+This call blocks program execution until the *Flowable* terminates (either by completing or erroring) and returns a list of the emitted items.
 Typically, `rxbp.run()` is intended to be the final step in a program: first, the dataflow is defined by constructing a *Flowable*; then, the program is executed by invoking `run()`.
 In contrast, functional programming languages eliminate the need for an explicit `run()` call—execution is handled automatically by the compiler or runtime. 
 In such cases, the programmer simply defines the computation, and the system takes care of running it.
@@ -93,14 +94,15 @@ rxbp.run(
 - `connectable` - create a *Flowable* whose source must be specified by the `connections` argument when calling the `run` function
 - `empty` - create a *Flowable* emitting no items
 - `error` - create a *Flowable* emitting an exception
-- `from_iterable` - create a *Flowable* that emits each element of an iterable
-- `from_value` - create a *Flowable* that emits a single element
+- `from_iterable` (or `from_`) - create a *Flowable* that emits each element of an iterable
+- `from_value` (or `return_`) - create a *Flowable* that emits a single element
 - `from_rx` - wrap a rx.Observable and exposes it as a *Flowable*, relaying signals in a backpressure-aware manner.
 - `interval` - create a *Flowable* emitting an item after every time interval
 - `repeat_value` - create a *Flowable* that repeats the given element
 - `schedule_on` - schedule task on a dedicated scheduler
-- `schedule_relative` - schedule task on a dedicated scheduler after a relative time
-- `schedule_absolute` - schedule task on a dedicated scheduler after an absolute time
+- `sleep` (or `delay`) - schedule task on a dedicated scheduler after a relative time
+<!-- - `schedule_relative` - schedule task on a dedicated scheduler after a relative time
+- `schedule_absolute` - schedule task on a dedicated scheduler after an absolute time -->
 
 ### Transforming operators
 
@@ -115,11 +117,11 @@ rxbp.run(
 - `repeat` - returns a *Flowable* that will resubscribe to the source when the source completes
 - `repeat_first` - return a *Flowable* that repeats the first element it receives from the source forever (until disposed).
 - `skip` - skip the first n items
-- `skip_while` - skip the first items while the given predicate holds
+- `skip_while` - skip first items while the given predicate holds
 - `take` - take the first n items
-- `take_while` - take the first item while the given predicate holds
+- `take_while` - take items while the given predicate holds
 - `tap` - used to perform side-effects for notifications from the source *Flowable*
-- `to_list` - create a new *Flowable* that collects the elements from the source sequence, and emits a single item
+- `to_list` - create a new *Flowable* that collects the items from the source sequence, and emits a single item
 - `zip_with_index` - zip each item emitted by the source with the enumerated index
 
 ### Combining operators

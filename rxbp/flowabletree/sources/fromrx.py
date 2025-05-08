@@ -36,7 +36,7 @@ class FromRx[V](FlowableNode[V]):
                 def task():
                     action(None)
                     return state.subscription_trampoline._create_certificate(
-                        weight=args.schedule_weight,
+                        weight=args.weight,
                         stack=tuple()
                     )
 
@@ -53,7 +53,7 @@ class FromRx[V](FlowableNode[V]):
                 # print(f'on_next({value})')
 
                 certificate = state.subscription_trampoline._create_certificate(
-                    weight=args.schedule_weight,
+                    weight=args.weight,
                     stack=tuple()
                 )
 
@@ -65,12 +65,12 @@ class FromRx[V](FlowableNode[V]):
                             observer=continuationmonad.init_anonymous_observer(
                                 on_success=lambda _, __: certificate,
                             ),
-                            weight=args.schedule_weight,
+                            weight=args.weight,
                             trampoline=trampoline,
                         )
                     )
 
-                trampoline.run(trampoline_task, weight=args.schedule_weight)
+                trampoline.run(trampoline_task, weight=args.weight)
 
             def on_error(self, error):
                 trampoline = continuationmonad.init_trampoline()
@@ -81,12 +81,12 @@ class FromRx[V](FlowableNode[V]):
                             observer=continuationmonad.init_anonymous_observer(
                                 on_success=lambda _, certificate: certificate,
                             ),
-                            weight=args.schedule_weight,
+                            weight=args.weight,
                             trampoline=state.subscription_trampoline,
                         )
                     )
 
-                trampoline.run(trampoline_task, weight=args.schedule_weight)
+                trampoline.run(trampoline_task, weight=args.weight)
 
             def on_completed(self):
                 trampoline = continuationmonad.init_trampoline()
@@ -97,12 +97,12 @@ class FromRx[V](FlowableNode[V]):
                             observer=continuationmonad.init_anonymous_observer(
                                 on_success=lambda _, certificate: certificate,
                             ),
-                            weight=args.schedule_weight,
+                            weight=args.weight,
                             trampoline=state.subscription_trampoline,
                         )
                     )
 
-                trampoline.run(trampoline_task, weight=args.schedule_weight)
+                trampoline.run(trampoline_task, weight=args.weight)
 
         observer = RxObserver()
 
@@ -115,13 +115,13 @@ class FromRx[V](FlowableNode[V]):
             )
 
             return state.subscription_trampoline._create_certificate(
-                weight=args.schedule_weight,
+                weight=args.weight,
                 stack=tuple()
             )
 
         certificate = state.subscription_trampoline.schedule(
             task=trampoline_task,
-            weight=args.schedule_weight,
+            weight=args.weight,
         )
 
         return state, SubscriptionResult(

@@ -54,7 +54,7 @@ class ReduceFlowable[U](SingleChildFlowableNode[U, U]):
             state=state,
             args=SubscribeArgs(
                 observer=ReduceObserver(is_first=True, acc=None),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

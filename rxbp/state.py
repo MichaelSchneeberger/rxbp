@@ -38,7 +38,7 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def subscriber_count(self) -> dict: ...
+    def shared_subscribe_count(self) -> dict: ...
 
     @property
     @abstractmethod
@@ -46,7 +46,7 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def connections(self) -> dict: ...    # remove?
+    def connections(self) -> dict: ...
 
     @property
     @abstractmethod
@@ -54,7 +54,11 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def connectable_observers(self) -> dict: ...
+    def discovered_subscriptions(self) -> list: ...
+
+    # @property
+    # @abstractmethod
+    # def connectable_observers(self) -> dict: ...
 
     @property
     @abstractmethod
@@ -67,12 +71,13 @@ class StateImpl(State):
     subscription_trampoline: Trampoline
     scheduler: Scheduler | None
     shared_observers: dict
+    shared_subscribe_count: dict
+    discovered_connectables: list
+    discovered_subscriptions: list
     shared_weights: dict
     connections: dict
-    connectable_observers: dict
-    subscriber_count: dict
+    # connectable_observers: dict
     certificate: ContinuationCertificate | None
-    discovered_connectables: list
 
     @override
     def copy(self, /, **changes):
@@ -83,17 +88,19 @@ def init_state(
     subscription_trampoline: Trampoline | None = None,
     scheduler: Scheduler | None = None,
     shared_observers: dict | None = None,
+    shared_subscribe_count: dict | None = None,
     shared_weights: dict | None = None,
-    subscriber_count: dict | None = None,
     connections: dict | None = None,
-    connectable_observers: dict | None = None,
+    discovered_connectables: list | None = None,
+    discovered_subscriptions: list | None = None,
+    # connectable_observers: dict | None = None,
     certificate: ContinuationCertificate | None = None,
 ):
     if subscription_trampoline is None:
         subscription_trampoline = continuationmonad.init_trampoline()
 
-    if subscriber_count is None:
-        subscriber_count = {}
+    if shared_subscribe_count is None:
+        shared_subscribe_count = {}
 
     if shared_observers is None:
         shared_observers = {}
@@ -104,18 +111,21 @@ def init_state(
     if connections is None:
         connections = {}
 
-    if connectable_observers is None:
-        connectable_observers = {}
+    if discovered_subscriptions is None:
+        discovered_subscriptions = []
+
+    if discovered_connectables is None:
+        discovered_connectables = []
 
     return StateImpl(
         lock=RLock(),
         scheduler=scheduler, 
         subscription_trampoline=subscription_trampoline,
-        subscriber_count=subscriber_count,
+        shared_subscribe_count=shared_subscribe_count,
         shared_observers=shared_observers,
         shared_weights=shared_weights,
         connections=connections,
-        discovered_connectables=[],
-        connectable_observers=connectable_observers,
+        discovered_connectables=discovered_connectables,
+        discovered_subscriptions=discovered_subscriptions,
         certificate=certificate,
     )

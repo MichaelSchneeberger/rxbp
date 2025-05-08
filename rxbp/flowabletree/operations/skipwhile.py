@@ -51,7 +51,7 @@ class SkipWhileFlowable[U](SingleChildFlowableNode[U, U]):
             state=state,
             args=SubscribeArgs(
                 observer=SkipWhileObserver(),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

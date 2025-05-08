@@ -33,8 +33,8 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def accumulate(self, func, init):
         return self.copy(child=init_accumulate_flowable(self.child, func, init))
 
-    @abstractmethod
-    def copy(self, /, **changes) -> Flowable: ...
+    def batch(self, size: int):
+        return self.copy(child=init_to_list_flowable(child=self.child, size=size))
 
     def buffer(self):
         return self.copy(
@@ -42,6 +42,9 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
                 child=self.child,
             )
         )
+
+    @abstractmethod
+    def copy(self, /, **changes) -> Flowable: ...
     
     def concat_map(self, func: Callable[[U], FlowableNode]):
         return self.copy(
@@ -155,8 +158,8 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
             )
         )
 
-    def to_list(self, size: int | None = None):
-        return self.copy(child=init_to_list_flowable(child=self.child, size=size))
+    def to_list(self):
+        return self.copy(child=init_to_list_flowable(child=self.child))
 
     def zip_with_index(self):
         return self.copy(child=init_zip((self, _count())))

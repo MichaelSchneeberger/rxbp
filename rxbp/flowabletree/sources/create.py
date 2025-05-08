@@ -35,15 +35,13 @@ class Create[V](FlowableNode[V]):
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
-            weight=args.schedule_weight,
+            weight=args.weight,
         )
 
-        result = SubscriptionResult(
+        return state, SubscriptionResult(
             certificate=certificate,
-            cancellable=cancellable,
+            cancellable=init_cancellation_state(),
         )
-
-        return state, result
 
 
 def init_create(func: Callable[[Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]]):

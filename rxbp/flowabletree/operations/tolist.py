@@ -42,24 +42,23 @@ class ToListFlowable[U](SingleChildFlowableNode[U, U]):
                 return args.observer.on_error(exception)
 
         @dataclass
-        class ToListObserverLimited(Observer[U]):
+        class BatchedObserver(Observer[U]):
             size: int
             acc: list[U]
 
             def on_next(self, item: U):
-                if len(self.acc) == self.size:
-                    self.acc.pop(0)
-
                 self.acc.append(item)
 
-                return continuationmonad.from_(None)
+                if len(self.acc) == self.size:
+                    batched = self.acc
+                    self.acc = []
+                    return args.observer.on_next(batched)
+
+                else:
+                    return continuationmonad.from_(None)
 
             def on_next_and_complete(self, item: U):
-                if len(self.acc) == self.size:
-                    self.acc.pop(0)
-
                 self.acc.append(item)
-
                 return args.observer.on_next_and_complete(self.acc)
 
             def on_completed(self):
@@ -72,13 +71,13 @@ class ToListFlowable[U](SingleChildFlowableNode[U, U]):
             observer = ToListObserver(acc=[])
 
         else:
-            observer = ToListObserverLimited(acc=[], size=self.size)
+            observer = BatchedObserver(acc=[], size=self.size)
 
         return self.child.unsafe_subscribe(
             state=state,
             args=SubscribeArgs(
                 observer=observer,
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

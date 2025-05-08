@@ -10,6 +10,7 @@ from continuationmonad.typing import (
     Scheduler,
 )
 
+from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
 from rxbp.state import init_state
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
@@ -40,7 +41,6 @@ class FlatMapObserver[U, V](Observer):
     weight: int
     scheduler: Scheduler | None
     func: Callable[[U], FlowableNode[V]]
-    schedule_weight: int
 
     @do()
     def _on_next(self, item: U, handler: DeferredHandler | None):
@@ -52,19 +52,36 @@ class FlatMapObserver[U, V](Observer):
             id = self.last_id
             self.last_id += 1
 
-        state, result = flowable.unsafe_subscribe(
-            state=init_state(
-                subscription_trampoline=trampoline,
-                scheduler=self.scheduler,
-            ),
-            args=SubscribeArgs(
-                observer=FlatMapInnerObserver(
-                    id=id,
-                    shared=self.shared,
-                ),
-                schedule_weight=self.schedule_weight,
-            ),
+        state = init_state(
+            subscription_trampoline=trampoline,
+            scheduler=self.scheduler,
         )
+
+        sink = FlatMapInnerObserver(
+            id=id,
+            shared=self.shared,
+        )
+
+        state, result = subscribe_single_sink(
+            source=flowable,
+            sink=sink,
+            state=state,
+            weight=self.weight,
+        )
+
+        # state, result = flowable.unsafe_subscribe(
+        #     state=init_state(
+        #         subscription_trampoline=trampoline,
+        #         scheduler=self.scheduler,
+        #     ),
+        #     args=SubscribeArgs(
+        #         observer=FlatMapInnerObserver(
+        #             id=id,
+        #             shared=self.shared,
+        #         ),
+        #         schedule_weight=self.schedule_weight,
+        #     ),
+        # )
 
         if handler is None:
             transition = OnNextAndCompleteOuterTransition(

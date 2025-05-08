@@ -19,38 +19,6 @@ class FlowableNode[U](AssignWeightMixin):
         state: object that is passed through the entire tree structure
         """
 
-    def subscribe(
-        self, 
-        state: State,
-        args: SubscribeArgs[U],
-    ):
-        state = self.discover(state)
-        state = self.assign_weights(state, 1)
-        for sink in state.connections.values():
-            state = sink.assign_weights(state, 1)
-
-        state, result = self.unsafe_subscribe(
-            state,
-            args=args,
-        )
-        main_result = result
-
-        while state.connectable_observers:
-            for source, observer in state.connectable_observers.items():
-                state = observer.connect(state, source)
-                # # state = state.copy(connectable_observers={})
-                # state, result = connectable.unsafe_subscribe(
-                #     state=state.copy(connectable_observers={}),
-                #     # state.copy(certificate=result.certificate),
-                #     args=SubscribeArgs(
-                #         observer=observer,
-                #         schedule_weight=1,
-                #     ),
-                # )
-                # observer.certificate = result.certificate
-
-        return main_result
-
     def discover(self, state: State):
         return state
 

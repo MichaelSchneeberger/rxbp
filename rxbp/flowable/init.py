@@ -40,12 +40,13 @@ def init_seq_flowable[U](child: FlowableNode[U]):
 
 
 @dataclassabc(frozen=True)
-class ConnectableFlowableImpl[U](ConnectableFlowable[U]):
-    child: FlowableNode[U]
+class ConnectableFlowableImpl[U](FlowableImpl[U], ConnectableFlowable[U]):
+    pass
+    # child: FlowableNode[U]
 
-    @override
-    def copy[V](self, /, child: FlowableNode[V]) -> FlowableImpl[V]:
-        return init_flowable(child=child)
+    # @override
+    # def copy[V](self, /, child: FlowableNode[V]) -> FlowableImpl[V]:
+    #     return init_flowable(child=child)
 
 
 def init_connectable_flowable[U](child: FlowableNode[U]):

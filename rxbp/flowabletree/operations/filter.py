@@ -49,7 +49,7 @@ class FilterFlowable[U](SingleChildFlowableNode[U, U]):
             state=state,
             args=SubscribeArgs(
                 observer=FilterObserver(),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

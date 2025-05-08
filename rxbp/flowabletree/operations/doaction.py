@@ -66,7 +66,7 @@ class TapFlowable[U](SingleChildFlowableNode[U, U]):
             state=state,
             args=SubscribeArgs(
                 observer=TapObserver(),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

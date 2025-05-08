@@ -48,7 +48,7 @@ class AccumulateFlowable[U, V](SingleChildFlowableNode[U, U]):
             state=state,
             args=SubscribeArgs(
                 observer=AccumulateObserver(acc=self.init),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

@@ -24,7 +24,7 @@ from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
 from rxbp.state import init_state
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.subscribe import subscribe
+from rxbp.flowabletree.subscribeandconnect import subscribe_and_connect, subscribe_single_sink
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscription import StandardSubscription
 
@@ -74,16 +74,15 @@ def run[U](
                 scheduler=scheduler,
             )
 
-            state, results = subscribe(
-                subscriptions=(StandardSubscription(
-                    source=source, 
-                    sink=observer,
-                ),),
+            state, result = subscribe_single_sink(
+                source=source,
+                sink=observer,
                 connections={c: s for c, s in connections.items()},
                 state=state,
+                weight=1,
             )
 
-            return results[0].certificate
+            return result.certificate
 
         return subscribe_trampoline.run(trampoline_task, weight=1)
 
@@ -180,13 +179,20 @@ def to_rx[U](source: FlowableNode[U]) -> RxObservable[U]:
                 scheduler=from_rx_scheduler,
             )
 
-            result = source.subscribe(
+            _, result = subscribe_single_sink(
+                source=source,
+                sink=RxBPObserver(),
                 state=state,
-                args=SubscribeArgs(
-                    observer=RxBPObserver(),
-                    schedule_weight=1,
-                ),
+                weight=1,
             )
+
+            # result = source.subscribe(
+            #     state=state,
+            #     args=SubscribeArgs(
+            #         observer=RxBPObserver(),
+            #         schedule_weight=1,
+            #     ),
+            # )
 
             return result.certificate
 

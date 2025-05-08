@@ -56,7 +56,7 @@ class TakeWhileFlowable[U](SingleChildFlowableNode[U, U]):
             state=state,
             args=SubscribeArgs(
                 observer=TakeWhileObserver(),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

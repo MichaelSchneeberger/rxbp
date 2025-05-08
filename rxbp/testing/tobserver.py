@@ -13,7 +13,7 @@ from rxbp.flowabletree.observer import Observer
 class TObserver[V](Observer):
     received: list[V]
     certificate: ContinuationCertificate
-    # is_completed: bool
+    is_completed: bool
 
     # def __init__(self, certificate: ContinuationCertificate):
     #     self.received = []
@@ -58,4 +58,5 @@ def init_test_observer():
     return TObserver(
         received=[],
         certificate=None,
+        is_completed=False,
     )

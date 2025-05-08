@@ -9,6 +9,7 @@ import continuationmonad
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.cancellable import init_cancellation_state
+from rxbp.flowabletree.subscription import Subscription
 from rxbp.state import State
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
@@ -25,18 +26,6 @@ class ConnectableObserver[V](Observer):
     certificate: ContinuationCertificate
     is_completed: bool
     exception: Exception | None
-
-    def connect(self, state: State, source: FlowableNode):
-        state, result = source.unsafe_subscribe(
-            state=state,  # .copy(connectable_observers={}),
-            # state.copy(certificate=result.certificate),
-            args=SubscribeArgs(
-                observer=self,
-                schedule_weight=1,
-            ),
-        )
-        self.certificate = result.certificate
-        return state
 
     def on_next(self, value: V):
         with self.lock:
@@ -74,6 +63,12 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
         )
         return state.connections[self].discover(state)
 
+    # def assign_weight(self, state: State, _):
+    #     # state = state.copy(
+    #     #     discovered_connectables=state.discovered_connectables + [self]
+    #     # )
+    #     return state.connections[self].assign_weight(state, 1)
+
     @override
     def unsafe_subscribe(
         self,
@@ -93,9 +88,40 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
         # if self not in state.connections:
         #     raise AssertionError("Connectable observable is not connected.")
 
-        state = state.copy(
-            connectable_observers=state.connectable_observers | {self: observer}
+        @dataclass
+        class ConnectableSubscription(Subscription):
+            source: FlowableNode
+            observer: ConnectableObserver
+
+            def discover(self, state: State) -> State:
+                return self.source.discover(state)
+
+            def assign_weights(self, state: State, weight: int) -> State:
+                return self.source.assign_weights(state, weight)
+
+            def subscribe(self, state: State) -> State:
+                state, result = self.source.unsafe_subscribe(
+                    state=state,
+                    args=SubscribeArgs(
+                        observer=self.observer,
+                        weight=1,
+                    ),
+                )
+                self.observer.certificate = result.certificate
+                return state
+            
+        subscription = ConnectableSubscription(
+            source=state.connections[self],
+            observer=observer,
         )
+
+        state = state.copy(
+            discovered_subscriptions=state.discovered_subscriptions + [subscription]
+        )
+
+        # state = state.copy(
+        #     connectable_observers=state.connectable_observers | {self: observer}
+        # )
 
         @do()
         def schedule_and_send_next():
@@ -140,7 +166,7 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
-            weight=args.schedule_weight,
+            weight=args.weight,
         )
 
         result = SubscriptionResult(

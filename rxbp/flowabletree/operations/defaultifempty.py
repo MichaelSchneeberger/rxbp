@@ -47,7 +47,7 @@ class DefaultIfEmptyFlowable[U, V](SingleChildFlowableNode[U, U | V]):
             state=state,
             args=SubscribeArgs(
                 observer=DefaultIfEmptyObserver(is_empty=True),
-                schedule_weight=args.schedule_weight,
+                weight=args.weight,
             ),
         )
 

@@ -24,12 +24,12 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
         self, 
         state: State,
     ):
-        if self not in state.subscriber_count:
-            state.subscriber_count[self] = 1
+        if self not in state.shared_subscribe_count:
+            state.shared_subscribe_count[self] = 1
             state = self.child.discover(state)
 
         else:
-            state.subscriber_count[self] += 1
+            state.shared_subscribe_count[self] += 1
 
         return state
 
@@ -38,14 +38,15 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
         state: State,
         weight: int,
     ):
-        state.subscriber_count[self] -= 1
+        state.shared_subscribe_count[self] -= 1
+
         if self not in state.shared_weights:
             state.shared_weights[self] = weight
 
         else:
             state.shared_weights[self] += weight
 
-        if state.subscriber_count[self] == 0:
+        if state.shared_subscribe_count[self] == 0:
             state = self.child.assign_weights(state, state.shared_weights[self])
 
         return state
@@ -73,7 +74,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
 
             observer = SharedObserver(
                 shared=shared,
-                weight=args.schedule_weight,
+                weight=args.weight,
                 ack_observers={},
                 cancellations={},
             )
@@ -84,7 +85,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
                 state,
                 SubscribeArgs(
                     observer=observer,
-                    schedule_weight=total_weight,
+                    weight=total_weight,
                 ),
             )
             shared.upstream_cancellation = result.cancellable
@@ -107,7 +108,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
         id = len(init_state.buffer_map)
         init_state.buffer_map[id] = 0
         certificate, acc_certificate = init_state.acc_certificate.take(
-            args.schedule_weight
+            args.weight
         )
         init_state.acc_certificate = acc_certificate
 
@@ -122,7 +123,7 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
             observer=args.observer,
             shared=shared,
             id=id,
-            weight=args.schedule_weight,
+            weight=args.weight,
             cancellation=downstream_cancellation,
         )
 

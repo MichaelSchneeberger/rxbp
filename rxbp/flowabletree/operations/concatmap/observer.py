@@ -11,8 +11,8 @@ from continuationmonad.typing import (
     DeferredHandler,
 )
 
+from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
 from rxbp.state import init_state
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.concatmap.sharedmemory import ConcatMapSharedMemory
@@ -27,7 +27,7 @@ class ConcatMapObserver[U](Observer[U]):
     func: Callable[[U], FlowableNode[U]]
     scheduler: Scheduler | None
     shared: ConcatMapSharedMemory
-    schedule_weight: int
+    weight: int
 
     @do()
     def _on_next(self, item: U, handler: DeferredHandler | None):
@@ -38,20 +38,38 @@ class ConcatMapObserver[U](Observer[U]):
         trampoline = yield from continuationmonad.get_trampoline()
 
         try:
-            result = flowable.subscribe(
-                state=init_state(
-                    subscription_trampoline=trampoline,
-                    scheduler=self.scheduler,
-                ),
-                args=SubscribeArgs(
-                    observer=ConcatMapInnerObserver(
-                        downstream=self.downstream,
-                        upstream=handler,
-                        shared=self.shared,
-                    ),
-                    schedule_weight=self.schedule_weight,
-                )
+            state = init_state(
+                subscription_trampoline=trampoline,
+                scheduler=self.scheduler,
             )
+
+            sink = ConcatMapInnerObserver(
+                downstream=self.downstream,
+                upstream=handler,
+                shared=self.shared,
+            )
+
+            state, result = subscribe_single_sink(
+                source=flowable,
+                sink=sink,
+                state=state,
+                weight=self.weight,
+            )
+
+            # result = flowable.subscribe(
+            #     state=init_state(
+            #         subscription_trampoline=trampoline,
+            #         scheduler=self.scheduler,
+            #     ),
+            #     args=SubscribeArgs(
+            #         observer=ConcatMapInnerObserver(
+            #             downstream=self.downstream,
+            #             upstream=handler,
+            #             shared=self.shared,
+            #         ),
+            #         schedule_weight=self.schedule_weight,
+            #     )
+            # )
 
         except Exception as exception:
             return self.downstream.on_error(exception)

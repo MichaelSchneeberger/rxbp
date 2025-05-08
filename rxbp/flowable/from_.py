@@ -1,9 +1,15 @@
 import datetime
-from typing import Iterable
+from typing import Callable, Iterable
 
-from continuationmonad.typing import Scheduler
+from continuationmonad.typing import (
+    Scheduler,
+    ContinuationMonad,
+    ContinuationCertificate,
+)
 
 from rxbp.flowable.init import init_connectable_flowable, init_flowable
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.sources.create import init_create
 from rxbp.flowabletree.sources.fromrx import FromRx
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
@@ -30,6 +36,14 @@ def connectable(id, init):
 
 def count():
     return init_flowable(_count())
+
+
+def create(
+    func: Callable[
+        [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
+    ],
+):
+    return init_flowable(init_create(func=func))
 
 
 def empty():
@@ -74,6 +88,26 @@ def repeat(value):
 
 def schedule_on(scheduler: Scheduler | None = None):
     return init_flowable(_schedule_on(scheduler))
+
+
+def sleep(
+    seconds: float | None = None,
+    scheduler: Scheduler | None = None,
+    until: datetime.datetime | None = None,
+):
+    match seconds, until:
+        case None, None:
+            raise Exception(
+                "Either `seconds` or `until` argument needs to be provided."
+            )
+
+        case None, _:
+            return init_flowable(_schedule_absolute(duetime=until, scheduler=scheduler))
+
+        case _:
+            return init_flowable(
+                _schedule_relative(duetime=seconds, scheduler=scheduler)
+            )
 
 
 def schedule_relative(duetime: float, scheduler: Scheduler | None = None):
