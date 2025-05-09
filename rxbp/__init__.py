@@ -1,3 +1,7 @@
+from rxbp.state import init_state as _init_state
+from rxbp.flowabletree.subscribeargs import (
+    init_subscribe_args as _init_subscribe_args,
+)
 from rxbp.flowable.from_ import (
     connectable as _connectable,
     create as _create,
@@ -10,7 +14,6 @@ from rxbp.flowable.from_ import (
     merge as _merge,
     repeat as _repeat,
     schedule_on as _schedule_on,
-    sleep as _sleep,
     schedule_relative as _schedule_relative,
     schedule_absolute as _schedule_absolute,
     zip as _zip,
@@ -19,6 +22,9 @@ from rxbp.flowable.to import (
     to_rx as _to_rx,
     run as _run,
 )
+
+init_state = _init_state
+init_subscribe_args = _init_subscribe_args
 
 connectable = _connectable
 create = _create
@@ -33,10 +39,10 @@ interval = _interval
 merge = _merge
 repeat = _repeat
 schedule_on = _schedule_on
-sleep = _sleep
 schedule_relative = _schedule_relative  # depricated
-delay = _schedule_relative
 schedule_absolute = _schedule_absolute  # depricated
+delay = _schedule_relative
+sleep = _schedule_relative
 zip = _zip
 
 run = _run

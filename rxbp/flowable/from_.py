@@ -90,32 +90,12 @@ def schedule_on(scheduler: Scheduler | None = None):
     return init_flowable(_schedule_on(scheduler))
 
 
-def sleep(
-    seconds: float | None = None,
-    scheduler: Scheduler | None = None,
-    until: datetime.datetime | None = None,
-):
-    match seconds, until:
-        case None, None:
-            raise Exception(
-                "Either `seconds` or `until` argument needs to be provided."
-            )
-
-        case None, _:
-            return init_flowable(_schedule_absolute(duetime=until, scheduler=scheduler))
-
-        case _:
-            return init_flowable(
-                _schedule_relative(duetime=seconds, scheduler=scheduler)
-            )
+def schedule_relative(seconds: float, scheduler: Scheduler | None = None):
+    return init_flowable(_schedule_relative(seconds, scheduler))
 
 
-def schedule_relative(duetime: float, scheduler: Scheduler | None = None):
-    return init_flowable(_schedule_relative(duetime, scheduler))
-
-
-def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler | None = None):
-    return init_flowable(_schedule_absolute(duetime, scheduler))
+def schedule_absolute(until: datetime.datetime, scheduler: Scheduler | None = None):
+    return init_flowable(_schedule_absolute(until, scheduler))
 
 
 def zip(observables: tuple[FlowableNode, ...]):

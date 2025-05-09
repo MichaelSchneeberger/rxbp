@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from rxbp.state import State
 from rxbp.flowabletree.assignweightmixin import AssignWeightMixin

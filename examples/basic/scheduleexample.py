@@ -12,13 +12,13 @@ s2 = continuationmonad.init_event_loop_scheduler()
 @do()
 def stream1():
     n = yield from rxbp.from_iterable(['a', 'b', 'c'])
-    yield rxbp.schedule_relative(s1, 1)
+    yield rxbp.sleep(1, s1)
     return rxbp.from_value(n)
 
 @do()
 def stream2():
     n = yield from rxbp.from_iterable(range(6))
-    yield rxbp.schedule_relative(s2, 0.5)
+    yield rxbp.sleep(0.5, s2)
     return rxbp.from_value(n)
 
 

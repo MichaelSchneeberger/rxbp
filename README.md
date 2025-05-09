@@ -7,7 +7,7 @@
 
 - **Observable Pattern**: built on the reactive programming model.
 - **Backpressure**: enables memory-safe handling of fast data producers and slow consumers.
-- **Continuation certificate**: ensures the execution of a Flowable completes, avoiding any continuation deadlock.
+- **Continuation certificate**: ensures that the execution of a Flowable completes, avoiding any continuation deadlock.
 - **RxPY compatibility**: interoperates with [RxPY](https://github.com/ReactiveX/RxPY/tree/master), bridging classic observables and backpressure-aware *Flowables*.
 - **Favor usability** - Favor an implementation that is simple, safe, and user-friendly, while accepting some computational overhead.
 

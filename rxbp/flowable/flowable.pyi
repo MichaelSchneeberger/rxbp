@@ -1,8 +1,8 @@
 from typing import Callable, Generator, override
 
-from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
 from rxbp.state import State
-from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
+from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
 
@@ -40,7 +40,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def zip_with_index(self) -> Flowable[tuple[U, int]]: ...
     @override
     def unsafe_subscribe(
-        self, state: State, observer: Observer[U]
+        self, state: State, args: SubscribeArgs[U]
     ) -> tuple[State, SubscriptionResult]: ...
 
 class SeqFlowable[U](Flowable[U]):

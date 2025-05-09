@@ -119,7 +119,9 @@ class BufferObserver[V](Cancellable, Observer[V]):
                     )
 
                 case LoopActivePopBuffer():
-                    self.buffer.pop(0)
+                    # pop item that has just been added
+                    self.buffer.pop()
+                    
                     r_certificate = certificate
 
                 case LoopActive():

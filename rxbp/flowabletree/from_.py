@@ -83,7 +83,7 @@ def interval(seconds: float, scheduler: Scheduler | None = None):
         prev_duetime: datetime.datetime,
     ):
         duetime = prev_duetime + datetime.timedelta(seconds=seconds)
-        yield continuationmonad.schedule_absolute(scheduler, duetime)
+        yield continuationmonad.schedule_absolute(duetime, scheduler)
         yield observer.on_next(duetime)
         return schedule_and_send_item(observer, scheduler, duetime)
 
@@ -139,7 +139,7 @@ def schedule_relative(duetime: float, scheduler: Scheduler | None = None):
         else:
             sel_scheduler = scheduler
 
-        yield continuationmonad.schedule_relative(sel_scheduler, duetime)
+        yield continuationmonad.schedule_relative(duetime, sel_scheduler)
         return observer.on_next_and_complete(scheduler)
 
     return init_create(
@@ -155,7 +155,7 @@ def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler | None = 
         else:
             sel_scheduler = scheduler
 
-        yield continuationmonad.schedule_absolute(sel_scheduler, duetime)
+        yield continuationmonad.schedule_absolute(duetime, sel_scheduler)
         return observer.on_next_and_complete(scheduler)
 
     return init_create(
