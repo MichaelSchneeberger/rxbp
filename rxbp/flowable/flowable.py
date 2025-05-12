@@ -27,6 +27,7 @@ from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.operations.concatmap.flowable import init_concat_map
 from rxbp.flowabletree.operations.share.flowable import init_share
+from rxbp.utils.framesummary import get_frame_summary
 
 
 class Flowable[U](SingleChildFlowableNode[U, U]):
@@ -78,11 +79,12 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
             child=init_flat_map_node(
                 child=self.child,
                 func=func,
+                stack=get_frame_summary(),
             )
         )
     
-    def flatten(self):
-        return self.flat_map(lambda f: f)
+    # def flatten(self):
+    #     return self.flat_map(lambda f: f)
 
     def last(self):
         return self.to_list(size=1).map(lambda v: v[0])

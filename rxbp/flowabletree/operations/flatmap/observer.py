@@ -1,20 +1,22 @@
 from dataclasses import dataclass
 from threading import Lock
+import traceback
 from typing import Callable
 
 from donotation import do
 
 import continuationmonad
+from continuationmonad.abc import ContinuationMonadOperatorException
 from continuationmonad.typing import (
     DeferredHandler,
     Scheduler,
 )
 
-from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
+from rxbp.exceptions import RxBpException
 from rxbp.state import init_state
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
 from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapInnerObserver
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.states import (
@@ -31,6 +33,7 @@ from rxbp.flowabletree.operations.flatmap.statetransitions import (
     OnNextAndCompleteOuterTransition,
     OnNextOuterTransition,
 )
+from rxbp.utils.framesummary import FrameSummary, to_execution_exception_message, to_operator_exception_message
 
 
 @dataclass
@@ -39,13 +42,46 @@ class FlatMapObserver[U, V](Observer):
     lock: Lock
     last_id: int
     weight: int
-    scheduler: Scheduler | None
+    scheduler: Scheduler
     func: Callable[[U], FlowableNode[V]]
+    stack: tuple[FrameSummary, ...]
+    raise_immediately: bool
 
     @do()
     def _on_next(self, item: U, handler: DeferredHandler | None):
-        flowable = self.func(item)
+        try:
+            flowable = self.func(item)
 
+        except ContinuationMonadOperatorException as exception:
+            if self.raise_immediately:
+                raise
+
+            exception = RxBpException(
+                "\n".join(
+                    (
+                        exception.args[0],
+                        to_execution_exception_message(traceback.format_exc()),
+                    )
+                )
+            )
+            return self.shared.downstream.on_error(exception)
+
+        except Exception:
+            if self.raise_immediately:
+                raise RxBpException(
+                    to_operator_exception_message(stack=self.stack)
+                )
+    
+            exception = RxBpException(
+                "\n".join(
+                    (
+                        to_execution_exception_message(traceback.format_exc()),
+                        to_operator_exception_message(stack=self.stack),
+                    )
+                )
+            )
+            return self.shared.downstream.on_error(exception)
+        
         trampoline = yield from continuationmonad.get_trampoline()
 
         with self.lock:
@@ -62,12 +98,43 @@ class FlatMapObserver[U, V](Observer):
             shared=self.shared,
         )
 
-        state, result = subscribe_single_sink(
-            source=flowable,
-            sink=sink,
-            state=state,
-            weight=self.weight,
-        )
+        try:
+            state, result = subscribe_single_sink(
+                source=flowable,
+                sink=sink,
+                state=state,
+                weight=self.weight,
+            )
+
+        except ContinuationMonadOperatorException as exception:
+            if self.raise_immediately:
+                raise
+
+            exception = RxBpException(
+                "\n".join(
+                    (
+                        exception.args[0],
+                        to_execution_exception_message(traceback.format_exc()),
+                    )
+                )
+            )
+            return self.shared.downstream.on_error(exception)
+
+        except Exception:
+            if self.raise_immediately:
+                raise RxBpException(
+                    to_operator_exception_message(stack=self.stack)
+                )
+    
+            exception = RxBpException(
+                "\n".join(
+                    (
+                        to_execution_exception_message(traceback.format_exc()),
+                        to_operator_exception_message(stack=self.stack),
+                    )
+                )
+            )
+            return self.shared.downstream.on_error(exception)
 
         # state, result = flowable.unsafe_subscribe(
         #     state=init_state(

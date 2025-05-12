@@ -11,7 +11,7 @@ from rxbp.flowabletree.assignweightmixin import AssignWeightMixin
 
 class Subscription(AssignWeightMixin):
     @abstractmethod
-    def subscribe(self, state: State) -> State: ...
+    def apply(self, state: State) -> State: ...
 
 
 # class Subscription(AssignWeightMixin):

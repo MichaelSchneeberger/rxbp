@@ -25,7 +25,7 @@ from rxbp.flowabletree.operations.concatmap.innerobserver import ConcatMapInnerO
 class ConcatMapObserver[U](Observer[U]):
     downstream: Observer
     func: Callable[[U], FlowableNode[U]]
-    scheduler: Scheduler | None
+    scheduler: Scheduler
     shared: ConcatMapSharedMemory
     weight: int
 

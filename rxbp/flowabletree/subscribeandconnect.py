@@ -32,7 +32,7 @@ def subscribe_and_connect(
 
     # subscribe
     for subscription in subscriptions:
-        state = subscription.subscribe(state)
+        state = subscription.apply(state)
 
     while state.discovered_subscriptions:
         discovered_subscriptions = state.discovered_subscriptions
@@ -61,7 +61,7 @@ def subscribe_single_sink(
         def assign_weights(self, state: State, weight: int):
             return source.assign_weights(state, weight)
 
-        def subscribe(self, state: State):
+        def apply(self, state: State):
             state, self.result = source.unsafe_subscribe(
                 state,
                 args=SubscribeArgs(

@@ -19,7 +19,7 @@ class create[U]:
     def __new__(
         cls,
         func: Callable[
-            [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
+            [Observer, Scheduler], ContinuationMonad[ContinuationCertificate]
         ],
     ) -> Flowable[U]: ...
 

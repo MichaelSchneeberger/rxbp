@@ -24,7 +24,7 @@ class State(ABC):
 
     @property
     @abstractmethod
-    def scheduler(self) -> Scheduler | None:
+    def scheduler(self) -> Scheduler:
         """
         Scheduler is propagated from downstream to upstream
         """
@@ -64,6 +64,10 @@ class State(ABC):
     @abstractmethod
     def certificate(self) -> ContinuationCertificate | None: ...
 
+    @property
+    @abstractmethod
+    def raise_immediately(self) -> bool: ...
+
 
 @dataclassabc(frozen=True)
 class StateImpl(State):
@@ -78,6 +82,7 @@ class StateImpl(State):
     connections: dict
     # connectable_observers: dict
     certificate: ContinuationCertificate | None
+    raise_immediately: bool
 
     @override
     def copy(self, /, **changes):
@@ -85,8 +90,8 @@ class StateImpl(State):
     
 
 def init_state(
+    scheduler: Scheduler,
     subscription_trampoline: Trampoline | None = None,
-    scheduler: Scheduler | None = None,
     shared_observers: dict | None = None,
     shared_subscribe_count: dict | None = None,
     shared_weights: dict | None = None,
@@ -95,6 +100,7 @@ def init_state(
     discovered_subscriptions: list | None = None,
     # connectable_observers: dict | None = None,
     certificate: ContinuationCertificate | None = None,
+    raise_immediately: bool | None = None,
 ):
     if subscription_trampoline is None:
         subscription_trampoline = continuationmonad.init_trampoline()
@@ -117,6 +123,9 @@ def init_state(
     if discovered_connectables is None:
         discovered_connectables = []
 
+    if raise_immediately is None:
+        raise_immediately = True
+
     return StateImpl(
         lock=RLock(),
         scheduler=scheduler, 
@@ -128,4 +137,5 @@ def init_state(
         discovered_connectables=discovered_connectables,
         discovered_subscriptions=discovered_subscriptions,
         certificate=certificate,
+        raise_immediately=raise_immediately,
     )

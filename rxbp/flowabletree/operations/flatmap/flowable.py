@@ -6,6 +6,7 @@ from typing import Callable
 from dataclassabc import dataclassabc
 from donotation import do
 
+from rxbp.utils.framesummary import FrameSummary, FrameSummaryMixin
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -17,10 +18,11 @@ from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemor
 from rxbp.flowabletree.operations.flatmap.observer import FlatMapObserver
 
 
-@dataclassabc(frozen=True)
-class FlatMapFlowableNode[U, V](SingleChildFlowableNode[U, V]):
+@dataclassabc(frozen=True, repr=False)
+class FlatMapFlowableNode[U, V](FrameSummaryMixin, SingleChildFlowableNode[U, V]):
     child: FlowableNode[U]
     func: Callable[[U], FlowableNode[V]]
+    stack: tuple[FrameSummary, ...]
 
     @do()
     def unsafe_subscribe(
@@ -45,6 +47,8 @@ class FlatMapFlowableNode[U, V](SingleChildFlowableNode[U, V]):
                 weight=args.weight,
                 func=self.func,
                 scheduler=state.scheduler,
+                stack=self.stack,
+                raise_immediately=state.raise_immediately,
             ))
         )
 
@@ -62,5 +66,6 @@ class FlatMapFlowableNode[U, V](SingleChildFlowableNode[U, V]):
 def init_flat_map_node[U, V](
     child: FlowableNode[U], 
     func: Callable[[U], FlowableNode[V]],
+    stack: tuple[FrameSummary, ...],
 ):
-    return FlatMapFlowableNode[U, V](child=child, func=func)
+    return FlatMapFlowableNode[U, V](child=child, func=func, stack=stack)

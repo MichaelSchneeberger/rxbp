@@ -116,6 +116,7 @@ class TerminatedStateMixin(FlatMapState):
     # - to cancel upstream flowable
     certificates: dict[int, ContinuationCertificate]
 
+    # None if outer Flowable is already terminated
     outer_certificate: ContinuationCertificate | None
 
 

@@ -18,7 +18,7 @@ from rxbp.flowabletree.nodes import FlowableNode
 
 @dataclass(frozen=True)
 class Create[V](FlowableNode[V]):
-    func: Callable[[Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]]
+    func: Callable[[Observer, Scheduler], ContinuationMonad[ContinuationCertificate]]
 
     @override
     def unsafe_subscribe(
@@ -44,5 +44,5 @@ class Create[V](FlowableNode[V]):
         )
 
 
-def init_create(func: Callable[[Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]]):
+def init_create(func: Callable[[Observer, Scheduler], ContinuationMonad[ContinuationCertificate]]):
     return Create(func=func)

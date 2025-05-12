@@ -161,7 +161,7 @@ class RequestTransition(FlatMapStateTransition):
                                 return OnNextAndCompleteState(
                                     certificates={},
                                     value=value,
-                                    outer_certificate=certificates[0],
+                                    outer_certificate=None,
                                 )
 
                             else:

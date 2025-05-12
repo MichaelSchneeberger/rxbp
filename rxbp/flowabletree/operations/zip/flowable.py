@@ -5,11 +5,11 @@ from typing import Callable
 from dataclassabc import dataclassabc
 from donotation import do
 
-from rxbp.flowabletree.operations.zip.states import AwaitUpstreamStateMixin
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
+from rxbp.flowabletree.operations.zip.states import AwaitUpstreamStateMixin
 from rxbp.flowabletree.operations.zip.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
 from rxbp.flowabletree.operations.zip.cancellable import ZipCancellable
@@ -95,11 +95,11 @@ def init_zip_flowable_node[A, U](
     children: tuple[FlowableNode[U], ...],
 ):
     def zip_func(acc: A, val: dict[int, U]):
-        return acc, tuple(), tuple(val.values())
+        _, zipped_values = zip(*sorted(val.items()))
+        return acc, tuple(), zipped_values
 
     return ControlledZipFlowableNode[A, U](
         children=children,
         func=zip_func,
         initial=None,
 )
-

@@ -14,7 +14,7 @@ from rxbp.flowabletree.sources.fromrx import FromRx
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.sources.connectable import init_connectable
-from rxbp.flowabletree.operations.merge.flowable import init_merge
+from rxbp.flowabletree.operations.merge.flowable import init_merge_flowable_node
 from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.flowabletree.from_ import (
     count as _count,
@@ -40,7 +40,7 @@ def count():
 
 def create(
     func: Callable[
-        [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
+        [Observer, Scheduler], ContinuationMonad[ContinuationCertificate]
     ],
 ):
     return init_flowable(init_create(func=func))
@@ -76,7 +76,7 @@ def interval(seconds: float, scheduler: Scheduler | None = None):
 
 def merge(observables: tuple[FlowableNode, ...]):
     return init_flowable(
-        child=init_merge(children=observables),
+        child=init_merge_flowable_node(children=observables),
     )
 
 

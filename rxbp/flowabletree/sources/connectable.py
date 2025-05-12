@@ -99,7 +99,7 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
             def assign_weights(self, state: State, weight: int) -> State:
                 return self.source.assign_weights(state, weight)
 
-            def subscribe(self, state: State) -> State:
+            def apply(self, state: State) -> State:
                 state, result = self.source.unsafe_subscribe(
                     state=state,
                     args=SubscribeArgs(

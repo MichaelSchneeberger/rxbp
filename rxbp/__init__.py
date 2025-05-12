@@ -4,6 +4,7 @@ from rxbp.flowabletree.subscribeargs import (
 )
 from rxbp.flowable.from_ import (
     connectable as _connectable,
+    count as _count,
     create as _create,
     empty as _empty,
     error as _error,
@@ -26,7 +27,11 @@ from rxbp.flowable.to import (
 init_state = _init_state
 init_subscribe_args = _init_subscribe_args
 
+
+# Create a Flowables
+
 connectable = _connectable
+count = _count
 create = _create
 empty = _empty
 error = _error
@@ -36,14 +41,21 @@ from_value = _from_value
 return_ = _from_value
 from_rx = _from_rx
 interval = _interval
-merge = _merge
 repeat = _repeat
 schedule_on = _schedule_on
 schedule_relative = _schedule_relative  # depricated
 schedule_absolute = _schedule_absolute  # depricated
 delay = _schedule_relative
 sleep = _schedule_relative
+
+
+# Combining operators
+
+merge = _merge
 zip = _zip
+
+
+# Output functions
 
 run = _run
 to_rx = _to_rx

@@ -7,6 +7,9 @@ from donotation import do
 import continuationmonad
 from continuationmonad.typing import (
     DeferredHandler,
+    ContinuationMonad,
+    ContinuationCertificate,
+    Trampoline,
 )
 
 from rxbp.flowabletree.observer import Observer
@@ -77,7 +80,9 @@ class FlatMapInnerObserver[V](Observer[V]):
                     case _:
                         pass
 
-                continuation = self._on_next(state)
+                # pyright needs help to infer correct type
+                continuation: ContinuationMonad[ContinuationCertificate] = self._on_next(state)
+
                 return continuation
 
             case KeepWaitingState(certificate=certificate):
@@ -100,7 +105,7 @@ class FlatMapInnerObserver[V](Observer[V]):
         # print(f'on_next({value}), id={self.id}')
 
         # wait for upstream observer before continuing to simplify concurrency
-        def on_next_subscription(_, handler: DeferredHandler):
+        def on_next_subscription(_: Trampoline, handler: DeferredHandler):
             transition = OnNextTransition(
                 child=None,  # type: ignore
                 id=self.id,
