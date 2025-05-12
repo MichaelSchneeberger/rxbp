@@ -61,14 +61,16 @@ class ZipObserver[V](Observer[V]):
                     return certificate
 
                 # all upstream items received
-                case OnNextState(values=values):
+                case OnNextState(
+                    values=values,
+                ):
                     # backpressure selected upstream flowables
-                    hold_back = self.shared.zip_func(state.values)
+                    self.shared.acc, hold_back, on_next_items = self.shared.zip_func(self.shared.acc, state.values)
 
                     complete_downstream = [False]
 
                     def gen_deferred_handlers():
-                        for id in state.values:
+                        for id in range(self.shared.n_children):
                             if id not in hold_back:
                                 if id in state.observers:
                                     yield state.observers[id]
@@ -77,15 +79,13 @@ class ZipObserver[V](Observer[V]):
 
                     handlers = tuple(gen_deferred_handlers())
 
-                    _, zipped_values = zip(*sorted(values.items()))
-
                     if complete_downstream[0]:
                         return self.shared.downstream.on_next_and_complete(
-                            zipped_values
+                            on_next_items
                         )
 
                     else:
-                        _ = yield from self.shared.downstream.on_next(zipped_values)
+                        _ = yield from self.shared.downstream.on_next(on_next_items)
 
                         certificate, *others = yield from continuationmonad.from_(
                             None
@@ -94,11 +94,7 @@ class ZipObserver[V](Observer[V]):
                         transition = RequestTransition(
                             child=None,  # type: ignore
                             certificates=tuple(others),
-                            values={
-                                id: value
-                                for id, value in state.values.items()
-                                if id in hold_back
-                            },
+                            values={},
                             observers={
                                 id: value
                                 for id, value in state.observers.items()
@@ -123,10 +119,11 @@ class ZipObserver[V](Observer[V]):
 
                         return continuationmonad.from_(certificate)
 
-                case OnNextAndCompleteState(values=values):
-                    _, zipped_values = zip(*sorted(values.items()))
-
-                    return self.shared.downstream.on_next_and_complete(zipped_values)
+                case OnNextAndCompleteState(
+                    values=values,
+                ):
+                    _, _, on_next_items = self.shared.zip_func(self.shared.acc, values)
+                    return self.shared.downstream.on_next_and_complete(on_next_items)
 
                 case TerminatedStateMixin(certificate=certificate):
                     return certificate

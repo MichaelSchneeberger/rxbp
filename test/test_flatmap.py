@@ -7,19 +7,19 @@ import continuationmonad
 import rxbp
 
 from rxbp.typing import Observer
-from rxbp.flowabletree.operations.flatmap.flowable import FlatMapFlowable
+from rxbp.flowabletree.operations.flatmap.flowable import FlatMapFlowableNode
 from rxbp.testing.tobserver import init_test_observer
 from rxbp.testing.trun import test_run
 
 
-class TestConcatMap(TestCase):
+class TestFlatMap(TestCase):
 
     def test_normal_case(self):
         scheduler = continuationmonad.init_virtual_time_scheduler()
 
         @do()
         def schedule_inner_source1(observer: Observer, _):
-            yield continuationmonad.sleep(1, scheduler)
+            yield continuationmonad.sleep(2, scheduler)
             _ = yield observer.on_next(2)
             yield continuationmonad.sleep(2, scheduler)
             return observer.on_next_and_complete(4)
@@ -28,6 +28,7 @@ class TestConcatMap(TestCase):
 
         @do()
         def schedule_inner_source2(observer: Observer, _):
+            yield continuationmonad.sleep(1, scheduler)
             _ = yield observer.on_next(1)
             yield continuationmonad.sleep(2, scheduler)
             return observer.on_next_and_complete(3)
@@ -44,7 +45,7 @@ class TestConcatMap(TestCase):
         sink = init_test_observer()
 
         test_run(
-            source=FlatMapFlowable(
+            source=FlatMapFlowableNode(
                 child=source,
                 func=lambda v: v,
             ),
@@ -53,15 +54,18 @@ class TestConcatMap(TestCase):
         )
 
         scheduler.advance_to(0.5)
-        self.assertEqual(sink.received, [1])
+        self.assertEqual(sink.received, [])
 
         scheduler.advance_to(1.5)
+        self.assertEqual(sink.received, [1])
+
+        scheduler.advance_to(2.5)
         self.assertEqual(sink.received, [1, 2])
         self.assertFalse(sink.is_completed)
 
-        scheduler.advance_to(2.5)
+        scheduler.advance_to(3.5)
         self.assertEqual(sink.received, [1, 2, 3])
 
-        scheduler.advance_to(3.5)
+        scheduler.advance_to(4.5)
         self.assertEqual(sink.received, [1, 2, 3, 4])
         self.assertTrue(sink.is_completed)

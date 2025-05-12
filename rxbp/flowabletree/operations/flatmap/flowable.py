@@ -6,11 +6,11 @@ from typing import Callable
 from dataclassabc import dataclassabc
 from donotation import do
 
-from rxbp.flowabletree.operations.flatmap.cancellable import FlatMapCancellable
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import SingleChildFlowableNode, FlowableNode
+from rxbp.flowabletree.operations.flatmap.cancellable import FlatMapCancellable
 from rxbp.flowabletree.operations.flatmap.states import InitState
 from rxbp.flowabletree.operations.flatmap.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
@@ -18,7 +18,7 @@ from rxbp.flowabletree.operations.flatmap.observer import FlatMapObserver
 
 
 @dataclassabc(frozen=True)
-class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
+class FlatMapFlowableNode[U, V](SingleChildFlowableNode[U, V]):
     child: FlowableNode[U]
     func: Callable[[U], FlowableNode[V]]
 
@@ -59,8 +59,8 @@ class FlatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
         )
 
 
-def init_flat_map[U, V](
+def init_flat_map_node[U, V](
     child: FlowableNode[U], 
     func: Callable[[U], FlowableNode[V]],
 ):
-    return FlatMapFlowable[U, V](child=child, func=func)
+    return FlatMapFlowableNode[U, V](child=child, func=func)

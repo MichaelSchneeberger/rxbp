@@ -27,7 +27,7 @@ class ZipCancellable(Cancellable):
         match state := transition.get_state():
             case CancelledState(certificates=certificates):
                 for id, certificate in certificates.items():
-                    self.shared.cancellables[id].cancel(certificate)
+                    self.cancellables[id].cancel(certificate)
 
             case _:
                 Exception(f"Unexpected state {state}.")

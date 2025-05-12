@@ -70,8 +70,8 @@ rxbp.to_rx(flowable).subscribe(lambda v: print(f"Received {v}"))
 A *Flowable* is executed by calling the `rxbp.run()` function. 
 This call blocks program execution until the *Flowable* terminates (either by completing or erroring) and returns a list of the emitted items.
 Typically, `rxbp.run()` is intended to be the final step in a program: first, the dataflow is defined by constructing a *Flowable*; then, the program is executed by invoking `run()`.
-In contrast, functional programming languages eliminate the need for an explicit `run()` call—execution is handled automatically by the compiler or runtime. 
-In such cases, the programmer simply defines the computation, and the system takes care of running it.
+<!-- In contrast, functional programming languages eliminate the need for an explicit `run()` call—execution is handled automatically by the compiler or runtime. 
+In such cases, the programmer simply defines the computation, and the system takes care of running it. -->
 
 In *RxPY*, the `subscribe` method is used to execute an *Observable*.
 It accepts `on_next`, `on_error`, and `on_completed` handlers as arguments, but does not return the received items.

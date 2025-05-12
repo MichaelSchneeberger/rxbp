@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Callable, override
 
-from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map
+from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map_node
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -23,7 +23,7 @@ from rxbp.flowabletree.operations.filter import init_filter_flowable
 from rxbp.flowabletree.operations.map import init_map_flowable
 from rxbp.flowabletree.operations.skipwhile import init_skip_while_flowable
 from rxbp.flowabletree.operations.takewhile import init_take_while_flowable
-from rxbp.flowabletree.operations.zip.flowable import init_zip
+from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.operations.concatmap.flowable import init_concat_map
 from rxbp.flowabletree.operations.share.flowable import init_share
@@ -75,7 +75,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
 
     def flat_map(self, func: Callable[[U], FlowableNode]):
         return self.copy(
-            child=init_flat_map(
+            child=init_flat_map_node(
                 child=self.child,
                 func=func,
             )
@@ -122,7 +122,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
 
     def skip(self, count: int):
         return (
-            self.copy(child=init_zip((self, _count())))
+            self.copy(child=init_zip_flowable_node((self, _count())))
             .skip_while(lambda v: v[1] < count)
             .map(lambda v: v[0])
         )
@@ -162,11 +162,11 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
         return self.copy(child=init_to_list_flowable(child=self.child))
 
     def zip_with_index(self):
-        return self.copy(child=init_zip((self, _count())))
+        return self.copy(child=init_zip_flowable_node((self, _count())))
 
     def zip(self, others: tuple[Flowable, ...]):
         return self.copy(
-            child=init_zip(children=(self,) + others),
+            child=init_zip_flowable_node(children=(self,) + others),
         )
 
     @override

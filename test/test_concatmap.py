@@ -107,7 +107,7 @@ class TestConcatMap(TestCase):
         self.assertEqual(sink.received, [1, 2])
         self.assertTrue(sink.is_completed)
 
-    def test_nonempty_follows_empty(self):
+    def test_nonempty_followed_by_empty(self):
         scheduler = continuationmonad.init_virtual_time_scheduler()
 
         @do()

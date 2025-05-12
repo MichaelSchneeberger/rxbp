@@ -15,7 +15,7 @@ from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.sources.connectable import init_connectable
 from rxbp.flowabletree.operations.merge.flowable import init_merge
-from rxbp.flowabletree.operations.zip.flowable import init_zip
+from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.flowabletree.from_ import (
     count as _count,
     empty as _empty,
@@ -100,5 +100,5 @@ def schedule_absolute(until: datetime.datetime, scheduler: Scheduler | None = No
 
 def zip(observables: tuple[FlowableNode, ...]):
     return init_flowable(
-        child=init_zip(children=observables),
+        child=init_zip_flowable_node(children=observables),
     )

@@ -20,13 +20,11 @@ from continuationmonad.typing import (
 )
 
 from rxbp.cancellable import CancellationState
-from rxbp.flowabletree.nodes import FlowableNode
-from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
 from rxbp.state import init_state
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.subscribeandconnect import subscribe_and_connect, subscribe_single_sink
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.subscription import StandardSubscription
+from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
+from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
 
 
 def run[U](
