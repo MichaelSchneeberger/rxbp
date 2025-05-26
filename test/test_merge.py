@@ -16,7 +16,7 @@ from rxbp.testing.trun import test_run
 class TestMerge(TestCase):
 
     def test_normal_case(self):
-        scheduler = continuationmonad.init_virtual_time_scheduler()
+        scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
         @do()
         def schedule_source1(observer: Observer, _):
@@ -35,13 +35,13 @@ class TestMerge(TestCase):
 
         source2 = init_test_flowable(schedule_source2)
 
-        sink = init_test_observer()
+        sink = init_test_observer(scheduler=scheduler)
 
         test_run(
             source=init_merge_flowable_node(
                 children=(source1, source2),
             ),
-            sink=sink,
+            sinks=(sink,),
             scheduler=scheduler,
         )
 

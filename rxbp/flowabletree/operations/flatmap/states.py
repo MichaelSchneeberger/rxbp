@@ -20,18 +20,16 @@ class FlatMapState:
     pass
 
 
-@dataclass(frozen=True, slots=True)
-class InitState(FlatMapState):
-    """No subscriptions"""
-
-
 @dataclass(frozen=True)
 class ActiveStateMixin(FlatMapState):
+
     # number of completed upstream observables
     # State is active as long as n_completed < n_children
-    n_completed: int
+    # n_completed: int
     
-    n_children: int
+    # n_children: int
+
+    active_ids: tuple[int, ...]
 
     # upstream continuation certificates
     certificates: tuple[ContinuationCertificate, ...]
@@ -54,14 +52,19 @@ class AwaitUpstreamStateMixin(ActiveStateMixin):
 
 
 @dataclass(frozen=True, slots=True)
-class FirstSubscription(AwaitUpstreamStateMixin):
-    # certificate: ContinuationCertificate
-    pass
+class InitState(AwaitUpstreamStateMixin):
+    """No subscriptions"""
 
 
-@dataclass(frozen=True, slots=True)
-class FirstSubscriptionOuterCompleted(StopContinuationStateMixin, AwaitUpstreamStateMixin):
-    pass
+# @dataclass(frozen=True, slots=True)
+# class FirstSubscription(AwaitUpstreamStateMixin):
+#     # certificate: ContinuationCertificate
+#     pass
+
+
+# @dataclass(frozen=True, slots=True)
+# class FirstSubscriptionOuterCompleted(StopContinuationStateMixin, AwaitUpstreamStateMixin):
+#     pass
 
 
 @dataclass(frozen=True, slots=True)

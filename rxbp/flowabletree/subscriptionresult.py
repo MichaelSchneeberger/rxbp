@@ -9,3 +9,13 @@ from rxbp.cancellable import Cancellable
 class SubscriptionResult:
     cancellable: Cancellable
     certificate: ContinuationCertificate
+
+
+def init_subscription_result(
+    cancellable: Cancellable,
+    certificate: ContinuationCertificate,
+):
+    return SubscriptionResult(
+        cancellable=cancellable,
+        certificate=certificate,
+    )

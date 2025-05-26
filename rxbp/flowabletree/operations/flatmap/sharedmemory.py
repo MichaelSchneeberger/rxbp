@@ -17,3 +17,4 @@ class FlatMapSharedMemory:
     transition: FlatMapStateTransition
     lock: Lock
     cancellables: dict[int, Cancellable]
+    upstream_cancellable: Cancellable

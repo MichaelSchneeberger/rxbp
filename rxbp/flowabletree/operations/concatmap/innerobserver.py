@@ -35,6 +35,7 @@ class ConcatMapInnerObserver[V](Observer[V]):
         match result := self.on_completed():
             case ContinuationCertificate():
                 return continuationmonad.from_(result)
+            
             case _:
                 return result
 

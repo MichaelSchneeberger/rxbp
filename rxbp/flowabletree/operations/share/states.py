@@ -17,10 +17,13 @@ class ActiveStateMixin(ShareState):
     first_buffer_index: int
     last_buffer_index: int
 
-    # last_buffer_index+1 when element
-    is_ack: bool
+    # # last_buffer_index+1 when element
+    # is_ack: bool
 
-    acc_certificate: ContinuationCertificate
+    weights: dict[int, int]
+
+    requested_certificates: dict[int, ContinuationCertificate]
+    cancelled_certificates: dict[int, ContinuationCertificate]
 
     is_completed: bool
 
@@ -34,9 +37,18 @@ class StopContinuationStateMixin:
 
 
 @dataclass(frozen=False)
+class AdjustBufferStateMixin(ActiveStateMixin):
+    n_buffer_pop: int
+
+
+@dataclass(frozen=False)
 class AwaitUpstreamStateMixin(ActiveStateMixin):
     """At least one downstream observer requested a new item."""
 
+
+@dataclass(frozen=False)
+class AwaitUpstreamAdjustBufferState(AdjustBufferStateMixin, AwaitUpstreamStateMixin):
+    # n_buffer_pop: int
     pass
 
 
@@ -48,7 +60,8 @@ class InitState(AwaitUpstreamStateMixin):
 @dataclass(frozen=False, slots=True)
 class RequestUpstream(AwaitUpstreamStateMixin):
     # upstream_ack_observer: DeferredHandler
-    certificate: ContinuationCertificate
+    # certificate: ContinuationCertificate
+    pass
 
 
 @dataclass(frozen=False, slots=True)
@@ -57,26 +70,48 @@ class AwaitOnNext(AwaitUpstreamStateMixin):
 
 
 @dataclass(frozen=False, slots=True)
-class SendItemFromBuffer(AwaitUpstreamStateMixin):
+class OnNextFromBuffer(AwaitUpstreamStateMixin):
     index: int
     pop_item: bool
 
 
+@dataclass(frozen=False)
+class AwaitDownstreamStateMixin(ActiveStateMixin):
+    # cancelled_certificates: dict[int, ContinuationCertificate]
+    pass
+
+
+@dataclass(frozen=False)
+class AwaitDownstreamAdjustBufferState(AdjustBufferStateMixin, AwaitDownstreamStateMixin):
+    # n_buffer_pop: int
+    pass
+
+
+@dataclass(frozen=False)
+class CancelledKeepAwaitDownstreamState(StopContinuationStateMixin, AwaitDownstreamStateMixin):
+    pass
+
+
 @dataclass(frozen=False, slots=True)
-class SendItem(ActiveStateMixin):
+class OnNext(AwaitDownstreamStateMixin):
     send_ids: tuple[int, ...]
     buffer_item: bool
 
 
 @dataclass(frozen=True, slots=True)
 class TerminatedStateMixin(ShareState):
-    pass
+    requested_certificates: dict[int, ContinuationCertificate]
+
+
+# @dataclass(frozen=False, slots=True)
+# class OnNextAndComplete(AwaitDownstreamStateMixin):
+#     send_ids: tuple[int, ...]
+#     buffer_item: bool
 
 
 @dataclass(frozen=True, slots=True)
 class OnCompletedState(TerminatedStateMixin):
     send_ids: tuple[int, ...]
-    acc_certificate: ContinuationCertificate
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,9 +121,7 @@ class ErrorStateMixin(TerminatedStateMixin):
 
 @dataclass(frozen=True, slots=True)
 class OnErrorState(ErrorStateMixin):
-    # exception: Exception
     send_ids: tuple[int, ...]
-    acc_certificate: ContinuationCertificate
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +131,7 @@ class HasErroredState(ErrorStateMixin):
 
 @dataclass(frozen=True, slots=True)
 class CancelledState(TerminatedStateMixin):
-    certificate: ContinuationCertificate
+    pass
 
 
 @dataclass(frozen=True, slots=True)

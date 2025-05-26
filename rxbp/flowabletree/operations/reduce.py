@@ -52,9 +52,8 @@ class ReduceFlowable[U](SingleChildFlowableNode[U, U]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=ReduceObserver(is_first=True, acc=None),
-                weight=args.weight,
             ),
         )
 

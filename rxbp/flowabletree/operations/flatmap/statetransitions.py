@@ -15,9 +15,6 @@ from rxbp.flowabletree.operations.flatmap.states import (
     AwaitDownstreamStateMixin,
     AwaitUpstreamStateMixin,
     CancelledStopRequestState,
-    FirstSubscription,
-    FirstSubscriptionOuterCompleted,
-    InitState,
     SubscribedState,
     CancelledAwaitRequestState,
     CancelledState,
@@ -82,8 +79,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, FlatMapStateTransition):
     def get_state(self):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
                 is_outer_completed=is_outer_completed,
             ):
@@ -91,17 +87,15 @@ class OnNextTransition[U](InactiveTransitionsMixin, FlatMapStateTransition):
                     value=self.value,
                     observer=self.observer,
                     on_next_calls=tuple(),
-                    n_completed=n_completed,
-                    n_children=n_children,
+                    active_ids=active_ids,
                     certificates=certificates,
                     is_outer_completed=is_outer_completed,
                 )
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
-                n_completed=n_completed,
+                active_ids=active_ids,
                 certificates=certificates,
-                n_children=n_children,
                 is_outer_completed=is_outer_completed,
             ):
                 # backpressure on_next call
@@ -114,8 +108,7 @@ class OnNextTransition[U](InactiveTransitionsMixin, FlatMapStateTransition):
                 n_on_next_calls = on_next_calls + (pre_state,)
 
                 return KeepWaitingState(
-                    n_completed=n_completed,
-                    n_children=n_children,
+                    active_ids=active_ids,
                     on_next_calls=n_on_next_calls,
                     certificate=certificates[0],
                     certificates=certificates[1:],
@@ -138,8 +131,7 @@ class RequestTransition(FlatMapStateTransition):
         match previous_state := self.child.get_state():
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
                 is_outer_completed=is_outer_completed,
             ):
@@ -157,7 +149,7 @@ class RequestTransition(FlatMapStateTransition):
                             # upstream called on_next_and_complete
 
                             # last element in buffer
-                            if is_outer_completed and len(others) == 0 and n_children == n_completed:
+                            if is_outer_completed and len(active_ids):
                                 return OnNextAndCompleteState(
                                     certificates={},
                                     value=value,
@@ -169,8 +161,7 @@ class RequestTransition(FlatMapStateTransition):
                                     observer=None,
                                     value=value,
                                     on_next_calls=tuple(others),
-                                    n_completed=n_completed,
-                                    n_children=n_children,
+                                    active_ids=active_ids,
                                     certificates=certificates + (self.certificate,)
                                     if self.certificate
                                     else certificates,
@@ -182,8 +173,7 @@ class RequestTransition(FlatMapStateTransition):
                                 value=value,
                                 observer=observer,
                                 on_next_calls=tuple(others),
-                                n_completed=n_completed,
-                                n_children=n_children,
+                                active_ids=active_ids,
                                 certificates=certificates + (self.certificate,)
                                 if self.certificate
                                 else certificates,
@@ -195,8 +185,7 @@ class RequestTransition(FlatMapStateTransition):
 
                         if self.certificate:
                             return AwaitOnNextState(
-                                n_completed=n_completed,
-                                n_children=n_children,
+                                active_ids=active_ids,
                                 certificate=self.certificate,
                                 certificates=certificates,
                                 is_outer_completed=is_outer_completed,
@@ -204,8 +193,7 @@ class RequestTransition(FlatMapStateTransition):
 
                         else:
                             return AwaitOnNextState(
-                                n_completed=n_completed,
-                                n_children=n_children,
+                                active_ids=active_ids,
                                 certificate=certificates[0],
                                 certificates=certificates[1:],
                                 is_outer_completed=is_outer_completed,
@@ -242,12 +230,11 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, FlatMapStateTrans
     def get_state(self):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
                 is_outer_completed=is_outer_completed,
             ):
-                if is_outer_completed and n_children == n_completed + 1:
+                if is_outer_completed and len(active_ids) == 1:
                     return OnNextAndCompleteState(
                         value=self.value,
                         certificates={},
@@ -259,16 +246,14 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, FlatMapStateTrans
                         value=self.value,
                         observer=None,
                         on_next_calls=tuple(),
-                        n_completed=n_completed + 1,
-                        n_children=n_children,
+                        active_ids=tuple(id for id in active_ids if id != self.id),
                         certificates=certificates,
                         is_outer_completed=is_outer_completed,
                     )
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
                 is_outer_completed=is_outer_completed,
             ):
@@ -282,8 +267,7 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, FlatMapStateTrans
                 n_on_next_calls = on_next_calls + (pre_state,)
 
                 return KeepWaitingState(
-                    n_completed=n_completed + 1,
-                    n_children=n_children,
+                    active_ids=tuple(id for id in active_ids if id != self.id),
                     on_next_calls=n_on_next_calls,
                     certificate=certificates[0],
                     certificates=certificates[1:],
@@ -302,21 +286,19 @@ class OnCompletedTransition(InactiveTransitionsMixin, FlatMapStateTransition):
     def get_state(self):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
                 is_outer_completed=is_outer_completed,
             ):
-                if is_outer_completed and n_children == n_completed + 1:
+                if is_outer_completed and len(active_ids) == 1:
                     return OnCompletedState(
                         certificates={},
-                        outer_certificate=certificates[0],
+                        outer_certificate=None,
                     )
 
                 else:
                     return AwaitOnNextState(
-                        n_completed=n_completed + 1,
-                        n_children=n_children,
+                        active_ids=tuple(id for id in active_ids if id != self.id),
                         certificate=certificates[0],
                         certificates=certificates[1:],
                         is_outer_completed=is_outer_completed,
@@ -324,15 +306,13 @@ class OnCompletedTransition(InactiveTransitionsMixin, FlatMapStateTransition):
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
                 is_outer_completed=is_outer_completed,
             ):
                 return KeepWaitingState(
                     on_next_calls=on_next_calls,
-                    n_completed=n_completed + 1,
-                    n_children=n_children,
+                    active_ids=tuple(id for id in active_ids if id != self.id),
                     certificate=certificates[0],
                     certificates=certificates[1:],
                     is_outer_completed=is_outer_completed,
@@ -352,75 +332,69 @@ class OnErrorTransition(InactiveTransitionsMixin, FlatMapStateTransition):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
                 certificates=certificates,
-                n_children=n_children,
+                is_outer_completed=is_outer_completed,
             ):
-                awaiting_ids = tuple(range(n_children))
-
-                return OnErrorState(
-                    exception=self.exception,
-                    certificates=dict(zip(awaiting_ids, certificates[1:])),
-                    outer_certificate=certificates[0],
-                )
+                active_ids = tuple(id for id in state.active_ids if id != self.id)
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls, 
                 certificates=certificates,
-                n_children=n_children,
+                is_outer_completed=is_outer_completed,
             ):
-                received_ids = tuple(call.id for call in on_next_calls)
-                awaiting_ids = tuple(
-                    id for id in range(n_children) if id not in received_ids
-                )
-                return OnErrorState(
-                    exception=self.exception,
-                    certificates=dict(zip(awaiting_ids, certificates[1:])),
-                    outer_certificate=certificates[0],
+                received_ids = tuple(call.id for call in on_next_calls) + (self.id,)
+                active_ids = tuple(
+                    id for id in state.active_ids if id not in received_ids
                 )
 
             case _:
                 return self._get_state(state)
+            
+        if is_outer_completed:
+            return OnErrorState(
+                exception=self.exception,
+                certificates=dict(zip(active_ids, certificates, strict=True)),
+                outer_certificate=None,
+            )
+        
+        else:
+            return OnErrorState(
+                exception=self.exception,
+                certificates=dict(zip(active_ids, certificates[1:], strict=True)),
+                outer_certificate=certificates[0],
+            )
 
 
 @dataclassabc(frozen=False)
 class OnNextOuterTransition(FlatMapStateTransition):
+    id: int
     child: FlatMapStateTransition
     certificate: ContinuationCertificate
 
     def get_state(self):
         match state := self.child.get_state():
-            case InitState():
-                return FirstSubscription(
-                    n_completed=0,
-                    n_children=1,
-                    certificates=(self.certificate,),
-                    is_outer_completed=False,
-                )
-
             case AwaitUpstreamStateMixin(
-                n_children=n_children,
+                active_ids=active_ids,
                 is_outer_completed=is_outer_completed,
                 certificates=certificates
             ):
                 assert is_outer_completed is False
 
                 return SubscribedState(
-                    n_completed=state.n_completed,
+                    active_ids=active_ids + (self.id,),
                     certificates=state.certificates + (self.certificate,),
-                    n_children=n_children + 1,
                     is_outer_completed=False,
                 )
 
             case AwaitDownstreamStateMixin(
-                n_children=n_children,
+                active_ids=active_ids,
                 is_outer_completed=is_outer_completed,
             ):
                 assert is_outer_completed is False
 
                 return AwaitDownstreamStateMixin(
-                    n_completed=state.n_completed,
+                    active_ids=active_ids + (self.id,),
                     certificates=state.certificates + (self.certificate,),
                     on_next_calls=state.on_next_calls,
-                    n_children=n_children + 1,
                     is_outer_completed=False,
                 )
 
@@ -439,45 +413,35 @@ class OnNextOuterTransition(FlatMapStateTransition):
 
 @dataclassabc
 class OnNextAndCompleteOuterTransition[U](FlatMapStateTransition):
+    id: int
     child: FlatMapStateTransition
     certificate: ContinuationCertificate
 
     def get_state(self):
         match state := self.child.get_state():
-            case InitState():
-                return FirstSubscriptionOuterCompleted(
-                    n_completed=0,
-                    n_children=1,
-                    certificates=tuple(),
-                    is_outer_completed=True,
-                    certificate=self.certificate,
-                )
-
             case AwaitUpstreamStateMixin(
-                n_children=n_children,
+                active_ids=active_ids,
                 is_outer_completed=is_outer_completed,
             ):
                 assert is_outer_completed is False
 
                 return SubscribedStateOuterCompleted(
-                    n_completed=state.n_completed,
+                    active_ids=active_ids + (self.id,),
                     certificates=state.certificates,
-                    n_children=n_children + 1,
                     is_outer_completed=True,
                     certificate=self.certificate,
                 )
 
             case AwaitDownstreamStateMixin(
-                n_children=n_children,
+                active_ids=active_ids,
                 is_outer_completed=is_outer_completed,
             ):
                 assert is_outer_completed is False
 
                 return AwaitDownstreamOuterCompletedState(
-                    n_completed=state.n_completed,
+                    active_ids=active_ids + (self.id,),
                     certificates=state.certificates,
                     on_next_calls=state.on_next_calls,
-                    n_children=n_children + 1,
                     is_outer_completed=True,
                     certificate=self.certificate,
                 )
@@ -488,7 +452,7 @@ class OnNextAndCompleteOuterTransition[U](FlatMapStateTransition):
             ):
                 return HasTerminatedState(
                     certificate=outer_certificate,
-                    certificates=certificates,
+                    certificates=certificates | {self.id: self.certificate},
                     outer_certificate=None,
                 )
 
@@ -503,11 +467,10 @@ class OnCompletedOuterTransition(FlatMapStateTransition):
     def get_state(self):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
             ):
-                if n_children == n_completed:
+                if len(active_ids) == 0:
                     return OnCompletedState(
                         certificates={},
                         outer_certificate=None,
@@ -515,8 +478,7 @@ class OnCompletedOuterTransition(FlatMapStateTransition):
 
                 else:
                     return AwaitOnNextState(
-                        n_completed=n_completed,
-                        n_children=n_children,
+                        active_ids=active_ids,
                         certificate=certificates[0],
                         certificates=certificates[1:],
                         is_outer_completed=True,
@@ -524,14 +486,12 @@ class OnCompletedOuterTransition(FlatMapStateTransition):
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
-                n_completed=n_completed,
-                n_children=n_children,
+                active_ids=active_ids,
                 certificates=certificates,
             ):
                 return KeepWaitingState(
                     on_next_calls=on_next_calls,
-                    n_completed=n_completed,
-                    n_children=n_children,
+                    active_ids=active_ids,
                     certificate=certificates[0],
                     certificates=certificates[1:],
                     is_outer_completed=True,
@@ -560,29 +520,27 @@ class OnErrorOuterTransition(FlatMapStateTransition):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
                 certificates=certificates,
-                n_children=n_children,
+                active_ids=active_ids,
             ):
-                awaiting_ids = tuple(range(n_children))
-
                 return OnErrorState(
                     exception=self.exception,
-                    certificates=dict(zip(awaiting_ids, certificates[1:])),
-                    outer_certificate=certificates[0],
+                    certificates=dict(zip(active_ids, certificates, strict=True)),
+                    outer_certificate=None,
                 )
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls, 
                 certificates=certificates,
-                n_children=n_children,
             ):
                 received_ids = tuple(call.id for call in on_next_calls)
-                awaiting_ids = tuple(
-                    id for id in range(n_children) if id not in received_ids
+                active_ids = tuple(
+                    id for id in state.active_ids if id not in received_ids
                 )
+
                 return OnErrorState(
                     exception=self.exception,
-                    certificates=dict(zip(awaiting_ids, certificates[1:])),
-                    outer_certificate=certificates[0],
+                    certificates=dict(zip(active_ids, certificates, strict=True)),
+                    outer_certificate=None,
                 )
 
             case TerminatedStateMixin(
@@ -609,30 +567,45 @@ class CancelTransition(FlatMapStateTransition):
         match state := self.child.get_state():
             case AwaitUpstreamStateMixin(
                 certificates=certificates,
-                n_children=n_children,
+                active_ids=active_ids,
+                is_outer_completed=is_outer_completed,
             ):
-                awaiting_ids = tuple(range(n_children))
                 certificates = certificates + (self.certificate,)
 
-                return CancelledState(
-                    certificates=dict(zip(awaiting_ids, certificates[1:])),
-                    outer_certificate=certificates[0],
-                )
+                if is_outer_completed:
+                    return CancelledState(
+                        certificates=dict(zip(active_ids, certificates, strict=True)),
+                        outer_certificate=None,
+                    )
+                else:
+                    return CancelledState(
+                        certificates=dict(zip(active_ids, certificates[1:], strict=True)),
+                        outer_certificate=certificates[0],
+                    )
 
             case AwaitDownstreamStateMixin(
                 on_next_calls=on_next_calls,
                 certificates=certificates,
-                n_children=n_children,
+                is_outer_completed=is_outer_completed,
             ):
                 received_ids = tuple(call.id for call in on_next_calls)
-                awaiting_ids = tuple(
-                    id for id in range(n_children) if id not in received_ids
+                active_ids = tuple(
+                    id for id in state.active_ids if id not in received_ids
                 )
-                return CancelledAwaitRequestState(
-                    certificate=self.certificate,
-                    certificates=dict(zip(awaiting_ids, certificates[1:])),
-                    outer_certificate=certificates[0],
-                )
+
+                if is_outer_completed:
+                    return CancelledAwaitRequestState(
+                        certificate=self.certificate,
+                        certificates=dict(zip(active_ids, certificates, strict=True)),
+                        outer_certificate=None,
+                    )
+                
+                else:
+                    return CancelledAwaitRequestState(
+                        certificate=self.certificate,
+                        certificates=dict(zip(active_ids, certificates[1:], strict=True)),
+                        outer_certificate=certificates[0],
+                    )
 
             case TerminatedStateMixin(
                 certificates=certificates,
@@ -645,3 +618,4 @@ class CancelTransition(FlatMapStateTransition):
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
+            

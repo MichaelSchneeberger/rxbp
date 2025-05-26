@@ -44,8 +44,8 @@ State groups (-), states (>):
   > HasTerminated
 
 
-  Transitions:
-  - on_next:
+Transitions:
+- on_next:
         AwaitUpstream           -> OnNext
                                 -> OnNextAndComplete        if one upstream completed
                                 -> AwaitFurther             if not all items are received

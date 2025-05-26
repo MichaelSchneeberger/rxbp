@@ -27,7 +27,7 @@ class MergeCancellable(Cancellable):
                 certificates=certificates,
             ):
                 for id, certificate in certificates.items():
-                    self.shared.cancellables[id].cancel(certificate)
+                    self.shared.cancellables[id].cancel((certificate,))
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

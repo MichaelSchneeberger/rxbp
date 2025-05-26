@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-import continuationmonad
 from dataclassabc import dataclassabc
 
 from rxbp.state import State
@@ -46,9 +45,8 @@ class AccumulateFlowable[U, V](SingleChildFlowableNode[U, U]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=AccumulateObserver(acc=self.init),
-                weight=args.weight,
             ),
         )
 

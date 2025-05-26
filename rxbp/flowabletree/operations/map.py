@@ -43,9 +43,8 @@ class MapFlowable[U, V](SingleChildFlowableNode[U, V]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=MapObserver(),
-                weight=args.weight,
             ),
         )
 

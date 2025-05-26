@@ -10,7 +10,6 @@ from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemor
 
 @dataclass
 class FlatMapCancellable(Cancellable):
-    upstream: Cancellable
     shared: FlatMapSharedMemory
 
     def cancel(self, certificate: ContinuationCertificate):
@@ -28,10 +27,10 @@ class FlatMapCancellable(Cancellable):
                 certificates=certificates,
                 outer_certificate=outer_certificate,
             ):
-                self.upstream.cancel(outer_certificate)
+                self.shared.upstream_cancellable.cancel((outer_certificate,))
 
                 for id, certificate in certificates.items():
-                    self.shared.cancellables[id].cancel(certificate)
+                    self.shared.cancellables[id].cancel((certificate,))
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

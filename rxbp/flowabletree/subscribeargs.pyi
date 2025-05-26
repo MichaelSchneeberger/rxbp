@@ -1,4 +1,7 @@
-from dataclasses import dataclass, replace
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import overload
 
 from continuationmonad.typing import Scheduler
 
@@ -20,31 +23,23 @@ class SubscribeArgs[U]:
     # default scheduler when no explicit scheduler is provided
     scheduler: Scheduler
 
-    def copy(
+    @overload
+    def copy[V](
         self, /,
-        observer: Observer | None = None,
+        observer: Observer[V],
         weight: int | None = None,
         scheduler: Scheduler | None = None,
-    ):
-        def gen_args():
-            if observer is not None:
-                yield 'observer', observer
-            if weight is not None:
-                yield 'weight', weight
-            if scheduler is not None:
-                yield 'scheduler', scheduler
-
-        args = dict(gen_args())
-        return replace(self, **args)
+    ) -> SubscribeArgs[V]: ...
+    @overload
+    def copy(
+        self, /,
+        weight: int | None = None,
+        scheduler: Scheduler | None = None,
+    ) -> SubscribeArgs[U]: ...
 
 
 def init_subscribe_args[U](
     observer: Observer[U],
     weight: int,
     scheduler: Scheduler,
-):
-    return SubscribeArgs(
-        observer=observer,
-        weight=weight,
-        scheduler=scheduler,
-    )
+) -> SubscribeArgs[U]: ...

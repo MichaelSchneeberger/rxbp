@@ -11,7 +11,7 @@ from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
-from rxbp.flowabletree.operations.merge.states import SubscribedState
+from rxbp.flowabletree.operations.merge.states import InitState
 from rxbp.flowabletree.operations.merge.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
 from rxbp.flowabletree.operations.merge.observer import MergeObserver
@@ -36,8 +36,10 @@ class MergeFlowableNode[U](MultiChildrenFlowableNode[U, U]):
 
         certificates = []
         cancellables: list[tuple[int, Cancellable]] = []
+        active_ids = []
 
         for id, child in enumerate(self.children):
+            active_ids.append(id)
             n_state, n_result = child.unsafe_subscribe(
                 state=state,
                 args=args.copy(
@@ -56,9 +58,8 @@ class MergeFlowableNode[U](MultiChildrenFlowableNode[U, U]):
         certificate, *others = certificates
 
         shared.transition = ToStateTransition(
-            state=SubscribedState(
-                n_completed=0,
-                n_children=len(self.children),
+            state=InitState(
+                active_ids=tuple(active_ids),
                 certificates=tuple(others),
             ),
         )

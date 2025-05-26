@@ -12,10 +12,12 @@ from continuationmonad.typing import (
 from rxbp.cancellable import CancellationState
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.share.states import (
+    HasErroredState,
+    CancelledKeepAwaitDownstreamState,
     RequestUpstream,
     AwaitOnNext,
-    SendItemFromBuffer,
-    HasErroredState,
+    OnNextFromBuffer,
+    TerminatedStateMixin,
 )
 from rxbp.flowabletree.operations.share.statetransitions import (
     RequestTransition,
@@ -35,14 +37,15 @@ class ShareAckObserver(CMObserver):
     def on_success(
         self,
         trampoline: Trampoline,
-        value: None,
+        weight: int,
+        item: None,
     ) -> ContinuationCertificate:
-        # print(f"request({self.id})")
+        # print(f"request({item}, id={self.id})")
 
         transition = RequestTransition(
             child=None,  # type: ignore
             id=self.id,
-            weight=self.weight,
+            weight=weight,
         )
 
         with self.shared.lock:
@@ -50,48 +53,76 @@ class ShareAckObserver(CMObserver):
 
             match state := transition.get_state():
                 case RequestUpstream():
-                    def trampoline_task():
-                        return self.shared.deferred_handler.resume(
-                            trampoline, None
-                        )
-                    
-                    certificate = trampoline.schedule(
-                        task=trampoline_task, 
-                        weight=self.shared.total_weight,
+                    # total_weight = sum(self.shared.weight_partition(id) for id in buffer_map)
+                    total_weight = sum(w for w in state.weights.values())
+
+                    certificate = self.shared.deferred_handler.resume(
+                        trampoline, total_weight, None
                     )
 
-                    state.certificate, state.acc_certificate = certificate.take(self.weight)
+                    # state.certificate, others = certificate.take(weight)
+
+                    requested_certificates = {}
+                    for id, weight in state.weights.items():
+                        requested_certificates[id], certificate = certificate.take(weight)
+                        
+                    state.requested_certificates = requested_certificates
 
             self.shared.transition = ToStateTransition(state)
 
         match state:
-            case RequestUpstream() | AwaitOnNext():
+            case RequestUpstream():
+                return state.requested_certificates[self.id]
+            
+            case AwaitOnNext():
+                # todo: adapt to new weight
+                # either split current certificate, or merge current certificate with borrowed certificate
                 return state.certificate
 
-            case SendItemFromBuffer():
-                value = self.shared.get_buffer_item(state.index)
+            case CancelledKeepAwaitDownstreamState():
+                return state.certificate
+
+            case OnNextFromBuffer():
+                item = self.shared.get_buffer_item(state.index)
 
                 if state.pop_item:
                     self.shared.pop_buffer(1)
 
-                return self.observer.on_next(value).subscribe(
-                    args=continuationmonad.init_subscribe_args(
-                        observer=self,
-                        weight=self.weight,
-                        cancellation=self.cancellation,
-                        trampoline=trampoline,
+                def trampoline_task():
+                    if state.is_completed:
+                        continuation = self.observer.on_next_and_complete(item)
+                        observer = continuationmonad.init_anonymous_observer(
+                            on_success=lambda t, w, c: c
+                        )
+
+                    else:
+                        continuation = self.observer.on_next(item)
+                        observer=self
+
+                    certificate =  continuation.subscribe(
+                        args=continuationmonad.init_subscribe_args(
+                            observer=observer,
+                            weight=weight,
+                            cancellation=self.cancellation,
+                            trampoline=trampoline,
+                        )
                     )
-                )
+                    return certificate
+                
+                return trampoline.schedule(trampoline_task, self.weight, self.cancellation)
             
             case HasErroredState(exception=exception):
                 return self.observer.on_error(exception=exception).subscribe(
                     args=continuationmonad.init_subscribe_args(
                         observer=self,
-                        weight=self.weight,
+                        weight=weight,
                         cancellation=self.cancellation,
                         trampoline=trampoline,
                     )
                 )
+
+            case TerminatedStateMixin():
+                return state.requested_certificates[self.id]
 
             case _:
                 raise Exception(f"Unexpected state {state}")

@@ -39,33 +39,13 @@ flowable = (
 rxbp.run(flowable)
 ```
 
+<!-- ## Run a Flowable
 
-## Run a *Flowable*
+`result = rxbp.run(flowable)`
 
-A *Flowable* is executed by calling the `rxbp.run()` function. 
-This call blocks program execution until the *Flowable* terminates (either by completing or erroring) and returns a list of the emitted items.
-Typically, `rxbp.run()` is intended to be the final step in a program: first, the dataflow is defined by constructing a *Flowable*; then, the program is executed by invoking `run()`.
-<!-- In contrast, functional programming languages eliminate the need for an explicit `run()` call—execution is handled automatically by the compiler or runtime. 
-In such cases, the programmer simply defines the computation, and the system takes care of running it. -->
 
-In *RxPY*, the `subscribe` method is used to execute an *Observable*.
-It accepts `on_next`, `on_error`, and `on_completed` handlers as arguments, but does not return the received items.
-*RxBP* implements a similar method called `unsafe_subscribe`.
-However, using it requires specific conditions: it should be called within an active Trampoline scheduler and an active main-thread scheduler to ensure that the program terminates when the Flowable completes.
-To replicate the behavior of `subscribe` in *RxPY* — executing the stream and handling items via side effects — you can use the `tap` operator together with `rxbp.run()`:
-``` python
-# Emulates the RxPY subscribe behavior
-rxbp.run(
-    flowable.tap(on_next=print)
-)
-```
 
-## Continuation Certificates
-
-Scheduling continuations across multiple threads can lead to continuation deadlocks, where a continuation never produces a result.
-These deadlocks are particularly difficult to debug when the continuation chain includes third-party operators that may be poorly tested or unpredictable.
-To mitigate this, the system enforces the use of *continuation certificates* when scheduling tasks.
-This design guarantees that the only way to complete a scheduled task is by scheduling another task, ensuring progress and avoiding deadlocks by construction.
+## Share a Flowable -->
 
 
 ## Operations

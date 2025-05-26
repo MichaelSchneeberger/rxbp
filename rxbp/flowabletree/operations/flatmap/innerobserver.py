@@ -75,12 +75,13 @@ class FlatMapInnerObserver[V](Observer[V]):
                         certificate=certificate,
                     ):
                         self.shared.cancellables[self.id].cancel(certificates[self.id])
+                        
                         return continuationmonad.from_(certificate)
                     
                     case _:
                         pass
 
-                # pyright needs help to infer correct type
+                # help pyright to infer correct type
                 continuation: ContinuationMonad[ContinuationCertificate] = self._on_next(state)
 
                 return continuation
@@ -161,7 +162,10 @@ class FlatMapInnerObserver[V](Observer[V]):
                 raise Exception(f"Unexpected state {state}.")
 
     def on_error(self, exception: Exception):
+        # print(f'on_error({exception}), id={self.id}')
+
         transition = OnErrorTransition(
+            id=self.id,
             child=None,  # type: ignore
             exception=exception,
         )
@@ -174,9 +178,12 @@ class FlatMapInnerObserver[V](Observer[V]):
             case OnErrorState(
                 exception=exception,
                 certificates=certificates,
+                outer_certificate=outer_certificate,
             ):
                 for id, certificate in certificates.items():
                     self.shared.cancellables[id].cancel(certificate)
+
+                self.shared.upstream_cancellable.cancel(outer_certificate)
         
                 return self.shared.downstream.on_error(exception)
 

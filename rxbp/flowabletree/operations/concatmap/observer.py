@@ -12,6 +12,7 @@ from continuationmonad.typing import (
 )
 
 from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
+from rxbp.flowabletree.subscribeargs import init_subscribe_args
 from rxbp.state import init_state
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
@@ -40,7 +41,6 @@ class ConcatMapObserver[U](Observer[U]):
         try:
             state = init_state(
                 subscription_trampoline=trampoline,
-                scheduler=self.scheduler,
             )
 
             sink = ConcatMapInnerObserver(
@@ -51,25 +51,13 @@ class ConcatMapObserver[U](Observer[U]):
 
             state, result = subscribe_single_sink(
                 source=flowable,
-                sink=sink,
+                args=init_subscribe_args(
+                    observer=sink,
+                    weight=self.weight,
+                    scheduler=self.scheduler,
+                ),
                 state=state,
-                weight=self.weight,
             )
-
-            # result = flowable.subscribe(
-            #     state=init_state(
-            #         subscription_trampoline=trampoline,
-            #         scheduler=self.scheduler,
-            #     ),
-            #     args=SubscribeArgs(
-            #         observer=ConcatMapInnerObserver(
-            #             downstream=self.downstream,
-            #             upstream=handler,
-            #             shared=self.shared,
-            #         ),
-            #         schedule_weight=self.schedule_weight,
-            #     )
-            # )
 
         except Exception as exception:
             return self.downstream.on_error(exception)

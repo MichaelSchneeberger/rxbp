@@ -4,7 +4,6 @@ import continuationmonad
 from continuationmonad.typing import (
     Scheduler,
     ContinuationMonad,
-    DeferredHandler,
     ContinuationCertificate,
 )
 
@@ -16,7 +15,7 @@ from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.state import State
 
 
-@dataclass
+@dataclass(frozen=True)
 class TFlowableNode[V](FlowableNode):
     subscribe_func: Callable[
         [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
@@ -30,7 +29,7 @@ class TFlowableNode[V](FlowableNode):
     ):
         certificate = continuationmonad.fork(
             source=continuationmonad.from_(None).flat_map(
-                lambda _: self.subscribe_func(args.observer, state.scheduler)
+                lambda _: self.subscribe_func(args.observer, args.scheduler)
             ),
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline

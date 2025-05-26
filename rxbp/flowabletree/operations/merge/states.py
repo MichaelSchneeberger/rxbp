@@ -7,12 +7,10 @@ from continuationmonad.typing import (
     DeferredHandler,
 )
 
-type UpstreamID = int
-
 
 @dataclass(frozen=True, slots=True)
 class BackpressuredOnNextCalls[U]:
-    id: UpstreamID
+    id: int
     value: U
     observer: DeferredHandler | None
     # completed: bool
@@ -29,11 +27,13 @@ class InitState(MergeState):
 
 @dataclass(frozen=True)
 class ActiveStateMixin(MergeState):
-    # number of completed upstream observables
-    # State is active as long as n_completed < n_children
-    n_completed: int
+    # # number of completed upstream observables
+    # # State is active as long as n_completed < n_children
+    # n_completed: int
     
-    n_children: int
+    # n_children: int
+
+    active_ids: tuple[int, ...]
 
     # upstream continuation certificates
     certificates: tuple[ContinuationCertificate, ...]
@@ -53,12 +53,7 @@ class AwaitUpstreamStateMixin(ActiveStateMixin):
 
 
 @dataclass(frozen=True, slots=True)
-class FirstSubscription(AwaitUpstreamStateMixin):
-    certificate: ContinuationCertificate
-
-
-@dataclass(frozen=True, slots=True)
-class SubscribedState(AwaitUpstreamStateMixin):
+class InitState(AwaitUpstreamStateMixin):
     """Await first upstream item"""
 
 

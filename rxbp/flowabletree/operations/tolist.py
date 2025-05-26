@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
 
 import continuationmonad
 from dataclassabc import dataclassabc
@@ -75,9 +74,8 @@ class ToListFlowable[U](SingleChildFlowableNode[U, U]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=observer,
-                weight=args.weight,
             ),
         )
 

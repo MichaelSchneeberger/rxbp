@@ -18,7 +18,7 @@ from rxbp.flowabletree.operations.reduce import init_reduce_flowable
 from rxbp.flowabletree.operations.tolist import init_to_list_flowable
 from rxbp.flowabletree.operations.accumulate import init_accumulate_flowable
 from rxbp.flowabletree.operations.defaultifempty import init_default_if_empty_flowable
-from rxbp.flowabletree.operations.doaction import init_tap_flowable
+from rxbp.flowabletree.operations.tap import init_tap_flowable
 from rxbp.flowabletree.operations.filter import init_filter_flowable
 from rxbp.flowabletree.operations.map import init_map_flowable
 from rxbp.flowabletree.operations.skipwhile import init_skip_while_flowable
@@ -26,7 +26,7 @@ from rxbp.flowabletree.operations.takewhile import init_take_while_flowable
 from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.operations.concatmap.flowable import init_concat_map
-from rxbp.flowabletree.operations.share.flowable import init_share
+from rxbp.flowabletree.operations.share.flowable import init_share_flowable_node
 from rxbp.utils.framesummary import get_frame_summary
 
 
@@ -117,7 +117,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
 
     def share(self):
         return self.copy(
-            child=init_share(
+            child=init_share_flowable_node(
                 child=self.child,
             )
         )

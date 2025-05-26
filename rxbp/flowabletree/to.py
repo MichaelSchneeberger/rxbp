@@ -20,11 +20,12 @@ from continuationmonad.typing import (
 )
 
 from rxbp.cancellable import CancellationState
+from rxbp.flowabletree.subscribeargs import init_subscribe_args
 from rxbp.state import init_state
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
-from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
+from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink_on_trampoline
 
 
 def run[U](
@@ -41,6 +42,7 @@ def run[U](
     class MainObserver(Observer[U]):
         received_items: list[U]
         received_exception: list[Exception | None]
+        is_completed: bool
 
         def on_next(self, value: U):
             self.received_items.append(value)
@@ -48,13 +50,16 @@ def run[U](
 
         def on_next_and_complete(self, value: U):
             self.received_items.append(value)
+            self.is_completed = True
             return continuationmonad.from_(scheduler.stop())
 
         def on_completed(self):
+            self.is_completed = True
             return continuationmonad.from_(scheduler.stop())
 
         def on_error(self, exception: Exception):
             self.received_exception[0] = exception
+            self.is_completed = True
             return continuationmonad.from_(scheduler.stop())
 
     if connections is None:
@@ -63,28 +68,34 @@ def run[U](
     observer = MainObserver(
         received_items=[],
         received_exception=[None],
+        is_completed=False,
     )
 
     def schedule_task():
-        def trampoline_task():
-            state = init_state(
-                subscription_trampoline=subscribe_trampoline,
-                scheduler=scheduler,
-            )
+        # def trampoline_task():
+        state = init_state(
+            subscription_trampoline=subscribe_trampoline,
+            # scheduler=scheduler,
+        )
 
-            state, result = subscribe_single_sink(
-                source=source,
-                sink=observer,
-                connections={c: s for c, s in connections.items()},
-                state=state,
+        return subscribe_single_sink_on_trampoline(
+            source=source,
+            args=init_subscribe_args(
+                observer=observer,
                 weight=1,
-            )
+                scheduler=scheduler,
+            ),
+            state=state,
+            connections=connections,
+        )
 
-            return result.certificate
+        # return result.certificate
 
-        return subscribe_trampoline.run(trampoline_task, weight=1)
+        # return subscribe_trampoline.run(trampoline_task, weight=1)
 
-    scheduler.run(schedule_task)
+    scheduler.run(schedule_task, weight=1, cancellation=None)
+
+    assert observer.is_completed
 
     if observer.received_exception[0]:
         raise observer.received_exception[0]
@@ -171,34 +182,39 @@ def to_rx[U](source: FlowableNode[U]) -> RxObservable[U]:
                 )
                 return continuationmonad.from_(certificate)
 
-        def trampoline_task():
-            state = init_state(
-                subscription_trampoline=subscribe_trampoline,
-                scheduler=from_rx_scheduler,
-            )
+        # def trampoline_task():
+        state = init_state(
+            subscription_trampoline=subscribe_trampoline,
+            # scheduler=from_rx_scheduler,
+        )
 
-            _, result = subscribe_single_sink(
-                source=source,
-                sink=RxBPObserver(),
-                state=state,
-                weight=1,
-            )
+        args = init_subscribe_args(
+            observer=RxBPObserver(),
+            weight=1,
+            scheduler=from_rx_scheduler,
+        )
 
-            # result = source.subscribe(
-            #     state=state,
-            #     args=SubscribeArgs(
-            #         observer=RxBPObserver(),
-            #         schedule_weight=1,
-            #     ),
-            # )
+        certificate = subscribe_single_sink_on_trampoline(
+            source=source,
+            args=args,
+            state=state,
+        )
 
-            return result.certificate
+        # result = source.subscribe(
+        #     state=state,
+        #     args=SubscribeArgs(
+        #         observer=RxBPObserver(),
+        #         schedule_weight=1,
+        #     ),
+        # )
+
+            # return result.certificate
 
         cancellation = CancellationState()
 
-        certificate = subscribe_trampoline.run(
-            trampoline_task, weight=1, cancellation=cancellation
-        )
+        # certificate = subscribe_trampoline.run(
+        #     trampoline_task, weight=1, cancellation=cancellation
+        # )
 
         return reactivex.disposable.Disposable(lambda: cancellation.cancel(certificate))
 

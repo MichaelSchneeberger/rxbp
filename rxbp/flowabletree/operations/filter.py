@@ -47,9 +47,8 @@ class FilterFlowable[U](SingleChildFlowableNode[U, U]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=FilterObserver(),
-                weight=args.weight,
             ),
         )
 

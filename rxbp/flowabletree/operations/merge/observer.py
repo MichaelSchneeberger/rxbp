@@ -20,7 +20,6 @@ from rxbp.flowabletree.operations.merge.states import (
     OnNextState,
     HasTerminatedState,
     StopContinuationStateMixin,
-    UpstreamID,
 )
 from rxbp.flowabletree.operations.merge.statetransitions import (
     RequestTransition,
@@ -37,7 +36,7 @@ from rxbp.flowabletree.observer import Observer
 @dataclass
 class MergeObserver[V](Observer[V]):
     shared: MergeSharedMemory
-    id: UpstreamID
+    id: int
 
     @do()
     def _on_next(self, state: MergeState):

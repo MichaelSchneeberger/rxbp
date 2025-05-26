@@ -45,9 +45,8 @@ class DefaultIfEmptyFlowable[U, V](SingleChildFlowableNode[U, U | V]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=DefaultIfEmptyObserver(is_empty=True),
-                weight=args.weight,
             ),
         )
 

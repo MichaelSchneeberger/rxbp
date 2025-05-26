@@ -41,16 +41,15 @@ class ConcatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
 
         n_state, result = self.child.unsafe_subscribe(
             state=state, 
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=ConcatMapObserver(
                     downstream=args.observer,
                     func=self.func,
-                    scheduler=state.scheduler,
+                    scheduler=args.scheduler,
                     shared=shared,
                     weight=args.weight,
                 ),
-                weight=args.weight,
-            ),
+            ), # type: ignore
         )
 
         shared.upstream_cancellable = result.cancellable

@@ -39,16 +39,15 @@ def subscribe_and_connect(
         state = state.copy(discovered_subscriptions={})
 
         for subscription in discovered_subscriptions:
-            state = subscription.subscribe(state)
+            state = subscription.apply(state)
 
     return state
 
 
 def subscribe_single_sink(
     source: FlowableNode,
-    sink: Observer,
+    args: SubscribeArgs,
     state: State,
-    weight: int,
     connections: dict[ConnectableFlowableNode, FlowableNode] | None = None,
 ):
     @dataclass
@@ -64,15 +63,12 @@ def subscribe_single_sink(
         def apply(self, state: State):
             state, self.result = source.unsafe_subscribe(
                 state,
-                args=SubscribeArgs(
-                    observer=sink,
-                    weight=weight,
-                ),
+                args=args,
             )
             return state
         
     subscription = SinlgeSinkSubscription(result=None)
-        
+    
     state = subscribe_and_connect(
         subscriptions=(subscription,),
         connections=connections,
@@ -84,6 +80,28 @@ def subscribe_single_sink(
     return state, subscription.result
 
 
+
+def subscribe_single_sink_on_trampoline(
+    source: FlowableNode,
+    args: SubscribeArgs,
+    state: State,
+    connections: dict[ConnectableFlowableNode, FlowableNode] | None = None,
+):    
+    def trampoline_task(state=state):
+        _, result = subscribe_single_sink(
+            source=source,
+            args=args,
+            state=state,
+            connections=connections,
+        )
+
+        return result.certificate
+
+    return state.subscription_trampoline.start_loop(
+        task=trampoline_task, 
+        weight=1, 
+        cancellation=None,
+    )
 
 
 # def subscribe_and_connect(

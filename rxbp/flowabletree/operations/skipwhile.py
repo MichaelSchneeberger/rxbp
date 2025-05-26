@@ -49,9 +49,8 @@ class SkipWhileFlowable[U](SingleChildFlowableNode[U, U]):
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=SkipWhileObserver(),
-                weight=args.weight,
             ),
         )
 

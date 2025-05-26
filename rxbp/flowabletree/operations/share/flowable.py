@@ -17,7 +17,7 @@ from rxbp.flowabletree.operations.share.observer import SharedObserver
 
 
 @dataclassabc(frozen=True)
-class ShareFlowable[U](SingleChildFlowableNode[U, U]):
+class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
     child: FlowableNode
 
     def discover(
@@ -70,6 +70,8 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
                 first_index=0,
                 buffer=[],
                 total_weight=total_weight,
+                weight_partition={},
+                init_certificate=None,
             )
 
             observer = SharedObserver(
@@ -83,21 +85,23 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
 
             state, result = self.child.unsafe_subscribe(
                 state,
-                SubscribeArgs(
+                args.copy(
                     observer=observer,
                     weight=total_weight,
                 ),
             )
             shared.upstream_cancellation = result.cancellable
+            shared.init_certificate = result.certificate
 
             shared.transition = ToStateTransition(
                 InitState(
                     buffer_map={},
                     first_buffer_index=0,
                     last_buffer_index=-1,
-                    acc_certificate=result.certificate,
-                    is_ack=False,
+                    cancelled_certificates={},
+                    requested_certificates={},
                     is_completed=False,
+                    weights={},
                 )
             )
 
@@ -107,10 +111,12 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
 
         id = len(init_state.buffer_map)
         init_state.buffer_map[id] = 0
-        certificate, acc_certificate = init_state.acc_certificate.take(
+        certificate, shared.init_certificate = shared.init_certificate.take(
             args.weight
         )
-        init_state.acc_certificate = acc_certificate
+        # print(certificate)
+        init_state.requested_certificates[id] = None
+        init_state.weights[id] = args.weight
 
         downstream_cancellation = ShareCancellation(
             id=id,
@@ -137,5 +143,5 @@ class ShareFlowable[U](SingleChildFlowableNode[U, U]):
         )
 
 
-def init_share[V](child: FlowableNode[V]):
-    return ShareFlowable[V](child=child)
+def init_share_flowable_node[V](child: FlowableNode[V]):
+    return ShareFlowableNode[V](child=child)

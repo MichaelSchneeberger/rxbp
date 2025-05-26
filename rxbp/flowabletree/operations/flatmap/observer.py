@@ -12,10 +12,12 @@ from continuationmonad.typing import (
     Scheduler,
 )
 
+from rxbp.utils.framesummary import FrameSummary, to_execution_exception_message, to_operator_exception_message
 from rxbp.exceptions import RxBpException
 from rxbp.state import init_state
 from rxbp.flowabletree.nodes import FlowableNode
 from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.subscribeargs import init_subscribe_args
 from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
 from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapInnerObserver
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
@@ -33,7 +35,6 @@ from rxbp.flowabletree.operations.flatmap.statetransitions import (
     OnNextAndCompleteOuterTransition,
     OnNextOuterTransition,
 )
-from rxbp.utils.framesummary import FrameSummary, to_execution_exception_message, to_operator_exception_message
 
 
 @dataclass
@@ -90,7 +91,6 @@ class FlatMapObserver[U, V](Observer):
 
         state = init_state(
             subscription_trampoline=trampoline,
-            scheduler=self.scheduler,
         )
 
         sink = FlatMapInnerObserver(
@@ -101,9 +101,12 @@ class FlatMapObserver[U, V](Observer):
         try:
             state, result = subscribe_single_sink(
                 source=flowable,
-                sink=sink,
+                args=init_subscribe_args(
+                    observer=sink,
+                    weight=self.weight,
+                    scheduler=self.scheduler,
+                ),
                 state=state,
-                weight=self.weight,
             )
 
         except ContinuationMonadOperatorException as exception:
@@ -136,27 +139,18 @@ class FlatMapObserver[U, V](Observer):
             )
             return self.shared.downstream.on_error(exception)
 
-        # state, result = flowable.unsafe_subscribe(
-        #     state=init_state(
-        #         subscription_trampoline=trampoline,
-        #         scheduler=self.scheduler,
-        #     ),
-        #     args=SubscribeArgs(
-        #         observer=FlatMapInnerObserver(
-        #             id=id,
-        #             shared=self.shared,
-        #         ),
-        #         schedule_weight=self.schedule_weight,
-        #     ),
-        # )
+        self.shared.cancellables[id] = result.cancellable
 
         if handler is None:
             transition = OnNextAndCompleteOuterTransition(
+                id=id,
                 child=None,  # type: ignore
                 certificate=result.certificate,
             )
+
         else:
             transition = OnNextOuterTransition(
+                id=id,
                 child=None,  # type: ignore
                 certificate=result.certificate,
             )
@@ -174,7 +168,7 @@ class FlatMapObserver[U, V](Observer):
                     raise Exception(f"Unexpected state {state}.")
 
                 else:
-                    certificate = handler.resume(trampoline, None)
+                    certificate = handler.resume(trampoline, handler.weight, None)
                     return continuationmonad.from_(certificate)
 
             case TerminatedStateMixin(outer_certificate=outer_certificate):

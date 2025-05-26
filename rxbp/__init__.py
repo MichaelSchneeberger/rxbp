@@ -2,6 +2,9 @@ from rxbp.state import init_state as _init_state
 from rxbp.flowabletree.subscribeargs import (
     init_subscribe_args as _init_subscribe_args,
 )
+from rxbp.flowabletree.subscriptionresult import (
+    init_subscription_result as _init_subscription_result,
+)
 from rxbp.flowable.from_ import (
     connectable as _connectable,
     count as _count,
@@ -26,6 +29,7 @@ from rxbp.flowable.to import (
 
 init_state = _init_state
 init_subscribe_args = _init_subscribe_args
+init_subscription_result = _init_subscription_result
 
 
 # Create a Flowables

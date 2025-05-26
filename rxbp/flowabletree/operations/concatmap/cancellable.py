@@ -24,4 +24,4 @@ class ConcatMapCancellable(Cancellable):
 
         match transition:
             case CancelledState(cancellable=cancellable):
-                cancellable.cancel(certificate)
+                cancellable.cancel((certificate,))

@@ -24,10 +24,10 @@ class FromRx[V](FlowableNode[V]):
         args: SubscribeArgs[V],
     ):
         
-        if state.scheduler is None:
+        if args.scheduler is None:
             scheduler = state.subscription_trampoline
         else:
-            scheduler = state.scheduler
+            scheduler = args.scheduler
 
         cancellable = init_cancellation_state()
 
@@ -70,7 +70,7 @@ class FromRx[V](FlowableNode[V]):
                         )
                     )
 
-                trampoline.run(trampoline_task, weight=args.weight)
+                trampoline.start_loop(trampoline_task, weight=args.weight, cancellation=None)
 
             def on_error(self, error):
                 trampoline = continuationmonad.init_trampoline()
@@ -86,7 +86,7 @@ class FromRx[V](FlowableNode[V]):
                         )
                     )
 
-                trampoline.run(trampoline_task, weight=args.weight)
+                trampoline.start_loop(trampoline_task, weight=args.weight, cancellation=None)
 
             def on_completed(self):
                 trampoline = continuationmonad.init_trampoline()
@@ -102,7 +102,7 @@ class FromRx[V](FlowableNode[V]):
                         )
                     )
 
-                trampoline.run(trampoline_task, weight=args.weight)
+                trampoline.start_loop(trampoline_task, weight=args.weight, cancellation=None)
 
         observer = RxObserver()
 
@@ -122,6 +122,7 @@ class FromRx[V](FlowableNode[V]):
         certificate = state.subscription_trampoline.schedule(
             task=trampoline_task,
             weight=args.weight,
+            cancellation=None,
         )
 
         return state, SubscriptionResult(

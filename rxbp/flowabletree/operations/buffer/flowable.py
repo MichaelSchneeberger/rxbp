@@ -41,9 +41,8 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
 
         state, result = self.child.unsafe_subscribe(
             state=state, 
-            args=SubscribeArgs(
+            args=args.copy(
                 observer=observer,
-                weight=args.weight,
             ),
         )
 

@@ -34,9 +34,16 @@ class FlatMapFlowableNode[U, V](FrameSummaryMixin, SingleChildFlowableNode[U, V]
             downstream=args.observer,
             lock=Lock(),
             transition=ToStateTransition(
-                state=InitState(),
+                state=InitState(
+                    # n_completed=0,
+                    # n_children=0,
+                    active_ids=tuple(),
+                    certificates=tuple(),
+                    is_outer_completed=False,
+                ),
             ),
             cancellables={},
+            upstream_cancellable=None,
         )
 
         state, result = self.child.unsafe_subscribe(
@@ -46,19 +53,18 @@ class FlatMapFlowableNode[U, V](FrameSummaryMixin, SingleChildFlowableNode[U, V]
                 last_id=0,
                 weight=args.weight,
                 func=self.func,
-                scheduler=state.scheduler,
+                scheduler=args.scheduler,
                 stack=self.stack,
                 raise_immediately=state.raise_immediately,
             ))
         )
 
-        cancellable = FlatMapCancellable(
-            upstream=result.cancellable,
-            shared=shared,
-        )
+        shared.upstream_cancellable = result.cancellable
 
         return state, SubscriptionResult(
-            cancellable=cancellable,
+            cancellable=FlatMapCancellable(
+                shared=shared,
+            ),
             certificate=result.certificate,
         )
 

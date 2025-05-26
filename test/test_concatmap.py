@@ -14,7 +14,7 @@ from rxbp.testing.trun import test_run
 class TestConcatMap(TestCase):
 
     def test_normal_case(self):
-        scheduler = continuationmonad.init_virtual_time_scheduler()
+        scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
         @do()
         def schedule_inner_source1(observer: Observer, _):
@@ -41,14 +41,14 @@ class TestConcatMap(TestCase):
 
         source = rxbp.create(schedule_source)
 
-        sink = init_test_observer()
+        sink = init_test_observer(scheduler=scheduler)
 
         test_run(
             source=ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,
             ),
-            sink=sink,
+            sinks=(sink,),
             scheduler=scheduler,
         )
 
@@ -67,7 +67,7 @@ class TestConcatMap(TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_delayed_outer_flowable(self):
-        scheduler = continuationmonad.init_virtual_time_scheduler()
+        scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
         @do()
         def schedule_inner_source1(observer: Observer, _):
@@ -89,14 +89,14 @@ class TestConcatMap(TestCase):
 
         source = rxbp.create(schedule_source)
 
-        sink = init_test_observer()
+        sink = init_test_observer(scheduler=scheduler)
 
         test_run(
             source=ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,
             ),
-            sink=sink,
+            sinks=(sink,),
             scheduler=scheduler,
         )
 
@@ -108,7 +108,7 @@ class TestConcatMap(TestCase):
         self.assertTrue(sink.is_completed)
 
     def test_nonempty_followed_by_empty(self):
-        scheduler = continuationmonad.init_virtual_time_scheduler()
+        scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
         @do()
         def schedule_inner_source1(observer: Observer, _):
@@ -130,14 +130,14 @@ class TestConcatMap(TestCase):
 
         source = rxbp.create(schedule_source)
 
-        sink = init_test_observer()
+        sink = init_test_observer(scheduler=scheduler)
 
         test_run(
             source=ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,
             ),
-            sink=sink,
+            sinks=(sink,),
             scheduler=scheduler,
         )
 
