@@ -51,16 +51,16 @@ def run[U](
         def on_next_and_complete(self, value: U):
             self.received_items.append(value)
             self.is_completed = True
-            return continuationmonad.from_(scheduler.stop())
+            return continuationmonad.from_(scheduler.stop(1))
 
         def on_completed(self):
             self.is_completed = True
-            return continuationmonad.from_(scheduler.stop())
+            return continuationmonad.from_(scheduler.stop(1))
 
         def on_error(self, exception: Exception):
             self.received_exception[0] = exception
             self.is_completed = True
-            return continuationmonad.from_(scheduler.stop())
+            return continuationmonad.from_(scheduler.stop(1))
 
     if connections is None:
         connections = {}
@@ -208,7 +208,7 @@ def to_rx[U](source: FlowableNode[U]) -> RxObservable[U]:
         #     ),
         # )
 
-            # return result.certificate
+        # return result.certificate
 
         cancellation = CancellationState()
 
