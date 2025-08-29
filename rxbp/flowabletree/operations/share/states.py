@@ -4,6 +4,29 @@ from dataclasses import dataclass
 
 from continuationmonad.typing import ContinuationCertificate
 
+"""
+States
+------
+
+State groups (-), states (>):
+- Active - AwaitUpstream
+  > Init
+  > RequestUpstream
+  > AwaitOnNext
+  > OnNextFromBuffer
+  > AwaitUpstreamAfterCancel
+- Active - AwaitDownstream
+  > OnNext
+  > AwaitDownstreamAfterCancel
+- Terminated
+  > OnCompleted
+  > Cancelled
+  > HasTerminated
+- Terminated - Errored
+  > OnError
+  > HasErrored
+"""
+
 
 class ShareState:
     pass
@@ -11,45 +34,52 @@ class ShareState:
 
 @dataclass(frozen=False)
 class ActiveStateMixin(ShareState):
-    # buffer indices are modified on ack
+    """Further items may be pending to be sent."""
+
+    # Maps each downstream ID to its current (virtual) buffer index.
+    # This map determines to which downstream observers new items are sent to.
     buffer_map: dict[int, int]
 
+    # The first buffer index is used to map the virtual buffer index to the actual buffer index.
+    # Explanation: Old and unused items are removed from the buffer without updating the indices
+    # in the buffer_map. Instead, only the first buffer index is updated, pointing to the first
+    # virtual index of the buffer.
     first_buffer_index: int
+
+    # The last buffer index determines if a new item is taken from the buffer, or requested from upstream.
     last_buffer_index: int
 
-    # # last_buffer_index+1 when element
-    # is_ack: bool
-
+    # Store downstream weights, as the downstream weights are dynamically adjusted.
     weights: dict[int, int]
 
-    requested_certificates: dict[int, ContinuationCertificate]
+    # Containers that hold certificates for each downstream observer that is either cancelled,
+    # or does not yet point to the last buffer item.
+    # These certificates are either consumed when downstream observers request a new item, or
+    # when receiving an upstream item.
     cancelled_certificates: dict[int, ContinuationCertificate]
+    requested_certificates: dict[int, ContinuationCertificate]
 
     is_completed: bool
 
 
 @dataclass(frozen=False)
 class StopContinuationStateMixin:
-    """Stop continuations associated with incoming upstream call"""
+    """Stop continuing exeuction"""
 
     # Certificate is used to stop continuation of calling upstream flowable.
     certificate: ContinuationCertificate
 
 
 @dataclass(frozen=False)
-class AdjustBufferStateMixin(ActiveStateMixin):
+class RemoveBufferItemsStateMixin(ActiveStateMixin):
+    """Delete first n items from the buffer"""
+
     n_buffer_pop: int
 
 
 @dataclass(frozen=False)
 class AwaitUpstreamStateMixin(ActiveStateMixin):
-    """At least one downstream observer requested a new item."""
-
-
-@dataclass(frozen=False)
-class AwaitUpstreamAdjustBufferState(AdjustBufferStateMixin, AwaitUpstreamStateMixin):
-    # n_buffer_pop: int
-    pass
+    """At least one downstream observer requested a new item"""
 
 
 @dataclass(frozen=False)
@@ -59,54 +89,73 @@ class InitState(AwaitUpstreamStateMixin):
 
 @dataclass(frozen=False, slots=True)
 class RequestUpstream(AwaitUpstreamStateMixin):
-    # upstream_ack_observer: DeferredHandler
-    # certificate: ContinuationCertificate
+    """Request new upstream item on first downstream request"""
+
     pass
 
 
 @dataclass(frozen=False, slots=True)
 class AwaitOnNext(AwaitUpstreamStateMixin):
+    """New upstream item has already been requested, await on_next call"""
+
     certificate: ContinuationCertificate
 
 
 @dataclass(frozen=False, slots=True)
 class OnNextFromBuffer(AwaitUpstreamStateMixin):
+    """Send item from buffer."""
+
     index: int
     pop_item: bool
 
 
 @dataclass(frozen=False)
+class AwaitUpstreamAfterCancelState(
+    RemoveBufferItemsStateMixin, AwaitUpstreamStateMixin
+):
+    """Downstream branch has been cancelled, remove items from buffer if necessary."""
+
+    pass
+
+
+@dataclass(frozen=False)
 class AwaitDownstreamStateMixin(ActiveStateMixin):
-    # cancelled_certificates: dict[int, ContinuationCertificate]
+    """Newest upstream item has benn sent downstream, await downstream request."""
+
     pass
 
 
 @dataclass(frozen=False)
-class AwaitDownstreamAdjustBufferState(AdjustBufferStateMixin, AwaitDownstreamStateMixin):
-    # n_buffer_pop: int
+class AwaitDownstreamAfterCancelState(
+    RemoveBufferItemsStateMixin, AwaitDownstreamStateMixin
+):
+    """Downstream branch has been cancelled, remove items from buffer if necessary."""
+
     pass
 
 
 @dataclass(frozen=False)
-class CancelledKeepAwaitDownstreamState(StopContinuationStateMixin, AwaitDownstreamStateMixin):
+class RequestFromCancelledDownstreamState(
+    StopContinuationStateMixin, AwaitDownstreamStateMixin
+):
+    """New item requested after downstream was cancelled, stop continuation using the certificate."""
+
     pass
 
 
 @dataclass(frozen=False, slots=True)
 class OnNext(AwaitDownstreamStateMixin):
+    """New item received."""
+
+    # IDs referencing downstream observers that poin to the last item in the buffer
     send_ids: tuple[int, ...]
+
     buffer_item: bool
 
 
 @dataclass(frozen=True, slots=True)
 class TerminatedStateMixin(ShareState):
     requested_certificates: dict[int, ContinuationCertificate]
-
-
-# @dataclass(frozen=False, slots=True)
-# class OnNextAndComplete(AwaitDownstreamStateMixin):
-#     send_ids: tuple[int, ...]
-#     buffer_item: bool
 
 
 @dataclass(frozen=True, slots=True)

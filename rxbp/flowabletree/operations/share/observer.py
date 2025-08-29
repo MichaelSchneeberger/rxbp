@@ -41,9 +41,7 @@ class SharedObserver[V](Observer[V]):
     def on_next(self, item: V):
         # print(f"on_next({item})")
 
-        def on_next_subscription(
-            trampoline: Trampoline, handler: DeferredHandler
-        ):
+        def on_next_subscription(trampoline: Trampoline, handler: DeferredHandler):
             # print(f"on_next_subscription({item}), weight={handler.weight}")
 
             self.shared.deferred_handler = handler
@@ -73,7 +71,8 @@ class SharedObserver[V](Observer[V]):
                                 ).subscribe(
                                     args=continuationmonad.init_subscribe_args(
                                         observer=ack_observer,
-                                        weight=ack_observer.weight,
+                                        # weight=ack_observer.weight,
+                                        weight=state.weights[id],
                                         cancellation=ack_observer.cancellation,
                                         trampoline=trampoline,
                                     )
@@ -87,13 +86,17 @@ class SharedObserver[V](Observer[V]):
                             yield certificate
 
                     certificates = tuple(gen_certificates())
-                    # print(certificates)
-                    certificate = continuationmonad.init_composite_continuation_certificate(certificates)
-                    # print(certificate)
+                    certificate = (
+                        continuationmonad.init_composite_continuation_certificate(
+                            certificates
+                        )
+                    )
                     return certificate
-                
+
                 case HasTerminatedState():
-                    return ContinuationCertificate.merge(tuple(state.requested_certificates.values()))
+                    return ContinuationCertificate.merge(
+                        tuple(state.requested_certificates.values())
+                    )
 
                 case _:
                     raise Exception(f"Unexpected state {state}")
@@ -133,17 +136,20 @@ class SharedObserver[V](Observer[V]):
                             assert certificate.validated is False
                             yield continuationmonad.from_(certificate)
 
-                return (
-                    continuationmonad.zip(tuple(gen_certificates()))
-                    .map(lambda c: ContinuationCertificate.merge(c))
+                return continuationmonad.zip(tuple(gen_certificates())).map(
+                    lambda c: ContinuationCertificate.merge(c)
                 )
 
             case HasTerminatedState():
-                certificate = ContinuationCertificate.merge(tuple(state.requested_certificates.values()))
+                certificate = ContinuationCertificate.merge(
+                    tuple(state.requested_certificates.values())
+                )
                 return continuationmonad.from_(certificate)
 
             case _:
-                raise Exception(f"Unexpected state {state} when evaluating {transition}.")
+                raise Exception(
+                    f"Unexpected state {state} when evaluating {transition}."
+                )
 
     def on_completed(self):
         transition = OnCompletedTransition(
@@ -156,6 +162,7 @@ class SharedObserver[V](Observer[V]):
 
         match state := transition.get_state():
             case OnCompletedState():
+
                 def gen_certificates():
                     for id in state.requested_certificates:
                         if id in state.send_ids:
@@ -166,9 +173,8 @@ class SharedObserver[V](Observer[V]):
                             assert certificate.validated is False
                             yield continuationmonad.from_(certificate)
 
-                return (
-                    continuationmonad.zip(tuple(gen_certificates()))
-                    .map(lambda c: ContinuationCertificate.merge(c))
+                return continuationmonad.zip(tuple(gen_certificates())).map(
+                    lambda c: ContinuationCertificate.merge(c)
                 )
 
                 # def gen_certificates():
@@ -182,7 +188,9 @@ class SharedObserver[V](Observer[V]):
                 # )
 
             case HasTerminatedState():
-                certificate = ContinuationCertificate.merge(tuple(state.requested_certificates.values()))
+                certificate = ContinuationCertificate.merge(
+                    tuple(state.requested_certificates.values())
+                )
                 return continuationmonad.from_(certificate)
 
             case _:
@@ -211,9 +219,8 @@ class SharedObserver[V](Observer[V]):
                             assert certificate.validated is False
                             yield continuationmonad.from_(certificate)
 
-                return (
-                    continuationmonad.zip(tuple(gen_certificates()))
-                    .map(lambda c: ContinuationCertificate.merge(c))
+                return continuationmonad.zip(tuple(gen_certificates())).map(
+                    lambda c: ContinuationCertificate.merge(c)
                 )
                 # def gen_certificates():
                 #     for id in send_ids:
@@ -227,7 +234,9 @@ class SharedObserver[V](Observer[V]):
                 # )
 
             case HasTerminatedState():
-                certificate = ContinuationCertificate.merge(tuple(state.requested_certificates.values()))
+                certificate = ContinuationCertificate.merge(
+                    tuple(state.requested_certificates.values())
+                )
                 return continuationmonad.from_(certificate)
 
             case _:

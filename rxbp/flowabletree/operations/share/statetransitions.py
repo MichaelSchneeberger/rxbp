@@ -6,12 +6,12 @@ from dataclassabc import dataclassabc
 from continuationmonad.typing import ContinuationCertificate
 
 from rxbp.flowabletree.operations.share.states import (
-    AwaitUpstreamAdjustBufferState,
+    AwaitUpstreamAfterCancelState,
     ErrorStateMixin,
     HasErroredState,
     HasTerminatedState,
-    AwaitDownstreamAdjustBufferState,
-    CancelledKeepAwaitDownstreamState,
+    AwaitDownstreamAfterCancelState,
+    RequestFromCancelledDownstreamState,
     RequestUpstream,
     ActiveStateMixin,
     AwaitOnNext,
@@ -30,21 +30,7 @@ from rxbp.flowabletree.operations.share.states import (
 State Machine
 -------------
 
-State groups (-), states (>):
-- Active - AwaitUpstream
-  > Init
-  > RequestUpstream
-  > AwaitOnNext
-  > OnNextFromBuffer
-- Active - AwaitDownstream
-  > OnNext
-- Terminated
-  > OnCompleted
-  > Cancelled
-  > HasTerminated
-- Terminated - Errored
-  > OnError
-  > HasErrored
+The states are described in states.py
 
 Transitions:
 - on_next:
@@ -97,16 +83,12 @@ class ToStateTransition(ShareStateTransition):
 @dataclassabc(frozen=False)
 class OnNextTransition(ShareStateTransition):
     """Item received"""
+
     child: ShareStateTransition
 
     def get_state(self):
         match state := self.child.get_state():
-            case AwaitUpstreamStateMixin(
-                # buffer_map=buffer_map,
-                # first_buffer_index=first_buffer_index,
-                # last_buffer_index=last_buffer_index,
-                # requested_certificates=requested_certificates,
-            ):
+            case AwaitUpstreamStateMixin():
                 last_buffer_index = state.last_buffer_index + 1
 
                 send_ids = tuple(
@@ -157,11 +139,11 @@ class RequestTransition(ShareStateTransition):
                             yield id, self.weight
                         else:
                             yield id, w
-            
+
                 weights = dict(gen_weights())
 
                 if self.id in state.cancelled_certificates:
-                    return CancelledKeepAwaitDownstreamState(
+                    return RequestFromCancelledDownstreamState(
                         buffer_map=state.buffer_map,
                         first_buffer_index=state.first_buffer_index,
                         last_buffer_index=state.last_buffer_index,
@@ -174,6 +156,7 @@ class RequestTransition(ShareStateTransition):
 
                 # update buffer_map
                 buffer_map = {}
+                sel_index = None
                 for id, index in state.buffer_map.items():
                     if id == self.id:
                         sel_index = index
@@ -182,12 +165,12 @@ class RequestTransition(ShareStateTransition):
                     else:
                         buffer_map[id] = index
 
+                assert sel_index is not None, "id not found in buffer."
+
+                # there is no item in the buffer
                 if state.last_buffer_index == sel_index:
-                    """ there is no item in the buffer """
-
+                    # request new upstream item
                     if isinstance(state, AwaitDownstreamStateMixin):
-                        """ request new upstream item """
-
                         return RequestUpstream(
                             buffer_map=buffer_map,
                             first_buffer_index=state.first_buffer_index,
@@ -214,21 +197,22 @@ class RequestTransition(ShareStateTransition):
                             cancelled_certificates=state.cancelled_certificates,
                         )
 
+                # there is an item in the buffer
                 else:
-                    """ there is an item in the buffer """
+                    first_buffer_index = state.first_buffer_index
 
-                    if sel_index == state.first_buffer_index:
-                        # update first index
-
+                    # update first index
+                    if sel_index == first_buffer_index:
+                        # number of downstream observers pointing to the first buffer item
                         n_observers = sum(
                             index
                             for index in buffer_map.values()
                             if index == state.first_buffer_index
                         )
 
-                        # no upstream points to first index
+                        # no upstream observers point to the first buffer item, increase index
                         if pop_item := n_observers == 0:
-                            first_buffer_index = state.first_buffer_index + 1
+                            first_buffer_index = first_buffer_index + 1
 
                     else:
                         pop_item = False
@@ -244,13 +228,11 @@ class RequestTransition(ShareStateTransition):
                         pop_item=pop_item,
                         cancelled_certificates=state.cancelled_certificates,
                     )
-            
+
             case ErrorStateMixin(
                 exception=exception,
                 requested_certificates=requested_certificates,
             ):
-                # send on_error
-
                 return HasErroredState(
                     exception=exception,
                     requested_certificates=requested_certificates,
@@ -266,6 +248,7 @@ class RequestTransition(ShareStateTransition):
 @dataclassabc(frozen=False)
 class OnNextAndCompleteTransition(ShareStateTransition):
     """Item received, stream is complete"""
+
     child: ShareStateTransition
 
     def get_state(self):
@@ -285,7 +268,9 @@ class OnNextAndCompleteTransition(ShareStateTransition):
                     if index == n_last_buffer_index
                 )
 
-                buffer_item = first_buffer_index != n_last_buffer_index      # all subscribers request new item
+                buffer_item = (
+                    first_buffer_index != n_last_buffer_index
+                )  # all subscribers request new item
 
                 return OnNext(
                     buffer_map=buffer_map,
@@ -327,7 +312,7 @@ class OnCompletedTransition(ShareStateTransition):
                     send_ids=send_ids,
                     requested_certificates=requested_certificates,
                 )
-            
+
             case CancelledState(requested_certificates=requested_certificates):
                 return HasTerminatedState(requested_certificates=requested_certificates)
 
@@ -377,31 +362,39 @@ class CancelTransition(ShareStateTransition):
                 requested_certificates=requested_certificates,
                 first_buffer_index=first_buffer_index,
             ):
-                # remove downstrem from buffer
+                # remove downstrem from buffer mapping
                 n_buffer_map = {
                     id: index for id, index in buffer_map.items() if id != self.id
                 }
 
+                # Downstream certificate is concurrently validated in case the downstream cancellation
+                # (i.e., downstream calls the cancel() method) occurs after requesting a new item.
+                # In this case, we select the valid certificate using or_ operator.
                 certificate = requested_certificates[self.id].or_(self.certificate)
 
                 if len(n_buffer_map) == 0:
                     # no active downstream observers
 
-                    requested_certificates = requested_certificates | {self.id: certificate}
+                    requested_certificates = requested_certificates | {
+                        self.id: certificate
+                    }
 
                     return CancelledState(
                         requested_certificates=requested_certificates,
                     )
-                
+
                 else:
                     first_buffer_index = min(n_buffer_map.values())
                     n_buffer_pop = first_buffer_index - first_buffer_index
 
                     match state:
                         case AwaitUpstreamStateMixin():
-                            requested_certificates = requested_certificates | {self.id: certificate}
+                            requested_certificates = requested_certificates | {
+                                # self.id: certificate
+                                self.id: self.certificate  # this should also work
+                            }
 
-                            return AwaitUpstreamAdjustBufferState(
+                            return AwaitUpstreamAfterCancelState(
                                 buffer_map=n_buffer_map,
                                 first_buffer_index=first_buffer_index,
                                 last_buffer_index=state.last_buffer_index,
@@ -415,10 +408,19 @@ class CancelTransition(ShareStateTransition):
                         case AwaitDownstreamStateMixin(
                             cancelled_certificates=cancelled_certificates,
                         ):
-                            cancelled_certificates = cancelled_certificates | {self.id: certificate}
-                            requested_certificates = {id: c for id, c in requested_certificates.items() if id != self.id}
+                            # certificate is required to stop the continuation when the downstream
+                            # is requesting a new item (despite being cancelled)
+                            cancelled_certificates = cancelled_certificates | {
+                                self.id: certificate
+                            }
 
-                            return AwaitDownstreamAdjustBufferState(
+                            requested_certificates = {
+                                id: c
+                                for id, c in requested_certificates.items()
+                                if id != self.id
+                            }
+
+                            return AwaitDownstreamAfterCancelState(
                                 buffer_map=n_buffer_map,
                                 first_buffer_index=first_buffer_index,
                                 last_buffer_index=state.last_buffer_index,

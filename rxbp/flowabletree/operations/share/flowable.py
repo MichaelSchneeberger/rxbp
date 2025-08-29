@@ -21,7 +21,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
     child: FlowableNode
 
     def discover(
-        self, 
+        self,
         state: State,
     ):
         if self not in state.shared_subscribe_count:
@@ -111,9 +111,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
 
         id = len(init_state.buffer_map)
         init_state.buffer_map[id] = 0
-        certificate, shared.init_certificate = shared.init_certificate.take(
-            args.weight
-        )
+        certificate, shared.init_certificate = shared.init_certificate.take(args.weight)
         # print(certificate)
         init_state.requested_certificates[id] = None
         init_state.weights[id] = args.weight
@@ -129,7 +127,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
             observer=args.observer,
             shared=shared,
             id=id,
-            weight=args.weight,
+            # weight=args.weight,
             cancellation=downstream_cancellation,
         )
 
