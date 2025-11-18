@@ -40,6 +40,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
     ):
         state.shared_subscribe_count[self] -= 1
 
+        # the first assign_weights call
         if self not in state.shared_weights:
             state.shared_weights[self] = weight
 
@@ -59,19 +60,17 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
             observer = state.shared_observers[self]
 
         else:
-            total_weight = state.shared_weights[self]
-
             shared = ShareSharedMemory(
+                acc_weight=state.shared_weights[self],
+                weights={},
+                subscribe_certificate=None,
                 upstream_cancellation=None,
-                transition=None,  # type: ignore
                 deferred_handler=None,  # type: ignore
                 lock=Lock(),
+                transition=None,  # type: ignore
                 buffer_lock=Lock(),
                 first_index=0,
                 buffer=[],
-                total_weight=total_weight,
-                weight_partition={},
-                init_certificate=None,
             )
 
             observer = SharedObserver(
@@ -83,25 +82,26 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
 
             state.shared_observers[self] = observer
 
+            # acc_weight = state.shared_weights[self]
+            # print(f"{acc_weight=}")
+
             state, result = self.child.unsafe_subscribe(
                 state,
                 args.copy(
                     observer=observer,
-                    weight=total_weight,
+                    weight=shared.acc_weight,
                 ),
             )
             shared.upstream_cancellation = result.cancellable
-            shared.init_certificate = result.certificate
+            shared.subscribe_certificate = result.certificate
 
             shared.transition = ToStateTransition(
                 InitState(
                     buffer_map={},
                     first_buffer_index=0,
                     last_buffer_index=-1,
-                    cancelled_certificates={},
                     requested_certificates={},
                     is_completed=False,
-                    weights={},
                 )
             )
 
@@ -111,10 +111,11 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
 
         id = len(init_state.buffer_map)
         init_state.buffer_map[id] = 0
-        certificate, shared.init_certificate = shared.init_certificate.take(args.weight)
-        # print(certificate)
+        certificate, shared.subscribe_certificate = shared.subscribe_certificate.take(
+            args.weight
+        )
         init_state.requested_certificates[id] = None
-        init_state.weights[id] = args.weight
+        shared.weights[id] = args.weight
 
         downstream_cancellation = ShareCancellation(
             id=id,
@@ -124,11 +125,11 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
         )
 
         ack_observer = ShareAckObserver(
-            observer=args.observer,
             shared=shared,
+            observer=args.observer,
             id=id,
-            # weight=args.weight,
             cancellation=downstream_cancellation,
+            weight=args.weight,
         )
 
         observer.ack_observers[id] = ack_observer

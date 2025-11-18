@@ -8,7 +8,7 @@ import rxbp
 from rxbp.testing.tflowable import init_test_flowable
 from rxbp.typing import Observer
 from rxbp.testing.tobserver import init_test_observer
-from rxbp.testing.trun import test_run
+from rxbp.testing.trun import t_run
 from rxbp.flowabletree.operations.share.flowable import init_share_flowable_node
 
 
@@ -28,7 +28,7 @@ class TestShare(TestCase):
         sink1 = init_test_observer(name="sink1", scheduler=scheduler)
         sink2 = init_test_observer(name="sink2", scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_share_flowable_node(source),
             sinks=(sink1, sink2),
             scheduler=scheduler,
@@ -66,7 +66,7 @@ class TestShare(TestCase):
         sink1 = init_test_observer(name="sink1", scheduler=scheduler)
         sink2 = init_test_observer(name="sink2", scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_share_flowable_node(source),
             sinks=(sink1, sink2),
             scheduler=scheduler,
@@ -107,7 +107,7 @@ class TestShare(TestCase):
         sink1 = init_test_observer(name="sink1", scheduler=scheduler)
         sink2 = init_test_observer(name="sink2", scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_share_flowable_node(source),
             sinks=(sink1, sink2),
             scheduler=scheduler,
@@ -147,7 +147,7 @@ class TestShare(TestCase):
         sink1 = init_test_observer(name="sink1", scheduler=scheduler)
         sink2 = init_test_observer(name="sink2", scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_share_flowable_node(source),
             sinks=(sink1, sink2),
             scheduler=scheduler,

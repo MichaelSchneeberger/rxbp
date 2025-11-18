@@ -8,11 +8,10 @@ import rxbp
 from rxbp.typing import Observer
 from rxbp.flowabletree.operations.concatmap.flowable import ConcatMapFlowable
 from rxbp.testing.tobserver import init_test_observer
-from rxbp.testing.trun import test_run
+from rxbp.testing.trun import t_run
 
 
 class TestConcatMap(TestCase):
-
     def test_normal_case(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
@@ -43,7 +42,7 @@ class TestConcatMap(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,
@@ -78,7 +77,7 @@ class TestConcatMap(TestCase):
         @do()
         def schedule_inner_source2(observer: Observer, _):
             return observer.on_next_and_complete(2)
-        
+
         inner_source2 = rxbp.create(schedule_inner_source2)
 
         @do()
@@ -91,7 +90,7 @@ class TestConcatMap(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,
@@ -120,7 +119,7 @@ class TestConcatMap(TestCase):
         @do()
         def schedule_inner_source2(observer: Observer, _):
             return observer.on_next_and_complete(1)
-        
+
         inner_source2 = rxbp.create(schedule_inner_source2)
 
         @do()
@@ -132,7 +131,7 @@ class TestConcatMap(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=ConcatMapFlowable(
                 child=source,
                 func=lambda v: v,

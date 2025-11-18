@@ -13,7 +13,7 @@ from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
 from rxbp.flowabletree.operations.share.states import (
     RemoveBufferItemsStateMixin,
     CancelledState,
-    HasTerminatedState,
+    TerminatedStateMixin,
 )
 
 
@@ -37,16 +37,21 @@ class ShareCancellation(CancellationState):
             transition.child = self.shared.transition
             self.shared.transition = transition
 
-        match transition.get_state():
-            case CancelledState(requested_certificates=requested_certificates):
-                self.upstream_cancellation.cancel(
-                    tuple(requested_certificates.values())
-                )
+            # match state := transition.get_state():
+            #     case CancelledState():
+            #         certificate = ContinuationCertificate.merge(
+            #             tuple(state.requested_certificates.values())
+            #         )
+            #         state.certificate = certificate
+
+        match state := transition.get_state():
+            case CancelledState():
+                self.upstream_cancellation.cancel(state.certificate)
 
             case RemoveBufferItemsStateMixin(n_buffer_pop=n_buffer_pop):
                 # still active downstream observers remaining
 
                 self.shared.pop_buffer(n_buffer_pop)
 
-            case HasTerminatedState():
+            case TerminatedStateMixin():
                 pass

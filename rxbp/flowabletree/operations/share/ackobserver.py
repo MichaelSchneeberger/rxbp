@@ -13,12 +13,11 @@ from rxbp.logging import rxbp_logger
 from rxbp.cancellable import CancellationState
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.share.states import (
-    HasErroredState,
-    RequestFromCancelledDownstreamState,
     RequestUpstream,
     AwaitOnNext,
     OnNextFromBuffer,
-    TerminatedStateMixin,
+    OnErrorState,
+    OnCompletedState,
 )
 from rxbp.flowabletree.operations.share.statetransitions import (
     RequestTransition,
@@ -33,6 +32,7 @@ class ShareAckObserver(CMObserver):
     observer: Observer
     id: int
     cancellation: CancellationState
+    weight: int
 
     def on_success(
         self,
@@ -45,26 +45,23 @@ class ShareAckObserver(CMObserver):
         transition = RequestTransition(
             child=None,  # type: ignore
             id=self.id,
-            weight=weight,
         )
 
         with self.shared.lock:
             transition.child = self.shared.transition
 
             match state := transition.get_state():
+                # request next upstream item
                 case RequestUpstream():
-                    total_weight = sum(w for w in state.weights.values())
-
-                    # request new item from upstream
                     certificate = self.shared.deferred_handler.resume(
-                        trampoline, total_weight, None
+                        trampoline,
+                        self.shared.acc_weight,
+                        None,
                     )
 
                     # Split up the upstream certificate according to the weight of each downstream branch.
-                    # Note that at this point all previous requested certificates have been consumed either
-                    # through a downstream request or on a upstream on_next call.
                     requested_certificates = {}
-                    for id, weight in state.weights.items():
+                    for id, weight in self.shared.weights.items():
                         requested_certificates[id], certificate = certificate.take(
                             weight
                         )
@@ -80,11 +77,10 @@ class ShareAckObserver(CMObserver):
             case AwaitOnNext():
                 return state.certificate
 
-            case RequestFromCancelledDownstreamState():
-                return state.certificate
-
             case OnNextFromBuffer():
                 item = self.shared.get_buffer_item(state.index)
+                # print(f"{item=}")
+                # print(f"{state.index}")
 
                 if state.pop_item:
                     self.shared.pop_buffer(1)
@@ -103,7 +99,7 @@ class ShareAckObserver(CMObserver):
                     certificate = continuation.subscribe(
                         args=continuationmonad.init_subscribe_args(
                             observer=observer,
-                            weight=weight,
+                            weight=self.weight,
                             cancellation=self.cancellation,
                             trampoline=trampoline,
                         )
@@ -113,18 +109,25 @@ class ShareAckObserver(CMObserver):
                 # schedule continuation on the current trampoline to limit the call stack depth
                 return trampoline.schedule(trampoline_task, weight, self.cancellation)
 
-            case HasErroredState(exception=exception):
+            case OnErrorState(exception=exception):
                 return self.observer.on_error(exception=exception).subscribe(
                     args=continuationmonad.init_subscribe_args(
                         observer=self,
-                        weight=weight,
+                        weight=self.weight,
                         cancellation=self.cancellation,
                         trampoline=trampoline,
                     )
                 )
 
-            case TerminatedStateMixin():
-                return state.requested_certificates[self.id]
+            case OnCompletedState(exception=exception):
+                return self.observer.on_completed().subscribe(
+                    args=continuationmonad.init_subscribe_args(
+                        observer=self,
+                        weight=self.weight,
+                        cancellation=self.cancellation,
+                        trampoline=trampoline,
+                    )
+                )
 
             case _:
                 raise Exception(f"Unexpected state {state}")
@@ -138,9 +141,8 @@ class ShareAckObserver(CMObserver):
         return self.observer.on_error(exception).subscribe(
             args=continuationmonad.init_subscribe_args(
                 observer=self,
-                weight=weight,
+                weight=self.weight,
                 cancellation=self.cancellation,
                 trampoline=trampoline,
             )
         )
-

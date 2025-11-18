@@ -9,11 +9,10 @@ from rxbp.testing.tflowable import init_test_flowable
 from rxbp.typing import Observer
 from rxbp.flowabletree.operations.flatmap.flowable import FlatMapFlowableNode
 from rxbp.testing.tobserver import init_test_observer
-from rxbp.testing.trun import test_run
+from rxbp.testing.trun import t_run
 
 
 class TestFlatMap(TestCase):
-
     def test_empty(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
@@ -26,7 +25,7 @@ class TestFlatMap(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=FlatMapFlowableNode(
                 child=source,
                 func=lambda v: v,
@@ -43,7 +42,6 @@ class TestFlatMap(TestCase):
         scheduler.advance_to(1.5)
         self.assertEqual(sink.received, [])
         self.assertTrue(sink.is_completed)
-
 
     def test_outer_complete_first(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
@@ -75,7 +73,7 @@ class TestFlatMap(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=FlatMapFlowableNode(
                 child=source,
                 func=lambda v: v,
@@ -104,7 +102,7 @@ class TestFlatMap(TestCase):
 
     def test_on_outer_error(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
-        exception = Exception('TestException')
+        exception = Exception("TestException")
 
         @do()
         def schedule_inner_source(observer: Observer, _):
@@ -125,7 +123,7 @@ class TestFlatMap(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=FlatMapFlowableNode(
                 child=source,
                 func=lambda v: v,
@@ -145,12 +143,12 @@ class TestFlatMap(TestCase):
         self.assertEqual(sink.received, [1])
         self.assertEqual(sink.exception, exception)
         self.assertIsNotNone(
-            inner_source.cancellation.is_cancelled(), 
+            inner_source.cancellation.is_cancelled(),
         )
 
     def test_on_inner_error(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
-        exception = Exception('TestException')
+        exception = Exception("TestException")
 
         @do()
         def schedule_inner_source1(observer: Observer, _):
@@ -174,13 +172,12 @@ class TestFlatMap(TestCase):
             yield observer.on_next(inner_source2)
             yield continuationmonad.sleep(2, scheduler)
             return observer.on_completed()
-        
 
         outer_source = init_test_flowable(schedule_source)
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=FlatMapFlowableNode(
                 child=outer_source,
                 func=lambda v: v,
@@ -200,10 +197,10 @@ class TestFlatMap(TestCase):
         self.assertEqual(sink.received, [1])
         self.assertEqual(sink.exception, exception)
         self.assertIsNotNone(
-            inner_source2.cancellation.is_cancelled(), 
-        )        
+            inner_source2.cancellation.is_cancelled(),
+        )
         self.assertIsNotNone(
-            outer_source.cancellation.is_cancelled(), 
+            outer_source.cancellation.is_cancelled(),
         )
 
         scheduler.advance_to(3.5)
@@ -211,7 +208,7 @@ class TestFlatMap(TestCase):
 
     def test_on_inner_error_stop_continuation(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
-        exception = Exception('TestException')
+        exception = Exception("TestException")
 
         @do()
         def schedule_inner_source1(observer: Observer, _):
@@ -231,12 +228,12 @@ class TestFlatMap(TestCase):
             yield continuationmonad.sleep(1, scheduler)
             yield observer.on_next(inner_source1)
             return observer.on_next_and_complete(inner_source2)
-        
+
         outer_source = init_test_flowable(schedule_source)
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=FlatMapFlowableNode(
                 child=outer_source,
                 func=lambda v: v,

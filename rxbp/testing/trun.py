@@ -9,21 +9,20 @@ from rxbp.typing import FlowableNode, State
 from rxbp.testing.tobserver import TObserver
 
 
-def test_run(
+def t_run(
     source: FlowableNode,
     sinks: tuple[TObserver, ...],
     scheduler: MainVirtualTimeScheduler,
-    state: State | None = None
+    state: State | None = None,
 ):
-
     if state is None:
         state = rxbp.init_state()
 
     def scheduler_task(state=state):
         def trampoline_task(state=state):
-
             def gen_subscriptions():
                 for sink in sinks:
+
                     @dataclass
                     class TestSubscription(Subscription):
                         sink: TObserver
@@ -39,9 +38,7 @@ def test_run(
                             state, result = source.unsafe_subscribe(
                                 state,
                                 args=rxbp.init_subscribe_args(
-                                    observer=self.sink,
-                                    weight=1,
-                                    scheduler=scheduler
+                                    observer=self.sink, weight=1, scheduler=scheduler
                                 ),
                             )
 
@@ -49,10 +46,10 @@ def test_run(
                             self.sink.cancellable = result.cancellable
 
                             return state
-                        
+
                     yield TestSubscription(
                         sink=sink,
-                        certificate=None, # type: ignore
+                        certificate=None,  # type: ignore
                     )
 
             subscriptions = tuple(gen_subscriptions())
@@ -62,14 +59,16 @@ def test_run(
                 state=state,
             )
 
-            return ContinuationCertificate.merge(tuple(
-                s.certificate for s in subscriptions
-            ))
-        
+            return ContinuationCertificate.merge(
+                tuple(s.certificate for s in subscriptions)
+            )
+
         return state.subscription_trampoline.start_loop(
-            trampoline_task, weight=len(sinks), cancellation=None,
+            trampoline_task,
+            weight=len(sinks),
+            cancellation=None,
         )
-    
+
     scheduler.run(scheduler_task, weight=len(sinks))
     #     return certificate
 

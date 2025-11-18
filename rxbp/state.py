@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import replace
+from threading import Lock
 from typing import override
 
 from dataclassabc import dataclassabc
 
 import continuationmonad
 from continuationmonad.typing import Trampoline
+
+from rxbp.scheduler.certificateprovider import CertificateProvider
+from rxbp.scheduler.init import init_certificate_provider
 
 
 class State(ABC):
@@ -47,6 +51,18 @@ class State(ABC):
 
         This dictionary is modified during the subscription of a Flowable.
         """
+
+    @property
+    @abstractmethod
+    def async_shared_observers(self) -> dict: ...
+
+    @property
+    @abstractmethod
+    def async_shared_lock(self) -> Lock: ...
+
+    @property
+    @abstractmethod
+    def certificate_provider(self) -> CertificateProvider: ...
 
     @property
     @abstractmethod
@@ -104,6 +120,9 @@ class StateImpl(State):
     subscription_trampoline: Trampoline
     raise_immediately: bool
     shared_observers: dict
+    async_shared_observers: dict
+    async_shared_lock: Lock
+    certificate_provider: CertificateProvider
     shared_subscribe_count: dict
     shared_weights: dict
     connections: dict
@@ -119,6 +138,9 @@ def init_state(
     subscription_trampoline: Trampoline | None = None,
     raise_immediately: bool | None = None,
     shared_observers: dict | None = None,
+    async_shared_observers: dict | None = None,
+    async_shared_lock: Lock | None = None,
+    certificate_provider: CertificateProvider | None = None,
     shared_subscribe_count: dict | None = None,
     shared_weights: dict | None = None,
     connections: dict | None = None,
@@ -133,6 +155,15 @@ def init_state(
 
     if shared_observers is None:
         shared_observers = {}
+
+    if async_shared_observers is None:
+        async_shared_observers = {}
+
+    if async_shared_lock is None:
+        async_shared_lock = Lock()
+
+    if certificate_provider is None:
+        certificate_provider = init_certificate_provider()
 
     if shared_subscribe_count is None:
         shared_subscribe_count = {}
@@ -153,6 +184,9 @@ def init_state(
         subscription_trampoline=subscription_trampoline,
         raise_immediately=raise_immediately,
         shared_observers=shared_observers,
+        async_shared_observers=async_shared_observers,
+        async_shared_lock=async_shared_lock,
+        certificate_provider=certificate_provider,
         shared_subscribe_count=shared_subscribe_count,
         shared_weights=shared_weights,
         connections=connections,

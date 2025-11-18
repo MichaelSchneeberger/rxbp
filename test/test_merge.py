@@ -10,11 +10,10 @@ from rxbp.testing.tflowable import init_test_flowable
 from rxbp.typing import Observer
 from rxbp.flowabletree.operations.merge.flowable import init_merge_flowable_node
 from rxbp.testing.tobserver import init_test_observer
-from rxbp.testing.trun import test_run
+from rxbp.testing.trun import t_run
 
 
 class TestMerge(TestCase):
-
     def test_normal_case(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
@@ -37,7 +36,7 @@ class TestMerge(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_merge_flowable_node(
                 children=(source1, source2),
             ),

@@ -11,11 +11,10 @@ from rxbp.testing.tflowable import init_test_flowable
 from rxbp.typing import Observer
 from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.testing.tobserver import init_test_observer
-from rxbp.testing.trun import test_run
+from rxbp.testing.trun import t_run
 
 
 class TestZip(TestCase):
-
     def test_normal_case(self):
         scheduler = continuationmonad.init_main_virtual_time_scheduler()
 
@@ -39,7 +38,7 @@ class TestZip(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_zip_flowable_node(
                 children=(source1, source2),
             ),
@@ -79,7 +78,7 @@ class TestZip(TestCase):
 
         sink = init_test_observer(scheduler=scheduler)
 
-        test_run(
+        t_run(
             source=init_zip_flowable_node(
                 children=(source1, source2),
             ),
@@ -97,3 +96,4 @@ class TestZip(TestCase):
             ContinuationCertificate,
         )
         self.assertTrue(sink.is_completed)
+
