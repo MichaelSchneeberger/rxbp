@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 
 @dataclass
@@ -18,7 +18,7 @@ class LoopActive(BufferState):
     is_completed: bool
 
     # since the loop is active, we get an additional certificate
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass
@@ -44,7 +44,7 @@ class SendItemAndComplete(LoopInactive):
 
 @dataclass
 class StopLoop(LoopInactive):
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass
@@ -54,7 +54,7 @@ class CompleteState(BufferState):
 
 @dataclass
 class ErrorState(BufferState):
-    certificate: ContinuationCertificate
+    certificate: ContCert
     exception: Exception
 
 
@@ -65,10 +65,10 @@ class SendErrorState(BufferState):
 
 @dataclass
 class CancelledState(BufferState):
-    # certificate: ContinuationCertificate
+    # certificate: ContCert
     pass
 
 
 @dataclass
 class CancelLoopState(BufferState):
-    certificate: ContinuationCertificate
+    certificate: ContCert

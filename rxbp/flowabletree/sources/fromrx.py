@@ -1,19 +1,19 @@
 from typing import override
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
 import reactivex
 
-import continuationmonad
+import rxsingle
 
 from rxbp.cancellable import init_cancellation_state
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode
 
 
-@dataclassabc(frozen=True)
+@dataclass(frozen=True)
 class FromRx[V](FlowableNode[V]):
     source: None
 
@@ -36,13 +36,13 @@ class FromRx[V](FlowableNode[V]):
                 def task():
                     action(None)
                     return state.subscription_trampoline._create_certificate(
-                        weight=args.weight,
+                        virtual_count=args.virtual_count,
                         stack=tuple()
                     )
 
                 scheduler.schedule(
                     task=task,
-                    weight=1,
+                    virtual_count=1,
                     cancellation=cancellable,
                 )
 
@@ -53,56 +53,56 @@ class FromRx[V](FlowableNode[V]):
                 # print(f'on_next({value})')
 
                 certificate = state.subscription_trampoline._create_certificate(
-                    weight=args.weight,
+                    virtual_count=args.virtual_count,
                     stack=tuple()
                 )
 
-                trampoline = continuationmonad.init_trampoline()
+                trampoline = contcert.init_trampoline()
 
                 def trampoline_task():
                     return args.observer.on_next(value).subscribe(
-                        continuationmonad.init_subscribe_args(
-                            observer=continuationmonad.init_anonymous_observer(
+                        rxsingle.init_subscribe_args(
+                            observer=rxsingle.init_anonymous_observer(
                                 on_success=lambda _, __: certificate,
                             ),
-                            weight=args.weight,
+                            virtual_count=args.virtual_count,
                             trampoline=trampoline,
                         )
                     )
 
-                trampoline.start_loop(trampoline_task, weight=args.weight, cancellation=None)
+                trampoline.start_loop(trampoline_task, virtual_count=args.virtual_count, cancellation=None)
 
             def on_error(self, error):
-                trampoline = continuationmonad.init_trampoline()
+                trampoline = contcert.init_trampoline()
 
                 def trampoline_task():
                     return args.observer.on_error(error).subscribe(
-                        continuationmonad.init_subscribe_args(
-                            observer=continuationmonad.init_anonymous_observer(
+                        rxsingle.init_subscribe_args(
+                            observer=rxsingle.init_anonymous_observer(
                                 on_success=lambda _, certificate: certificate,
                             ),
-                            weight=args.weight,
+                            virtual_count=args.virtual_count,
                             trampoline=state.subscription_trampoline,
                         )
                     )
 
-                trampoline.start_loop(trampoline_task, weight=args.weight, cancellation=None)
+                trampoline.start_loop(trampoline_task, virtual_count=args.virtual_count, cancellation=None)
 
             def on_completed(self):
-                trampoline = continuationmonad.init_trampoline()
+                trampoline = contcert.init_trampoline()
 
                 def trampoline_task():
                     return args.observer.on_completed().subscribe(
-                        continuationmonad.init_subscribe_args(
-                            observer=continuationmonad.init_anonymous_observer(
+                        rxsingle.init_subscribe_args(
+                            observer=rxsingle.init_anonymous_observer(
                                 on_success=lambda _, certificate: certificate,
                             ),
-                            weight=args.weight,
+                            virtual_count=args.virtual_count,
                             trampoline=state.subscription_trampoline,
                         )
                     )
 
-                trampoline.start_loop(trampoline_task, weight=args.weight, cancellation=None)
+                trampoline.start_loop(trampoline_task, virtual_count=args.virtual_count, cancellation=None)
 
         observer = RxObserver()
 
@@ -115,13 +115,13 @@ class FromRx[V](FlowableNode[V]):
             )
 
             return state.subscription_trampoline._create_certificate(
-                weight=args.weight,
+                virtual_count=args.virtual_count,
                 stack=tuple()
             )
 
         certificate = state.subscription_trampoline.schedule(
             task=trampoline_task,
-            weight=args.weight,
+            virtual_count=args.virtual_count,
             cancellation=None,
         )
 

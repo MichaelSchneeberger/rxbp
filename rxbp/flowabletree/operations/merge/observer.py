@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import (
+import rxsingle
+from rxsingle.typing import (
     DeferredHandler,
 )
 
@@ -51,7 +51,7 @@ class MergeObserver[V](Observer[V]):
                     certificate = None
 
                 else:
-                    certificate, *_ = yield from continuationmonad.from_(None).connect(
+                    certificate, *_ = yield from rxsingle.from_(None).connect(
                         (observer,)
                     )
 
@@ -72,7 +72,7 @@ class MergeObserver[V](Observer[V]):
                         certificate=certificate,
                     ):
                         self.shared.cancellables[self.id].cancel(certificates[self.id])
-                        return continuationmonad.from_(certificate)
+                        return rxsingle.from_(certificate)
                     
                     case _:
                         pass
@@ -81,16 +81,16 @@ class MergeObserver[V](Observer[V]):
                 return continuation
 
             case KeepWaitingState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case AwaitOnNextState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case OnNextAndCompleteState(value=value):
                 return self.shared.downstream.on_next_and_complete(value)
 
             case HasTerminatedState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -116,7 +116,7 @@ class MergeObserver[V](Observer[V]):
             certificate = self._on_next(state)
             return certificate
 
-        return continuationmonad.defer(on_next_subscription)
+        return rxsingle.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
@@ -150,7 +150,7 @@ class MergeObserver[V](Observer[V]):
                 return self.shared.downstream.on_completed()
 
             case StopContinuationStateMixin(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -177,7 +177,7 @@ class MergeObserver[V](Observer[V]):
                 return self.shared.downstream.on_error(exception)
 
             case HasTerminatedState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

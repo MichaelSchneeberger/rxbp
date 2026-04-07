@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from continuationmonad.typing import (
-    ContinuationCertificate,
+from rxsingle.typing import (
+    ContCert,
     DeferredHandler,
 )
 
@@ -32,10 +32,10 @@ class ActiveStateMixin(FlatMapState):
     active_ids: tuple[int, ...]
 
     # upstream continuation certificates
-    certificates: tuple[ContinuationCertificate, ...]
+    certificates: tuple[ContCert, ...]
 
     is_outer_completed: bool
-    # outer_certificate: ContinuationCertificate
+    # outer_certificate: ContCert
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ class StopContinuationStateMixin:
     """Stop continuations associated with incoming upstream call"""
 
     # Certificate is used to stop continuation of calling upstream flowable.
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,7 @@ class InitState(AwaitUpstreamStateMixin):
 
 # @dataclass(frozen=True, slots=True)
 # class FirstSubscription(AwaitUpstreamStateMixin):
-#     # certificate: ContinuationCertificate
+#     # certificate: ContCert
 #     pass
 
 
@@ -106,7 +106,7 @@ class OnNextState[U](AwaitDownstreamStateMixin):
 class KeepWaitingState(StopContinuationStateMixin, AwaitDownstreamStateMixin):
     """Await for downstream to request new item"""
 
-    # certificate: ContinuationCertificate
+    # certificate: ContCert
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,10 +117,10 @@ class TerminatedStateMixin(FlatMapState):
     # This is important as the certificate is either used:
     # - to stop calling upsream flowable (on_next, on_next_and_complete, ...), or
     # - to cancel upstream flowable
-    certificates: dict[int, ContinuationCertificate]
+    certificates: dict[int, ContCert]
 
     # None if outer Flowable is already terminated
-    outer_certificate: ContinuationCertificate | None
+    outer_certificate: ContCert | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,7 +153,7 @@ class CancelledAwaitRequestState(TerminatedStateMixin):
 
     # The certificate is used to stop the downstream request.
     # It is not used to stop the current upstream.
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass(frozen=True, slots=True)

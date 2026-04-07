@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from threading import Lock
 
-from continuationmonad.typing import (
-    DeferredHandler, ContinuationCertificate
+from rxsingle.typing import (
+    DeferredHandler, ContCert
 )
 
 from rxbp.cancellable import Cancellable
@@ -15,10 +15,10 @@ from rxbp.flowabletree.operations.share.statetransitions import (
 
 @dataclass(frozen=False)
 class ShareSharedMemory[V]:
-    total_weight: int
-    weight_partition: dict[int, int]
+    total_virtual_count: int
+    virtual_count_partition: dict[int, int]
 
-    init_certificate: ContinuationCertificate
+    init_certificate: ContCert
 
     upstream_cancellation: Cancellable
 

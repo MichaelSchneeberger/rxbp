@@ -3,22 +3,16 @@ from threading import Lock
 import traceback
 from typing import Callable
 
-from donotation import do
-
-import continuationmonad
-from continuationmonad.abc import ContinuationMonadOperatorException
-from continuationmonad.typing import (
-    DeferredHandler,
-    Scheduler,
-)
+from contcert.typing import ContCert, Trampoline
+from rxsingle.typing import Observer as RxSingleObserver
 
 from rxbp.utils.framesummary import FrameSummary, to_execution_exception_message, to_operator_exception_message
 from rxbp.exceptions import RxBpException
 from rxbp.state import init_state
-from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import init_subscribe_args
-from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
+from rxbp.flowabletree.subscribe import subscribe_single_sink
 from rxbp.flowabletree.operations.flatmap.innerobserver import FlatMapInnerObserver
 from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemory
 from rxbp.flowabletree.operations.flatmap.states import (
@@ -38,11 +32,11 @@ from rxbp.flowabletree.operations.flatmap.statetransitions import (
 
 
 @dataclass
-class FlatMapObserver[U, V](Observer):
+class FlatMapObserver[U, V][U](Observer[U]):
     shared: FlatMapSharedMemory
     lock: Lock
     last_id: int
-    weight: int
+    virtual_count: int
     scheduler: Scheduler
     func: Callable[[U], FlowableNode[V]]
     stack: tuple[FrameSummary, ...]
@@ -53,7 +47,7 @@ class FlatMapObserver[U, V](Observer):
         try:
             flowable = self.func(item)
 
-        except ContinuationMonadOperatorException as exception:
+        except RxSingleOperatorException as exception:
             if self.raise_immediately:
                 raise
 
@@ -83,7 +77,7 @@ class FlatMapObserver[U, V](Observer):
             )
             return self.shared.downstream.on_error(exception)
         
-        trampoline = yield from continuationmonad.get_trampoline()
+        trampoline = yield from rxsingle.get_trampoline()
 
         with self.lock:
             id = self.last_id
@@ -103,13 +97,13 @@ class FlatMapObserver[U, V](Observer):
                 source=flowable,
                 args=init_subscribe_args(
                     observer=sink,
-                    weight=self.weight,
+                    virtual_count=self.virtual_count,
                     scheduler=self.scheduler,
                 ),
                 state=state,
             )
 
-        except ContinuationMonadOperatorException as exception:
+        except RxSingleOperatorException as exception:
             if self.raise_immediately:
                 raise
 
@@ -161,29 +155,29 @@ class FlatMapObserver[U, V](Observer):
 
         match state := transition.get_state():
             case StopContinuationStateMixin(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case ActiveStateMixin():
                 if handler is None:
                     raise Exception(f"Unexpected state {state}.")
 
                 else:
-                    certificate = handler.resume(trampoline, handler.weight, None)
-                    return continuationmonad.from_(certificate)
+                    certificate = handler.resume(trampoline, handler.virtual_count, None)
+                    return rxsingle.from_(certificate)
 
             case TerminatedStateMixin(outer_certificate=outer_certificate):
-                return continuationmonad.from_(outer_certificate)
+                return rxsingle.from_(outer_certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
-    def on_next(self, item: U):
+    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]):
         # print(f"on_next({item})")
 
         def on_next_subscription(_, handler: DeferredHandler):
             return self._on_next(item, handler)
 
-        return continuationmonad.defer(on_next_subscription)
+        return rxsingle.defer(on_next_subscription)
 
     def on_next_and_complete(self, item: U):
         # print(f"on_next_and_completed({item})")
@@ -203,7 +197,7 @@ class FlatMapObserver[U, V](Observer):
                 return self.shared.downstream.on_completed()
 
             case StopContinuationStateMixin(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -229,7 +223,7 @@ class FlatMapObserver[U, V](Observer):
                 return self.shared.downstream.on_error(exception)
 
             case HasTerminatedState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

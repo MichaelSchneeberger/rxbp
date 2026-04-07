@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import (
+import rxsingle
+from rxsingle.typing import (
     DeferredHandler,
-    ContinuationMonad,
-    ContinuationCertificate,
+    RxSingle,
+    ContCert,
     Trampoline,
 )
 
@@ -54,7 +54,7 @@ class FlatMapInnerObserver[V](Observer[V]):
                     certificate = None
 
                 else:
-                    certificate, *_ = yield from continuationmonad.from_(None).connect(
+                    certificate, *_ = yield from rxsingle.from_(None).connect(
                         (observer,)
                     )
 
@@ -76,27 +76,27 @@ class FlatMapInnerObserver[V](Observer[V]):
                     ):
                         self.shared.cancellables[self.id].cancel(certificates[self.id])
                         
-                        return continuationmonad.from_(certificate)
+                        return rxsingle.from_(certificate)
                     
                     case _:
                         pass
 
                 # help pyright to infer correct type
-                continuation: ContinuationMonad[ContinuationCertificate] = self._on_next(state)
+                continuation: RxSingle[ContCert] = self._on_next(state)
 
                 return continuation
 
             case KeepWaitingState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case AwaitOnNextState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case OnNextAndCompleteState(value=value):
                 return self.shared.downstream.on_next_and_complete(value)
 
             case HasTerminatedState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -122,7 +122,7 @@ class FlatMapInnerObserver[V](Observer[V]):
             certificate = self._on_next(state)
             return certificate
 
-        return continuationmonad.defer(on_next_subscription)
+        return rxsingle.defer(on_next_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
@@ -156,7 +156,7 @@ class FlatMapInnerObserver[V](Observer[V]):
                 return self.shared.downstream.on_completed()
 
             case StopContinuationStateMixin(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -188,7 +188,7 @@ class FlatMapInnerObserver[V](Observer[V]):
                 return self.shared.downstream.on_error(exception)
 
             case HasTerminatedState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")

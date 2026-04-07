@@ -1,41 +1,37 @@
 from __future__ import annotations
 
 
+from collections import deque
 from threading import Lock
 from typing import Callable
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
+from contcert.typing import ContCert
+from rxsingle.typing import Observer as RxSingleObserver
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.zip.statetransitions import ZipStateTransition
 
 
-@dataclassabc
-class ZipSharedMemory[A, U]:
-    transition: ZipStateTransition
-    downstream: Observer[tuple[U, ...]]
-    zip_func: Callable[[A, dict[int, U]], tuple[A, tuple[int, ...], U]]
+@dataclass
+class ZipSharedMemory[U, A]:
+    downstream: Observer[A]
+    zip_func: Callable[[dict[int, U], A], tuple[A, set[int]]]
+    acc: A
     n_children: int
     cancellables: dict[int, Cancellable]
-    lock: Lock
-    acc: A
+    transition: ZipStateTransition
+    transition_lock: Lock
 
-    # def cancel(self, certificate: ContinuationCertificate):
-    #     transition = CancelTransition(
-    #         child=None,  # type: ignore
-    #         certificate=certificate,
-    #         n_children=self.n_children,
-    #     )
-        
-    #     with self.lock:
-    #         transition.child = self.transition
-    #         self.transition = transition
+    # there is always one certificate too few
+    certs: list[ContCert]
+    certs_lock: Lock
 
-    #     match state := transition.get_state():
-    #         case CancelledState(certificates=certificates):
-    #             for id, certificate in certificates.items():
-    #                 self.cancellables[id].cancel(certificate)
+    # concurrently add to the Deque
+    items: deque[tuple[int, U]]
+    upstream: deque[tuple[int, RxSingleObserver[None]]]
 
-    #         case _:
-    #             Exception(f"Unexpected state {state}.")
+    # # update when Downstream cancels Zip Flowable
+    # assigned_certs: dict[int, ContCert]
+

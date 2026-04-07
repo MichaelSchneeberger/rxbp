@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from continuationmonad.typing import (
-    ContinuationCertificate,
+from rxsingle.typing import (
+    ContCert,
 )
 
 from rxbp.cancellable import Cancellable, CancellationState
@@ -22,9 +22,9 @@ class ShareCancellation(CancellationState):
     id: int
     shared: ShareSharedMemory
     upstream_cancellation: Cancellable
-    _certificate: ContinuationCertificate
+    _certificate: ContCert
 
-    def cancel(self, certificate: ContinuationCertificate):
+    def cancel(self, certificate: ContCert):
         super().cancel(certificate)
 
         transition = CancelTransition(

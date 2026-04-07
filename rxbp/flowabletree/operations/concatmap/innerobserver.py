@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import (
-    ContinuationMonad,
+import rxsingle
+from rxsingle.typing import (
+    RxSingle,
     DeferredHandler,
-    ContinuationCertificate,
+    ContCert,
 )
 
 from rxbp.flowabletree.observer import Observer
@@ -26,15 +26,15 @@ class ConcatMapInnerObserver[V](Observer[V]):
     upstream: DeferredHandler | None
     shared: ConcatMapSharedMemory
 
-    def on_next(self, value: V) -> ContinuationMonad[None]:
+    def on_next(self, value: V) -> RxSingle[None]:
         return self.downstream.on_next(value)
 
     @do()
     def on_next_and_complete(self, value: V):
         yield from self.downstream.on_next(value)
         match result := self.on_completed():
-            case ContinuationCertificate():
-                return continuationmonad.from_(result)
+            case ContCert():
+                return rxsingle.from_(result)
             
             case _:
                 return result
@@ -59,13 +59,13 @@ class ConcatMapInnerObserver[V](Observer[V]):
 
                     case DeferredHandler():
                         return (
-                            continuationmonad.from_(None)
+                            rxsingle.from_(None)
                             .connect((self.upstream,))
                             .map(lambda c: c[0])
                         )
 
             case CancelledState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
                 # return certificate
 
             case _:

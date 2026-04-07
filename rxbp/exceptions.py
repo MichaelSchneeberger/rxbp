@@ -1,5 +1,5 @@
-from continuationmonad.abc import ContinuationMonadOperatorException
+from rxsingle.abc import rxsingleOperatorException
 
 
-class RxBpException(ContinuationMonadOperatorException):
+class RxBpException(RxSingleOperatorException):
     pass

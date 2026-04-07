@@ -1,4 +1,4 @@
-from continuationmonad.typing import (
+from rxsingle.typing import (
     MainScheduler,
 )
 
@@ -18,10 +18,10 @@ def run[U](
         case None:
             _connections = connections
         case _:
-            _connections = {c.child: s.child for c, s in connections.items()}
+            _connections = {c.child: s.p_child for c, s in connections.items()}
 
     return _run(
-        source=source.child,
+        source=source.p_child,
         scheduler=scheduler, 
         connections=_connections,
     )

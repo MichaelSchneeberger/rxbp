@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from threading import Lock
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 from donotation import do
 
 from rxbp.cancellable import Cancellable
@@ -10,15 +10,15 @@ from rxbp.flowabletree.operations.merge.cancellable import MergeCancellable
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import MultiChildrenFlowableNode, FlowableNode
+from rxbp.flowabletree.flowablenode import MultiChildrenFlowableNode, FlowableNode
 from rxbp.flowabletree.operations.merge.states import InitState
 from rxbp.flowabletree.operations.merge.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
 from rxbp.flowabletree.operations.merge.observer import MergeObserver
 
 
-@dataclassabc(frozen=True)
-class MergeFlowableNode[U](MultiChildrenFlowableNode[U, U]):
+@dataclass(frozen=True)
+class MergeFlowableNode[S, U](MultiChildrenFlowableNode[S, U, U]):
     children: tuple[FlowableNode, ...]
 
     @do()
@@ -73,5 +73,5 @@ class MergeFlowableNode[U](MultiChildrenFlowableNode[U, U]):
         )
 
 
-def init_merge_flowable_node[U](children: tuple[FlowableNode[U], ...]):
-    return MergeFlowableNode[U](children=children)
+def init_merge_flowable_node[U](children: tuple[FlowableNode[S, U], ...]):
+    return MergeFlowableNode[S, U](children=children)

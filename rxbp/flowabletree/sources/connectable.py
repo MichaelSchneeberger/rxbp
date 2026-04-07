@@ -1,12 +1,13 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import Lock
 from typing import override
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import ContinuationCertificate, ContinuationMonad
+import rxsingle
+from contcert.typing import ContCert, contcert
 
 from rxbp.cancellable import init_cancellation_state
 from rxbp.state import State
@@ -14,16 +15,28 @@ from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.subscription import Subscription
-from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode
 
+
+class ConnectableState(ABC):
+    @property
+    @abstractmethod
+    def connections(
+            self,
+    ) -> dict[ConnectableFlowableNode[S, U], FlowableNode[S, U]]:
+        """
+        Maps connectable Flowable nodes to its source.
+
+        This dictionary needs to be provided when subscribing to a Flowable.
+        """
 
 @dataclass
-class ConnectableObserver[V](Observer):
+class ConnectableObserver[V][U](Observer[U]):
     lock: Lock
     downstream: Observer
     item_received: bool
     item: V
-    certificate: ContinuationCertificate
+    certificate: ContCert
     is_completed: bool
     exception: Exception | None
 
@@ -33,7 +46,7 @@ class ConnectableObserver[V](Observer):
             assert self.item_received is False
             self.item_received = True
 
-        return continuationmonad.from_(None)
+        return rxsingle.from_(None)
 
     def on_next_and_complete(self, item: V):
         with self.lock:
@@ -42,17 +55,17 @@ class ConnectableObserver[V](Observer):
             self.item_received = True
             self.is_completed = True
 
-        return continuationmonad.from_(self.certificate)
+        return rxsingle.from_(self.certificate)
 
     def on_completed(self):
-        return continuationmonad.from_(self.certificate)
+        return rxsingle.from_(self.certificate)
 
     def on_error(self, exception: Exception):
         self.exception = exception
-        return continuationmonad.from_(self.certificate)
+        return rxsingle.from_(self.certificate)
 
 
-@dataclassabc(frozen=True)
+@dataclass(frozen=True)
 class ConnectableFlowableNode[V](FlowableNode[V]):
     id: None
     init_item: V
@@ -63,11 +76,11 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
         )
         return state.connections[self].discover(state)
 
-    # def assign_weight(self, state: State, _):
+    # def assign_virtual_count(self, state: State, _):
     #     # state = state.copy(
     #     #     discovered_connectables=state.discovered_connectables + [self]
     #     # )
-    #     return state.connections[self].assign_weight(state, 1)
+    #     return state.connections[self].assign_virtual_count(state, 1)
 
     @override
     def unsafe_subscribe(
@@ -96,15 +109,15 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
             def discover(self, state: State) -> State:
                 return self.source.discover(state)
 
-            def assign_weights(self, state: State, weight: int) -> State:
-                return self.source.assign_weights(state, weight)
+            def assign_virtual_count(self, state: State, virtual_count: int) -> State:
+                return self.source.assign_virtual_count(state, virtual_count)
 
             def apply(self, state: State) -> State:
                 state, result = self.source.unsafe_subscribe(
                     state=state,
                     args=args.copy(
                         observer=self.observer,
-                        weight=1,
+                        virtual_count=1,
                     ),
                 )
                 self.observer.certificate = result.certificate
@@ -123,7 +136,7 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
         def schedule_and_send_next():
             # if args.scheduler:
             #     # schedule sending action on dedicated scheduler
-            #     yield from continuationmonad.schedule_on(state.scheduler)
+            #     yield from rxsingle.schedule_on(state.scheduler)
 
             with observer.lock:
                 item_received = observer.item_received
@@ -139,12 +152,12 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
                 assert item_received is True
 
                 # receive acknowledgment
-                _ = yield from args.observer.on_next(item)
+                _ = yield from args.observer.on_next(trampoline, item, observer)
 
-                yield from continuationmonad.schedule_trampoline()
+                yield from rxsingle.schedule_trampoline()
 
                 # help pyright to infer correct type
-                continuation: ContinuationMonad[ContinuationCertificate] = (
+                continuation: RxSingle[ContCert] = (
                     schedule_and_send_next()
                 )
                 return continuation
@@ -157,16 +170,16 @@ class ConnectableFlowableNode[V](FlowableNode[V]):
 
         cancellable = init_cancellation_state()
 
-        certificate = continuationmonad.fork(
+        certificate = rxsingle.fork(
             source=(
-                continuationmonad.from_(None).flat_map(
+                rxsingle.from_(None).flat_map(
                     lambda _: schedule_and_send_next()
                 )
             ),
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=cancellable,
-            weight=args.weight,
+            virtual_count=args.virtual_count,
         )
 
         result = SubscriptionResult(

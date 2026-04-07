@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from threading import Lock
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.merge.statetransitions import MergeStateTransition
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class MergeSharedMemory:
     downstream: Observer
     transition: MergeStateTransition

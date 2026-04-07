@@ -1,23 +1,31 @@
 from abc import ABC, abstractmethod
 
-from continuationmonad.typing import ContinuationCertificate, ContinuationMonad
+from contcert.typing import ContCert, Trampoline
+from rxsingle.typing import Observer as RxSingleObserver
 
 
 class Observer[U](ABC):
     @abstractmethod
     def on_next(
-        self, item: U,
-    ) -> ContinuationMonad[None]: ...
+        self, 
+        trampoline: Trampoline,
+        item: U, 
+        observer: RxSingleObserver[None],
+    ) -> ContCert: ...
 
     @abstractmethod
     def on_next_and_complete(
-        self, item: U
-    ) -> ContinuationMonad[ContinuationCertificate]: ...
+        self,
+        trampoline: Trampoline,
+        item: U,
+    ) -> ContCert: ...
 
     @abstractmethod
-    def on_completed(self) -> ContinuationMonad[ContinuationCertificate]: ...
+    def on_completed(self) -> ContCert: ...
 
     @abstractmethod
     def on_error(
-        self, exception: Exception
-    ) -> ContinuationMonad[ContinuationCertificate]: ...
+        self,
+        exception: Exception,
+    ) -> ContCert: ...
+

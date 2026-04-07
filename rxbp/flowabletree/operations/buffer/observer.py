@@ -5,10 +5,10 @@ from threading import Lock
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import (
+import rxsingle
+from rxsingle.typing import (
     DeferredHandler,
-    ContinuationCertificate,
+    ContCert,
 )
 
 from rxbp.cancellable import Cancellable, CancellationState
@@ -41,7 +41,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
     observer: Observer
     upstream_cancellable: Cancellable
     loop_cancellation: CancellationState
-    weight: int
+    virtual_count: int
     buffer_size: int | None
 
     transition: ShareStateTransition
@@ -70,7 +70,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 return self.observer.on_next_and_complete(item)
 
             case StopLoop(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case CompleteState():
                 return self.observer.on_completed()
@@ -90,7 +90,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
         def on_ack_subscription(_, handler: DeferredHandler):
             # print(f"on_next_subscription({value})")
 
-            certificate, *_ = yield from continuationmonad.from_(None).connect(
+            certificate, *_ = yield from rxsingle.from_(None).connect(
                 (handler,)
             )
 
@@ -108,14 +108,14 @@ class BufferObserver[V](Cancellable, Observer[V]):
 
             match state:
                 case SendItemAndStartLoop():
-                    trampoline = yield from continuationmonad.get_trampoline()
+                    trampoline = yield from rxsingle.get_trampoline()
 
-                    r_certificate = continuationmonad.fork(
+                    r_certificate = rxsingle.fork(
                         source=self.run(),
                         on_error=lambda e: self.observer.on_error(e),
                         scheduler=trampoline,
                         cancellation=self.loop_cancellation,
-                        weight=self.weight,
+                        virtual_count=self.virtual_count,
                     )
 
                 case LoopActivePopBuffer():
@@ -130,9 +130,9 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 case _:
                     raise Exception(f"Unexpected state {state}")
 
-            return continuationmonad.from_(r_certificate)
+            return rxsingle.from_(r_certificate)
 
-        return continuationmonad.defer(on_ack_subscription)
+        return rxsingle.defer(on_ack_subscription)
 
     @do()
     def on_next_and_complete(self, value: V):
@@ -152,11 +152,11 @@ class BufferObserver[V](Cancellable, Observer[V]):
         match state := transition.get_state():
             case LoopActivePopBuffer(certificate=certificate):
                 self.buffer.pop(0)
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case LoopActive(certificate=certificate):
                 # there are still items in the buffer
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case SendItemAndComplete():
                 return self.observer.on_next_and_complete(value)
@@ -178,7 +178,7 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 return self.observer.on_completed()
 
             case LoopActive(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
@@ -200,12 +200,12 @@ class BufferObserver[V](Cancellable, Observer[V]):
                 return self.observer.on_error(exception)
 
             case ErrorState(certificate=certificate):
-                return continuationmonad.from_(certificate)
+                return rxsingle.from_(certificate)
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
-    def cancel(self, certificate: ContinuationCertificate):
+    def cancel(self, certificate: ContCert):
         transition = CancelTransition(
             child=None,  # type: ignore
         )

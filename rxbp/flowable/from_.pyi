@@ -1,10 +1,10 @@
 import datetime
 from typing import Callable, Iterable
 
-from continuationmonad.typing import (
+from rxsingle.typing import (
     Scheduler,
-    ContinuationMonad,
-    ContinuationCertificate,
+    RxSingle,
+    ContCert,
 )
 
 import reactivex
@@ -19,7 +19,7 @@ class create[U]:
     def __new__(
         cls,
         func: Callable[
-            [Observer, Scheduler], ContinuationMonad[ContinuationCertificate]
+            [Observer, Scheduler], RxSingle[ContCert]
         ],
     ) -> Flowable[U]: ...
 

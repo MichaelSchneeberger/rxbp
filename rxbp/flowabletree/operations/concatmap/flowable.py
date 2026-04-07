@@ -3,12 +3,12 @@ from __future__ import annotations
 from threading import Lock
 from typing import Callable
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.concatmap.states import ActiveState
 from rxbp.flowabletree.operations.concatmap.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.concatmap.sharedmemory import ConcatMapSharedMemory
@@ -17,9 +17,9 @@ from rxbp.flowabletree.operations.concatmap.observer import ConcatMapObserver
 
 
 
-@dataclassabc(frozen=True)
+@dataclass(frozen=True)
 class ConcatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
-    child: FlowableNode[U]
+    child: FlowableNode[S, U]
     func: Callable[[U], FlowableNode[V]]
 
     def unsafe_subscribe(
@@ -47,7 +47,7 @@ class ConcatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
                     func=self.func,
                     scheduler=args.scheduler,
                     shared=shared,
-                    weight=args.weight,
+                    virtual_count=args.virtual_count,
                 ),
             ), # type: ignore
         )
@@ -65,7 +65,7 @@ class ConcatMapFlowable[U, V](SingleChildFlowableNode[U, V]):
 
 
 def init_concat_map[U, V](
-    child: FlowableNode[U],
+    child: FlowableNode[S, U],
     func: Callable[[U], FlowableNode[V]],
 ):
     return ConcatMapFlowable(

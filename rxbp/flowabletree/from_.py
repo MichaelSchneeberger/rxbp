@@ -3,8 +3,8 @@ from typing import Iterable
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import Scheduler
+import rxsingle
+from rxsingle.typing import Scheduler
 
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.sources.create import init_create
@@ -16,7 +16,7 @@ def count():
     def count_and_send_item(observer: Observer, count: int):
         yield observer.on_next(count)
 
-        yield from continuationmonad.schedule_trampoline()
+        yield from rxsingle.schedule_trampoline()
 
         return count_and_send_item(observer, count + 1)
 
@@ -49,7 +49,7 @@ def from_iterable[U](iterable: Iterable[U]):
         if has_item:
             _ = yield from observer.on_next(current_item)
 
-            yield from continuationmonad.schedule_trampoline()
+            yield from rxsingle.schedule_trampoline()
 
             return schedule_and_send_next(next_item, observer, iterator)
 
@@ -83,7 +83,7 @@ def interval(seconds: float, scheduler: Scheduler | None = None):
         prev_duetime: datetime.datetime,
     ):
         duetime = prev_duetime + datetime.timedelta(seconds=seconds)
-        yield continuationmonad.schedule_absolute(duetime, scheduler)
+        yield rxsingle.schedule_absolute(duetime, scheduler)
         yield observer.on_next(duetime)
         return schedule_and_send_item(observer, scheduler, duetime)
 
@@ -106,7 +106,7 @@ def repeat_value[U](value: U):
     def schedule_and_send_item(observer: Observer[U], scheduler):
         yield observer.on_next(value)
 
-        yield from continuationmonad.schedule_trampoline()
+        yield from rxsingle.schedule_trampoline()
 
         return schedule_and_send_item(observer, scheduler)
 
@@ -123,7 +123,7 @@ def schedule_on(scheduler: Scheduler | None = None):
         else:
             sel_scheduler = scheduler
 
-        yield continuationmonad.schedule_on(sel_scheduler)
+        yield rxsingle.schedule_on(sel_scheduler)
         return observer.on_next_and_complete(sel_scheduler)
 
     return init_create(
@@ -139,7 +139,7 @@ def schedule_relative(duetime: float, scheduler: Scheduler | None = None):
         else:
             sel_scheduler = scheduler
 
-        yield continuationmonad.schedule_relative(duetime, sel_scheduler)
+        yield rxsingle.schedule_relative(duetime, sel_scheduler)
         return observer.on_next_and_complete(scheduler)
 
     return init_create(
@@ -155,7 +155,7 @@ def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler | None = 
         else:
             sel_scheduler = scheduler
 
-        yield continuationmonad.schedule_absolute(duetime, sel_scheduler)
+        yield rxsingle.schedule_absolute(duetime, sel_scheduler)
         return observer.on_next_and_complete(scheduler)
 
     return init_create(

@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 from rxbp.flowabletree.operations.buffer.states import (
     CancelLoopState,
@@ -25,7 +25,7 @@ class ShareStateTransition(ABC):
     def get_state(self) -> BufferState: ...
 
 
-@dataclassabc(frozen=True)
+@dataclass(frozen=True)
 class ToStateTransition(ShareStateTransition):
     """Transitions to predefined state"""
 
@@ -35,12 +35,12 @@ class ToStateTransition(ShareStateTransition):
         return self.state
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnNextTransition(ShareStateTransition):
     """Item received"""
 
     child: ShareStateTransition
-    certificate: ContinuationCertificate
+    certificate: ContCert
     buffer_size: int | None
 
     def get_state(self):
@@ -77,7 +77,7 @@ class OnNextTransition(ShareStateTransition):
                 )
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnNextAndCompleteTransition(ShareStateTransition):
     """Item received, stream is complete"""
 
@@ -111,7 +111,7 @@ class OnNextAndCompleteTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {child_state}.")
 
 
-@dataclassabc
+@dataclass
 class RequestTransition(ShareStateTransition):
     """Downstream request received"""
 
@@ -149,7 +149,7 @@ class RequestTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {child_state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnCompletedTransition(ShareStateTransition):
     """Stream is complete"""
 
@@ -174,7 +174,7 @@ class OnCompletedTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {child_state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnErrorTransition(ShareStateTransition):
     child: ShareStateTransition
     exception: Exception
@@ -196,7 +196,7 @@ class OnErrorTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {child_state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class CancelTransition(ShareStateTransition):
     child: ShareStateTransition
     id: int

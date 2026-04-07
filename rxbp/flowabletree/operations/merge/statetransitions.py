@@ -3,10 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
-from continuationmonad.typing import (
-    ContinuationCertificate,
+from rxsingle.typing import (
+    ContCert,
     DeferredHandler,
 )
 
@@ -113,7 +113,7 @@ class InactiveTransitionsMixin:
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc
+@dataclass
 class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: int
@@ -160,13 +160,13 @@ class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
                 return self._get_state(state)
 
 
-@dataclassabc
+@dataclass
 class RequestTransition(MergeStateTransition):
     """Downstream request received"""
 
     id: int
     child: MergeStateTransition
-    certificate: ContinuationCertificate | None
+    certificate: ContCert | None
 
     def get_state(self):
         match previous_state := self.child.get_state():
@@ -253,7 +253,7 @@ class RequestTransition(MergeStateTransition):
                 raise Exception(f"Unexpected state {previous_state}.")
 
 
-@dataclassabc
+@dataclass
 class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: int
@@ -305,7 +305,7 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransit
                 return self._get_state(state)
 
 
-@dataclassabc
+@dataclass
 class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: int
@@ -342,7 +342,7 @@ class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
                 return self._get_state(state)
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
     child: MergeStateTransition
     id: int
@@ -379,10 +379,10 @@ class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
                 return self._get_state(state)
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class CancelTransition(MergeStateTransition):
     child: MergeStateTransition
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
     def get_state(self):
         match child_state := self.child.get_state():

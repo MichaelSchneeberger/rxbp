@@ -1,17 +1,17 @@
 import datetime
 from typing import Callable, Iterable
 
-from continuationmonad.typing import (
+from rxsingle.typing import (
     Scheduler,
-    ContinuationMonad,
-    ContinuationCertificate,
+    RxSingle,
+    ContCert,
 )
 
 from rxbp.flowable.init import init_connectable_flowable, init_flowable
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.sources.create import init_create
 from rxbp.flowabletree.sources.fromrx import FromRx
-from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode
 from rxbp.flowabletree.operations.buffer.flowable import init_buffer
 from rxbp.flowabletree.sources.connectable import init_connectable
 from rxbp.flowabletree.operations.merge.flowable import init_merge_flowable_node
@@ -40,7 +40,7 @@ def count():
 
 def create(
     func: Callable[
-        [Observer, Scheduler], ContinuationMonad[ContinuationCertificate]
+        [Observer, Scheduler], RxSingle[ContCert]
     ],
 ):
     return init_flowable(init_create(func=func))

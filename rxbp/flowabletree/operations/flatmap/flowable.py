@@ -3,14 +3,14 @@ from __future__ import annotations
 from threading import Lock
 from typing import Callable
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 from donotation import do
 
 from rxbp.utils.framesummary import FrameSummary, FrameSummaryMixin
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import SingleChildFlowableNode, FlowableNode
+from rxbp.flowabletree.flowablenode import SingleChildFlowableNode, FlowableNode
 from rxbp.flowabletree.operations.flatmap.cancellable import FlatMapCancellable
 from rxbp.flowabletree.operations.flatmap.states import InitState
 from rxbp.flowabletree.operations.flatmap.statetransitions import ToStateTransition
@@ -18,9 +18,9 @@ from rxbp.flowabletree.operations.flatmap.sharedmemory import FlatMapSharedMemor
 from rxbp.flowabletree.operations.flatmap.observer import FlatMapObserver
 
 
-@dataclassabc(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False)
 class FlatMapFlowableNode[U, V](FrameSummaryMixin, SingleChildFlowableNode[U, V]):
-    child: FlowableNode[U]
+    child: FlowableNode[S, U]
     func: Callable[[U], FlowableNode[V]]
     stack: tuple[FrameSummary, ...]
 
@@ -51,7 +51,7 @@ class FlatMapFlowableNode[U, V](FrameSummaryMixin, SingleChildFlowableNode[U, V]
                 shared=shared,
                 lock=Lock(),
                 last_id=0,
-                weight=args.weight,
+                virtual_count=args.virtual_count,
                 func=self.func,
                 scheduler=args.scheduler,
                 stack=self.stack,
@@ -70,7 +70,7 @@ class FlatMapFlowableNode[U, V](FrameSummaryMixin, SingleChildFlowableNode[U, V]
 
 
 def init_flat_map_node[U, V](
-    child: FlowableNode[U], 
+    child: FlowableNode[S, U], 
     func: Callable[[U], FlowableNode[V]],
     stack: tuple[FrameSummary, ...],
 ):

@@ -1,116 +1,87 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import replace
-from typing import override
-
-from dataclassabc import dataclassabc
-
-import continuationmonad
-from continuationmonad.typing import Trampoline
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, Any, override
 
 
+from contcert.typing import Trampoline
+import rxsingle
+
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.share.flowable import ShareFlowable
+
+
+@dataclass
 class State(ABC):
     # Settings
     ##########
 
-    @property
-    @abstractmethod
-    def raise_immediately(self) -> bool:
-        """
-        If set to False, an exception raised within a user provided function (e.g., func in flat_map),
-        the exception is caught and propagated using the Observble interface `observer.on_error`.
-        Otherwise, the exception is raised immediately.
-        """
+    """
+    If set to False, an exception raised within a user provided function (e.g., func in flat_map),
+    the exception is caught and propagated using the Observble interface `observer.on_error`.
+    Otherwise, the exception is raised immediately.
+    """
+    raise_immediately: bool
 
     # Sending items
     ###############
 
-    @property
-    @abstractmethod
-    def subscription_trampoline(self) -> Trampoline:
-        """
-        Trampoline ensures that all Flowable nodes are subscribe before first items are sent
-        """
+    """
+    Trampoline ensures that all Flowable nodes are subscribe before first items are sent
+    """
+    subscription_trampoline: Trampoline
 
     # Shared Flowable nodes
     #######################
 
-    @property
-    @abstractmethod
-    def shared_observers(self) -> dict:
-        """
-        Dictionary containing all shared Flowable nodes that are encountered during the subscription process.
-        It maps the shared Flowable node to its observer created when first subscribing.
-        When subscribing multiple times to the same Flowable node, the observer is used that is stored in the
-        dictionary.
+    """
+    Dictionary containing all shared Flowable nodes that are encountered during the subscription process.
+    It maps the shared Flowable node to its observer created when first subscribing.
+    When subscribing multiple times to the same Flowable node, the observer is used that is stored in the
+    dictionary.
 
-        This dictionary is modified during the subscription of a Flowable.
-        """
+    This dictionary is modified during the subscription of a Flowable.
+    """
+    shared_observers: dict[ShareFlowable, Observer[object]]
 
-    @property
-    @abstractmethod
-    def shared_subscribe_count(self) -> dict:
-        """
-        To properly assign the weight attribute in case of shared Flowables, the number of observer
-        needs to be evaluated first.
+    """
+    To properly assign the virtual_count attribute in case of shared Flowables, the number of observer
+    needs to be evaluated first.
 
-        This dictionary is created during the discovering phase before subscribing to a Flowable.
-        """
+    This dictionary is created during the discovering phase before subscribing to a Flowable.
+    """
+    shared_subscribe_count: dict[ShareFlowable, int]
 
-    @property
-    @abstractmethod
-    def shared_weights(self) -> dict:
-        """
-        The downstream weight of the Continuation Certificate of all shared Flowable nodes.
+    """
+    The downstream virtual_count of the Continuation Certificate of all shared Flowable nodes.
 
-        This dictionary is created during the weight assigning phase before subscribing to a Flowable.
-        """
+    This dictionary is created during the virtual_count assigning phase before subscribing to a Flowable.
+    """
+    shared_virtual_count: dict[ShareFlowable, int]
 
     # Connectable Flowable node
     ###########################
 
-    @property
-    @abstractmethod
-    def connections(self) -> dict:
-        """
-        Maps connectable Flowable nodes to its source.
+    """
+    Maps connectable Flowable nodes to its source.
 
-        This dictionary needs to be provided when subscribing to a Flowable.
-        """
-
-    @property
-    @abstractmethod
-    def discovered_connectables(self) -> list:
-        """
-        A list that is created during the discovering phase before subscribing to a Flowable.
-        It is needed to assign the weights of the specified source of a connectable Flowable node.
-        """
-
-    @property
-    @abstractmethod
-    def discovered_subscriptions(self) -> list:
-        """
-        A list that contains the subscriptions of all connectable Flowable nodes encountered during
-        the current subription.
-        """
-
-    @abstractmethod
-    def copy(self, /, **changes) -> State: ...
-
-
-@dataclassabc(frozen=True)
-class StateImpl(State):
-    subscription_trampoline: Trampoline
-    raise_immediately: bool
-    shared_observers: dict
-    shared_subscribe_count: dict
-    shared_weights: dict
+    This dictionary needs to be provided when subscribing to a Flowable.
+    """
     connections: dict
+
+    """
+    A list that is created during the discovering phase before subscribing to a Flowable.
+    It is needed to assign the virtual_counts of the specified source of a connectable Flowable node.
+    """
     discovered_connectables: list
+
+    """
+    A list that contains the subscriptions of all connectable Flowable nodes encountered during
+    the current subription.
+    """
     discovered_subscriptions: list
 
-    @override
     def copy(self, /, **changes):
         return replace(self, **changes)
 
@@ -120,13 +91,13 @@ def init_state(
     raise_immediately: bool | None = None,
     shared_observers: dict | None = None,
     shared_subscribe_count: dict | None = None,
-    shared_weights: dict | None = None,
+    shared_virtual_counts: dict | None = None,
     connections: dict | None = None,
     discovered_connectables: list | None = None,
     discovered_subscriptions: list | None = None,
 ):
     if subscription_trampoline is None:
-        subscription_trampoline = continuationmonad.init_trampoline()
+        subscription_trampoline = contcert.init_trampoline()
 
     if raise_immediately is None:
         raise_immediately = True
@@ -137,8 +108,8 @@ def init_state(
     if shared_subscribe_count is None:
         shared_subscribe_count = {}
 
-    if shared_weights is None:
-        shared_weights = {}
+    if shared_virtual_counts is None:
+        shared_virtual_counts = {}
 
     if connections is None:
         connections = {}
@@ -154,7 +125,7 @@ def init_state(
         raise_immediately=raise_immediately,
         shared_observers=shared_observers,
         shared_subscribe_count=shared_subscribe_count,
-        shared_weights=shared_weights,
+        shared_virtual_counts=shared_virtual_counts,
         connections=connections,
         discovered_connectables=discovered_connectables,
         discovered_subscriptions=discovered_subscriptions,

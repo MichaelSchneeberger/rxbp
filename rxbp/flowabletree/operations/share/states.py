@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 """
 States
@@ -49,15 +49,15 @@ class ActiveStateMixin(ShareState):
     # The last buffer index determines if a new item is taken from the buffer, or requested from upstream.
     last_buffer_index: int
 
-    # Store downstream weights, as the downstream weights are dynamically adjusted.
-    weights: dict[int, int]
+    # Store downstream virtual_counts, as the downstream virtual_counts are dynamically adjusted.
+    virtual_counts: dict[int, int]
 
     # Containers that hold certificates for each downstream observer that is either cancelled,
     # or does not yet point to the last buffer item.
     # These certificates are either consumed when downstream observers request a new item, or
     # when receiving an upstream item.
-    cancelled_certificates: dict[int, ContinuationCertificate]
-    requested_certificates: dict[int, ContinuationCertificate]
+    cancelled_certificates: dict[int, ContCert]
+    requested_certificates: dict[int, ContCert]
 
     is_completed: bool
 
@@ -67,7 +67,7 @@ class StopContinuationStateMixin:
     """Stop continuing exeuction"""
 
     # Certificate is used to stop continuation of calling upstream flowable.
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass(frozen=False)
@@ -98,7 +98,7 @@ class RequestUpstream(AwaitUpstreamStateMixin):
 class AwaitOnNext(AwaitUpstreamStateMixin):
     """New upstream item has already been requested, await on_next call"""
 
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass(frozen=False, slots=True)
@@ -155,7 +155,7 @@ class OnNext(AwaitDownstreamStateMixin):
 
 @dataclass(frozen=True, slots=True)
 class TerminatedStateMixin(ShareState):
-    requested_certificates: dict[int, ContinuationCertificate]
+    requested_certificates: dict[int, ContCert]
 
 
 @dataclass(frozen=True, slots=True)

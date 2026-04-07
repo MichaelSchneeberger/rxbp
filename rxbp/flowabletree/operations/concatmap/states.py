@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 from rxbp.cancellable import Cancellable
 
@@ -19,4 +19,4 @@ class ActiveState(ConcatMapState):
 @dataclass(frozen=True)
 class CancelledState(ConcatMapState):
     cancellable: Cancellable
-    certificate: ContinuationCertificate
+    certificate: ContCert

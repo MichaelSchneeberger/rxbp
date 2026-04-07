@@ -1,76 +1,96 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import override
 
-import continuationmonad
-from dataclassabc import dataclassabc
+from contcert.typing import ContCert, Trampoline
+from rxsingle.typing import Observer as RxSingleObserver
 
 from rxbp.state import State
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 
 
-@dataclassabc(frozen=True)
-class ToListFlowable[U](SingleChildFlowableNode[U, U]):
-    child: FlowableNode[U]
+@dataclass
+class ToListObserver[U](Observer[U]):
+    observer: Observer[list[U]]
+    acc: list[U]
+
+    @override
+    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]):
+        self.acc.append(item)
+        return observer.on_success(trampoline, None)
+
+    @override
+    def on_next_and_complete(self, item: U):
+        self.acc.append(item)
+        return self.observer.on_next_and_complete(self.acc)
+
+    @override
+    def on_completed(self):
+        return self.observer.on_next_and_complete(self.acc)
+
+    @override
+    def on_error(self, exception: Exception):
+        return self.observer.on_error(exception)
+
+@dataclass
+class BatchedObserver[U](Observer[U]):
+    observer: Observer[list[U]]
+    size: int
+    acc: list[U]
+
+    @override
+    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]):
+        self.acc.append(item)
+
+        if len(self.acc) == self.size:
+            batched = self.acc
+            self.acc = []
+            return self.observer.on_next(trampoline, batched, observer)
+
+        else:
+            return observer.on_success(trampoline, None)
+
+    @override
+    def on_next_and_complete(self, item: U):
+        self.acc.append(item)
+        return self.observer.on_next_and_complete(self.acc)
+
+    @override
+    def on_completed(self):
+        return self.observer.on_next_and_complete(self.acc)
+
+    @override
+    def on_error(self, exception: Exception):
+        return self.observer.on_error(exception)
+
+
+@dataclass(frozen=True)
+class ToListFlowable[S: State, U](SingleChildFlowableNode[S, U, U]):
+    child: FlowableNode[S, U]
     size: int | None
 
     def unsafe_subscribe(
         self,
-        state: State,
+        state: S,
         args: SubscribeArgs[list[U]],
-    ) -> tuple[State, SubscriptionResult]:
-        @dataclass
-        class ToListObserver(Observer[U]):
-            acc: list[U]
-
-            def on_next(self, item: U):
-                self.acc.append(item)
-                return continuationmonad.from_(None)
-
-            def on_next_and_complete(self, item: U):
-                self.acc.append(item)
-                return args.observer.on_next_and_complete(self.acc)
-
-            def on_completed(self):
-                return args.observer.on_next_and_complete(self.acc)
-
-            def on_error(self, exception: Exception):
-                return args.observer.on_error(exception)
-
-        @dataclass
-        class BatchedObserver(Observer[U]):
-            size: int
-            acc: list[U]
-
-            def on_next(self, item: U):
-                self.acc.append(item)
-
-                if len(self.acc) == self.size:
-                    batched = self.acc
-                    self.acc = []
-                    return args.observer.on_next(batched)
-
-                else:
-                    return continuationmonad.from_(None)
-
-            def on_next_and_complete(self, item: U):
-                self.acc.append(item)
-                return args.observer.on_next_and_complete(self.acc)
-
-            def on_completed(self):
-                return args.observer.on_next_and_complete(self.acc)
-
-            def on_error(self, exception: Exception):
-                return args.observer.on_error(exception)
+    ) -> tuple[S, SubscriptionResult]:
 
         if self.size is None:
-            observer = ToListObserver(acc=[])
+            observer = ToListObserver(
+                observer=args.observer,
+                acc=[],
+            )
 
         else:
-            observer = BatchedObserver(acc=[], size=self.size)
+            observer = BatchedObserver(
+                observer=args.observer,
+                acc=[], 
+                size=self.size,
+            )
 
         return self.child.unsafe_subscribe(
             state=state,
@@ -79,12 +99,19 @@ class ToListFlowable[U](SingleChildFlowableNode[U, U]):
             ),
         )
 
+    """ Implement abstract methods from SingleChildFlowableNode """
 
-def init_to_list_flowable[U](
-    child: FlowableNode[U],
+    @property
+    @override
+    def p_child(self):
+        return self.child
+
+
+def init_to_list_flowable[S: State, U](
+    child: FlowableNode[S, U],
     size: int | None = None,
 ):
-    return ToListFlowable[U](
+    return ToListFlowable[S, U](
         child=child,
         size=size,
     )

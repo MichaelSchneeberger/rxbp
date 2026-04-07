@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from continuationmonad.typing import MainVirtualTimeScheduler, ContinuationCertificate
+from rxsingle.typing import MainVirtualTimeScheduler, ContCert
 
 import rxbp
-from rxbp.flowabletree.subscribeandconnect import subscribe_and_connect
+from rxbp.flowabletree.subscribe import subscribe
 from rxbp.flowabletree.subscription import Subscription
 from rxbp.typing import FlowableNode, State
 from rxbp.testing.tobserver import TObserver
@@ -27,20 +27,20 @@ def test_run(
                     @dataclass
                     class TestSubscription(Subscription):
                         sink: TObserver
-                        certificate: ContinuationCertificate
+                        certificate: ContCert
 
                         def discover(self, state: State):
                             return source.discover(state)
 
-                        def assign_weights(self, state: State, weight: int):
-                            return source.assign_weights(state, weight)
+                        def assign_virtual_count(self, state: State, virtual_count: int):
+                            return source.assign_virtual_count(state, virtual_count)
 
                         def apply(self, state: State):
                             state, result = source.unsafe_subscribe(
                                 state,
                                 args=rxbp.init_subscribe_args(
                                     observer=self.sink,
-                                    weight=1,
+                                    virtual_count=1,
                                     scheduler=scheduler
                                 ),
                             )
@@ -57,24 +57,26 @@ def test_run(
 
             subscriptions = tuple(gen_subscriptions())
 
-            state = subscribe_and_connect(
+            state = subscribe(
                 subscriptions=subscriptions,
                 state=state,
             )
 
-            return ContinuationCertificate.merge(tuple(
+            return ContCert.merge(tuple(
                 s.certificate for s in subscriptions
             ))
         
         return state.subscription_trampoline.start_loop(
-            trampoline_task, weight=len(sinks), cancellation=None,
+            trampoline_task, virtual_count=len(sinks), cancellation=None,
         )
     
-    scheduler.run(scheduler_task, weight=len(sinks))
+    # using run, we enforce that `stop()` is called
+    scheduler.run(scheduler_task, virtual_count=len(sinks))
+
     #     return certificate
 
     # certificate = state.subscription_trampoline.start_loop(
-    #     trampoline_task, weight=len(sinks), cancellation=None,
+    #     trampoline_task, virtual_count=len(sinks), cancellation=None,
     # )
 
     # for sink in sinks:

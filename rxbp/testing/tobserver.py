@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import (
+import rxsingle
+from rxsingle.typing import (
     DeferredHandler,
-    ContinuationCertificate,
+    ContCert,
     MainVirtualTimeScheduler,
 )
 
@@ -14,10 +14,10 @@ from rxbp.flowabletree.observer import Observer
 
 
 @dataclass
-class TObserver[V](Observer):
+class TObserver[V][U](Observer[U]):
     name: str | None
     received: list[V]
-    # certificate: ContinuationCertificate
+    # certificate: ContCert
     cancellable: Cancellable
     is_completed: bool
     # is_backpressured: bool
@@ -26,17 +26,17 @@ class TObserver[V](Observer):
     request_delay: float
 
     def _stop(self):
-        return self.scheduler.stop(weight=1)
+        return self.scheduler.stop(virtual_count=1)
 
     def cancel(self):
         self.cancellable.cancel(self._stop())
 
-    # def request(self, weight: int):
-    #     trampoline = continuationmonad.init_trampoline()
+    # def request(self, virtual_count: int):
+    #     trampoline = contcert.init_trampoline()
     #     def trampoline_task():
-    #         return self.handler.resume(trampoline, weight, None)
+    #         return self.handler.resume(trampoline, virtual_count, None)
         
-    #     self.certificate = trampoline.start_loop(trampoline_task, weight=weight, cancellation=None)
+    #     self.certificate = trampoline.start_loop(trampoline_task, virtual_count=virtual_count, cancellation=None)
 
     @do()
     def on_next(self, item: V):
@@ -45,35 +45,35 @@ class TObserver[V](Observer):
         # print(self.request_delay)
 
         if self.request_delay:
-            yield continuationmonad.sleep(seconds=self.request_delay, scheduler=self.scheduler)
+            yield rxsingle.sleep(seconds=self.request_delay, scheduler=self.scheduler)
             # def on_next_subscription(_, handler: DeferredHandler):
             #     self.handler = handler
             #     return self.certificate
 
-            # return continuationmonad.defer(on_next_subscription)
-            return continuationmonad.from_(None)
+            # return rxsingle.defer(on_next_subscription)
+            return rxsingle.from_(None)
         
         else:
-            return continuationmonad.from_(None)
+            return rxsingle.from_(None)
 
     def on_next_and_complete(self, item: V):
         self.received.append(item)
         self.is_completed = True
 
-        # assert isinstance(self.certificate, ContinuationCertificate)
-        return continuationmonad.from_(self._stop())
+        # assert isinstance(self.certificate, ContCert)
+        return rxsingle.from_(self._stop())
 
     def on_error(self, err):
         self.exception = err
 
-        # assert isinstance(self.certificate, ContinuationCertificate)
-        return continuationmonad.from_(self._stop())
+        # assert isinstance(self.certificate, ContCert)
+        return rxsingle.from_(self._stop())
 
     def on_completed(self):
         self.is_completed = True
 
-        # assert isinstance(self.certificate, ContinuationCertificate)
-        return continuationmonad.from_(self._stop())
+        # assert isinstance(self.certificate, ContCert)
+        return rxsingle.from_(self._stop())
 
 
 def init_test_observer(

@@ -7,7 +7,7 @@ from rxbp.flowabletree.operations.flatmap.flowable import init_flat_map_node
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.from_ import (
     count as _count,
     repeat_value as _repeat_value,
@@ -32,15 +32,15 @@ from rxbp.utils.framesummary import get_frame_summary
 
 class Flowable[U](SingleChildFlowableNode[U, U]):
     def accumulate(self, func, init):
-        return self.copy(child=init_accumulate_flowable(self.child, func, init))
+        return self.copy(child=init_accumulate_flowable(self.p_child, func, init))
 
     def batch(self, size: int):
-        return self.copy(child=init_to_list_flowable(child=self.child, size=size))
+        return self.copy(child=init_to_list_flowable(child=self.p_child, size=size))
 
     def buffer(self):
         return self.copy(
             child=init_buffer(
-                child=self.child,
+                child=self.p_child,
             )
         )
 
@@ -50,7 +50,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def concat_map(self, func: Callable[[U], FlowableNode]):
         return self.copy(
             child=init_concat_map(
-                child=self.child,
+                child=self.p_child,
                 func=func,
             )
         )
@@ -58,7 +58,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def default_if_empty[V](self, value: V):
         return self.copy(
             child=init_default_if_empty_flowable(
-                child=self.child,
+                child=self.p_child,
                 value=value,
             )
         )
@@ -66,7 +66,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def filter(self, predicate: Callable[[U], bool]):
         return self.copy(
             child=init_filter_flowable(
-                child=self.child,
+                child=self.p_child,
                 predicate=predicate,
             )
         )
@@ -77,7 +77,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def flat_map(self, func: Callable[[U], FlowableNode]):
         return self.copy(
             child=init_flat_map_node(
-                child=self.child,
+                child=self.p_child,
                 func=func,
                 stack=get_frame_summary(),
             )
@@ -93,13 +93,13 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def map[V](self, func: Callable[[U], V]):
         return self.copy(
             child=init_map_flowable(
-                child=self.child,
+                child=self.p_child,
                 func=func,
             )
         )
 
     def reduce(self, func):
-        return self.copy(child=init_reduce_flowable(self.child, func))
+        return self.copy(child=init_reduce_flowable(self.p_child, func))
 
     def repeat(self, count: int | None = None):
         return (
@@ -118,7 +118,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def share(self):
         return self.copy(
             child=init_share_flowable_node(
-                child=self.child,
+                child=self.p_child,
             )
         )
 
@@ -131,7 +131,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
 
     def skip_while(self, predicate):
         return self.copy(
-            child=init_skip_while_flowable(child=self.child, predicate=predicate)
+            child=init_skip_while_flowable(child=self.p_child, predicate=predicate)
         )
 
     def take(self, count: int | None = None):
@@ -144,7 +144,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
 
     def take_while(self, predicate):
         return self.copy(
-            child=init_take_while_flowable(child=self.child, predicate=predicate)
+            child=init_take_while_flowable(child=self.p_child, predicate=predicate)
         )
 
     def tap(
@@ -152,7 +152,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     ):
         return self.copy(
             child=init_tap_flowable(
-                self.child,
+                self.p_child,
                 on_next,
                 on_next_and_completed,
                 on_completed,
@@ -161,7 +161,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
         )
 
     def to_list(self):
-        return self.copy(child=init_to_list_flowable(child=self.child))
+        return self.copy(child=init_to_list_flowable(child=self.p_child))
 
     def zip_with_index(self):
         return self.copy(child=init_zip_flowable_node((self, _count())))
@@ -175,7 +175,7 @@ class Flowable[U](SingleChildFlowableNode[U, U]):
     def unsafe_subscribe(
         self, state: State, args: SubscribeArgs[U]
     ) -> tuple[State, SubscriptionResult]:
-        return self.child.unsafe_subscribe(state, args)
+        return self.p_child.unsafe_subscribe(state, args)
 
 
 class SeqFlowable[U](Flowable[U]):
@@ -183,7 +183,7 @@ class SeqFlowable[U](Flowable[U]):
     def flat_map(self, func: Callable[[U], FlowableNode]):
         return self.copy(
             child=init_concat_map(
-                child=self.child,
+                child=self.p_child,
                 func=func,
             )
         )

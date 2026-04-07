@@ -3,19 +3,19 @@ from __future__ import annotations
 from threading import Lock
 from typing import override
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
 from rxbp.cancellable import init_cancellation_state
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.buffer.observer import BufferObserver
 from rxbp.flowabletree.operations.buffer.states import LoopInactive
 from rxbp.flowabletree.operations.buffer.statetransitions import ToStateTransition
 
 
-@dataclassabc(frozen=True)
+@dataclass(frozen=True)
 class BufferImpl[V](SingleChildFlowableNode[V, V]):
     child: FlowableNode[V]
     buffer_size: int | None
@@ -34,7 +34,7 @@ class BufferImpl[V](SingleChildFlowableNode[V, V]):
             lock=Lock(),
             observer=args.observer,
             loop_cancellation=loop_cancellation,
-            weight=args.weight,
+            virtual_count=args.virtual_count,
             buffer=[],
             buffer_size=self.buffer_size,
         )

@@ -5,16 +5,13 @@ from typing import Callable
 
 from donotation import do
 
-import continuationmonad
-from continuationmonad.typing import (
-    Scheduler,
-    DeferredHandler,
-)
+from contcert.typing import ContCert, Trampoline
+from rxsingle.typing import Observer as RxSingleObserver
 
-from rxbp.flowabletree.subscribeandconnect import subscribe_single_sink
+from rxbp.flowabletree.subscribe import subscribe_single_sink
 from rxbp.flowabletree.subscribeargs import init_subscribe_args
 from rxbp.state import init_state
-from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.concatmap.sharedmemory import ConcatMapSharedMemory
 from rxbp.flowabletree.operations.concatmap.states import CancelledState
@@ -25,10 +22,10 @@ from rxbp.flowabletree.operations.concatmap.innerobserver import ConcatMapInnerO
 @dataclass
 class ConcatMapObserver[U](Observer[U]):
     downstream: Observer
-    func: Callable[[U], FlowableNode[U]]
+    func: Callable[[U], FlowableNode[S, U]]
     scheduler: Scheduler
     shared: ConcatMapSharedMemory
-    weight: int
+    virtual_count: int
 
     @do()
     def _on_next(self, item: U, handler: DeferredHandler | None):
@@ -36,7 +33,7 @@ class ConcatMapObserver[U](Observer[U]):
 
         flowable = self.func(item)
 
-        trampoline = yield from continuationmonad.get_trampoline()
+        trampoline = yield from rxsingle.get_trampoline()
 
         try:
             state = init_state(
@@ -53,7 +50,7 @@ class ConcatMapObserver[U](Observer[U]):
                 source=flowable,
                 args=init_subscribe_args(
                     observer=sink,
-                    weight=self.weight,
+                    virtual_count=self.virtual_count,
                     scheduler=self.scheduler,
                 ),
                 state=state,
@@ -75,13 +72,13 @@ class ConcatMapObserver[U](Observer[U]):
             case CancelledState(certificate=certificate, cancellable=cancellable):
                 cancellable.cancel(certificate)
 
-        return continuationmonad.from_(result.certificate)
+        return rxsingle.from_(result.certificate)
 
-    def on_next(self, item: U):
+    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]):
         def on_next_subscription(_, handler: DeferredHandler):
             return self._on_next(item, handler)
 
-        return continuationmonad.defer(on_next_subscription)
+        return rxsingle.defer(on_next_subscription)
 
     def on_next_and_complete(self, item: U):
         return self._on_next(item, None)

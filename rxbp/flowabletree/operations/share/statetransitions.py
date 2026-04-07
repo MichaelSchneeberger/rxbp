@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import replace
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 from rxbp.flowabletree.operations.share.states import (
     AwaitUpstreamAfterCancelState,
@@ -70,7 +70,7 @@ class ShareStateTransition(ABC):
     def get_state(self) -> ShareState: ...
 
 
-@dataclassabc(frozen=True)
+@dataclass(frozen=True)
 class ToStateTransition(ShareStateTransition):
     """Transitions to predefined state"""
 
@@ -80,7 +80,7 @@ class ToStateTransition(ShareStateTransition):
         return self.state
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnNextTransition(ShareStateTransition):
     """Item received"""
 
@@ -104,7 +104,7 @@ class OnNextTransition(ShareStateTransition):
                     buffer_map=state.buffer_map,
                     first_buffer_index=state.first_buffer_index,
                     last_buffer_index=last_buffer_index,
-                    weights=state.weights,
+                    virtual_counts=state.virtual_counts,
                     requested_certificates=state.requested_certificates,
                     send_ids=send_ids,
                     buffer_item=buffer_item,
@@ -121,33 +121,33 @@ class OnNextTransition(ShareStateTransition):
                 )
 
 
-@dataclassabc
+@dataclass
 class RequestTransition(ShareStateTransition):
     """Downstream request received"""
 
     child: ShareStateTransition
     id: int  # downstream id
-    weight: int  # downstream weight
+    virtual_count: int  # downstream virtual_count
 
     def get_state(self):
         match state := self.child.get_state():
             case ActiveStateMixin():
 
-                def gen_weights():
-                    for id, w in state.weights.items():
+                def gen_virtual_counts():
+                    for id, w in state.virtual_counts.items():
                         if id == self.id:
-                            yield id, self.weight
+                            yield id, self.virtual_count
                         else:
                             yield id, w
 
-                weights = dict(gen_weights())
+                virtual_counts = dict(gen_virtual_counts())
 
                 if self.id in state.cancelled_certificates:
                     return RequestFromCancelledDownstreamState(
                         buffer_map=state.buffer_map,
                         first_buffer_index=state.first_buffer_index,
                         last_buffer_index=state.last_buffer_index,
-                        weights=weights,
+                        virtual_counts=virtual_counts,
                         requested_certificates=state.requested_certificates,
                         certificate=state.cancelled_certificates[self.id],
                         is_completed=state.is_completed,
@@ -175,7 +175,7 @@ class RequestTransition(ShareStateTransition):
                             buffer_map=buffer_map,
                             first_buffer_index=state.first_buffer_index,
                             last_buffer_index=state.last_buffer_index,
-                            weights=weights,
+                            virtual_counts=virtual_counts,
                             requested_certificates=state.requested_certificates,
                             # certificate=None,
                             is_completed=state.is_completed,
@@ -190,7 +190,7 @@ class RequestTransition(ShareStateTransition):
                             buffer_map=buffer_map,
                             first_buffer_index=state.first_buffer_index,
                             last_buffer_index=state.last_buffer_index,
-                            weights=weights,
+                            virtual_counts=virtual_counts,
                             requested_certificates=state.requested_certificates,
                             certificate=certificate,
                             is_completed=state.is_completed,
@@ -221,7 +221,7 @@ class RequestTransition(ShareStateTransition):
                         buffer_map=buffer_map,
                         first_buffer_index=first_buffer_index,
                         last_buffer_index=state.last_buffer_index,
-                        weights=weights,
+                        virtual_counts=virtual_counts,
                         requested_certificates=state.requested_certificates,
                         is_completed=state.is_completed,
                         index=sel_index,
@@ -245,7 +245,7 @@ class RequestTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnNextAndCompleteTransition(ShareStateTransition):
     """Item received, stream is complete"""
 
@@ -276,7 +276,7 @@ class OnNextAndCompleteTransition(ShareStateTransition):
                     buffer_map=buffer_map,
                     first_buffer_index=first_buffer_index,
                     last_buffer_index=n_last_buffer_index,
-                    weights=state.weights,
+                    virtual_counts=state.virtual_counts,
                     requested_certificates=requested_certificates,
                     send_ids=send_ids,
                     buffer_item=buffer_item,
@@ -291,7 +291,7 @@ class OnNextAndCompleteTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnCompletedTransition(ShareStateTransition):
     """Stream is complete"""
 
@@ -320,7 +320,7 @@ class OnCompletedTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnErrorTransition(ShareStateTransition):
     child: ShareStateTransition
     exception: Exception
@@ -349,11 +349,11 @@ class OnErrorTransition(ShareStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class CancelTransition(ShareStateTransition):
     child: ShareStateTransition
     id: int
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
     def get_state(self):
         match state := self.child.get_state():
@@ -398,7 +398,7 @@ class CancelTransition(ShareStateTransition):
                                 buffer_map=n_buffer_map,
                                 first_buffer_index=first_buffer_index,
                                 last_buffer_index=state.last_buffer_index,
-                                weights=state.weights,
+                                virtual_counts=state.virtual_counts,
                                 requested_certificates=requested_certificates,
                                 is_completed=state.is_completed,
                                 n_buffer_pop=n_buffer_pop,
@@ -424,7 +424,7 @@ class CancelTransition(ShareStateTransition):
                                 buffer_map=n_buffer_map,
                                 first_buffer_index=first_buffer_index,
                                 last_buffer_index=state.last_buffer_index,
-                                weights=state.weights,
+                                virtual_counts=state.virtual_counts,
                                 requested_certificates=requested_certificates,
                                 is_completed=state.is_completed,
                                 n_buffer_pop=n_buffer_pop,

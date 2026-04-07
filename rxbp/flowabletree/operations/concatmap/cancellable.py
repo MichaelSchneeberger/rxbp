@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.operations.concatmap.statetransitions import CancelTransition
@@ -12,7 +12,7 @@ from rxbp.flowabletree.operations.concatmap.states import CancelledState
 class ConcatMapCancellable(Cancellable):
     shared: ConcatMapSharedMemory
 
-    def cancel(self, certificate: ContinuationCertificate):
+    def cancel(self, certificate: ContCert):
         transition = CancelTransition(
             child=None,  # type: ignore
             certificate=certificate,

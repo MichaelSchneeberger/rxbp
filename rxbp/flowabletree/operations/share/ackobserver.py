@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import continuationmonad
-from continuationmonad.typing import (
-    ContinuationCertificate,
+import rxsingle
+from rxsingle.typing import (
+    ContCert,
     Trampoline,
     Observer as CMObserver,
 )
@@ -37,15 +37,15 @@ class ShareAckObserver(CMObserver):
     def on_success(
         self,
         trampoline: Trampoline,
-        weight: int,
+        virtual_count: int,
         item: None,
-    ) -> ContinuationCertificate:
+    ) -> ContCert:
         rxbp_logger.info(f"ShareAckObserver.on_success({item}, id={self.id})")
 
         transition = RequestTransition(
             child=None,  # type: ignore
             id=self.id,
-            weight=weight,
+            virtual_count=virtual_count,
         )
 
         with self.shared.lock:
@@ -53,20 +53,20 @@ class ShareAckObserver(CMObserver):
 
             match state := transition.get_state():
                 case RequestUpstream():
-                    total_weight = sum(w for w in state.weights.values())
+                    total_virtual_count = sum(w for w in state.virtual_counts.values())
 
                     # request new item from upstream
                     certificate = self.shared.deferred_handler.resume(
-                        trampoline, total_weight, None
+                        trampoline, total_virtual_count, None
                     )
 
-                    # Split up the upstream certificate according to the weight of each downstream branch.
+                    # Split up the upstream certificate according to the virtual_count of each downstream branch.
                     # Note that at this point all previous requested certificates have been consumed either
                     # through a downstream request or on a upstream on_next call.
                     requested_certificates = {}
-                    for id, weight in state.weights.items():
+                    for id, virtual_count in state.virtual_counts.items():
                         requested_certificates[id], certificate = certificate.take(
-                            weight
+                            virtual_count
                         )
 
                     state.requested_certificates = requested_certificates
@@ -92,8 +92,8 @@ class ShareAckObserver(CMObserver):
                 def trampoline_task():
                     if state.is_completed:
                         continuation = self.observer.on_next_and_complete(item)
-                        observer = continuationmonad.init_anonymous_observer[
-                            ContinuationCertificate
+                        observer = rxsingle.init_anonymous_observer[
+                            ContCert
                         ](on_success=lambda t, w, c: c)
 
                     else:
@@ -101,9 +101,9 @@ class ShareAckObserver(CMObserver):
                         observer = self
 
                     certificate = continuation.subscribe(
-                        args=continuationmonad.init_subscribe_args(
+                        args=rxsingle.init_subscribe_args(
                             observer=observer,
-                            weight=weight,
+                            virtual_count=virtual_count,
                             cancellation=self.cancellation,
                             trampoline=trampoline,
                         )
@@ -111,13 +111,13 @@ class ShareAckObserver(CMObserver):
                     return certificate
 
                 # schedule continuation on the current trampoline to limit the call stack depth
-                return trampoline.schedule(trampoline_task, weight, self.cancellation)
+                return trampoline.schedule(trampoline_task, virtual_count, self.cancellation)
 
             case HasErroredState(exception=exception):
                 return self.observer.on_error(exception=exception).subscribe(
-                    args=continuationmonad.init_subscribe_args(
+                    args=rxsingle.init_subscribe_args(
                         observer=self,
-                        weight=weight,
+                        virtual_count=virtual_count,
                         cancellation=self.cancellation,
                         trampoline=trampoline,
                     )
@@ -132,13 +132,13 @@ class ShareAckObserver(CMObserver):
     def on_error(
         self,
         trampoline: Trampoline,
-        weight: int,
+        virtual_count: int,
         exception: Exception,
-    ) -> ContinuationCertificate:
+    ) -> ContCert:
         return self.observer.on_error(exception).subscribe(
-            args=continuationmonad.init_subscribe_args(
+            args=rxsingle.init_subscribe_args(
                 observer=self,
-                weight=weight,
+                virtual_count=virtual_count,
                 cancellation=self.cancellation,
                 trampoline=trampoline,
             )

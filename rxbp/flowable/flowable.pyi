@@ -4,7 +4,7 @@ from rxbp.state import State
 from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 
 class Flowable[U](SingleChildFlowableNode[U, U]):
     # used for the donotation.do notation
@@ -48,4 +48,4 @@ class SeqFlowable[U](Flowable[U]):
 
 class ConnectableFlowable[U](Flowable[U]):
     @property
-    def child(self) -> ConnectableFlowableNode[U]: ...
+    def child(self) -> ConnectableFlowableNode[S, U]: ...

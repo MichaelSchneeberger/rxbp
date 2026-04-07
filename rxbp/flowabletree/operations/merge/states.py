@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from continuationmonad.typing import (
-    ContinuationCertificate,
+from rxsingle.typing import (
+    ContCert,
     DeferredHandler,
 )
 
@@ -36,7 +36,7 @@ class ActiveStateMixin(MergeState):
     active_ids: tuple[int, ...]
 
     # upstream continuation certificates
-    certificates: tuple[ContinuationCertificate, ...]
+    certificates: tuple[ContCert, ...]
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ class StopContinuationStateMixin:
     """Stop continuations associated with incoming upstream call"""
 
     # Certificate is used to stop continuation of calling upstream flowable.
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,7 @@ class OnNextState[U](AwaitDownstreamStateMixin):
 class KeepWaitingState(StopContinuationStateMixin, AwaitDownstreamStateMixin):
     """Await for downstream to request new item"""
 
-    # certificate: ContinuationCertificate
+    # certificate: ContCert
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,7 +92,7 @@ class TerminatedStateMixin(MergeState):
     # This is important as the certificate is either used:
     # - to stop calling upsream flowable (on_next, on_next_and_complete, ...), or
     # - to cancel upstream flowable
-    certificates: dict[int, ContinuationCertificate]
+    certificates: dict[int, ContCert]
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,7 +125,7 @@ class CancelledAwaitRequestState(TerminatedStateMixin):
 
     # The certificate is used to stop the downstream request.
     # It is not used to stop the current upstream.
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 @dataclass(frozen=True, slots=True)

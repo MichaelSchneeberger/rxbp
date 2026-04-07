@@ -3,10 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 
-from continuationmonad.typing import (
-    ContinuationCertificate,
+from rxsingle.typing import (
+    ContCert,
     DeferredHandler,
 )
 
@@ -69,7 +69,7 @@ class InactiveTransitionsMixin:
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc
+@dataclass
 class OnNextTransition[U](InactiveTransitionsMixin, FlatMapStateTransition):
     child: FlatMapStateTransition
     id: int
@@ -119,13 +119,13 @@ class OnNextTransition[U](InactiveTransitionsMixin, FlatMapStateTransition):
                 return self._get_state(state)
 
 
-@dataclassabc
+@dataclass
 class RequestTransition(FlatMapStateTransition):
     """Downstream request received"""
 
     id: int
     child: FlatMapStateTransition
-    certificate: ContinuationCertificate | None
+    certificate: ContCert | None
 
     def get_state(self):
         match previous_state := self.child.get_state():
@@ -221,7 +221,7 @@ class RequestTransition(FlatMapStateTransition):
                 raise Exception(f"Unexpected state {previous_state}.")
 
 
-@dataclassabc
+@dataclass
 class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, FlatMapStateTransition):
     child: FlatMapStateTransition
     id: int
@@ -278,7 +278,7 @@ class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, FlatMapStateTrans
                 return self._get_state(state)
 
 
-@dataclassabc
+@dataclass
 class OnCompletedTransition(InactiveTransitionsMixin, FlatMapStateTransition):
     child: FlatMapStateTransition
     id: int
@@ -322,7 +322,7 @@ class OnCompletedTransition(InactiveTransitionsMixin, FlatMapStateTransition):
                 return self._get_state(state)
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnErrorTransition(InactiveTransitionsMixin, FlatMapStateTransition):
     id: int
     child: FlatMapStateTransition
@@ -364,11 +364,11 @@ class OnErrorTransition(InactiveTransitionsMixin, FlatMapStateTransition):
             )
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnNextOuterTransition(FlatMapStateTransition):
     id: int
     child: FlatMapStateTransition
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
     def get_state(self):
         match state := self.child.get_state():
@@ -411,11 +411,11 @@ class OnNextOuterTransition(FlatMapStateTransition):
             case _:
                 raise Exception(f"Unexpected state {state}.")
 
-@dataclassabc
+@dataclass
 class OnNextAndCompleteOuterTransition[U](FlatMapStateTransition):
     id: int
     child: FlatMapStateTransition
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
     def get_state(self):
         match state := self.child.get_state():
@@ -460,7 +460,7 @@ class OnNextAndCompleteOuterTransition[U](FlatMapStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc
+@dataclass
 class OnCompletedOuterTransition(FlatMapStateTransition):
     child: FlatMapStateTransition
 
@@ -511,7 +511,7 @@ class OnCompletedOuterTransition(FlatMapStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class OnErrorOuterTransition(FlatMapStateTransition):
     child: FlatMapStateTransition
     exception: Exception
@@ -558,10 +558,10 @@ class OnErrorOuterTransition(FlatMapStateTransition):
 
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class CancelTransition(FlatMapStateTransition):
     child: FlatMapStateTransition
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
     def get_state(self):
         match state := self.child.get_state():

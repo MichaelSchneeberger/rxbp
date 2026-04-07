@@ -3,9 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from dataclassabc import dataclassabc
+from contcert.typing import ContCert
 
-from continuationmonad.typing import ContinuationCertificate
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.operations.concatmap.states import CancelledState, ConcatMapState, ActiveState
 
@@ -18,7 +17,7 @@ class ConcatMapStateTransition(ABC):
 @dataclass(frozen=True)
 class ToStateTransition(ConcatMapStateTransition):
     """ Transitions to predefined state """
-    
+
     state: ConcatMapState
 
     def get_state(self):
@@ -47,10 +46,10 @@ class UpdateCancellableTransition(ConcatMapStateTransition):
                 raise Exception(f"Unexpected state {state}.")
 
 
-@dataclassabc(frozen=False)
+@dataclass(frozen=False)
 class CancelTransition(ConcatMapStateTransition):
     child: ConcatMapStateTransition
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
     def get_state(self):
         match state := self.child.get_state():
@@ -62,3 +61,4 @@ class CancelTransition(ConcatMapStateTransition):
 
             case _:
                 raise Exception(f"Unexpected state {state}.")
+

@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from typing import Callable
-import continuationmonad
-from continuationmonad.typing import (
+import rxsingle
+from rxsingle.typing import (
     Scheduler,
-    ContinuationMonad,
-    ContinuationCertificate,
+    RxSingle,
+    ContCert,
 )
 
 from rxbp.cancellable import CancellationState, init_cancellation_state
-from rxbp.flowabletree.nodes import FlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -18,7 +18,7 @@ from rxbp.state import State
 @dataclass(frozen=True)
 class TFlowableNode[V](FlowableNode):
     subscribe_func: Callable[
-        [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
+        [Observer, Scheduler | None], RxSingle[ContCert]
     ]
     cancellation: CancellationState
 
@@ -27,14 +27,14 @@ class TFlowableNode[V](FlowableNode):
         state: State,
         args: SubscribeArgs[V],
     ):
-        certificate = continuationmonad.fork(
-            source=continuationmonad.from_(None).flat_map(
+        certificate = rxsingle.fork(
+            source=rxsingle.from_(None).flat_map(
                 lambda _: self.subscribe_func(args.observer, args.scheduler)
             ),
             on_error=args.observer.on_error,
             scheduler=state.subscription_trampoline,  # ensures scheduling on trampoline
             cancellation=None,
-            weight=args.weight,
+            virtual_count=args.virtual_count,
         )
 
         return state, SubscriptionResult(
@@ -45,7 +45,7 @@ class TFlowableNode[V](FlowableNode):
 
 def init_test_flowable(
     subscribe_func: Callable[
-        [Observer, Scheduler | None], ContinuationMonad[ContinuationCertificate]
+        [Observer, Scheduler | None], RxSingle[ContCert]
     ],
 ):
     return TFlowableNode(

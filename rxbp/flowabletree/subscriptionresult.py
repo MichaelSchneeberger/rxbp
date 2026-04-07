@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from continuationmonad.typing import ContinuationCertificate
+from contcert.typing import ContCert
 
 from rxbp.cancellable import Cancellable
 
@@ -8,12 +8,12 @@ from rxbp.cancellable import Cancellable
 @dataclass
 class SubscriptionResult:
     cancellable: Cancellable
-    certificate: ContinuationCertificate
+    certificate: ContCert
 
 
 def init_subscription_result(
     cancellable: Cancellable,
-    certificate: ContinuationCertificate,
+    certificate: ContCert,
 ):
     return SubscriptionResult(
         cancellable=cancellable,

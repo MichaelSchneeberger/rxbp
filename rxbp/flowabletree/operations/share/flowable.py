@@ -1,13 +1,13 @@
 from __future__ import annotations
 from threading import Lock
 
-from dataclassabc import dataclassabc
+from dataclasses import dataclass
 from donotation import do
 
 from rxbp.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.nodes import FlowableNode, SingleChildFlowableNode
+from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.operations.share.states import InitState
 from rxbp.flowabletree.operations.share.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
@@ -16,8 +16,8 @@ from rxbp.flowabletree.operations.share.ackobserver import ShareAckObserver
 from rxbp.flowabletree.operations.share.observer import SharedObserver
 
 
-@dataclassabc(frozen=True)
-class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
+@dataclass(frozen=True)
+class ShareFlowableNode[S, U](SingleChildFlowableNode[S, U, U]):
     child: FlowableNode
 
     def discover(
@@ -33,21 +33,21 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
 
         return state
 
-    def assign_weights(
+    def assign_virtual_count(
         self,
         state: State,
-        weight: int,
+        virtual_count: int,
     ):
         state.shared_subscribe_count[self] -= 1
 
-        if self not in state.shared_weights:
-            state.shared_weights[self] = weight
+        if self not in state.shared_virtual_count:
+            state.shared_virtual_count[self] = virtual_count
 
         else:
-            state.shared_weights[self] += weight
+            state.shared_virtual_count[self] += virtual_count
 
         if state.shared_subscribe_count[self] == 0:
-            state = self.child.assign_weights(state, state.shared_weights[self])
+            state = self.child.assign_virtual_count(state, state.shared_virtual_count[self])
 
         return state
 
@@ -59,7 +59,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
             observer = state.shared_observers[self]
 
         else:
-            total_weight = state.shared_weights[self]
+            total_virtual_count = state.shared_virtual_count[self]
 
             shared = ShareSharedMemory(
                 upstream_cancellation=None,
@@ -69,14 +69,14 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
                 buffer_lock=Lock(),
                 first_index=0,
                 buffer=[],
-                total_weight=total_weight,
-                weight_partition={},
+                total_virtual_count=total_virtual_count,
+                virtual_count_partition={},
                 init_certificate=None,
             )
 
             observer = SharedObserver(
                 shared=shared,
-                weight=args.weight,
+                virtual_count=args.virtual_count,
                 ack_observers={},
                 cancellations={},
             )
@@ -87,7 +87,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
                 state,
                 args.copy(
                     observer=observer,
-                    weight=total_weight,
+                    virtual_count=total_virtual_count,
                 ),
             )
             shared.upstream_cancellation = result.cancellable
@@ -101,7 +101,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
                     cancelled_certificates={},
                     requested_certificates={},
                     is_completed=False,
-                    weights={},
+                    virtual_counts={},
                 )
             )
 
@@ -111,10 +111,10 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
 
         id = len(init_state.buffer_map)
         init_state.buffer_map[id] = 0
-        certificate, shared.init_certificate = shared.init_certificate.take(args.weight)
+        certificate, shared.init_certificate = shared.init_certificate.take(args.virtual_count)
         # print(certificate)
         init_state.requested_certificates[id] = None
-        init_state.weights[id] = args.weight
+        init_state.virtual_counts[id] = args.virtual_count
 
         downstream_cancellation = ShareCancellation(
             id=id,
@@ -127,7 +127,7 @@ class ShareFlowableNode[U](SingleChildFlowableNode[U, U]):
             observer=args.observer,
             shared=shared,
             id=id,
-            # weight=args.weight,
+            # virtual_count=args.virtual_count,
             cancellation=downstream_cancellation,
         )
 
