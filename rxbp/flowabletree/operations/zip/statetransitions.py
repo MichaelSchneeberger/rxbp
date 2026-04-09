@@ -57,7 +57,7 @@ class OnNextTransition(ZipStateTransition):
 
                 return StopContinuation(
                     assigned_ids=n_assigned_ids,
-                    index=self.id,
+                    index=assigned_ids[self.id],
                 )
 
             case _:
@@ -92,7 +92,7 @@ class OnNextAndCompleteTransition(ZipStateTransition):
 
                 return StopContinuation(
                     assigned_ids=n_assigned_ids,
-                    index=self.id,
+                    index=assigned_ids[self.id],
                 )
 
             case _:
@@ -123,7 +123,7 @@ class OnCompletedTransition(ZipStateTransition):
 
                 return StopContinuation(
                     assigned_ids=n_assigned_ids,
-                    index=self.id,
+                    index=assigned_ids[self.id],
                 )
 
             case _:
@@ -172,7 +172,7 @@ class CancelTransition(ZipStateTransition):
                 )
 
             # Flowable is already completed via on_completed or on_error
-            # Certificate provided to the cancel() can be ignored
+            # Certificate provided to the cancel() must be ignored
             case Completed():
                 return p_state
 

@@ -1,25 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import override
 
-from donotation import do
 
-import rxsingle
-from rxsingle.typing import (
-    DeferredHandler,
-)
+from contcert.typing import ContCert, Trampoline
+from rxsingle.typing import Observer as RxSingleObserver
 
 from rxbp.flowabletree.operations.merge.states import (
-    CancelledStopRequestState,
-    KeepWaitingState,
-    AwaitOnNextState,
-    MergeState,
-    OnCompletedState,
-    OnErrorState,
-    OnNextAndCompleteState,
-    OnNextState,
-    HasTerminatedState,
-    StopContinuationStateMixin,
+    Active,
+    Completed,
+    Error,
+    StopContinuation,
 )
 from rxbp.flowabletree.operations.merge.statetransitions import (
     RequestTransition,
@@ -29,155 +21,237 @@ from rxbp.flowabletree.operations.merge.statetransitions import (
     OnNextTransition,
     OnNextAndCompleteTransition,
 )
-from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
+from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory, OnCompleted, OnNext, OnNextAndComplete
 from rxbp.flowabletree.observer import Observer
 
 
 @dataclass
-class MergeObserver[V](Observer[V]):
-    shared: MergeSharedMemory
-    id: int
+class MergeRxSingleObserver[U](RxSingleObserver[None]):
+    shared: MergeSharedMemory[U]
 
-    @do()
-    def _on_next(self, state: MergeState):
-        match state:
-            case OnNextState(
-                value=value,
-                observer=observer,
-            ):
-                _ = yield from self.shared.downstream.on_next(value)
+    @override
+    def on_success(
+        self,
+        trampoline: Trampoline,
+        item: None,
+    ):
+        # print("Request new")
 
-                if observer is None:
-                    certificate = None
+        transition = RequestTransition(
+            child=None,  # pyright: ignore[reportArgumentType]
+        )
 
-                else:
-                    certificate, *_ = yield from rxsingle.from_(None).connect(
-                        (observer,)
-                    )
-
-                transition = RequestTransition(
-                    child=None,  # type: ignore
-                    id=self.id,
-                    certificate=certificate,
-                )
-
-                with self.shared.lock:
-                    transition.child = self.shared.transition
-                    state = transition.get_state()
-                    self.shared.transition = ToStateTransition(state=state)
-
-                match state:
-                    case CancelledStopRequestState(
-                        certificates=certificates, 
-                        certificate=certificate,
-                    ):
-                        self.shared.cancellables[self.id].cancel(certificates[self.id])
-                        return rxsingle.from_(certificate)
-                    
-                    case _:
-                        pass
-
-                continuation = self._on_next(state)
-                return continuation
-
-            case KeepWaitingState(certificate=certificate):
-                return rxsingle.from_(certificate)
-
-            case AwaitOnNextState(certificate=certificate):
-                return rxsingle.from_(certificate)
-
-            case OnNextAndCompleteState(value=value):
-                return self.shared.downstream.on_next_and_complete(value)
-
-            case HasTerminatedState(certificate=certificate):
-                return rxsingle.from_(certificate)
-
-            case _:
-                raise Exception(f"Unexpected state {state}.")
-
-    @do()
-    def on_next(self, value: V):
-        # print(f'on_next({value}), id={self.id}')
-
-        # wait for upstream observer before continuing to simplify concurrency
-        def on_next_subscription(_, handler: DeferredHandler):
-            transition = OnNextTransition(
-                child=None,  # type: ignore
-                id=self.id,
-                value=value,
-                observer=handler,
+        with self.shared.transition_lock:
+            transition.child = self.shared.transition
+            n_state = transition.get_state()
+            self.shared.transition = ToStateTransition(
+                state=n_state
             )
 
-            with self.shared.lock:
-                transition.child = self.shared.transition
-                self.shared.transition = transition
+        match n_state:
+            case Active(
+                received_ids=received_ids,
+            ):
+                if not received_ids:
+                    match self.shared.items.pop():
+                        case OnNext():
+                            _, observer = self.shared.upstream.pop()
+                            cert = observer.on_success(trampoline, None)
+                            return cert
+                        case _:
+                            with self.shared.certs_lock:
+                                cert = self.shared.certs.pop()
+                            return cert
 
-            state = transition.get_state()
-            certificate = self._on_next(state)
-            return certificate
+                else:
+                    match self.shared.items.pop():
+                        case OnNext(item=item):
 
-        return rxsingle.defer(on_next_subscription)
+                            _, observer = self.shared.upstream.pop()
+                            cert = observer.on_success(trampoline, None)
+                            with self.shared.certs_lock:
+                                self.shared.certs.append(cert)
 
-    @do()
-    def on_next_and_complete(self, value: V):
-        # print(f'on_next_and_complete({value}), id={self.id}')
+                            print(f"request: next{item}")
+                            cert = self.shared.downstream.on_next(
+                                trampoline=trampoline,
+                                item=item,
+                                observer = MergeRxSingleObserver(
+                                    shared=self.shared,
+                                ),
+                            )
+                            return cert
+
+                        case OnNextAndComplete(item=item):
+                            cert = self.shared.downstream.on_next_and_complete(
+                                trampoline=trampoline,
+                                item=item,
+                            )
+                            return cert
+
+                        case OnCompleted():
+                            cert = self.shared.downstream.on_completed()
+                            return cert
+
+                        case _:
+                            pass
+
+            case StopContinuation(index=index):
+                return self.shared.certs[index]
+
+            case Error(msg=msg):
+                raise Exception(msg)
+
+    @override
+    def on_error(
+        self,
+        trampoline: Trampoline,
+        exception: Exception,
+    ):
+        pass
+
+@dataclass
+class MergeObserver[U](Observer[U]):
+    shared: MergeSharedMemory[U]
+    id: int
+
+    @override
+    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]) -> ContCert:
+        # print(f"on_next({item})")
+        self.shared.items.append(OnNext(item))
+        self.shared.upstream.append((self.id, observer))
+
+        transition = OnNextTransition(
+            id=self.id,
+            child=None,  # type: ignore  # pyright: ignore[reportArgumentType]
+        )
+
+        with self.shared.transition_lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
+
+        match transition.get_state():
+            case Active(
+                received_ids=received_ids,
+            ):
+                if len(received_ids) == 1:
+                    # _ = self.shared.items.pop()
+                    cert = self.shared.downstream.on_next(
+                        trampoline=trampoline,
+                        item=item,
+                        observer = MergeRxSingleObserver(
+                            shared=self.shared,
+                        ),
+                    )
+                    return cert
+
+                else:
+                    with self.shared.certs_lock:
+                        cert = self.shared.certs.pop()
+                    return cert
+
+            case StopContinuation(index=index):
+                cert = self.shared.certs[index]
+                return cert
+
+            case Error(msg):
+                raise Exception(msg)
+
+    @override
+    def on_next_and_complete(self, trampoline: Trampoline, item: U) -> ContCert:
+        # print(f"on_next_and_complete({item})")
+        self.shared.items.append(OnNextAndComplete(item))
 
         transition = OnNextAndCompleteTransition(
-            child=None,  # type: ignore
             id=self.id,
-            value=value,
+            child=None,  # type: ignore  # pyright: ignore[reportArgumentType]
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
-        state = transition.get_state()
-        return self._on_next(state)
+        match transition.get_state():
+            case Active(
+                received_ids=received_ids,
+            ):
+                if len(received_ids) == 1:
+                    # _ = self.shared.items.pop()
+                    cert = self.shared.downstream.on_next(
+                        trampoline=trampoline,
+                        item=item,
+                        observer = MergeRxSingleObserver(
+                            shared=self.shared,
+                        ),
+                    )
+                    return cert
 
+                else:
+                    with self.shared.certs_lock:
+                        cert = self.shared.certs.pop()
+                    return cert
+
+            case StopContinuation(index=index):
+                cert = self.shared.certs[index]
+                return cert
+
+            case Completed():
+                cert = self.shared.downstream.on_next_and_complete(
+                    trampoline=trampoline,
+                    item=item,
+                )
+                return cert
+
+            case Error(msg):
+                raise Exception(msg)
+
+    @override
     def on_completed(self):
+        self.shared.items.append(OnCompleted())
+
         transition = OnCompletedTransition(
-            child=None,  # type: ignore
+            child=None,  # pyright: ignore[reportArgumentType]
             id=self.id,
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
-        match state := transition.get_state():
-            case OnCompletedState():
+        match transition.get_state():
+            case Active():
+                with self.shared.certs_lock:
+                    cert = self.shared.certs.pop()
+                return cert
+
+            case StopContinuation(index=index):
+                return self.shared.certs[index]
+
+            case Completed():
+                # _ = self.shared.items.pop()
                 return self.shared.downstream.on_completed()
 
-            case StopContinuationStateMixin(certificate=certificate):
-                return rxsingle.from_(certificate)
+            case Error(msg):
+                raise Exception(msg)
 
-            case _:
-                raise Exception(f"Unexpected state {state}.")
-
+    @override
     def on_error(self, exception: Exception):
         transition = OnErrorTransition(
-            child=None,  # type: ignore
+            child=None,  # pyright: ignore[reportArgumentType]
             id=self.id,
-            exception=exception,
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
-        match state := transition.get_state():
-            case OnErrorState(
-                exception=exception,
-                certificates=certificates,
-            ):
-                for id, certificate in certificates.items():
-                    self.shared.cancellables[id].cancel(certificate)
-        
-                return self.shared.downstream.on_error(exception)
+        match transition.get_state():
+            case StopContinuation(index=index):
+                return self.shared.certs[index]
 
-            case HasTerminatedState(certificate=certificate):
-                return rxsingle.from_(certificate)
+            case Completed():
+                cert = self.shared.downstream.on_error(exception)
+                return cert
 
-            case _:
-                raise Exception(f"Unexpected state {state}.")
+            case Error(msg):
+                raise Exception(msg)

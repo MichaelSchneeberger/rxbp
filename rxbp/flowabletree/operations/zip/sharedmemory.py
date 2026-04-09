@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from contcert.typing import ContCert
 from rxsingle.typing import Observer as RxSingleObserver
+
 from rxbp.cancellable import Cancellable
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.zip.statetransitions import ZipStateTransition

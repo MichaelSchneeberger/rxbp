@@ -3,79 +3,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from dataclasses import dataclass
+from typing import override
 
-from rxsingle.typing import (
-    ContCert,
-    DeferredHandler,
-)
 
 from rxbp.flowabletree.operations.merge.states import (
-    AwaitUpstreamStateMixin,
-    AwaitOnNextState,
-    AwaitDownstreamStateMixin,
-    OnNextState,
-    KeepWaitingState,
-    TerminatedStateMixin,
-    HasTerminatedState,
+    Active,
+    Completed,
+    Error,
+    StopContinuation,
     MergeState,
-    OnCompletedState,
-    OnErrorState,
-    BackpressuredOnNextCalls,
-    OnNextAndCompleteState,
-    CancelledStopRequestState,
-    CancelledAwaitRequestState,
-    CancelledState,
 )
 
-"""
-State Machine
--------------
-
-State groups (-), states (>):
-- Active - AwaitUpstream
-  > Init
-  > AwaitOnNext
-- Active - AwaitDownstream
-  > OnNext
-  > KeepWaiting
-- Terminated
-  > OnNextAndComplete
-  > OnCompleted
-  > OnError
-  > Cancelled
-  > CancelledAwaitRequest
-  > CancelledStopRequest
-  > HasTerminated
-
-Transitions:
-- on_next:
-        AwaitUpstream           -> OnNext
-        AwaitDownstream         -> KeepWaiting
-        Terminated              -> HasTerminated
-- request:
-        AwaitDownstream         -> OnNext
-                                -> OnNextAndComplete        if all upstream completed
-                                -> AwaitOnNext              if no other items were received
-        CancelledAwaitRequest   -> CancelledStopRequest
-- on_next_and_complete: 
-        AwaitUpstream           -> OnNext
-        AwaitDownstream         -> OnNextAndComplete        if all upstream completed
-        Terminated              -> HasTerminated
-- on_completed:
-        AwaitUpstream           -> AwaitOnNext
-                                -> OnCompleted              if all upstream completed
-        AwaitDownstream         -> KeepWaiting
-        Terminated              -> HasTerminated
-- on_error:
-        AwaitUpstream           -> OnError
-        AwaitDownstream         -> OnError
-        Terminated              -> HasTerminated
-- cancel:
-        AwaitUpstream           -> Cancelled
-        AwaitDownstream         -> CancelledAwaitRequest
-        Terminated              -> Cancelled
-"""
 
 
 class MergeStateTransition(ABC):
@@ -89,330 +27,230 @@ class ToStateTransition(MergeStateTransition):
 
     state: MergeState
 
+    @override
     def get_state(self):
         return self.state
 
 
-@dataclass
-class InactiveTransitionsMixin:
-    id: int
-
-    def _get_state(self, state: MergeState):
-        match state:
-            case TerminatedStateMixin(
-                certificates=certificates,
-            ):
-                return HasTerminatedState(
-                    certificate=certificates[self.id],
-                    certificates={
-                        id: c for id, c in certificates.items() if id != self.id
-                    },
-                )
-
-            case _:
-                raise Exception(f"Unexpected state {state}.")
-
 
 @dataclass
-class OnNextTransition[U](InactiveTransitionsMixin, MergeStateTransition):
+class OnNextTransition(MergeStateTransition):
     child: MergeStateTransition
     id: int
-    value: U
-    observer: DeferredHandler
 
-    def get_state(self):
+    @override
+    def get_state(self) -> Active | StopContinuation | Error:
         match state := self.child.get_state():
-            case AwaitUpstreamStateMixin(
+            case Active(
                 active_ids=active_ids,
-                certificates=certificates,
+                received_ids=received_ids,
             ):
-                return OnNextState(
-                    value=self.value,
-                    observer=self.observer,
-                    on_next_calls=tuple(),
+                n_received_ids = received_ids + (self.id,)
+
+                return Active(
                     active_ids=active_ids,
-                    certificates=certificates,
+                    received_ids=n_received_ids,
                 )
 
-            case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls,
-                active_ids=active_ids,
-                certificates=certificates,
+            case Completed(
+                assigned_ids=assigned_ids,
+                received_ids=received_ids,
             ):
-                # backpressure on_next call
+                n_assigned_ids = {id: idx for idx, id in assigned_ids.items() if id != self.id}
 
-                pre_state = BackpressuredOnNextCalls(
-                    id=self.id,
-                    value=self.value,
-                    observer=self.observer,
-                )
-                n_on_next_calls = on_next_calls + (pre_state,)
-
-                return KeepWaitingState(
-                    active_ids=active_ids,
-                    on_next_calls=n_on_next_calls,
-                    certificate=certificates[0],
-                    certificates=certificates[1:],
+                return StopContinuation(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
+                    index=assigned_ids[self.id],
                 )
 
             case _:
-                # print(self.child)
-                return self._get_state(state)
+                return Error(f"Unexpected state {state}")
+
+
+@dataclass
+class OnNextAndCompleteTransition(MergeStateTransition):
+    child: MergeStateTransition
+    id: int
+
+    @override
+    def get_state(self) -> Active | Completed | StopContinuation | Error:
+        match state := self.child.get_state():
+            case Active(
+                active_ids=active_ids,
+                received_ids=received_ids,
+            ):
+                n_received_ids = received_ids + (self.id,)
+                n_active_ids = active_ids - {self.id}
+
+                # remaining active Flowables
+                if n_active_ids:
+                    return Active(
+                        active_ids=n_active_ids,
+                        received_ids=n_received_ids,
+                    )
+
+                else:
+                    return Completed(
+                        assigned_ids={},
+                        received_ids=n_received_ids,
+                    )
+
+            case Completed(
+                assigned_ids=assigned_ids,
+                received_ids=received_ids,
+            ):
+                n_assigned_ids = {id: idx for idx, id in assigned_ids.items() if id != self.id}
+
+                return StopContinuation(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
+                    index=assigned_ids[self.id],
+                )
+
+            case _:
+                return Error(f"Unexpected state {state}")
+
+
+@dataclass
+class OnCompletedTransition(MergeStateTransition):
+    child: MergeStateTransition
+    id: int
+
+    @override
+    def get_state(self) -> Active | Completed | StopContinuation | Error:
+        match p_state := self.child.get_state():
+            case Active(
+                active_ids=active_ids,
+                received_ids=received_ids,
+            ):
+                n_active_ids = active_ids - {self.id}
+
+                if n_active_ids:
+                    return Active(
+                        active_ids=n_active_ids,
+                        received_ids=received_ids,
+                    )
+
+                else:
+                    return Completed(
+                        assigned_ids={},
+                        received_ids=received_ids,
+                    )
+
+            case Completed(
+                assigned_ids=assigned_ids,
+                received_ids=received_ids,
+            ):
+                n_assigned_ids = {id: idx for idx, id in assigned_ids.items() if id != self.id}
+
+                return StopContinuation(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
+                    index=assigned_ids[self.id],
+                )
+
+            case _:
+                return Error(f"Unexpected state {p_state}")
+
+
+@dataclass(frozen=False)
+class OnErrorTransition(MergeStateTransition):
+    child: MergeStateTransition
+    id: int
+
+    @override
+    def get_state(self) -> Completed | StopContinuation | Error:
+
+        match p_state := self.child.get_state():
+            case Active(
+                active_ids=active_ids,
+                received_ids=received_ids,
+            ):
+                n_assigned_ids = {id: idx for idx, id in enumerate(active_ids) if id != self.id and id not in received_ids}
+
+                return Completed(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
+                )
+
+            case Completed(
+                assigned_ids=assigned_ids,
+                received_ids=received_ids,
+            ):
+                n_assigned_ids = {id: idx for idx, id in assigned_ids.items() if id != self.id}
+
+                return StopContinuation(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
+                    index=assigned_ids[self.id],
+                )
+
+            case _:
+                return Error(f"Unexpected state {p_state}")
 
 
 @dataclass
 class RequestTransition(MergeStateTransition):
-    """Downstream request received"""
+    """Downstream requests new item"""
 
-    id: int
     child: MergeStateTransition
-    certificate: ContCert | None
 
-    def get_state(self):
-        match previous_state := self.child.get_state():
-            case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls,
+    @override
+    def get_state(self) -> Active | StopContinuation | Error:
+        match p_state := self.child.get_state():
+            case Active(
+                received_ids=received_ids,
                 active_ids=active_ids,
-                certificates=certificates,
             ):
-                match on_next_calls:
-                    case [
-                        BackpressuredOnNextCalls(
-                            value=value,
-                            observer=observer,
-                        ),
-                        *others,
-                    ]:
-                        # backpressured upstream exist
+                n_received_ids = received_ids[1:]
 
-                        if observer is None:
-                            # upstream called on_next_and_complete
-
-                            # last element in buffer
-                            if len(active_ids) == 0:
-                                return OnNextAndCompleteState(
-                                    certificates={},
-                                    value=value,
-                                )
-
-                            else:
-                                return OnNextState(
-                                    observer=None,
-                                    value=value,
-                                    on_next_calls=tuple(others),
-                                    active_ids=active_ids,
-                                    certificates=certificates + (self.certificate,)
-                                    if self.certificate
-                                    else certificates,
-                                )
-
-                        else:
-                            return OnNextState(
-                                value=value,
-                                observer=observer,
-                                on_next_calls=tuple(others),
-                                active_ids=active_ids,
-                                certificates=certificates + (self.certificate,)
-                                if self.certificate
-                                else certificates,
-                            )
-
-                    case _:
-                        # no backpressured upstream exist
-
-                        if self.certificate:
-                            return AwaitOnNextState(
-                                active_ids=active_ids,
-                                certificate=self.certificate,
-                                certificates=certificates,
-                            )
-
-                        else:
-                            return AwaitOnNextState(
-                                active_ids=active_ids,
-                                certificate=certificates[0],
-                                certificates=certificates[1:],
-                            )
-
-            case CancelledAwaitRequestState(
-                certificates=certificates,
-                certificate=certificate,
-            ):
-                if self.certificate:
-                    return CancelledStopRequestState(
-                        certificate=certificate,
-                        certificates={self.id: self.certificate} | certificates,
-                    )
-                else:
-                    return CancelledStopRequestState(
-                        certificate=certificate,
-                        certificates=certificates,
-                    )
-
-            case _:
-                raise Exception(f"Unexpected state {previous_state}.")
-
-
-@dataclass
-class OnNextAndCompleteTransition[U](InactiveTransitionsMixin, MergeStateTransition):
-    child: MergeStateTransition
-    id: int
-    value: U
-
-    def get_state(self):
-        match state := self.child.get_state():
-            case AwaitUpstreamStateMixin(
-                active_ids=active_ids,
-                certificates=certificates,
-            ):
-                if len(active_ids) == 1:
-                    return OnNextAndCompleteState(
-                        value=self.value,
-                        certificates={},
-                    )
-
-                else:
-                    return OnNextState(
-                        value=self.value,
-                        observer=None,
-                        on_next_calls=tuple(),
-                        active_ids=tuple(id for id in active_ids if id != self.id),
-                        certificates=certificates,
-                    )
-
-            case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls,
-                active_ids=active_ids,
-                certificates=certificates,
-            ):
-                # backpressure on_next call
-
-                pre_state = BackpressuredOnNextCalls(
-                    id=self.id,
-                    value=self.value,
-                    observer=None,
+                # todo: assert requested_ids is empty
+                return Active(
+                    received_ids=n_received_ids,
+                    active_ids=active_ids,
                 )
-                n_on_next_calls = on_next_calls + (pre_state,)
 
-                return KeepWaitingState(
-                    active_ids=tuple(id for id in active_ids if id != self.id),
-                    on_next_calls=n_on_next_calls,
-                    certificate=certificates[0],
-                    certificates=certificates[1:],
+            case Completed(
+                assigned_ids=assigned_ids,
+                received_ids=received_ids,
+            ):
+                await_id = received_ids[0]
+                n_assigned_ids = {id: idx for idx, id in assigned_ids.items() if id != await_id}
+
+                return StopContinuation(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
+                    index=assigned_ids[await_id],
                 )
 
             case _:
-                return self._get_state(state)
-
-
-@dataclass
-class OnCompletedTransition(InactiveTransitionsMixin, MergeStateTransition):
-    child: MergeStateTransition
-    id: int
-
-    def get_state(self):
-        match state := self.child.get_state():
-            case AwaitUpstreamStateMixin(
-                active_ids=active_ids,
-                certificates=certificates,
-            ):
-                if len(active_ids) == 1:
-                    return OnCompletedState(certificates={})
-
-                else:
-                    return AwaitOnNextState(
-                        active_ids=tuple(id for id in active_ids if id != self.id),
-                        certificate=certificates[0],
-                        certificates=certificates[1:],
-                    )
-
-            case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls,
-                active_ids=active_ids,
-                certificates=certificates,
-            ):
-                return KeepWaitingState(
-                    on_next_calls=on_next_calls,
-                    active_ids=tuple(id for id in active_ids if id != self.id),
-                    certificate=certificates[0],
-                    certificates=certificates[1:],
-                )
-
-            case _:
-                return self._get_state(state)
-
-
-@dataclass(frozen=False)
-class OnErrorTransition(InactiveTransitionsMixin, MergeStateTransition):
-    child: MergeStateTransition
-    id: int
-    exception: Exception
-
-    def get_state(self):
-        match state := self.child.get_state():
-            case AwaitUpstreamStateMixin(
-                certificates=certificates,
-                n_children=n_children,
-            ):
-                awaiting_ids = tuple(range(n_children))
-
-                return OnErrorState(
-                    exception=self.exception,
-                    certificates=dict(zip(awaiting_ids, certificates)),
-                )
-
-            case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls,
-                certificates=certificates,
-                n_children=n_children,
-            ):
-                received_ids = tuple(call.id for call in on_next_calls)
-                awaiting_ids = tuple(
-                    id for id in range(n_children) if id not in received_ids
-                )
-                return OnErrorState(
-                    exception=self.exception,
-                    certificates=dict(zip(awaiting_ids, certificates)),
-                )
-
-            case _:
-                return self._get_state(state)
+                return Error(f"Unexpected state {p_state}.")
 
 
 @dataclass(frozen=False)
 class CancelTransition(MergeStateTransition):
     child: MergeStateTransition
-    certificate: ContCert
 
-    def get_state(self):
-        match child_state := self.child.get_state():
-            case AwaitUpstreamStateMixin(
-                certificates=certificates,
-                n_children=n_children,
+    @override
+    def get_state(self) -> Completed | Error:
+        match p_state := self.child.get_state():
+            case Active(
+                active_ids=active_ids,
+                received_ids=received_ids,
             ):
-                awaiting_ids = tuple(range(n_children))
-                certificates = certificates + (self.certificate,)
+                n_assigned_ids = {id: idx for idx, id in enumerate(active_ids) if id not in received_ids}
 
-                return CancelledState(
-                    certificates=dict(zip(awaiting_ids, certificates)),
+                return Completed(
+                    assigned_ids=n_assigned_ids,
+                    received_ids=received_ids,
                 )
 
-            case AwaitDownstreamStateMixin(
-                on_next_calls=on_next_calls,
-                certificates=certificates,
-                n_children=n_children,
-            ):
-                received_ids = tuple(call.id for call in on_next_calls)
-                awaiting_ids = tuple(
-                    id for id in range(n_children) if id not in received_ids
-                )
-                return CancelledAwaitRequestState(
-                    certificate=self.certificate,
-                    certificates=dict(zip(awaiting_ids, certificates)),
-                )
-
-            case TerminatedStateMixin(certificates=certificates):
-                return CancelledState(certificates=certificates)
+            # Flowable is already completed via on_completed or on_error
+            # Certificate provided to the cancel() must be ignored
+            case Completed():
+                return p_state
 
             case _:
-                raise Exception(f"Unexpected state {child_state}.")
+                return Error(f"Unexpected state {p_state}.")
+

@@ -1,23 +1,42 @@
 from __future__ import annotations
 
+from abc import ABC
 from dataclasses import dataclass
-
-from rxsingle.typing import (
-    ContCert,
-    DeferredHandler,
-)
-
-
-@dataclass(frozen=True, slots=True)
-class BackpressuredOnNextCalls[U]:
-    id: int
-    value: U
-    observer: DeferredHandler | None
-    # completed: bool
 
 
 class MergeState:
     pass
+
+
+@dataclass(frozen=True)
+class Error(MergeState):
+    msg: str
+
+
+@dataclass(frozen=True)
+class Active(MergeState, ABC):
+    active_ids: set[int]
+    received_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class Request(Active, ABC):
+    id: int
+
+
+@dataclass(frozen=True)
+class Completed(MergeState, ABC):
+    assigned_ids: dict[int, int]
+    received_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class StopContinuation(Completed):
+    index: int
+
+
+
+
 
 
 @dataclass(frozen=True, slots=True)

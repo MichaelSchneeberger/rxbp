@@ -203,12 +203,19 @@ class ZipObserver[U, V](Observer[U]):
                             transition.child = self.shared.transition
                             self.shared.transition = transition
 
-                        cert = self.shared.downstream.on_next_and_complete(
-                            trampoline=trampoline,
-                            item=self.shared.acc,
-                        )
+                        match transition.get_state():
+                            case StopContinuation(index=index):
+                                return self.shared.certs[index]
 
-                        return cert
+                            case Completed():
+                                cert = self.shared.downstream.on_next_and_complete(
+                                    trampoline=trampoline,
+                                    item=self.shared.acc,
+                                )
+                                return cert
+
+                            case Error(msg):
+                                raise Exception(msg)
 
                     else:
                         cert = self.shared.downstream.on_next(
@@ -278,12 +285,19 @@ class ZipObserver[U, V](Observer[U]):
                             transition.child = self.shared.transition
                             self.shared.transition = transition
 
-                        cert = self.shared.downstream.on_next_and_complete(
-                            trampoline=trampoline,
-                            item=self.shared.acc,
-                        )
+                        match transition.get_state():
+                            case StopContinuation(index=index):
+                                return self.shared.certs[index]
 
-                        return cert
+                            case Completed():
+                                cert = self.shared.downstream.on_next_and_complete(
+                                    trampoline=trampoline,
+                                    item=self.shared.acc,
+                                )
+                                return cert
+
+                            case Error(msg):
+                                raise Exception(msg)
 
                     else:
                         cert = self.shared.downstream.on_next(
