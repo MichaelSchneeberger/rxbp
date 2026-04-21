@@ -1,145 +1,195 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
+from collections import deque
 from threading import Lock
 
 from dataclasses import dataclass
-from donotation import do
+from typing import Any, Self, override
 
-from rxbp.state import State
+import contcert
+
+from rxbp.flowabletree.operations.share.cancellable import ShareCancellation
+from rxbp.flowabletree.operations.share.requestobserver import ShareRequestObserver
+from rxbp.flowabletree.operations.share.statetransitions import (
+    InitialTransition,
+)
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
-from rxbp.flowabletree.operations.share.states import InitState
-from rxbp.flowabletree.operations.share.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
-from rxbp.flowabletree.operations.share.cancellable import ShareCancellation
-from rxbp.flowabletree.operations.share.ackobserver import ShareAckObserver
 from rxbp.flowabletree.operations.share.observer import SharedObserver
+from rxsingle.rxsingletree.state import State
+
+
+class ShareFlowableState(State, ABC):
+    @property
+    @abstractmethod
+    def p_share_flowable_count(self) -> dict[ShareFlowableNode[Self, Any], int]: ...  # pyright: ignore[reportExplicitAny]
+
+    @property
+    @abstractmethod
+    def p_share_virtual_count(self) -> dict[ShareFlowableNode[Self, Any], int]: ...  # pyright: ignore[reportExplicitAny]
+
+    """
+    Dictionary containing all shared Flowable nodes that are encountered during the subscription process.
+    It maps the shared Flowable node to its observer created when first subscribing.
+    When subscribing multiple times to the same Flowable node, the observer is used that is stored in the
+    dictionary.
+
+    This dictionary is modified during the subscription of a Flowable.
+    """
+
+    @property
+    @abstractmethod
+    def p_share_observers(
+        self,
+    ) -> dict[ShareFlowableNode[Self, Any], SharedObserver[Any]]: ...  # pyright: ignore[reportExplicitAny]
+
+    @abstractmethod
+    def update_shared_flowable_data[U](
+        self,
+        flowable_count: dict[ShareFlowableNode[Self, U], int] | None = None,
+        virtual_count: dict[ShareFlowableNode[Self, U], int] | None = None,
+        share_observers: tuple[ShareFlowableNode[Self, U], SharedObserver[U]] | None = None,
+    ) -> Self: ...
 
 
 @dataclass(frozen=True)
-class ShareFlowableNode[S, U](SingleChildFlowableNode[S, U, U]):
-    child: FlowableNode
+class ShareFlowableNode[S: ShareFlowableState, U](SingleChildFlowableNode[S, U, U]):
+    child: FlowableNode[S, U]
 
-    def discover(
-        self,
-        state: State,
-    ):
-        if self not in state.shared_subscribe_count:
-            state.shared_subscribe_count[self] = 1
+    @override
+    def discover(self, state: S) -> S:
+        # copy dictionary
+        flowable_count_map = dict(state.p_share_flowable_count)
+
+        if self not in flowable_count_map:
+            flowable_count_map[self] = 1
+            state = state.update_shared_flowable_data(
+                flowable_count=flowable_count_map,
+            )
             state = self.child.discover(state)
 
         else:
-            state.shared_subscribe_count[self] += 1
+            flowable_count_map[self] += 1
+            state = state.update_shared_flowable_data(
+                flowable_count=flowable_count_map,
+            )
 
         return state
 
+    @override
     def assign_virtual_count(
         self,
-        state: State,
+        state: S,
         virtual_count: int,
-    ):
-        state.shared_subscribe_count[self] -= 1
+    ) -> S:
+        flowable_count_map = dict(state.p_share_flowable_count)
+        virtual_count_map = dict(state.p_share_virtual_count)
 
-        if self not in state.shared_virtual_count:
-            state.shared_virtual_count[self] = virtual_count
+        flowable_count_map[self] -= 1
+
+        if self not in virtual_count_map:
+            virtual_count_map[self] = virtual_count
+            state = state.update_shared_flowable_data(
+                virtual_count=virtual_count_map,
+                flowable_count=flowable_count_map,
+            )
 
         else:
-            state.shared_virtual_count[self] += virtual_count
+            virtual_count_map[self] += virtual_count
+            state = state.update_shared_flowable_data(
+                virtual_count=virtual_count_map,
+                flowable_count=flowable_count_map,
+            )
 
-        if state.shared_subscribe_count[self] == 0:
-            state = self.child.assign_virtual_count(state, state.shared_virtual_count[self])
+        if flowable_count_map[self] == 0:
+            state = self.child.assign_virtual_count(state, virtual_count_map[self])
 
         return state
 
-    @do()
+    @override
     def unsafe_subscribe(
-        self, state: State, args: SubscribeArgs[U]
-    ) -> tuple[State, SubscriptionResult]:
-        if self in state.shared_observers:
-            observer = state.shared_observers[self]
+        self, state: S, args: SubscribeArgs[U]
+    ) -> tuple[S, SubscriptionResult]:
+        if self not in state.p_share_observers:
+            # observer = state.p_share_observers[self]
+            # shared = observer.shared
 
-        else:
-            total_virtual_count = state.shared_virtual_count[self]
+            # total_virtual_count = state.shared_virtual_count[self]
 
-            shared = ShareSharedMemory(
-                upstream_cancellation=None,
-                transition=None,  # type: ignore
-                deferred_handler=None,  # type: ignore
-                lock=Lock(),
+            shared = ShareSharedMemory[U](
+                virtual_count_partition={},
+                virtual_count=state.p_share_virtual_count[self],
+                context=args.context,
+                upstream=None,  # pyright: ignore[reportArgumentType]
+                cancellable=None,  # pyright: ignore[reportArgumentType]
+                cert_lock=Lock(),
+                cert=None,
+                transition_lock=Lock(),
+                transition=InitialTransition(),
                 buffer_lock=Lock(),
                 first_index=0,
-                buffer=[],
-                total_virtual_count=total_virtual_count,
-                virtual_count_partition={},
-                init_certificate=None,
+                buffer=deque(),
+                stacks=tuple(),
+                lambda_trace_logger=state.p_subscription_trampoline.lambda_trace_logger,
             )
 
             observer = SharedObserver(
                 shared=shared,
-                virtual_count=args.virtual_count,
-                ack_observers={},
+                request_observers={},
                 cancellations={},
             )
 
-            state.shared_observers[self] = observer
-
-            state, result = self.child.unsafe_subscribe(
-                state,
-                args.copy(
+            n_state, result = self.child.unsafe_subscribe(
+                args=args.copy(
                     observer=observer,
-                    virtual_count=total_virtual_count,
+                    virtual_count=shared.virtual_count,
+                ),
+                state=state.update_shared_flowable_data(
+                    share_observers=(self, observer)
                 ),
             )
-            shared.upstream_cancellation = result.cancellable
-            shared.init_certificate = result.certificate
 
-            shared.transition = ToStateTransition(
-                InitState(
-                    buffer_map={},
-                    first_buffer_index=0,
-                    last_buffer_index=-1,
-                    cancelled_certificates={},
-                    requested_certificates={},
-                    is_completed=False,
-                    virtual_counts={},
-                )
-            )
+            shared.cert = result.certificate
+            shared.cancellable = result.cancellable
 
-        shared = observer.shared
+        else:
+            observer = state.p_share_observers[self]
+            shared = observer.shared
+            n_state = state
 
-        init_state = shared.transition.state
+        id = len(observer.request_observers)
+        shared.virtual_count_partition[id] = args.virtual_count
 
-        id = len(init_state.buffer_map)
-        init_state.buffer_map[id] = 0
-        certificate, shared.init_certificate = shared.init_certificate.take(args.virtual_count)
-        # print(certificate)
-        init_state.requested_certificates[id] = None
-        init_state.virtual_counts[id] = args.virtual_count
-
-        downstream_cancellation = ShareCancellation(
+        requested_observer = ShareRequestObserver(
             id=id,
+            downstream=args.observer,
             shared=shared,
-            upstream_cancellation=shared.upstream_cancellation,
-            _certificate=None,
         )
+        observer.request_observers[id] = requested_observer
 
-        ack_observer = ShareAckObserver(
-            observer=args.observer,
-            shared=shared,
+        cancellable = ShareCancellation(
             id=id,
-            # virtual_count=args.virtual_count,
-            cancellation=downstream_cancellation,
+            shared=shared
         )
 
-        observer.ack_observers[id] = ack_observer
-
-        assert isinstance(shared.transition.state, InitState)
-
-        return state, SubscriptionResult(
-            cancellable=downstream_cancellation,
-            certificate=certificate,
+        cert, shared.cert = contcert.take(
+            cert=shared.cert, 
+            virtual_count=args.virtual_count,
+            stacks=tuple(),
+            lambda_trace_logger=state.p_subscription_trampoline.lambda_trace_logger,
         )
 
+        return n_state, SubscriptionResult(
+            certificate=cert,
+            cancellable=cancellable,
+        )
 
-def init_share_flowable_node[V](child: FlowableNode[V]):
-    return ShareFlowableNode[V](child=child)
+    @property
+    @override
+    def p_child(self) -> FlowableNode[S, U]:
+        return self.child
+
+def init_share_flowable_node[S: ShareFlowableState, U](child: FlowableNode[S, U]):
+    return ShareFlowableNode[S, U](child=child)

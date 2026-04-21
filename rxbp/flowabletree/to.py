@@ -2,7 +2,7 @@ from dataclasses import dataclass, replace
 from logging import Logger
 import logging
 from threading import RLock
-from typing import Callable, Self, override
+from typing import Any, Callable, Self, override
 
 # import reactivex
 # import reactivex.disposable
@@ -19,6 +19,8 @@ from contcert.typing import (
     Trampoline,
 )
 
+from rxbp.flowabletree.operations.share.flowable import ShareFlowableNode, ShareFlowableState
+from rxbp.flowabletree.operations.share.observer import SharedObserver
 from rxbp.flowabletree.subscribe import subscribe_single_sink
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 import rxsingle
@@ -38,11 +40,14 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 
 
 @dataclass
-class StateImpl(State):
+class StateImpl(ShareFlowableState, State):
     subscription_trampoline: Trampoline
     default_scheduler: Scheduler
     lambda_trace_logger: Logger
     rxbp_observer: Observer | None  # pyright: ignore[reportMissingTypeArgument]
+    share_flowable_count: dict[ShareFlowableNode[ShareFlowableState, Any], int]  # pyright: ignore[reportExplicitAny]
+    share_virtual_count: dict[ShareFlowableNode[ShareFlowableState, Any], int]  # pyright: ignore[reportExplicitAny]
+    share_observers: dict[ShareFlowableNode[ShareFlowableState, Any], SharedObserver[Any]]  # pyright: ignore[reportExplicitAny]
 
     @property
     @override
@@ -71,6 +76,42 @@ class StateImpl(State):
     @override
     def update_rxbp_observer(self, observer: Observer | None) -> Self:  # pyright: ignore[reportMissingTypeArgument, reportUnknownParameterType]
         return replace(self, rxbp_observer=observer)
+
+    @property
+    @override
+    def p_share_flowable_count(self) -> dict[ShareFlowableNode[ShareFlowableState, Any], int]:  # pyright: ignore[reportExplicitAny]
+        return self.share_flowable_count
+
+    @property
+    @override
+    def p_share_virtual_count(self) -> dict[ShareFlowableNode[ShareFlowableState, Any], int]:   # pyright: ignore[reportExplicitAny]
+        return self.share_virtual_count
+
+    @property
+    @override
+    def p_share_observers(
+        self,
+    ) -> dict[ShareFlowableNode[ShareFlowableState, Any], SharedObserver[Any]]:   # pyright: ignore[reportExplicitAny]
+        return self.share_observers
+
+    @override
+    def update_shared_flowable_data[U](
+        self,
+        flowable_count: dict[ShareFlowableNode[ShareFlowableState, U], int] | None = None,
+        virtual_count: dict[ShareFlowableNode[ShareFlowableState, U], int] | None = None,
+        share_observers: tuple[ShareFlowableNode[ShareFlowableState, U], SharedObserver[U]] | None = None,
+    ) -> ShareFlowableState:
+        def gen_args():
+            if flowable_count is not None:
+                yield 'share_flowable_count', flowable_count
+            if virtual_count is not None:
+                yield 'share_virtual_count', virtual_count
+            if share_observers is not None:
+                n_share_observers = self.share_observers | {share_observers[0]: share_observers[1]}
+                yield 'share_observers', n_share_observers
+
+        return replace(self, **dict(gen_args()))
+
 
 def run[U](
     source: FlowableNode[State, U],
@@ -107,21 +148,26 @@ def run[U](
 
         @override
         def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]) -> ContCert:
+            # print('on_next')
             self.received_items.append(item)
             return observer.on_success(trampoline, None)
 
         @override
         def on_next_and_complete(self, trampoline: Trampoline, item: U) -> ContCert:
+            # print('on_next_and_complete')
             self.received_items.append(item)
             self.is_completed = True
             scheduler.stop()
-            return scheduler.acquire_certificate(
+            cert = scheduler.acquire_certificate(
                 virtual_count=virtual_count,
                 stacks=tuple(),
             )
+            # print(f'{cert=}')
+            return cert
 
         @override
         def on_completed(self) -> ContCert:
+            # print('on_completed()')
             self.is_completed = True
             scheduler.stop()
             return scheduler.acquire_certificate(
@@ -179,6 +225,9 @@ def run[U](
         default_scheduler=scheduler,
         subscription_trampoline=trampoline,
         rxbp_observer=None,
+        share_flowable_count={},
+        share_virtual_count={},
+        share_observers={},
     )
 
     # state = source.discover(state)

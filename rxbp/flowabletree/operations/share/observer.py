@@ -1,243 +1,185 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import override
 
-from donotation import do
-
-import rxsingle
-from rxsingle.typing import (
-    ContCert,
-    Trampoline,
-    DeferredHandler,
-)
+import contcert
+from contcert.typing import ContCert, Trampoline
+from rxsingle.typing import Observer as RxSingleObserver
 
 from rxbp.cancellable import CancellationState
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.share.states import (
-    CancelledState,
-    HasTerminatedState,
-    OnCompletedState,
-    OnErrorState,
-    OnNext,
-)
+from rxbp.flowabletree.operations.share.states import Active, Error
 from rxbp.flowabletree.operations.share.statetransitions import (
-    OnErrorTransition,
     OnNextTransition,
     OnNextAndCompleteTransition,
     OnCompletedTransition,
 )
 from rxbp.flowabletree.operations.share.sharedmemory import ShareSharedMemory
-from rxbp.flowabletree.operations.share.ackobserver import ShareAckObserver
+from rxbp.flowabletree.operations.share.requestobserver import ShareRequestObserver
 
 
 @dataclass
-class SharedObserver[V](Observer[V]):
-    ack_observers: dict[int, ShareAckObserver]
+class SharedObserver[U](Observer[U]):
+    shared: ShareSharedMemory[U]
+    request_observers: dict[int, ShareRequestObserver[U]]
     cancellations: dict[int, CancellationState]
-    shared: ShareSharedMemory
-    virtual_count: int
 
-    @do()
-    def on_next(self, item: V):
-        # print(f"on_next({item})")
+    @override
+    def on_next(
+        self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]
+    ) -> ContCert:
+        print(f"on_next({item})")
 
-        def on_next_subscription(trampoline: Trampoline, handler: DeferredHandler):
-            # print(f"on_next_subscription({item}), virtual_count={handler.virtual_count}")
+        self.shared.buffer.append(item)
+        self.shared.upstream = observer
 
-            self.shared.deferred_handler = handler
-
-            transition = OnNextTransition(
-                child=None,  # type: ignore
-            )
-
-            with self.shared.lock:
-                transition.child = self.shared.transition
-                self.shared.transition = transition
-
-            match state := transition.get_state():
-                case OnNext():
-                    if state.buffer_item:
-                        self.shared.buffer.append(item)
-
-                    assert state.send_ids
-
-                    def gen_certificates():
-                        for id in state.requested_certificates:
-                            if id in state.send_ids:
-                                ack_observer = self.ack_observers[id]
-
-                                certificate = ack_observer.observer.on_next(
-                                    item
-                                ).subscribe(
-                                    args=rxsingle.init_subscribe_args(
-                                        observer=ack_observer,
-                                        # virtual_count=ack_observer.virtual_count,
-                                        virtual_count=state.virtual_counts[id],
-                                        cancellation=ack_observer.cancellation,
-                                        trampoline=trampoline,
-                                    )
-                                )
-                                # todo: merge certificate with requested_certificates
-
-                            else:
-                                certificate = state.requested_certificates[id]
-                                assert certificate.validated is False
-
-                            yield certificate
-
-                    certificates = tuple(gen_certificates())
-                    certificate = (
-                        rxsingle.init_composite_continuation_certificate(
-                            certificates
-                        )
-                    )
-                    return certificate
-
-                case HasTerminatedState():
-                    return ContCert.merge(
-                        tuple(state.requested_certificates.values())
-                    )
-
-                case _:
-                    raise Exception(f"Unexpected state {state}")
-
-        return rxsingle.defer(on_next_subscription)
-
-    @do()
-    def on_next_and_complete(self, item: V):
-        # print(f"on_next_and_complete({item})")
-
-        transition = OnNextAndCompleteTransition(
-            child=None,  # type: ignore
+        transition = OnNextTransition(
+            child=None,  # pyright: ignore[reportArgumentType]
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case OnNext(
-                send_ids=send_ids,
+            case Active(
+                buffer_map=buffer_map,
             ):
-                assert 0 < len(send_ids), f"{len(send_ids)}"
+                # assert state.send_ids
+                last_index = buffer_map.next_index
 
-                if state.buffer_item:
-                    self.shared.buffer.append(item)
+                # self.shared.cert is not modified after OnNext Transition
+                # until the downstream.on_next is called
+                certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
 
-                def gen_certificates():
-                    for id in state.requested_certificates:
-                        if id in state.send_ids:
-                            yield self.ack_observers[id].observer.on_next_and_complete(
-                                item
-                            )
+                # send item ready downstream
+                for id, idx in buffer_map.mapping.items():
+                    if idx == last_index:
+                        downstream = self.request_observers[id]
+                        cert = downstream.downstream.on_next(trampoline, item, downstream)
+                        certs.append(cert)
 
-                        else:
-                            certificate = state.requested_certificates[id]
-                            assert certificate.validated is False
-                            yield rxsingle.from_(certificate)
-
-                return rxsingle.zip(tuple(gen_certificates())).map(
-                    lambda c: ContCert.merge(c)
+                return contcert.merge(
+                    certs,
+                    stacks=self.shared.stacks,
+                    lambda_trace_logger=self.shared.lambda_trace_logger,
                 )
 
-            case HasTerminatedState():
-                certificate = ContCert.merge(
-                    tuple(state.requested_certificates.values())
-                )
-                return rxsingle.from_(certificate)
+            case Error(msg=msg):
+                raise Exception(msg)
 
-            case _:
-                raise Exception(
-                    f"Unexpected state {state} when evaluating {transition}."
+    @override
+    def on_next_and_complete(self, trampoline: Trampoline, item: U) -> ContCert:
+        print(f"on_next_and_complete({item})")
+
+        transition = OnNextAndCompleteTransition(
+            child=None,  # pyright: ignore[reportArgumentType]
+        )
+
+        with self.shared.transition_lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
+
+        match state := transition.get_state():
+            case Active(
+                buffer_map=buffer_map,
+            ):
+                # assert state.send_ids
+                last_index = buffer_map.next_index
+
+                certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
+
+                # print(f'{buffer_map.mapping=}')
+                # print(last_index)
+
+                # send
+                for id, idx in buffer_map.mapping.items():
+                    if idx == last_index:
+                        downstream = self.request_observers[id]
+                        # print(f'{downstream=}')
+                        cert = downstream.downstream.on_next_and_complete(
+                            trampoline, item
+                        )
+                        certs.append(cert)
+
+                # print(f'{certs=}')
+
+                return contcert.merge(
+                    certs,
+                    stacks=self.shared.stacks,
+                    lambda_trace_logger=self.shared.lambda_trace_logger,
                 )
 
-    def on_completed(self):
+            case Error(msg=msg):
+                raise Exception(msg)
+
+    @override
+    def on_completed(self) -> ContCert:
         transition = OnCompletedTransition(
             child=None,  # type: ignore
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case OnCompletedState():
+            case Active(
+                buffer_map=buffer_map,
+            ):
+                # assert state.send_ids
+                last_index = buffer_map.next_index
 
-                def gen_certificates():
-                    for id in state.requested_certificates:
-                        if id in state.send_ids:
-                            yield self.ack_observers[id].observer.on_completed()
+                certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
 
-                        else:
-                            certificate = state.requested_certificates[id]
-                            assert certificate.validated is False
-                            yield rxsingle.from_(certificate)
+                # send
+                for id, idx in buffer_map.mapping.items():
+                    if idx == last_index:
+                        downstream = self.request_observers[id]
+                        cert = downstream.downstream.on_completed()
+                        certs.append(cert)
 
-                return rxsingle.zip(tuple(gen_certificates())).map(
-                    lambda c: ContCert.merge(c)
+                return contcert.merge(
+                    certs,
+                    stacks=self.shared.stacks,
+                    lambda_trace_logger=self.shared.lambda_trace_logger,
                 )
 
-                # def gen_certificates():
-                #     for id in send_ids:
-                #         yield self.ack_observers[id].observer.on_completed()
+            case Error(msg=msg):
+                raise Exception(msg)
 
-                # return rxsingle.zip(tuple(gen_certificates())).map(
-                #     lambda c: ContCert.merge(
-                #         tuple(state.acc_certificate.values()) + c,
-                #     )
-                # )
-
-            case HasTerminatedState():
-                certificate = ContCert.merge(
-                    tuple(state.requested_certificates.values())
-                )
-                return rxsingle.from_(certificate)
-
-            case _:
-                raise Exception(f"Unexpected state {state}.")
-
-    def on_error(self, exception: Exception):
-        transition = OnErrorTransition(
-            exception=exception,
-            child=None,  # type: ignore
+    @override
+    def on_error(self, exception: Exception) -> ContCert:
+        transition = OnCompletedTransition(
+            child=None,  # pyright: ignore[reportArgumentType]
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
             self.shared.transition = transition
 
         match state := transition.get_state():
-            case OnErrorState():
+            case Active(
+                buffer_map=buffer_map,
+            ):
+                # assert state.send_ids
+                last_index = buffer_map.next_index - 1
 
-                def gen_certificates():
-                    for id in state.requested_certificates:
-                        if id in state.send_ids:
-                            yield self.ack_observers[id].observer.on_error(exception)
+                certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
 
-                        else:
-                            certificate = state.requested_certificates[id]
-                            assert certificate.validated is False
-                            yield rxsingle.from_(certificate)
+                # send
+                for id, idx in buffer_map.mapping.items():
+                    if idx == last_index:
+                        downstream = self.request_observers[id]
+                        cert = downstream.downstream.on_error(exception)
+                        certs.append(cert)
 
-                return rxsingle.zip(tuple(gen_certificates())).map(
-                    lambda c: ContCert.merge(c)
+                return contcert.merge(
+                    certs,
+                    stacks=self.shared.stacks,
+                    lambda_trace_logger=self.shared.lambda_trace_logger,
                 )
-                # def gen_certificates():
-                #     for id in send_ids:
-                #         ack_observer = self.ack_observers[id]
-                #         yield ack_observer.observer.on_error(exception)
 
-                # return rxsingle.zip(tuple(gen_certificates())).map(
-                #     lambda c: ContCert.merge(
-                #         tuple(state.acc_certificate.values()) + c
-                #     )
-                # )
-
-            case HasTerminatedState():
-                certificate = ContCert.merge(
-                    tuple(state.requested_certificates.values())
-                )
-                return rxsingle.from_(certificate)
-
-            case _:
-                raise Exception(f"Unexpected state {state}.")
+            case Error(msg=msg):
+                raise Exception(msg)

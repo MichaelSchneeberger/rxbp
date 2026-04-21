@@ -65,7 +65,7 @@ class MergeRxSingleObserver[U](RxSingleObserver[None]):
 
                 else:
                     match self.shared.items.pop():
-                        case OnNext(item=item):
+                        case OnNext(item=next_item):
 
                             _, observer = self.shared.upstream.pop()
                             cert = observer.on_success(trampoline, None)
@@ -75,17 +75,17 @@ class MergeRxSingleObserver[U](RxSingleObserver[None]):
                             print(f"request: next{item}")
                             cert = self.shared.downstream.on_next(
                                 trampoline=trampoline,
-                                item=item,
+                                item=next_item,
                                 observer = MergeRxSingleObserver(
                                     shared=self.shared,
                                 ),
                             )
                             return cert
 
-                        case OnNextAndComplete(item=item):
+                        case OnNextAndComplete(item=next_item):
                             cert = self.shared.downstream.on_next_and_complete(
                                 trampoline=trampoline,
-                                item=item,
+                                item=next_item,
                             )
                             return cert
 
@@ -94,7 +94,7 @@ class MergeRxSingleObserver[U](RxSingleObserver[None]):
                             return cert
 
                         case _:
-                            pass
+                            raise Exception()
 
             case StopContinuation(index=index):
                 return self.shared.certs[index]

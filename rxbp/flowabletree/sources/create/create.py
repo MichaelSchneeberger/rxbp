@@ -30,7 +30,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #     rxbp_observer: Observer[U]
 
 
-@dataclass
+@dataclass(frozen=True)
 class OnNextRxSingleLeave[S: State, U](RxSingleLeave[S, None]):
     item: U
 
@@ -61,7 +61,7 @@ def init_on_next[S: State, U](item: U) -> RxSingle[S, None]:  # pyright: ignore[
     return rxsingle.init_rx_single(child=OnNextRxSingleLeave[S, U](item=item, stacks=tuple()))
 
 
-@dataclass
+@dataclass(frozen=True)
 class OnNextAndCompletedRxSingleLeave[S: State, U](RxSingleLeave[S, ContCert]):
     item: U
 
@@ -83,7 +83,7 @@ class init_on_next_and_complete[S: State, U]:
     def __new__(cls, item: U) -> RxSingle[S, ContCert]:
         return rxsingle.init_rx_single(child=OnNextAndCompletedRxSingleLeave[S, U](item=item, stacks=tuple()))
 
-@dataclass
+@dataclass(frozen=True)
 class OnCompletedRxSingleLeave[S: State](RxSingleLeave[S, ContCert]):
     @override
     def _subscribe(

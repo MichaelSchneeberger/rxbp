@@ -48,7 +48,7 @@ class ShareAckObserver(CMObserver):
             virtual_count=virtual_count,
         )
 
-        with self.shared.lock:
+        with self.shared.transition_lock:
             transition.child = self.shared.transition
 
             match state := transition.get_state():
