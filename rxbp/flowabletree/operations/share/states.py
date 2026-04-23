@@ -33,30 +33,6 @@ class BufferMap:
 
         return replace(self, **dict(gen_args()))
 
-    # @staticmethod
-    # def update_first_index(mapping: dict[int, int], first_index: int):
-    #     is_consumed = True
-    #
-    #     while is_consumed:
-    #         # number of downstream observer that point to the first buffer position
-    #         n_observers = sum(
-    #             index
-    #             for index in mapping.values()
-    #             if index == first_index
-    #         )
-    #
-    #         # the first position in the buffer is consumed by all downstream observers
-    #         is_consumed = n_observers == 0
-    #
-    #         if not is_consumed:
-    #             break
-    #
-    #         first_index += 1
-    #
-    #     return first_index
-
-
-
 # enumeration of actions
 @dataclass
 class ActionEnum(ABC): ...

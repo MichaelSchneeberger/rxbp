@@ -12,6 +12,7 @@ from rxbp.flowabletree.operations.share.cancellable import ShareCancellation
 from rxbp.flowabletree.operations.share.requestobserver import ShareRequestObserver
 from rxbp.flowabletree.operations.share.statetransitions import (
     InitialTransition,
+    SubscribeTransition,
 )
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -153,13 +154,17 @@ class ShareFlowableNode[S: ShareFlowableState, U](SingleChildFlowableNode[S, U, 
 
             shared.cert = result.certificate
             shared.cancellable = result.cancellable
+            id = 0
 
         else:
             observer = state.p_share_observers[self]
             shared = observer.shared
             n_state = state
 
-        id = len(observer.request_observers)
+
+            id = len(observer.request_observers)
+            shared.transition = SubscribeTransition(child=shared.transition, id=id)
+
         shared.virtual_count_partition[id] = args.virtual_count
 
         requested_observer = ShareRequestObserver(

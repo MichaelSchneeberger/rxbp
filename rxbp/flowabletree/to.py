@@ -1,7 +1,7 @@
 from dataclasses import dataclass, replace
 from logging import Logger
 import logging
-from threading import RLock
+from threading import Lock, RLock
 from typing import Any, Callable, Self, override
 
 # import reactivex
@@ -19,6 +19,8 @@ from contcert.typing import (
     Trampoline,
 )
 
+from rxbp.flowabletree.operations.asyncshare.observer import AsyncShareObserver
+from rxbp.flowabletree.operations.asyncshare.subject import AsyncShareFlowableState, AsyncShareKey
 from rxbp.flowabletree.operations.share.flowable import ShareFlowableNode, ShareFlowableState
 from rxbp.flowabletree.operations.share.observer import SharedObserver
 from rxbp.flowabletree.subscribe import subscribe_single_sink
@@ -40,7 +42,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 
 
 @dataclass
-class StateImpl(ShareFlowableState, State):
+class StateImpl(AsyncShareFlowableState, ShareFlowableState, State):
     subscription_trampoline: Trampoline
     default_scheduler: Scheduler
     lambda_trace_logger: Logger
@@ -48,6 +50,9 @@ class StateImpl(ShareFlowableState, State):
     share_flowable_count: dict[ShareFlowableNode[ShareFlowableState, Any], int]  # pyright: ignore[reportExplicitAny]
     share_virtual_count: dict[ShareFlowableNode[ShareFlowableState, Any], int]  # pyright: ignore[reportExplicitAny]
     share_observers: dict[ShareFlowableNode[ShareFlowableState, Any], SharedObserver[Any]]  # pyright: ignore[reportExplicitAny]
+    async_share_observers_lock: Lock
+    async_share_observers: dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]  # pyright: ignore[reportExplicitAny]
+
 
     @property
     @override
@@ -93,6 +98,16 @@ class StateImpl(ShareFlowableState, State):
         self,
     ) -> dict[ShareFlowableNode[ShareFlowableState, Any], SharedObserver[Any]]:   # pyright: ignore[reportExplicitAny]
         return self.share_observers
+
+    @property
+    @override
+    def p_async_share_observers_lock(self) -> Lock:
+        return self.async_share_observers_lock
+
+    @property
+    @override
+    def p_async_share_observers(self) -> dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]:   # pyright: ignore[reportExplicitAny]
+        return self.async_share_observers
 
     @override
     def update_shared_flowable_data[U](
@@ -228,6 +243,8 @@ def run[U](
         share_flowable_count={},
         share_virtual_count={},
         share_observers={},
+        async_share_observers_lock=Lock(),
+        async_share_observers={},
     )
 
     # state = source.discover(state)

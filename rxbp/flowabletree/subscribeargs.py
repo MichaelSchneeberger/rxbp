@@ -26,6 +26,7 @@ class SubscribeArgs[U]:
         self, /,
         observer: Observer[V] | None = None,
         virtual_count: int | None = None,
+        context: int | None = None,
         scheduler: Scheduler | None = None,
     ) -> SubscribeArgs[V]:
         def gen_args():
@@ -33,6 +34,8 @@ class SubscribeArgs[U]:
                 yield 'observer', observer
             if virtual_count is not None:
                 yield 'virtual_count', virtual_count
+            if context is not None:
+                yield 'context', context
             if scheduler is not None:
                 yield 'scheduler', scheduler
 
