@@ -5,18 +5,7 @@ from rxsingle.abc import State as RxSingleState
 
 
 class State(RxSingleState, ABC):
-    @property
-    @abstractmethod
-    def p_rxbp_observer(  # pyright: ignore[reportUnknownParameterType]
-            self,
-    ) -> Observer | None:  # pyright: ignore[reportMissingTypeArgument]
-        ...
-
-    @abstractmethod
-    def update_rxbp_observer(self, observer: Observer | None) -> Self:  # pyright: ignore[reportMissingTypeArgument, reportUnknownParameterType]
-        ...
-
-
+    pass
 
     # @property
     # @abstractmethod

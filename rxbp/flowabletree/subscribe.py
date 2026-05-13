@@ -75,9 +75,10 @@ def subscribe[S: State, U](
     return state
 
 
-def subscribe_single_sink[S: State, U](
-    source: FlowableNode[S, U],
-    args: SubscribeArgs[U],
+def subscribe_single_sink[S: State, U, E](
+    source: FlowableNode[S, U, E],
+    observer: Observer[U, E],
+    args: SubscribeArgs,
     state: S,
     # connections: dict[ConnectableFlowableNode[S, U], FlowableNode[S, U]] | None = None,
 ) -> tuple[S, SubscriptionResult]:
@@ -97,6 +98,7 @@ def subscribe_single_sink[S: State, U](
         def apply(self, state: S) -> tuple[S, SubscriptionResult]:
             state, result = source.unsafe_subscribe(
                 state,
+                observer=observer,
                 args=args,
             )
             self.result = result

@@ -7,30 +7,33 @@ from dataclasses import dataclass
 from typing import override
 
 from contcert.typing import ContCert
+
 from rxbp.cancellable import Cancellable
+from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.state import State
 from rxbp.flowabletree.operations.merge.cancellable import MergeCancellable
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.flowablenode import MultiChildrenFlowableNode, FlowableNode
-from rxbp.flowabletree.operations.merge.states import Active, InitState
+from rxbp.flowabletree.operations.merge.states import ActiveState
 from rxbp.flowabletree.operations.merge.statetransitions import ToStateTransition
 from rxbp.flowabletree.operations.merge.sharedmemory import MergeSharedMemory
 from rxbp.flowabletree.operations.merge.observer import MergeObserver
 
 
 @dataclass(frozen=True)
-class MergeFlowableNode[S: State, U](MultiChildrenFlowableNode[S, U, U]):
-    children: tuple[FlowableNode[S, U], ...]
+class MergeFlowableNode[S: State, U, E](MultiChildrenFlowableNode[S, U, U, E]):
+    children: tuple[FlowableNode[S, U, E], ...]
 
     @override
     def unsafe_subscribe(
         self,
         state: S,
-        args: SubscribeArgs[U],
+        observer: Observer[U, E],
+        args: SubscribeArgs,
     ) -> tuple[S, SubscriptionResult]:
         shared = MergeSharedMemory(
-            downstream=args.observer,
+            downstream=observer,
             cancellables=None,  # pyright: ignore[reportArgumentType]
             transition=None,   # pyright: ignore[reportArgumentType]
             transition_lock=Lock(),
@@ -49,12 +52,11 @@ class MergeFlowableNode[S: State, U](MultiChildrenFlowableNode[S, U, U]):
 
             state, n_result = child.unsafe_subscribe(
                 state=state,
-                args=args.copy(
-                    observer=MergeObserver(
-                        shared=shared,
-                        id=id,
-                    ),
+                observer=MergeObserver(
+                    shared=shared,
+                    id=id,
                 ),
+                args=args,
             )
 
             if n_result.certificate:
@@ -65,7 +67,7 @@ class MergeFlowableNode[S: State, U](MultiChildrenFlowableNode[S, U, U]):
         # certificate, *others = certificates
         shared.certs = certificates[1:]
         shared.transition = ToStateTransition(
-            state=Active(
+            state=ActiveState(
                 active_ids=active_ids,
                 received_ids=tuple(),
             ),
@@ -81,13 +83,13 @@ class MergeFlowableNode[S: State, U](MultiChildrenFlowableNode[S, U, U]):
 
     @property
     @override
-    def p_children(self) -> tuple[FlowableNode[S, U], ...]:
+    def p_children(self) -> tuple[FlowableNode[S, U, E], ...]:
         return self.children
 
 
-def init_merge_flowable_node[S: State, U](
-        children: tuple[FlowableNode[S, U], ...],
+def init_merge_flowable_node[S: State, U, E](
+        children: tuple[FlowableNode[S, U, E], ...],
 ):
-    return MergeFlowableNode[S, U](
+    return MergeFlowableNode[S, U, E](
         children=children,
     )

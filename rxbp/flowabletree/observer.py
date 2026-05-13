@@ -1,31 +1,18 @@
 from abc import ABC, abstractmethod
+from typing import TypeVar
 
-from contcert.typing import ContCert, Trampoline
-from rxsingle.typing import Observer as RxSingleObserver
+from contcert.typing import ContCert
+from rxbp.flowabletree.notifications import (
+    Notification,
+)
 
 
-class Observer[U](ABC):
+E = TypeVar("E", contravariant=True)
+
+
+class Observer[U, E](ABC):
     @abstractmethod
-    def on_next(
-        self, 
-        trampoline: Trampoline,
-        item: U, 
-        observer: RxSingleObserver[None],
-    ) -> ContCert: ...
-
-    @abstractmethod
-    def on_next_and_complete(
+    def notify(
         self,
-        trampoline: Trampoline,
-        item: U,
+        notification: Notification[U, E],
     ) -> ContCert: ...
-
-    @abstractmethod
-    def on_completed(self) -> ContCert: ...
-
-    @abstractmethod
-    def on_error(
-        self,
-        exception: Exception,
-    ) -> ContCert: ...
-

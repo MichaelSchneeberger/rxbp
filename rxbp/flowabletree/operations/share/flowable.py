@@ -122,7 +122,7 @@ class ShareFlowableNode[S: ShareFlowableState, U](SingleChildFlowableNode[S, U, 
             shared = ShareSharedMemory[U](
                 virtual_count_partition={},
                 virtual_count=state.p_share_virtual_count[self],
-                context=args.context,
+                context=args.async_index,
                 upstream=None,  # pyright: ignore[reportArgumentType]
                 cancellable=None,  # pyright: ignore[reportArgumentType]
                 cert_lock=Lock(),

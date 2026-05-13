@@ -74,14 +74,14 @@ class AsyncShareSubject[S: AsyncShareFlowableState, U](SingleChildFlowableNode[S
                     shared.transition = SubscribeTransition(child=shared.transition, id=id)
 
                 shared.virtual_count_partition[id] = args.virtual_count
-                shared.context_partition[id] = args.context
+                shared.context_partition[id] = args.async_index
 
                 requested_observer = AsyncShareRequestObserver(
                     id=id,
                     downstream=args.observer,
                     shared=shared,
                     virtual_count=args.virtual_count,
-                    context=args.context,
+                    context=args.async_index,
 
                 )
                 observer.request_observers[id] = requested_observer
@@ -93,7 +93,7 @@ class AsyncShareSubject[S: AsyncShareFlowableState, U](SingleChildFlowableNode[S
 
                 cert = shared.context_translation.increase(
                     virtual_count=args.virtual_count,
-                    context=args.context,
+                    context=args.async_index,
                     stacks=tuple(),
                     lambda_trace_logger=state.p_lambda_trace_logger,
                 )

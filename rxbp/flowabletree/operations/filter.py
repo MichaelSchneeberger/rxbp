@@ -43,7 +43,7 @@ class FilterObserver[U](Observer[U]):
         return self.observer.on_error(exception)
 
 @dataclass(frozen=True)
-class FilterFlowable[S: State, U](SingleChildFlowableNode[S, U, U]):
+class FilterFlowable[S, U](SingleChildFlowableNode[S, U, U]):
     child: FlowableNode[S, U]
     predicate: Callable[[U], bool]
 
@@ -71,7 +71,7 @@ class FilterFlowable[S: State, U](SingleChildFlowableNode[S, U, U]):
         return self.child
 
 
-def init_filter_flowable[S: State, U](
+def init_filter_flowable[S, U](
     child: FlowableNode[S, U],
     predicate: Callable[[U], bool],
 ):

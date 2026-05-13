@@ -5,6 +5,7 @@ from collections import deque
 from threading import Lock
 
 from dataclasses import dataclass
+from typing import Never
 
 from contcert.typing import ContCert
 from rxsingle.typing import Observer as RxSingleObserver
@@ -19,22 +20,22 @@ class MergeItems[U](ABC): ...
 
 
 @dataclass(frozen=True)
-class OnNext[U](MergeItems[U]):
+class OnNextMergeItem[U](MergeItems[U]):
     item: U
 
 
 @dataclass(frozen=True)
-class OnNextAndComplete[U](MergeItems[U]):
+class OnNextAndCompleteMergeItem[U](MergeItems[U]):
     item: U
 
 
 @dataclass(frozen=True)
-class OnCompleted[U](MergeItems[U]): ...
+class OnCompletedMergeItem[U](MergeItems[U]): ...
 
 
 @dataclass(frozen=False)
-class MergeSharedMemory[U]:
-    downstream: Observer[U]
+class MergeSharedMemory[U, E]:
+    downstream: Observer[U, E]
     cancellables: dict[int, Cancellable]
 
     transition: MergeStateTransition
@@ -45,4 +46,4 @@ class MergeSharedMemory[U]:
     certs_lock: Lock
 
     items: deque[MergeItems[U]]
-    upstream: deque[tuple[int, RxSingleObserver[None]]]
+    upstream: deque[tuple[int, RxSingleObserver[None, Never]]]
