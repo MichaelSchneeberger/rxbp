@@ -74,7 +74,9 @@ class OnNextAndCompleteTransition(MergeStateTransition):
     id: int
 
     @override
-    def get_state(self) -> ActiveState | CompletedState | StopContinuationState | ErrorState:
+    def get_state(
+        self,
+    ) -> ActiveState | CompletedState | StopContinuationState | ErrorState:
         match state := self.child.get_state():
             case ActiveState(
                 active_ids=active_ids,
@@ -120,7 +122,9 @@ class OnCompletedTransition(MergeStateTransition):
     id: int
 
     @override
-    def get_state(self) -> ActiveState | CompletedState | StopContinuationState | ErrorState:
+    def get_state(
+        self,
+    ) -> ActiveState | CompletedState | StopContinuationState | ErrorState:
         match p_state := self.child.get_state():
             case ActiveState(
                 active_ids=active_ids,
@@ -173,8 +177,11 @@ class OnErrorTransition(MergeStateTransition):
             ):
                 n_assigned_ids = {
                     id: idx
-                    for idx, id in enumerate(active_ids)
-                    if id != self.id and id not in received_ids
+                    for idx, id in enumerate(
+                        id
+                        for id in active_ids
+                        if id != self.id and id not in received_ids
+                    )
                 }
 
                 return CompletedState(
@@ -253,8 +260,11 @@ class CancelTransition(MergeStateTransition):
             ):
                 n_assigned_ids = {
                     id: idx
-                    for idx, id in enumerate(active_ids)
-                    if id not in received_ids
+                    for idx, id in enumerate(
+                        id
+                        for id in active_ids
+                        if id not in received_ids
+                    )
                 }
 
                 return CompletedState(

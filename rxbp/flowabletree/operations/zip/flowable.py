@@ -1,14 +1,15 @@
 from __future__ import annotations
 from collections import deque
 from threading import Lock
-from typing import Callable, override
+from typing import Any, Callable, override
 
 from dataclasses import dataclass
 
 from contcert.typing import ContCert
 
 from rxbp.cancellable import Cancellable
-from rxbp.flowabletree.operations.zip.states import Active
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.zip.states import ActiveState
 from rxbp.flowabletree.state import State
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -19,9 +20,9 @@ from rxbp.flowabletree.operations.zip.cancellable import ZipCancellable
 from rxbp.flowabletree.operations.zip.observer import ZipObserver
 
 
-@dataclass
-class ControlledZipFlowableNode[S: State, U, A](MultiChildrenFlowableNode[S, U, A]):
-    children: tuple[FlowableNode[S, U], ...]
+@dataclass(frozen=True)
+class ControlledZipFlowableNode[S: State, U, A, E](MultiChildrenFlowableNode[S, U, A, E]):
+    children: tuple[FlowableNode[S, U, E], ...]
     zip_func: Callable[[dict[int, U], A], tuple[A, set[int]]]
     acc: A
 
@@ -29,10 +30,11 @@ class ControlledZipFlowableNode[S: State, U, A](MultiChildrenFlowableNode[S, U, 
     def unsafe_subscribe(
         self,
         state: S,
-        args: SubscribeArgs[A],
+        observer: Observer[A, E],
+        args: SubscribeArgs,
     ) -> tuple[S, SubscriptionResult]:
-        shared = ZipSharedMemory[U, A](
-            downstream=args.observer,
+        shared = ZipSharedMemory[U, A, E](
+            downstream=observer,
             zip_func=self.zip_func,
             acc=self.acc,
             n_children=len(self.children),
@@ -46,30 +48,29 @@ class ControlledZipFlowableNode[S: State, U, A](MultiChildrenFlowableNode[S, U, 
         )
 
         certificates: list[ContCert] = []
-        cancellables: dict[int, Cancellable] = {}
+        cancellables: list[tuple[int, Cancellable]] = []
 
         for id, child in enumerate(self.children):
             state, n_result = child.unsafe_subscribe(
-                state,
-                args=args.copy(
-                    observer=ZipObserver(
-                        shared=shared,
-                        id=id,
-                    ),
+                state=state,
+                observer=ZipObserver(
+                    shared=shared,
+                    id=id,
                 ),
+                args=args,
             )
 
             if n_result.certificate:
                 certificates.append(n_result.certificate)
 
-            cancellables[id] = n_result.cancellable
+            cancellables.append((id, n_result.cancellable))
 
         cert, *certs = certificates
 
         n_children = len(self.children)
 
         shared.transition = ToStateTransition(
-            state=Active(
+            state=ActiveState(
                 requested_ids=set(range(n_children)),
                 completed_ids=set(),
             )
@@ -78,7 +79,7 @@ class ControlledZipFlowableNode[S: State, U, A](MultiChildrenFlowableNode[S, U, 
         shared.certs = certs
 
         cancellable = ZipCancellable(
-            cancellables=tuple(cancellables.values()),
+            cancellables=tuple(dict(cancellables).values()),
             shared=shared,
         )
 
@@ -89,30 +90,18 @@ class ControlledZipFlowableNode[S: State, U, A](MultiChildrenFlowableNode[S, U, 
 
     @property
     @override
-    def p_children(self) -> tuple[FlowableNode[S, U], ...]:
+    def p_children(self) -> tuple[FlowableNode[S, U, E], ...]:
         return self.children
 
 
-# def init_controlled_zip_flowable_node[A, U](
-#     children: tuple[FlowableNode[S, U], ...],
-#     func: Callable[[A, dict[int, U]], tuple[A, tuple[int, ...], U]],
-#     initial: A, 
-# ):
-#     return ControlledZipFlowableNode[A, U](
-#         children=children,
-#         func=func,
-#         initial=initial,
-# )
-
-
-def init_zip_flowable_node[S: State, U](
-    children: tuple[FlowableNode[S, U], ...],
+def init_zip_flowable_node[S: State, U, E](
+    children: tuple[FlowableNode[S, U, E], ...],
 ):
     def zip_func(val: dict[int, U], acc: tuple[U, ...]):
         _, zipped_values = zip(*sorted(val.items()))
-        return zipped_values, set(range(len(children)))
+        return tuple(zipped_values), set(range(len(children)))
 
-    return ControlledZipFlowableNode[S, U, tuple[U, ...]](
+    return ControlledZipFlowableNode[S, U, tuple[U, ...], E](
         children=children,
         zip_func=zip_func,
         acc=None,  # pyright: ignore[reportArgumentType]

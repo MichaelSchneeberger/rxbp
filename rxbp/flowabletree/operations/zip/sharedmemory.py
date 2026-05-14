@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import deque
 from threading import Lock
-from typing import Callable
+from typing import Callable, Never
 
 from dataclasses import dataclass
 
@@ -16,8 +16,8 @@ from rxbp.flowabletree.operations.zip.statetransitions import ZipStateTransition
 
 
 @dataclass
-class ZipSharedMemory[U, A]:
-    downstream: Observer[A]
+class ZipSharedMemory[U, A, E]:
+    downstream: Observer[A, E]
     zip_func: Callable[[dict[int, U], A], tuple[A, set[int]]]
     acc: A
     n_children: int
@@ -31,8 +31,4 @@ class ZipSharedMemory[U, A]:
 
     # concurrently add to the Deque
     items: deque[tuple[int, U]]
-    upstream: deque[tuple[int, RxSingleObserver[None]]]
-
-    # # update when Downstream cancels Zip Flowable
-    # assigned_certs: dict[int, ContCert]
-
+    upstream: deque[tuple[int, RxSingleObserver[None, Never]]]

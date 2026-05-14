@@ -34,7 +34,7 @@ from rxbp.flowabletree.operations.merge.statetransitions import (
 
 
 @dataclass
-class MergeRxSingleObserver[U, E](RxSingleObserver[None, Never]):
+class MergeRequestObserver[U, E](RxSingleObserver[None, Never]):
     shared: MergeSharedMemory[U, E]
 
     @override
@@ -95,7 +95,7 @@ class MergeRxSingleObserver[U, E](RxSingleObserver[None, Never]):
                                             item=next_item,
                                             trampoline=notification.p_trampoline,
                                             item_scheduler=notification.p_item_scheduler,
-                                            observer=MergeRxSingleObserver(
+                                            observer=MergeRequestObserver(
                                                 shared=self.shared,
                                             ),
                                         )

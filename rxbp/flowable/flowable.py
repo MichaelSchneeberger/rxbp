@@ -6,6 +6,7 @@ from typing import Callable, override
 
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.operations.map import init_map_flowable
+from rxbp.flowabletree.operations.share.flowable import init_share_flowable_node
 from rxbp.flowabletree.state import State
 from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
@@ -96,14 +97,14 @@ class Flowable[S: State, U, E](SingleChildFlowableNode[S, U, U, E], ABC):
     # @abstractmethod
     # def seq(self):
     #     ...
-    #
-    # def share(self):
-    #     return self.copy(
-    #         child=init_share_flowable_node(
-    #             child=self.p_child,
-    #         )
-    #     )
-    #
+
+    def share(self):
+        return self.copy(
+            child=init_share_flowable_node(
+                child=self.p_child,
+            )
+        )
+
     # def skip(self, count: int):
     #     return (
     #         self.copy(child=init_zip_flowable_node((self, _count())))

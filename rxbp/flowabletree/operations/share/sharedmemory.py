@@ -4,6 +4,7 @@ from collections import deque
 from dataclasses import dataclass
 from logging import Logger
 from threading import Lock
+from typing import Never
 
 
 from contcert.typing import ContCert
@@ -17,12 +18,12 @@ from rxbp.flowabletree.operations.share.statetransitions import (
 
 
 @dataclass(frozen=False)
-class ShareSharedMemory[U]:
+class ShareSharedMemory[U, E]:
     virtual_count_partition: dict[int, int]
     virtual_count: int
     context: int
 
-    upstream: RxSingleObserver[None]
+    upstream: RxSingleObserver[None, Never]
     cancellable: Cancellable
 
     # there is always one certificate too few
@@ -39,26 +40,3 @@ class ShareSharedMemory[U]:
 
     stacks: tuple[StackTrace, ...]
     lambda_trace_logger: Logger
-
-    # downstream: deque[tuple[int, RxSingleObserver[None]]]
-
-    # total_virtual_count: int
-    #
-    # init_certificate: ContCert
-    #
-    # upstream_cancellation: Cancellable
-    #
-    # # modified synchronously
-    # deferred_handler: DeferredHandler
-
-
-    # def get_buffer_item(self, index: int):
-    #     with self.buffer_lock:
-    #         rel_index = index - self.first_index
-    #         assert 0 <= rel_index <= len(self.buffer), f'No item in buffer at {index-self.first_index=}.'
-    #         return self.buffer[index - self.first_index]
-    #
-    # def pop_buffer(self, num: int):
-    #     with self.buffer_lock:
-    #         del self.buffer[:num]
-    #         self.first_index += num

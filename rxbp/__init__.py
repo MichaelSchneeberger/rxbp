@@ -25,7 +25,7 @@ from rxbp.flowable.from_ import (
 #     schedule_on as _schedule_on,
 #     schedule_relative as _schedule_relative,
 #     schedule_absolute as _schedule_absolute,
-#     zip as _zip,
+    zip as _zip,
 )
 # from rxbp.flowable.to import (
 #     to_rx as _to_rx,
@@ -62,7 +62,7 @@ create = _create
 # Combining operators
 
 merge = _merge
-# zip = _zip
+zip = _zip
 
 on_next = _on_next
 on_completed = _on_completed

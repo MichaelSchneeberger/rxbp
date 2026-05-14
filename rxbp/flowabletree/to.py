@@ -22,7 +22,7 @@ from contcert.typing import (
 from rxbp.flowabletree.operations.asyncshare.observer import AsyncShareObserver
 from rxbp.flowabletree.operations.asyncshare.subject import AsyncShareFlowableState, AsyncShareKey
 from rxbp.flowabletree.operations.share.flowable import ShareFlowableNode, ShareFlowableState
-from rxbp.flowabletree.operations.share.observer import SharedObserver
+from rxbp.flowabletree.operations.share.observer import ShareObserver
 from rxbp.flowabletree.subscribe import subscribe_single_sink
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 import rxsingle

@@ -1,361 +1,269 @@
 from __future__ import annotations
 
-from collections import deque
 from dataclasses import dataclass
 from typing import override
 
-from contcert.typing import ContCert, Trampoline
-from rxsingle.typing import Observer as RxSingleObserver
+from contcert.typing import ContCert
 
+from rxbp.flowabletree.notifications import (
+    Notification,
+    OnNext,
+    OnNextAndComplete,
+    OnCompleted,
+    OnError,
+    init_on_next,
+    init_on_next_and_complete,
+    init_on_completed,
+    init_on_error,
+)
 from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.zip.requestobserver import ZipRequestObserver
 from rxbp.flowabletree.operations.zip.states import (
-    Active,
-    StopContinuation,
-    Completed,
-    Error,
+    ActiveState,
+    StopContinuationState,
+    CompletedState,
+    ErrorState,
 )
 from rxbp.flowabletree.operations.zip.statetransitions import (
-    RequestTransition,
     OnNextTransition,
     OnNextAndCompleteTransition,
     OnCompletedTransition,
-    ToStateTransition,
+    OnErrorTransition,
 )
 from rxbp.flowabletree.operations.zip.sharedmemory import ZipSharedMemory
 
 
 @dataclass
-class ZipRxSingleObserver[A, U](RxSingleObserver[None]):
-    shared: ZipSharedMemory[A, U]
-    requested_ids: set[int]
-
-    @override
-    def on_success(
-        self,
-        trampoline: Trampoline,
-        item: None,
-    ):
-
-        transition = RequestTransition(
-            requested_ids=self.requested_ids,
-            child=None,  # pyright: ignore[reportArgumentType]
-        )
-
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            n_state = transition.get_state()
-            self.shared.transition = ToStateTransition(
-                state=n_state
-            )
-
-        match n_state:
-            case Active():
-                pass
-
-            case Completed():
-                # todo: assure a single certificate
-                return self.shared.certs[-1]
-
-            case Error(msg=msg):
-                raise Exception(msg)
-
-        n_upstream: deque[tuple[int, RxSingleObserver[None]]] = deque()
-        certs: list[ContCert] = []
-        for id, observer in self.shared.upstream:
-            if id in self.requested_ids:
-                cert = observer.on_success(trampoline, None)
-                certs.append(cert)
-
-            else:
-                n_upstream.append((id, observer))
-
-        self.shared.items = deque()
-        self.shared.upstream = n_upstream
-        self.shared.certs = certs[1:]
-
-        return certs[0]
-
-    @override
-    def on_error(
-        self,
-        trampoline: Trampoline,
-        exception: Exception,
-    ):
-        pass
-
-
-@dataclass
-class ZipObserver[U, V](Observer[U]):
-    shared: ZipSharedMemory[U, V]
+class ZipObserver[U, A, E](Observer[U, E]):
+    shared: ZipSharedMemory[U, A, E]
     id: int
 
-    # def _on_next(self, state: ZipState, trampoline: Trampoline) -> ContCert:
-    #
-    #     match state:
-    #         # wait for other upstream items
-    #         case Active(
-    #             requested_ids=requested_ids,
-    #             completed_ids=completed_ids,
-    #         ):
-    #
-    #             if requested_ids:
-    #
-    #                 with self.shared.certs_lock:
-    #                     cert = self.shared.certs.pop()
-    #                 return cert
-    #
-    #             else:
-    #
-    #                 items = dict(self.shared.items)
-    #
-    #                 # backpressure selected upstream flowables
-    #                 self.shared.acc, n_requested_ids = self.shared.zip_func(
-    #                     items,
-    #                     self.shared.acc,
-    #                 )
-    #
-    #                 complete_downstream = completed_ids & requested_ids
-    #
-    #                 if complete_downstream:
-    #
-    #                     transition = OnCompletedTransition(
-    #                         child=None,  # pyright: ignore[reportArgumentType]
-    #                         id=self.id,
-    #                     )
-    #
-    #                     with self.shared.transition_lock:
-    #                         transition.child = self.shared.transition
-    #                         self.shared.transition = transition
-    #
-    #                     cert = self.shared.downstream.on_next_and_complete(
-    #                         trampoline=trampoline,
-    #                         item=self.shared.acc,
-    #                     )
-    #
-    #                     return cert
-    #
-    #                 else:
-    #                     cert = self.shared.downstream.on_next(
-    #                         trampoline=trampoline,
-    #                         item=self.shared.acc,
-    #                         observer = ZipRxSingleObserver(
-    #                             shared=self.shared,
-    #                             requested_ids=n_requested_ids,
-    #                         ),
-    #                     )
-    #                     return cert
-    #
-    #         case StopContinuation(index=index):
-    #             cert = self.shared.certs[index]
-    #             return cert
-    #
-    #         case Error(msg):
-    #             raise Exception(msg)
-
     @override
-    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]) -> ContCert:
-        # print(f'on_next({value}), id={self.id}')
-        self.shared.items.append((self.id, item))
-        self.shared.upstream.append((self.id, observer))
+    def notify(
+        self,
+        notification: Notification[U, E],
+    ) -> ContCert:
+        match notification:
+            case OnNext():
+                self.shared.items.append((self.id, notification.p_item))
+                self.shared.upstream.append((self.id, notification.p_observer))
 
-        transition = OnNextTransition(
-            id=self.id,
-            child=None,  # type: ignore  # pyright: ignore[reportArgumentType]
-        )
+                transition = OnNextTransition(
+                    id=self.id,
+                    child=None,  # type: ignore  # pyright: ignore[reportArgumentType]
+                )
 
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
 
-        match transition.get_state():
-            # wait for other upstream items
-            case Active(
-                requested_ids=requested_ids,
-                completed_ids=completed_ids,
-            ):
+                match transition.get_state():
+                    # wait for other upstream items
+                    case ActiveState(
+                        requested_ids=requested_ids,
+                        completed_ids=completed_ids,
+                    ):
 
-                if requested_ids:
+                        if requested_ids:
 
-                    with self.shared.certs_lock:
-                        cert = self.shared.certs.pop()
-                    return cert
+                            with self.shared.certs_lock:
+                                cert = self.shared.certs.pop()
+                            return cert
 
-                else:
+                        else:
 
-                    items = dict(self.shared.items)
+                            items = dict(self.shared.items)
 
-                    # backpressure selected upstream flowables
-                    self.shared.acc, n_requested_ids = self.shared.zip_func(
-                        items,
-                        self.shared.acc,
-                    )
+                            # backpressure selected upstream flowables
+                            self.shared.acc, n_requested_ids = self.shared.zip_func(
+                                items,
+                                self.shared.acc,
+                            )
 
-                    complete_downstream = completed_ids & requested_ids
+                            complete_downstream = completed_ids & requested_ids
 
-                    if complete_downstream:
+                            if complete_downstream:
 
-                        transition = OnCompletedTransition(
-                            child=None,  # pyright: ignore[reportArgumentType]
-                            id=self.id,
-                        )
+                                transition = OnCompletedTransition(
+                                    child=None,  # pyright: ignore[reportArgumentType]
+                                    id=self.id,
+                                )
 
-                        with self.shared.transition_lock:
-                            transition.child = self.shared.transition
-                            self.shared.transition = transition
+                                with self.shared.transition_lock:
+                                    transition.child = self.shared.transition
+                                    self.shared.transition = transition
 
-                        match transition.get_state():
-                            case StopContinuation(index=index):
-                                return self.shared.certs[index]
+                                match transition.get_state():
+                                    case StopContinuationState(index=index):
+                                        return self.shared.certs[index]
 
-                            case Completed():
-                                cert = self.shared.downstream.on_next_and_complete(
-                                    trampoline=trampoline,
-                                    item=self.shared.acc,
+                                    case CompletedState():
+                                        cert = self.shared.downstream.notify(
+                                            init_on_next_and_complete(
+                                                item=self.shared.acc,
+                                                trampoline=notification.p_trampoline,
+                                                item_scheduler=notification.p_item_scheduler,
+                                            )
+                                        )
+                                        return cert
+
+                                    case ErrorState(msg):
+                                        raise Exception(msg)
+
+                            else:
+                                cert = self.shared.downstream.notify(
+                                    init_on_next(
+                                        item=self.shared.acc,
+                                        trampoline=notification.p_trampoline,
+                                        item_scheduler=notification.p_item_scheduler,
+                                        observer=ZipRequestObserver(
+                                            shared=self.shared,
+                                            requested_ids=n_requested_ids,
+                                        ),
+                                    )
                                 )
                                 return cert
 
-                            case Error(msg):
-                                raise Exception(msg)
-
-                    else:
-                        cert = self.shared.downstream.on_next(
-                            trampoline=trampoline,
-                            item=self.shared.acc,
-                            observer = ZipRxSingleObserver(
-                                shared=self.shared,
-                                requested_ids=n_requested_ids,
-                            ),
-                        )
+                    case StopContinuationState(index=index):
+                        cert = self.shared.certs[index]
                         return cert
 
-            case StopContinuation(index=index):
-                cert = self.shared.certs[index]
-                return cert
+                    case ErrorState(msg):
+                        raise Exception(msg)
 
-            case Error(msg):
-                raise Exception(msg)
+            case OnNextAndComplete():
+                self.shared.items.append((self.id, notification.p_item))
 
-    @override
-    def on_next_and_complete(self, trampoline: Trampoline, item: U) -> ContCert:
-        # print(f'on_next_and_complete({value}), id={self.id}')
-        self.shared.items.append((self.id, item))
+                transition = OnNextAndCompleteTransition(
+                    id=self.id,
+                    child=None,  # pyright: ignore[reportArgumentType]
+                )
 
-        transition = OnNextAndCompleteTransition(
-            id=self.id,
-            child=None,  # pyright: ignore[reportArgumentType]
-        )
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
 
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
+                match transition.get_state():
+                    # wait for other upstream items
+                    case ActiveState(
+                        requested_ids=requested_ids,
+                        completed_ids=completed_ids,
+                    ):
 
-        match transition.get_state():
-            # wait for other upstream items
-            case Active(
-                requested_ids=requested_ids,
-                completed_ids=completed_ids,
-            ):
+                        if requested_ids:
 
-                if requested_ids:
+                            with self.shared.certs_lock:
+                                cert = self.shared.certs.pop()
+                            return cert
 
-                    with self.shared.certs_lock:
-                        cert = self.shared.certs.pop()
-                    return cert
+                        else:
 
-                else:
+                            items = dict(self.shared.items)
 
-                    items = dict(self.shared.items)
+                            # backpressure selected upstream flowables
+                            self.shared.acc, n_requested_ids = self.shared.zip_func(
+                                items,
+                                self.shared.acc,
+                            )
 
-                    # backpressure selected upstream flowables
-                    self.shared.acc, n_requested_ids = self.shared.zip_func(
-                        items,
-                        self.shared.acc,
-                    )
+                            complete_downstream = completed_ids & n_requested_ids
 
-                    complete_downstream = completed_ids & n_requested_ids
+                            if complete_downstream:
 
-                    if complete_downstream:
+                                transition = OnCompletedTransition(
+                                    child=None,  # pyright: ignore[reportArgumentType]
+                                    id=self.id,
+                                )
 
-                        transition = OnCompletedTransition(
-                            child=None,  # pyright: ignore[reportArgumentType]
-                            id=self.id,
-                        )
+                                with self.shared.transition_lock:
+                                    transition.child = self.shared.transition
+                                    self.shared.transition = transition
 
-                        with self.shared.transition_lock:
-                            transition.child = self.shared.transition
-                            self.shared.transition = transition
+                                match transition.get_state():
+                                    case StopContinuationState(index=index):
+                                        return self.shared.certs[index]
 
-                        match transition.get_state():
-                            case StopContinuation(index=index):
-                                return self.shared.certs[index]
+                                    case CompletedState():
+                                        cert = self.shared.downstream.notify(
+                                            init_on_next_and_complete(
+                                                item=self.shared.acc,
+                                                trampoline=notification.p_trampoline,
+                                                item_scheduler=notification.p_item_scheduler,
+                                            )
+                                        )
+                                        return cert
 
-                            case Completed():
-                                cert = self.shared.downstream.on_next_and_complete(
-                                    trampoline=trampoline,
-                                    item=self.shared.acc,
+                                    case ErrorState(msg):
+                                        raise Exception(msg)
+
+                            else:
+                                cert = self.shared.downstream.notify(
+                                    init_on_next(
+                                        item=self.shared.acc,
+                                        trampoline=notification.p_trampoline,
+                                        item_scheduler=notification.p_item_scheduler,
+                                        observer=ZipRequestObserver(
+                                            shared=self.shared,
+                                            requested_ids=n_requested_ids,
+                                        ),
+                                    )
                                 )
                                 return cert
 
-                            case Error(msg):
-                                raise Exception(msg)
-
-                    else:
-                        cert = self.shared.downstream.on_next(
-                            trampoline=trampoline,
-                            item=self.shared.acc,
-                            observer = ZipRxSingleObserver(
-                                shared=self.shared,
-                                requested_ids=n_requested_ids,
-                            ),
-                        )
+                    case StopContinuationState(index=index):
+                        cert = self.shared.certs[index]
                         return cert
 
-            case StopContinuation(index=index):
-                cert = self.shared.certs[index]
-                return cert
+                    case ErrorState(msg):
+                        raise Exception(msg)
 
-            case Error(msg):
-                raise Exception(msg)
+            case OnCompleted():
+                transition = OnCompletedTransition(
+                    child=None,  # pyright: ignore[reportArgumentType]
+                    id=self.id,
+                )
 
-    @override
-    def on_completed(self):
-        transition = OnCompletedTransition(
-            child=None,  # pyright: ignore[reportArgumentType]
-            id=self.id,
-        )
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
 
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
+                match transition.get_state():
+                    case StopContinuationState(index=index):
+                        return self.shared.certs[index]
 
-        match transition.get_state():
-            case StopContinuation(index=index):
-                return self.shared.certs[index]
+                    case CompletedState():
+                        return self.shared.downstream.notify(
+                            init_on_completed(
+                                trampoline=notification.p_trampoline,
+                                item_scheduler=notification.p_item_scheduler,
+                            )
+                        )
 
-            case Completed():
-                return self.shared.downstream.on_completed()
+                    case ErrorState(msg):
+                        raise Exception(msg)
 
-            case Error(msg):
-                raise Exception(msg)
+            case OnError():
+                transition = OnErrorTransition(
+                    child=None,  # pyright: ignore[reportArgumentType]
+                    id=self.id,
+                )
 
-    @override
-    def on_error(self, exception: Exception):
-        transition = OnCompletedTransition(
-            child=None,  # pyright: ignore[reportArgumentType]
-            id=self.id,
-        )
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
 
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
+                match transition.get_state():
+                    case StopContinuationState(index=index):
+                        return self.shared.certs[index]
 
-        match transition.get_state():
-            case StopContinuation(index=index):
-                return self.shared.certs[index]
+                    case CompletedState():
+                        return self.shared.downstream.notify(
+                            init_on_error(
+                                exception=notification.p_exception,
+                                trampoline=notification.p_trampoline,
+                                item_scheduler=notification.p_item_scheduler,
+                            )
+                        )
 
-            case Completed():
-                cert = self.shared.downstream.on_error(exception)
-                return cert
-
-            case Error(msg):
-                raise Exception(msg)
+                    case ErrorState(msg):
+                        raise Exception(msg)

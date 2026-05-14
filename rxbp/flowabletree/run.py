@@ -2,7 +2,7 @@
 from dataclasses import dataclass, replace
 from logging import Logger
 import logging
-from typing import Self, override
+from typing import Any, Self, override
 
 
 import contcert
@@ -13,6 +13,8 @@ from contcert.typing import (
 )
 
 from rxbp.flowabletree.notifications import Notification, OnCompleted, OnError, OnNext, OnNextAndComplete
+from rxbp.flowabletree.operations.share.flowable import ShareFlowableNode, ShareFlowableState
+from rxbp.flowabletree.operations.share.observer import ShareObserver
 from rxbp.flowabletree.subscribe import subscribe_single_sink
 import rxsingle
 
@@ -25,15 +27,15 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 
 
 @dataclass
-class StateImpl(State):
+class StateImpl(ShareFlowableState, State):
 # class StateImpl(AsyncShareFlowableState, ShareFlowableState, State):
     item_scheduler: LoopLikeScheduler
     default_scheduler: Scheduler
     lambda_trace_logger: Logger
     # rxbp_observer: Observer | None  # pyright: ignore[reportMissingTypeArgument]
-    # share_flowable_count: dict[ShareFlowableNode[ShareFlowableState, Any], int]  # pyright: ignore[reportExplicitAny]
-    # share_virtual_count: dict[ShareFlowableNode[ShareFlowableState, Any], int]  # pyright: ignore[reportExplicitAny]
-    # share_observers: dict[ShareFlowableNode[ShareFlowableState, Any], SharedObserver[Any]]  # pyright: ignore[reportExplicitAny]
+    share_flowable_count: dict[ShareFlowableNode[ShareFlowableState, Any, Any], int]  # pyright: ignore[reportExplicitAny]
+    share_virtual_count: dict[ShareFlowableNode[ShareFlowableState, Any, Any], int]  # pyright: ignore[reportExplicitAny]
+    share_observers: dict[ShareFlowableNode[ShareFlowableState, Any, Any], ShareObserver[Any, Any]]  # pyright: ignore[reportExplicitAny]
     # async_share_observers_lock: Lock
     # async_share_observers: dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]  # pyright: ignore[reportExplicitAny]
 
@@ -64,24 +66,24 @@ class StateImpl(State):
     # @override
     # def update_rxbp_observer(self, observer: Observer | None) -> Self:  # pyright: ignore[reportMissingTypeArgument, reportUnknownParameterType]
     #     return replace(self, rxbp_observer=observer)
-    #
-    # @property
-    # @override
-    # def p_share_flowable_count(self) -> dict[ShareFlowableNode[ShareFlowableState, Any], int]:  # pyright: ignore[reportExplicitAny]
-    #     return self.share_flowable_count
-    #
-    # @property
-    # @override
-    # def p_share_virtual_count(self) -> dict[ShareFlowableNode[ShareFlowableState, Any], int]:   # pyright: ignore[reportExplicitAny]
-    #     return self.share_virtual_count
-    #
-    # @property
-    # @override
-    # def p_share_observers(
-    #     self,
-    # ) -> dict[ShareFlowableNode[ShareFlowableState, Any], SharedObserver[Any]]:   # pyright: ignore[reportExplicitAny]
-    #     return self.share_observers
-    #
+
+    @property
+    @override
+    def p_share_flowable_count(self) -> dict[ShareFlowableNode[ShareFlowableState, Any, Any], int]:  # pyright: ignore[reportExplicitAny]
+        return self.share_flowable_count
+
+    @property
+    @override
+    def p_share_virtual_count(self) -> dict[ShareFlowableNode[ShareFlowableState, Any, Any], int]:   # pyright: ignore[reportExplicitAny]
+        return self.share_virtual_count
+
+    @property
+    @override
+    def p_share_observers(
+        self,
+    ) -> dict[ShareFlowableNode[ShareFlowableState, Any, Any], ShareObserver[Any, Any]]:   # pyright: ignore[reportExplicitAny]
+        return self.share_observers
+
     # @property
     # @override
     # def p_async_share_observers_lock(self) -> Lock:
@@ -92,23 +94,23 @@ class StateImpl(State):
     # def p_async_share_observers(self) -> dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]:   # pyright: ignore[reportExplicitAny]
     #     return self.async_share_observers
 
-    # @override
-    # def update_shared_flowable_data[U](
-    #     self,
-    #     flowable_count: dict[ShareFlowableNode[ShareFlowableState, U], int] | None = None,
-    #     virtual_count: dict[ShareFlowableNode[ShareFlowableState, U], int] | None = None,
-    #     share_observers: tuple[ShareFlowableNode[ShareFlowableState, U], SharedObserver[U]] | None = None,
-    # ) -> ShareFlowableState:
-    #     def gen_args():
-    #         if flowable_count is not None:
-    #             yield 'share_flowable_count', flowable_count
-    #         if virtual_count is not None:
-    #             yield 'share_virtual_count', virtual_count
-    #         if share_observers is not None:
-    #             n_share_observers = self.share_observers | {share_observers[0]: share_observers[1]}
-    #             yield 'share_observers', n_share_observers
-    #
-    #     return replace(self, **dict(gen_args()))
+    @override
+    def update_shared_flowable_data[U, E](
+        self,
+        flowable_count: dict[ShareFlowableNode[ShareFlowableState, U, E], int] | None = None,
+        virtual_count: dict[ShareFlowableNode[ShareFlowableState, U, E], int] | None = None,
+        share_observers: tuple[ShareFlowableNode[ShareFlowableState, U, E], ShareObserver[U, E]] | None = None,
+    ) -> ShareFlowableState:
+        def gen_args():
+            if flowable_count is not None:
+                yield 'share_flowable_count', flowable_count
+            if virtual_count is not None:
+                yield 'share_virtual_count', virtual_count
+            if share_observers is not None:
+                n_share_observers = self.share_observers | {share_observers[0]: share_observers[1]}
+                yield 'share_observers', n_share_observers
+
+        return replace(self, **dict(gen_args()))
 
 
 def run[U, E](
@@ -228,9 +230,9 @@ def run[U, E](
         default_scheduler=scheduler,
         item_scheduler=scheduler,
         # rxbp_observer=None,
-        # share_flowable_count={},
-        # share_virtual_count={},
-        # share_observers={},
+        share_flowable_count={},
+        share_virtual_count={},
+        share_observers={},
         # async_share_observers_lock=Lock(),
         # async_share_observers={},
     )

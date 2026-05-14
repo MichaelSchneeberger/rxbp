@@ -4,25 +4,26 @@ from abc import ABC
 from dataclasses import dataclass
 
 
-class ZipState: ...
+class ZipState:
+    pass
 
 
 @dataclass(frozen=True)
-class Error(ZipState):
+class ErrorState(ZipState):
     msg: str
 
 
 @dataclass(frozen=True)
-class Active(ZipState, ABC):
+class ActiveState(ZipState, ABC):
     requested_ids: set[int]
     completed_ids: set[int]
 
 
 @dataclass(frozen=True)
-class Completed(ZipState, ABC):
+class CompletedState(ZipState, ABC):
     assigned_ids: dict[int, int]
 
 
 @dataclass(frozen=True, slots=True)
-class StopContinuation(Completed):
+class StopContinuationState(CompletedState):
     index: int

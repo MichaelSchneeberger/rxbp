@@ -4,6 +4,7 @@ from contcert.typing import ContCert
 from rxbp.flowable.flowable import Flowable, init_flowable
 from rxbp.flowabletree.flowablenode import FlowableNode
 from rxbp.flowabletree.operations.merge.flowable import init_merge_flowable_node
+from rxbp.flowabletree.operations.zip.flowable import init_zip_flowable_node
 from rxbp.flowabletree.sources.create.create import init_create
 from rxbp.flowabletree.sources.create.operations import CreateSubscribeArgs
 from rxbp.flowabletree.state import State
@@ -76,9 +77,9 @@ def merge[S: State, U, E](observables: tuple[FlowableNode[S, U, E], ...]):
 #
 # def schedule_absolute(until: datetime.datetime, scheduler: Scheduler | None = None):
 #     return init_flowable(_schedule_absolute(until, scheduler))
-#
-#
-# def zip(observables: tuple[FlowableNode, ...]):
-#     return init_flowable(
-#         child=init_zip_flowable_node(children=observables),
-#     )
+
+
+def zip[S: State, U, E](observables: tuple[FlowableNode[S, U, E], ...]):
+    return init_flowable(
+        child=init_zip_flowable_node(children=observables),
+    )

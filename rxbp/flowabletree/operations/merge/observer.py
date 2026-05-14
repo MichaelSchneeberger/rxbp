@@ -3,11 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import override
 
-
 from contcert.typing import ContCert
-from rxbp.flowabletree.notifications import Notification, OnCompleted, OnError, OnNext, OnNextAndComplete, init_on_completed, init_on_error, init_on_next, init_on_next_and_complete
-from rxbp.flowabletree.operations.merge.rxsingleobserver import MergeRxSingleObserver
 
+from rxbp.flowabletree.notifications import Notification, OnCompleted, OnError, OnNext, OnNextAndComplete, init_on_completed, init_on_error, init_on_next, init_on_next_and_complete
+from rxbp.flowabletree.operations.merge.requestobserver import MergeRequestObserver
 from rxbp.flowabletree.operations.merge.states import (
     ActiveState,
     CompletedState,
@@ -61,7 +60,7 @@ class MergeObserver[U, E](Observer[U, E]):
                                     item=notification.p_item,
                                     trampoline=notification.p_trampoline,
                                     item_scheduler=notification.p_item_scheduler,
-                                    observer=MergeRxSingleObserver(
+                                    observer=MergeRequestObserver(
                                         shared=self.shared,
                                     ),
                                 )
@@ -104,7 +103,7 @@ class MergeObserver[U, E](Observer[U, E]):
                                     item=notification.p_item,
                                     trampoline=notification.p_trampoline,
                                     item_scheduler=notification.p_item_scheduler,
-                                    observer=MergeRxSingleObserver(
+                                    observer=MergeRequestObserver(
                                         shared=self.shared,
                                     ),
                                 )
