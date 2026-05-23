@@ -1,109 +1,98 @@
-
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from collections import deque
-from threading import Lock
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Self, override
 
-import contcert
 
-from rxbp.flowabletree.operations.asyncshare.cancellable import AsyncShareCancellation
-from rxbp.flowabletree.operations.share.cancellable import ShareCancellation
-from rxbp.flowabletree.operations.asyncshare.requestobserver import AsyncShareRequestObserver
+from rxbp.flowabletree.observer import Observer
+from rxbp.flowabletree.operations.asyncshare.cancellable import AsyncShareCancellable
+from rxbp.flowabletree.operations.asyncshare.requestobserver import (
+    AsyncShareRequestObserver,
+)
+from rxbp.flowabletree.operations.asyncshare.states import ActiveState, ErrorState
 from rxbp.flowabletree.operations.asyncshare.statetransitions import (
-    InitialTransition,
     SubscribeTransition,
 )
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
-from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
-from rxbp.flowabletree.operations.asyncshare.sharedmemory import AsyncShareSharedMemory
+from rxbp.flowabletree.flowablenode import FlowableNode
 from rxbp.flowabletree.operations.asyncshare.observer import AsyncShareObserver
-from rxsingle.rxsingletree.state import State
+from rxbp.flowabletree.state import State
 
 
-
-class AsyncShareFlowableState(State, ABC):
+class AsyncShareSubscribeArgs(SubscribeArgs, ABC):
     @property
     @abstractmethod
-    def p_async_share_observers_lock(self) -> Lock: ...
+    def p_async_share_observers(
+        self,
+    ) -> dict[AsyncShareSubject[Any, Any, Any, Any], AsyncShareObserver[Any, Any]]:  # pyright: ignore[reportExplicitAny]
+        ...
 
-    @property
     @abstractmethod
-    def p_async_share_observers(self) -> dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]: ...  # pyright: ignore[reportExplicitAny]
-
-
-    # @abstractmethod
-    # def update_async_share_observers[U](
-    #     self,
-    #     async_share_observers: tuple[AsyncShareSubject[Self, U], AsyncShareObserver[U]] | None = None,
-    # ) -> Self: ...
+    def update_async_share_observers(
+        self,
+        observers: dict[
+            AsyncShareSubject[Any, Any, Any, Any], AsyncShareObserver[Any, Any]  # pyright: ignore[reportExplicitAny]
+        ],
+    ) -> Self: ...
 
 
 @dataclass(frozen=True)
-class AsyncShareKey[S, U]:
-    child: FlowableNode[S, U]
-    # context: int
-
-
-@dataclass
-class AsyncShareSubject[S: AsyncShareFlowableState, U](SingleChildFlowableNode[S, U, U]):
-    key: None | AsyncShareKey[S, U]
-    context: int
-    # observer: AsyncShareObserver[U]
-    # shared: AsyncShareSharedMemory[U]
+class AsyncShareSubject[S: State, A: AsyncShareSubscribeArgs, U, E](
+    FlowableNode[S, A, U, E]
+):
+    id: int
 
     @override
     def unsafe_subscribe(
-        self, state: S, args: SubscribeArgs[U]
+        self,
+        state: S,
+        observer: Observer[U, E],
+        args: A,  # SubscribeArgs,
     ) -> tuple[S, SubscriptionResult]:
-        match self.key:
+        if self not in args.p_async_share_observers:
+            # todo: handle this case
+            raise Exception("not good")
 
-            case None:
-                raise Exception("Not good")
+        share_observer: AsyncShareObserver[U, E] = args.p_async_share_observers[self]
+        shared = share_observer.shared
 
-            case AsyncShareKey():
-                observer = state.p_async_share_observers[self.key]
-                shared = observer.shared
+        transition = SubscribeTransition(child=shared.transition)
 
-                id = len(observer.request_observers)
+        with shared.transition_lock:
+            shared.transition = transition
 
-                with shared.transition_lock:
-                    shared.transition = SubscribeTransition(child=shared.transition, id=id)
-
-                shared.virtual_count_partition[id] = args.virtual_count
-                shared.context_partition[id] = args.async_index
+        match p_state := transition.get_state():
+            case ActiveState(counter=id):
+                shared.virtual_count_partition[id] = args.p_virtual_count
+                shared.async_index_partition[id] = args.p_async_index
 
                 requested_observer = AsyncShareRequestObserver(
                     id=id,
-                    downstream=args.observer,
+                    downstream=observer,
                     shared=shared,
-                    virtual_count=args.virtual_count,
-                    context=args.async_index,
-
                 )
-                observer.request_observers[id] = requested_observer
+                share_observer.request_observers[id] = requested_observer
 
-                cancellable = AsyncShareCancellation(
-                    id=id,
-                    shared=shared
-                )
-
-                cert = shared.context_translation.increase(
-                    virtual_count=args.virtual_count,
-                    context=args.async_index,
+                cert = shared.async_translation.increase(
+                    virtual_count=args.p_virtual_count,
+                    async_index=args.p_async_index,
                     stacks=tuple(),
                     lambda_trace_logger=state.p_lambda_trace_logger,
                 )
 
                 return state, SubscriptionResult(
                     certificate=cert,
-                    cancellable=cancellable,
+                    cancellable=AsyncShareCancellable(id=id, shared=shared),
                 )
 
-    @property
-    @override
-    def p_child(self) -> FlowableNode[S, U]:
-        return self.key.child
+            case ErrorState():
+                raise Exception()
+
+
+class init_async_share_subject[S: State, U, E]:
+    def __new__(cls, id: int) -> AsyncShareSubject[S, U, E]:
+        return AsyncShareSubject(
+            id=id,
+        )

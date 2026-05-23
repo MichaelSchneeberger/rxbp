@@ -5,20 +5,19 @@ from typing import TypeVar, override
 
 from rxbp.flowabletree.assignvirtualcount import AssignVirtualCount
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 
 
 
 E = TypeVar("E", contravariant=True)
 
-class FlowableNode[S, U, E](AssignVirtualCount[S], ABC):
+class FlowableNode[S, A, U, E](AssignVirtualCount[S], ABC):
     @abstractmethod
     def unsafe_subscribe(
         self,
         state: S,
         observer: Observer[U, E],
-        args: SubscribeArgs,
+        args: A, #SubscribeArgs,
     ) -> tuple[S, SubscriptionResult]:
         """
         state: object that is passed through the entire tree structure
@@ -33,14 +32,14 @@ class FlowableNode[S, U, E](AssignVirtualCount[S], ABC):
         return state
 
 
-class SingleChildFlowableNode[S, U, V, E](FlowableNode[S, V, E], ABC):
+class SingleChildFlowableNode[S, A, U, V, E](FlowableNode[S, A, V, E], ABC):
     """
     Represents a state monad node with a single child.
     """
 
     @property
     @abstractmethod
-    def p_child(self) -> FlowableNode[S, U, E]: ...
+    def p_child(self) -> FlowableNode[S, A, U, E]: ...
 
     @override
     def discover(self, state: S) -> S:
@@ -51,18 +50,18 @@ class SingleChildFlowableNode[S, U, V, E](FlowableNode[S, V, E], ABC):
         return self.p_child.assign_virtual_count(state, virtual_count)
 
 
-class TwoChildrenFlowableNode[S, L, R, V, E](FlowableNode[S, V, E], ABC):
+class TwoChildrenFlowableNode[S, A, L, R, V, E](FlowableNode[S, A, V, E], ABC):
     """
     Represents a state monad node with two children.
     """
 
     @property
     @abstractmethod
-    def p_left(self) -> FlowableNode[S, L, E]: ...
+    def p_left(self) -> FlowableNode[S, A, L, E]: ...
 
     @property
     @abstractmethod
-    def p_right(self) -> FlowableNode[S, R, E]: ...
+    def p_right(self) -> FlowableNode[S, A, R, E]: ...
 
     @override
     def discover(
@@ -82,14 +81,14 @@ class TwoChildrenFlowableNode[S, L, R, V, E](FlowableNode[S, V, E], ABC):
         return self.p_right.assign_virtual_count(state, virtual_count)
 
 
-class MultiChildrenFlowableNode[S, U, V, E](FlowableNode[S, V, E], ABC):
+class MultiChildrenFlowableNode[S, A, U, V, E](FlowableNode[S, A, V, E], ABC):
     """
     Represents a state monad node with two children.
     """
 
     @property
     @abstractmethod
-    def p_children(self) -> tuple[FlowableNode[S, U, E], ...]: ...
+    def p_children(self) -> tuple[FlowableNode[S, A, U, E], ...]: ...
 
     @override
     def discover(

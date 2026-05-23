@@ -4,9 +4,10 @@ from collections import deque
 from dataclasses import dataclass
 from logging import Logger
 from threading import Lock
+from typing import Never
 
-from contcert.typing import ContextTranslation, Trampoline
 from lambdatrace import StackTrace
+from contcert.typing import AsyncIndexTranslation, ContCert
 from rxsingle.typing import Observer as RxSingleObserver
 
 from rxbp.cancellable import Cancellable
@@ -16,24 +17,22 @@ from rxbp.flowabletree.operations.asyncshare.statetransitions import (
 
 
 @dataclass(frozen=False)
-class AsyncShareSharedMemory[U]:
+class AsyncShareSharedMemory[U, E]:
     virtual_count_partition: dict[int, int]
-    context_partition: dict[int, int]
+    async_index_partition: dict[int, int]
     # virtual_count: int
-    context: int
+    async_index: int
 
-    upstream: RxSingleObserver[None]
+    upstream: RxSingleObserver[None, Never] | None
+    cert: ContCert
     cancellable: Cancellable
 
     # there is always one certificate too few
-    # cert_lock: Lock
-    # cert: ContCert
-    context_translation: ContextTranslation
+    async_translation: AsyncIndexTranslation
 
     # modified using lock
     transition_lock: Lock
     transition: ShareStateTransition
-    # trampoline: Trampoline
 
     buffer_lock: Lock
     first_index: int
@@ -41,4 +40,3 @@ class AsyncShareSharedMemory[U]:
 
     stacks: tuple[StackTrace, ...]
     lambda_trace_logger: Logger
-

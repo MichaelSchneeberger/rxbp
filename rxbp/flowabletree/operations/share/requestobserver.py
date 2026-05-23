@@ -43,7 +43,6 @@ class ShareRequestObserver[U, E](RxSingleObserver[None, Never]):
                 with self.shared.transition_lock:
                     transition.child = self.shared.transition
                     n_state = transition.get_state()
-                    # print(n_state)
                     self.shared.transition = ToStateTransition(state=n_state)
 
                     match n_state:
@@ -77,11 +76,12 @@ class ShareRequestObserver[U, E](RxSingleObserver[None, Never]):
                                         contcert.init_task(
                                             callable=request_next,
                                             virtual_count=self.shared.virtual_count,
-                                            async_index=self.shared.context,
+                                            async_index=self.shared.async_index,
                                             cancellation=None,
                                         ),
                                         stacks=self.shared.stacks,
                                     )
+                                    # print(cert)
 
                                     with self.shared.cert_lock:
                                         self.shared.cert = cert

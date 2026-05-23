@@ -3,10 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import override
 
-from contcert.typing import ContCert, Trampoline
-from rxsingle.typing import Observer as RxSingleObserver
+import rxsingle
+from contcert.typing import ContCert
+from rxbp.flowabletree.notifications import (
+    Notification,
+    OnNext,
+    OnNextAndComplete,
+    OnCompleted,
+    OnError,
+    init_on_next_and_complete,
+)
 
-from rxbp.state import State
+from rxbp.flowabletree.state import State
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
@@ -14,104 +22,152 @@ from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 
 
 @dataclass
-class ToListObserver[U](Observer[U]):
-    observer: Observer[list[U]]
+class ToListObserver[U, E](Observer[U, E]):
+    observer: Observer[list[U], E]
     acc: list[U]
 
     @override
-    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]):
-        self.acc.append(item)
-        return observer.on_success(trampoline, None)
+    def notify(
+        self,
+        notification: Notification[U, E],
+    ) -> ContCert:
+        match notification:
+            case OnNext():
+                self.acc.append(notification.p_item)
+                return notification.p_observer.notify(
+                    rxsingle.init_on_success(
+                        item=None,
+                        trampoline=notification.p_trampoline,
+                        item_scheduler=notification.p_item_scheduler,
+                    )
+                )
 
-    @override
-    def on_next_and_complete(self, item: U):
-        self.acc.append(item)
-        return self.observer.on_next_and_complete(self.acc)
+            case OnNextAndComplete():
+                self.acc.append(notification.p_item)
+                return self.observer.notify(
+                    init_on_next_and_complete(
+                        item=self.acc,
+                        trampoline=notification.p_trampoline,
+                        item_scheduler=notification.p_item_scheduler,
+                    )
+                )
 
-    @override
-    def on_completed(self):
-        return self.observer.on_next_and_complete(self.acc)
+            case OnCompleted():
+                return self.observer.notify(
+                    init_on_next_and_complete(
+                        item=self.acc,
+                        trampoline=notification.p_trampoline,
+                        item_scheduler=notification.p_item_scheduler,
+                    )
+                )
 
-    @override
-    def on_error(self, exception: Exception):
-        return self.observer.on_error(exception)
+            case OnError():
+                return self.observer.notify(notification)
 
 @dataclass
-class BatchedObserver[U](Observer[U]):
-    observer: Observer[list[U]]
+class BatchedObserver[U, E](Observer[U, E]):
+    observer: Observer[list[U], E]
     size: int
     acc: list[U]
 
     @override
-    def on_next(self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]):
-        self.acc.append(item)
+    def notify(
+        self,
+        notification: Notification[U, E],
+    ) -> ContCert:
+        match notification:
+            case OnNext():
+                self.acc.append(notification.p_item)
 
-        if len(self.acc) == self.size:
-            batched = self.acc
-            self.acc = []
-            return self.observer.on_next(trampoline, batched, observer)
+                if len(self.acc) == self.size:
+                    batched = self.acc
+                    self.acc = []
+                    return self.observer.notify(
+                        notification.update_item(
+                            item=batched,
+                        )
+                    )
 
-        else:
-            return observer.on_success(trampoline, None)
+                else:
+                    return notification.p_observer.notify(
+                        rxsingle.init_on_success(
+                            item=None,
+                            trampoline=notification.p_trampoline,
+                            item_scheduler=notification.p_item_scheduler,
+                        )
+                    )
 
-    @override
-    def on_next_and_complete(self, item: U):
-        self.acc.append(item)
-        return self.observer.on_next_and_complete(self.acc)
+            case OnNextAndComplete():
+                self.acc.append(notification.p_item)
+                return self.observer.notify(
+                    init_on_next_and_complete(
+                        item=self.acc,
+                        trampoline=notification.p_trampoline,
+                        item_scheduler=notification.p_item_scheduler,
+                    )
+                )
 
-    @override
-    def on_completed(self):
-        return self.observer.on_next_and_complete(self.acc)
+            case OnCompleted():
+                if self.acc:
+                    return self.observer.notify(
+                        init_on_next_and_complete(
+                            item=self.acc,
+                            trampoline=notification.p_trampoline,
+                            item_scheduler=notification.p_item_scheduler,
+                        )
+                    )
+                else:
+                    return self.observer.notify(notification)
 
-    @override
-    def on_error(self, exception: Exception):
-        return self.observer.on_error(exception)
+            case OnError():
+                return self.observer.notify(notification)
 
 
 @dataclass(frozen=True)
-class ToListFlowable[S: State, U](SingleChildFlowableNode[S, U, U]):
-    child: FlowableNode[S, U]
+class ToListFlowable[S: State, U, E](SingleChildFlowableNode[S, U, list[U], E]):
+    child: FlowableNode[S, U, E]
     size: int | None
 
+    @override
     def unsafe_subscribe(
         self,
         state: S,
-        args: SubscribeArgs[list[U]],
+        observer: Observer[list[U], E],
+        args: SubscribeArgs,
     ) -> tuple[S, SubscriptionResult]:
 
         if self.size is None:
-            observer = ToListObserver(
-                observer=args.observer,
+            n_observer = ToListObserver(
+                observer=observer,
                 acc=[],
             )
 
         else:
-            observer = BatchedObserver(
-                observer=args.observer,
+            n_observer = BatchedObserver(
+                observer=observer,
                 acc=[], 
                 size=self.size,
             )
 
         return self.child.unsafe_subscribe(
             state=state,
-            args=args.copy(
-                observer=observer,
-            ),
+            observer=n_observer,
+            args=args,
         )
 
     """ Implement abstract methods from SingleChildFlowableNode """
 
     @property
     @override
-    def p_child(self):
+    def p_child(self) -> FlowableNode[S, U, E]:
         return self.child
 
 
-def init_to_list_flowable[S: State, U](
-    child: FlowableNode[S, U],
+def init_to_list_flowable[S: State, U, E](
+    child: FlowableNode[S, U, E],
     size: int | None = None,
 ):
-    return ToListFlowable[S, U](
+    return ToListFlowable[S, U, E](
         child=child,
         size=size,
     )

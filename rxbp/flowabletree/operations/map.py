@@ -6,11 +6,10 @@ from typing import Callable, override
 
 from contcert.typing import ContCert
 from lambdatrace import StackTrace, format_lambda_tb_from_exception
-from rxbp.flowabletree.notifications import Notification, OnCompleted, OnNext, OnNextAndComplete, OnError, init_on_error
 
+from rxbp.flowabletree.notifications import Notification, OnCompleted, OnNext, OnNextAndComplete, OnError, init_on_error
 from rxbp.flowabletree.state import State
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.flowablenode import FlowableNode, SingleChildFlowableNode
 
@@ -61,8 +60,8 @@ class MapObserver[U, V, E](Observer[U, E]):
 
 
 @dataclass(frozen=True)
-class MapFlowable[S: State, U, V, E](SingleChildFlowableNode[S, U, V, Err[E]]):
-    child: FlowableNode[S, U, E]
+class MapFlowable[S: State, A, U, V, E](SingleChildFlowableNode[S, A, U, V, Err[E]]):
+    child: FlowableNode[S, A, U, E]
     func: Callable[[U], V]
     stacks: tuple[StackTrace, ...] = field(repr=False)
 
@@ -71,7 +70,7 @@ class MapFlowable[S: State, U, V, E](SingleChildFlowableNode[S, U, V, Err[E]]):
         self,
         state: S,
         observer: Observer[V, Err[E]],
-        args: SubscribeArgs,
+        args: A,
     ) -> tuple[S, SubscriptionResult]:
         return self.child.unsafe_subscribe(
             state=state,
@@ -88,17 +87,18 @@ class MapFlowable[S: State, U, V, E](SingleChildFlowableNode[S, U, V, Err[E]]):
 
     @property
     @override
-    def p_child(self):
+    def p_child(self) -> FlowableNode[S, A, U, E]:
         return self.child
 
 
-def init_map_flowable[S: State, U, V, E](
-    child: FlowableNode[S, U, E],
+def init_map_flowable[S: State, A, U, V, E](
+    child: FlowableNode[S, A, U, E],
     func: Callable[[U], V],
     stacks: tuple[StackTrace, ...],
-):
-    return MapFlowable[S, U, V, E](
+) -> MapFlowable[S, A, U, V, E]:
+    return MapFlowable(
         child=child,
         func=func,
         stacks=stacks,
     )
+

@@ -9,6 +9,7 @@ from contcert.typing import ContCert
 @dataclass(frozen=True)
 class BufferMap:
     # Maps each downstream to its current buffer item
+    # Cancelled downstream observers are removed from the dictionary
     mapping: dict[int, int]
 
     # Represents the item saved in the first position of the buffer
@@ -31,7 +32,7 @@ class BufferMap:
         )
 
 
-class ShareState:
+class ShareState(ABC):
     pass
 
 
@@ -47,6 +48,9 @@ class ActiveState(ShareState):
 
     is_completed: bool
 
+    # Race condition between OnNext and Cancelled
+    # OnNext First: Ignore Certificate from downstream Observer
+    # Cancel First: Use cancelled_certs instead of OnNext downstream Observer
     cancelled_certs: tuple[ContCert, ...]
 
     def copy(

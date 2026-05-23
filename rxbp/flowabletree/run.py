@@ -2,7 +2,9 @@
 from dataclasses import dataclass, replace
 from logging import Logger
 import logging
+from threading import Lock
 from typing import Any, Self, override
+from abc import abstractmethod, ABC
 
 
 import contcert
@@ -11,18 +13,88 @@ from contcert.typing import (
     Scheduler,
     ContCert,
 )
+import rxsingle
 
+from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.notifications import Notification, OnCompleted, OnError, OnNext, OnNextAndComplete
+from rxbp.flowabletree.operations.asyncshare.observer import AsyncShareObserver
+from rxbp.flowabletree.operations.asyncshare.subject import AsyncShareSubscribeArgs, AsyncShareSubject
 from rxbp.flowabletree.operations.share.flowable import ShareFlowableNode, ShareFlowableState
 from rxbp.flowabletree.operations.share.observer import ShareObserver
 from rxbp.flowabletree.subscribe import subscribe_single_sink
-import rxsingle
-
 from rxbp.flowabletree.state import State
-from rxbp.flowabletree.subscribeargs import init_subscribe_args
 from rxbp.flowabletree.observer import Observer
 from rxbp.flowabletree.flowablenode import FlowableNode
 # from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode
+
+
+@dataclass
+class SubscribeArgsImpl(AsyncShareSubscribeArgs, SubscribeArgs):
+    virtual_count: int
+    async_index: int
+    scheduler: Scheduler
+    async_share_observers: dict[AsyncShareSubject[Any, Any, Any], AsyncShareObserver[Any, Any]]
+
+    @property
+    def p_virtual_count(self) -> int:
+        return self.virtual_count
+
+    @property
+    def p_async_index(self) -> int: 
+        return self.async_index
+
+    # default scheduler when no explicit scheduler is provided
+    @property
+    def p_scheduler(self) -> Scheduler: 
+        return self.scheduler
+
+    def update_basics[V](
+        self, /,
+        virtual_count: int | None = None,
+        async_index: int | None = None,
+        scheduler: Scheduler | None = None,
+    ) -> Self:
+        def gen_args():
+            if virtual_count is not None:
+                yield 'virtual_count', virtual_count
+            if async_index is not None:
+                yield 'async_index', async_index
+            if scheduler is not None:
+                yield 'scheduler', scheduler
+            # if async_share_observers is not None:
+            #     yield 'async_share_observers', async_share_observers
+
+        args = dict(gen_args())
+        return replace(self, **args)
+
+    @property
+    def p_async_share_observers(
+        self,
+    ) -> dict[AsyncShareSubject[Any, Any, Any, Any], AsyncShareObserver[Any, Any]]:  # pyright: ignore[reportExplicitAny]
+        return self.async_share_observers
+
+    def update_async_share_observers(
+        self,
+        observers: dict[
+            AsyncShareSubject[Any, Any, Any, Any], AsyncShareObserver[Any, Any]  # pyright: ignore[reportExplicitAny]
+        ],
+    ) -> Self:
+        return replace(self, async_share_observers=observers)
+
+
+
+# def init_subscribe_args(
+#     virtual_count: int,
+#     async_index: int,
+#     scheduler: Scheduler,
+#     async_share_observers: dict[AsyncShareSubject[Any, Any, Any], AsyncShareObserver[Any, Any]],  # pyright: ignore[reportExplicitAny]
+# ) -> SubscribeArgs:
+#     return SubscribeArgsImpl(
+#         virtual_count=virtual_count,
+#         async_index=async_index,
+#         scheduler=scheduler,
+#         async_share_observers=async_share_observers,
+#     )
 
 
 
@@ -37,7 +109,7 @@ class StateImpl(ShareFlowableState, State):
     share_virtual_count: dict[ShareFlowableNode[ShareFlowableState, Any, Any], int]  # pyright: ignore[reportExplicitAny]
     share_observers: dict[ShareFlowableNode[ShareFlowableState, Any, Any], ShareObserver[Any, Any]]  # pyright: ignore[reportExplicitAny]
     # async_share_observers_lock: Lock
-    # async_share_observers: dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]  # pyright: ignore[reportExplicitAny]
+    # async_share_observers: dict[AsyncShareKey[Self, Any, Any], AsyncShareObserver[Any, Any]]  # pyright: ignore[reportExplicitAny]
 
     @property
     @override
@@ -91,7 +163,7 @@ class StateImpl(ShareFlowableState, State):
     #
     # @property
     # @override
-    # def p_async_share_observers(self) -> dict[AsyncShareKey[Self, Any], AsyncShareObserver[Any]]:   # pyright: ignore[reportExplicitAny]
+    # def p_async_share_observers(self) -> dict[AsyncShareKey[Self, Any, Any], AsyncShareObserver[Any, Any]]:   # pyright: ignore[reportExplicitAny]
     #     return self.async_share_observers
 
     @override
@@ -225,7 +297,7 @@ def run[U, E](
 
 
     state = StateImpl(
-        # min_subscription_context=0,
+        # min_subscription_async_index=0,
         lambda_trace_logger=lambda_trace_logger,
         default_scheduler=scheduler,
         item_scheduler=scheduler,
@@ -239,15 +311,16 @@ def run[U, E](
 
     # state = source.discover(state)
 
-    # context = state.min_subscription_context
+    # async_index = state.min_subscription_context
 
     def scheduler_callable():
 
         def trampoline_callable() -> ContCert:
-            args = init_subscribe_args(
+            args = SubscribeArgsImpl(
                 scheduler=scheduler,
                 virtual_count=virtual_count,
-                context=async_index,
+                async_index=async_index,
+                async_share_observers={},
             )
 
             _, result = subscribe_single_sink(

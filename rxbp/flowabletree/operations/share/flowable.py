@@ -57,7 +57,7 @@ class ShareFlowableState(State, ABC):
 
 
 @dataclass(frozen=True)
-class ShareFlowableNode[S: ShareFlowableState, U, E](SingleChildFlowableNode[S, U, U, E]):
+class ShareFlowableNode[S: ShareFlowableState, A: SubscribeArgs, U, E](SingleChildFlowableNode[S, A, U, U, E]):
     child: FlowableNode[S, U, E]
 
     @override
@@ -115,7 +115,7 @@ class ShareFlowableNode[S: ShareFlowableState, U, E](SingleChildFlowableNode[S, 
         self,
         state: S,
         observer: Observer[U, E],
-        args: SubscribeArgs,
+        args: A,
     ) -> tuple[S, SubscriptionResult]:
         if self not in state.p_share_observers:
             # observer = state.p_share_observers[self]
@@ -126,7 +126,7 @@ class ShareFlowableNode[S: ShareFlowableState, U, E](SingleChildFlowableNode[S, 
             shared = ShareSharedMemory[U, E](
                 virtual_count_partition={},
                 virtual_count=state.p_share_virtual_count[self],
-                context=args.async_index,
+                async_index=args.async_index,
                 upstream=None,  # pyright: ignore[reportArgumentType]
                 cancellable=None,  # pyright: ignore[reportArgumentType]
                 cert_lock=Lock(),

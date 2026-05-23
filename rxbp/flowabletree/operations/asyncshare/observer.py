@@ -4,195 +4,294 @@ from dataclasses import dataclass
 from typing import override
 
 import contcert
-from contcert.typing import ContCert, Trampoline
-from rxsingle.typing import Observer as RxSingleObserver
+from contcert.typing import ContCert
 
 from rxbp.cancellable import CancellationState
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.operations.asyncshare.states import Active, Error
+from rxbp.flowabletree.notifications import (
+    Notification,
+    OnNext,
+    OnNextAndComplete,
+    OnCompleted,
+    OnError,
+    init_on_next,
+    init_on_next_and_complete,
+    init_on_completed,
+    init_on_error,
+)
+from rxbp.flowabletree.operations.asyncshare.states import ActiveState, ErrorState
 from rxbp.flowabletree.operations.asyncshare.statetransitions import (
     OnNextTransition,
     OnNextAndCompleteTransition,
     OnCompletedTransition,
 )
 from rxbp.flowabletree.operations.asyncshare.sharedmemory import AsyncShareSharedMemory
-from rxbp.flowabletree.operations.asyncshare.requestobserver import (
-    AsyncShareRequestObserver,
-)
+from rxbp.flowabletree.operations.asyncshare.requestobserver import AsyncShareRequestObserver
 
 
 @dataclass
-class AsyncShareObserver[U](Observer[U]):
-    shared: AsyncShareSharedMemory[U]
-    request_observers: dict[int, AsyncShareRequestObserver[U]]
+class AsyncShareObserver[U, E](Observer[U, E]):
+    shared: AsyncShareSharedMemory[U, E]
+    request_observers: dict[int, AsyncShareRequestObserver[U, E]]
     cancellations: dict[int, CancellationState]
 
     @override
-    def on_next(
-        self, trampoline: Trampoline, item: U, observer: RxSingleObserver[None]
+    def notify(
+        self,
+        notification: Notification[U, E],
     ) -> ContCert:
-        print(f"on_next({item})")
+        match notification:
+            case OnNext():
+                # print(f"on_next({notification.p_item})")
 
-        self.shared.buffer.append(item)
-        self.shared.upstream = observer
+                self.shared.buffer.append(notification.p_item)
+                self.shared.upstream = notification.p_observer
 
-        transition = OnNextTransition(
-            child=None,  # pyright: ignore[reportArgumentType]
-        )
-
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
-
-        match state := transition.get_state():
-            case Active(
-                buffer_map=buffer_map,
-            ):
-                # assert state.send_ids
-                last_index = buffer_map.next_index
-
-                # # self.shared.cert is not modified after OnNext Transition
-                # # until the downstream.on_next is called
-                # certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
-                context_translation = self.shared.context_translation
-
-                # send item ready downstream
-                for id, idx in buffer_map.mapping.items():
-                    if idx == last_index:
-                        downstream = self.request_observers[id]
-                        cert = downstream.downstream.on_next(
-                            trampoline, item, downstream
-                        )
-                        context_translation.decrease(
-                            cert=cert,
-                            stacks=tuple(),
-                            lambda_trace_logger=self.shared.lambda_trace_logger,
-                        )
-
-                return context_translation.consume(
-                    stacks=tuple(),
-                    lambda_trace_logger=self.shared.lambda_trace_logger,
+                transition = OnNextTransition(
+                    child=None,  # pyright: ignore[reportArgumentType]
                 )
 
-            case Error(msg=msg):
-                raise Exception(msg)
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
 
-    @override
-    def on_next_and_complete(self, trampoline: Trampoline, item: U) -> ContCert:
-        print(f"on_next_and_complete({item})")
-        # print(self.shared.context_translation.transition.get_state())
+                match state := transition.get_state():
+                    case ActiveState(
+                        buffer_map=buffer_map,
+                    ):
+                        last_index = buffer_map.next_index - 1
+                        async_index_translation = self.shared.async_translation
 
-        transition = OnNextAndCompleteTransition(
-            child=None,  # pyright: ignore[reportArgumentType]
-        )
+                        certs: list[ContCert] = [self.shared.cert] #+ list(state.cancelled_certs)
 
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
+                        # send item ready downstream
+                        for id, idx in buffer_map.mapping.items():
+                            if idx == last_index:
+                                if id == 0:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_next(
+                                            item=notification.p_item,
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                            observer=downstream,
+                                        )
+                                    )
+                                    certs.append(cert)
 
-        match state := transition.get_state():
-            case Active(
-                buffer_map=buffer_map,
-            ):
-                # assert state.send_ids
-                last_index = buffer_map.next_index
+                                else:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_next(
+                                            item=notification.p_item,
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                            observer=downstream,
+                                        )
+                                    )
+                                    async_index_translation.decrease(
+                                        cert=cert,
+                                        stacks=self.shared.stacks,
+                                        lambda_trace_logger=self.shared.lambda_trace_logger,
+                                    )
 
-                # # self.shared.cert is not modified after OnNext Transition
-                # # until the downstream.on_next is called
-                # certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
-
-                # send item ready downstream
-                for id, idx in buffer_map.mapping.items():
-                    if idx == last_index:
-                        downstream = self.request_observers[id]
-                        cert = downstream.downstream.on_next_and_complete(
-                            trampoline, item
-                        )
-                        self.shared.context_translation.decrease(
-                            cert=cert,
-                            stacks=tuple(),
+                        cert = async_index_translation.consume(
+                            stacks=self.shared.stacks,
                             lambda_trace_logger=self.shared.lambda_trace_logger,
                         )
-
-                return self.shared.context_translation.consume(
-                    stacks=tuple(),
-                    lambda_trace_logger=self.shared.lambda_trace_logger,
-                )
-
-            case Error(msg=msg):
-                raise Exception(msg)
-
-    @override
-    def on_completed(self) -> ContCert:
-        transition = OnCompletedTransition(
-            child=None,  # type: ignore
-        )
-
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
-
-        match state := transition.get_state():
-            case Active(
-                buffer_map=buffer_map,
-            ):
-                # assert state.send_ids
-                last_index = buffer_map.next_index
-
-                # # self.shared.cert is not modified after OnNext Transition
-                # # until the downstream.on_next is called
-                # certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
-
-                # send item ready downstream
-                for id, idx in buffer_map.mapping.items():
-                    if idx == last_index:
-                        downstream = self.request_observers[id]
-                        cert = downstream.downstream.on_completed()
-                        self.shared.context_translation.decrease(
-                            cert=cert,
-                            stacks=tuple(),
-                            lambda_trace_logger=self.shared.lambda_trace_logger,
-                        )
-
-                return self.shared.context_translation.consume(
-                    stacks=tuple(),
-                    lambda_trace_logger=self.shared.lambda_trace_logger,
-                )
-
-            case Error(msg=msg):
-                raise Exception(msg)
-
-    @override
-    def on_error(self, exception: Exception) -> ContCert:
-        transition = OnCompletedTransition(
-            child=None,  # pyright: ignore[reportArgumentType]
-        )
-
-        with self.shared.transition_lock:
-            transition.child = self.shared.transition
-            self.shared.transition = transition
-
-        match state := transition.get_state():
-            case Active(
-                buffer_map=buffer_map,
-            ):
-                # assert state.send_ids
-                last_index = buffer_map.next_index - 1
-
-                certs: list[ContCert] = [self.shared.cert] + list(state.cancelled_certs)
-
-                # send
-                for id, idx in buffer_map.mapping.items():
-                    if idx == last_index:
-                        downstream = self.request_observers[id]
-                        cert = downstream.downstream.on_error(exception)
                         certs.append(cert)
 
-                return contcert.merge(
-                    certs,
-                    stacks=self.shared.stacks,
-                    lambda_trace_logger=self.shared.lambda_trace_logger,
+                        return contcert.merge(
+                            certs,
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+
+                    case ErrorState(msg=msg):
+                        raise Exception(msg)
+
+            case OnNextAndComplete():
+                # print(f"on_next_and_complete({notification.p_item})")
+
+                transition = OnNextAndCompleteTransition(
+                    child=None,  # pyright: ignore[reportArgumentType]
                 )
 
-            case Error(msg=msg):
-                raise Exception(msg)
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
+
+                match state := transition.get_state():
+                    case ActiveState(
+                        buffer_map=buffer_map,
+                    ):
+                        last_index = buffer_map.next_index
+                        async_index_translation = self.shared.async_translation
+
+                        certs: list[ContCert] = [self.shared.cert] #+ list(state.cancelled_certs)
+
+                        # send
+                        for id, idx in buffer_map.mapping.items():
+                            if idx == last_index:
+                                if id == 0:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_next_and_complete(
+                                            item=notification.p_item,
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                        )
+                                    )
+                                    certs.append(cert)
+
+                                else:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_next_and_complete(
+                                            item=notification.p_item,
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                        )
+                                    )
+                                    async_index_translation.decrease(
+                                        cert=cert,
+                                        stacks=self.shared.stacks,
+                                        lambda_trace_logger=self.shared.lambda_trace_logger,
+                                    )
+
+                        cert = async_index_translation.consume(
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+                        certs.append(cert)
+
+                        return contcert.merge(
+                            certs,
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+
+                    case ErrorState(msg=msg):
+                        raise Exception(msg)
+
+            case OnCompleted():
+                transition = OnCompletedTransition(
+                    child=None,  # pyright: ignore[reportArgumentType]
+                )
+
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
+
+                match state := transition.get_state():
+                    case ActiveState(
+                        buffer_map=buffer_map,
+                    ):
+                        last_index = buffer_map.next_index
+                        async_index_translation = self.shared.async_translation
+
+                        certs: list[ContCert] = [self.shared.cert] #+ list(state.cancelled_certs)
+
+                        # send
+                        for id, idx in buffer_map.mapping.items():
+                            if idx == last_index:
+                                if id == 0:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_completed(
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                        )
+                                    )
+                                    certs.append(cert)
+
+                                else:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_completed(
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                        )
+                                    )
+                                    async_index_translation.decrease(
+                                        cert=cert,
+                                        stacks=self.shared.stacks,
+                                        lambda_trace_logger=self.shared.lambda_trace_logger,
+                                    )
+
+                        cert = async_index_translation.consume(
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+                        certs.append(cert)
+
+                        return contcert.merge(
+                            certs,
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+
+                    case ErrorState(msg=msg):
+                        raise Exception(msg)
+
+            case OnError():
+                transition = OnCompletedTransition(
+                    child=None,  # pyright: ignore[reportArgumentType]
+                )
+
+                with self.shared.transition_lock:
+                    transition.child = self.shared.transition
+                    self.shared.transition = transition
+
+                match state := transition.get_state():
+                    case ActiveState(
+                        buffer_map=buffer_map,
+                    ):
+                        last_index = buffer_map.next_index - 1
+                        async_index_translation = self.shared.async_translation
+
+                        certs: list[ContCert] = [self.shared.cert] #+ list(state.cancelled_certs)
+
+                        # send
+                        for id, idx in buffer_map.mapping.items():
+                            if idx == last_index:
+                                if id == 0:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_error(
+                                            exception=notification.p_exception,
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                        )
+                                    )
+                                    certs.append(cert)
+
+                                else:
+                                    downstream = self.request_observers[id]
+                                    cert = downstream.downstream.notify(
+                                        init_on_error(
+                                            exception=notification.p_exception,
+                                            trampoline=notification.p_trampoline,
+                                            item_scheduler=notification.p_item_scheduler,
+                                        )
+                                    )
+                                    async_index_translation.decrease(
+                                        cert=cert,
+                                        stacks=self.shared.stacks,
+                                        lambda_trace_logger=self.shared.lambda_trace_logger,
+                                    )
+
+                        cert = async_index_translation.consume(
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+                        certs.append(cert)
+
+                        return contcert.merge(
+                            certs,
+                            stacks=self.shared.stacks,
+                            lambda_trace_logger=self.shared.lambda_trace_logger,
+                        )
+
+                    case ErrorState(msg=msg):
+                        raise Exception(msg)

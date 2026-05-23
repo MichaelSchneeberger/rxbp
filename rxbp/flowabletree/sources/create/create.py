@@ -53,7 +53,7 @@ class StopObserver[U, E](RxSingleObserver[ContCert, Never]):
 
 
 @dataclass(frozen=True)
-class Create[S: State, U, E](FlowableNode[S, U, E]):
+class Create[S: State, A: SubscribeArgs, U, E](FlowableNode[S, A, U, E]):
     source: RxSingleNode[S, CreateSubscribeArgs[U, E], ContCert, Never]
     stacks: tuple[StackTrace, ...]
 
@@ -62,7 +62,7 @@ class Create[S: State, U, E](FlowableNode[S, U, E]):
         self,
         state: S,
         observer: Observer[U, E],
-        args: SubscribeArgs,
+        args: A,
     ) -> tuple[S, SubscriptionResult]:
         cancellable = init_cancellation_state()
 
@@ -89,8 +89,8 @@ class Create[S: State, U, E](FlowableNode[S, U, E]):
         return state, result
 
 
-def init_create[S: State, U, E](source: RxSingleNode[S, CreateSubscribeArgs[U, E], ContCert, Never]):
-    return Create[S, U, E](
+def init_create[S: State, A: SubscribeArgs, U, E](source: RxSingleNode[S, A, CreateSubscribeArgs[U, E], ContCert, Never]):
+    return Create[S, A, U, E](
         source=source,
         stacks=tuple(),
     )

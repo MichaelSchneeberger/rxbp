@@ -7,7 +7,7 @@ from contcert.typing import ContCert, Scheduler
 from rxbp.flowabletree.state import State
 from rxbp.flowabletree.assignvirtualcount import AssignVirtualCount
 from rxbp.flowabletree.observer import Observer
-from rxbp.flowabletree.subscribeargs import SubscribeArgs, init_subscribe_args
+from rxbp.flowabletree.subscribeargs import SubscribeArgs
 from rxbp.flowabletree.subscriptionresult import SubscriptionResult
 from rxbp.flowabletree.flowablenode import FlowableNode
 # from rxbp.flowabletree.sources.connectable import ConnectableFlowableNode

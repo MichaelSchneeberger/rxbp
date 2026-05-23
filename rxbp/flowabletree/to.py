@@ -130,13 +130,13 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #
 # def run[U](
 #     source: FlowableNode[State, U],
-#     context: int | None = None,
+#     async_index: int | None = None,
 #     lambda_trace_logger: Logger | None = None,
 #     # scheduler: MainScheduler | None = None,
 #     # connections: dict[ConnectableFlowableNode[S, U], FlowableNode[S, U]] | None = None,
 # ):
-#     if context is None:
-#         context = 1
+#     if async_index is None:
+#         async_index = 1
 #
 #     if lambda_trace_logger is None:
 #         lambda_trace_logger = logging.getLogger("LambdaTrace")
@@ -235,7 +235,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #
 #
 #     state = StateImpl(
-#         # min_subscription_context=0,
+#         # min_subscription_async_index=0,
 #         lambda_trace_logger=lambda_trace_logger,
 #         default_scheduler=scheduler,
 #         subscription_trampoline=trampoline,
@@ -249,7 +249,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #
 #     # state = source.discover(state)
 #
-#     # context = state.min_subscription_context
+#     # async_index = state.min_subscription_context
 #
 #     def scheduler_callable():
 #
@@ -258,7 +258,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #                 observer=observer,
 #                 scheduler=scheduler,
 #                 virtual_count=virtual_count,
-#                 context=context,
+#                 async_index=context,
 #             )
 #
 #             _, result = subscribe_single_sink(
@@ -272,7 +272,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #         task = contcert.init_task(
 #             callable=trampoline_callable,
 #             virtual_count=virtual_count,
-#             context=context,
+#             async_index=context,
 #             cancellation=None,
 #         )
 #         return trampoline.run(task=task, stacks=tuple())
@@ -280,7 +280,7 @@ from rxbp.flowabletree.flowablenode import FlowableNode
 #     task = contcert.init_task(
 #         callable=scheduler_callable,
 #         virtual_count=virtual_count,
-#         context=context,
+#         async_index=context,
 #         cancellation=None,
 #     )
 #

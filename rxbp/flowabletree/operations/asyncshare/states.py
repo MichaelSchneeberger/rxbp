@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from abc import ABC
@@ -7,7 +6,7 @@ from dataclasses import dataclass, replace
 from contcert.typing import ContCert
 
 
-@dataclass
+@dataclass(frozen=True)
 class BufferMap:
     # Maps each downstream to its current buffer item
     mapping: dict[int, int]
@@ -24,65 +23,53 @@ class BufferMap:
         first_index: int | None = None,
         next_index: int | None = None,
     ):
-        def gen_args():
-            if mapping is not None:
-                yield 'mapping', mapping
-            if first_index is not None:
-                yield 'first_index', first_index
-            if next_index is not None:
-                yield 'next_index', next_index
-
-        return replace(self, **dict(gen_args()))
-
-# enumeration of actions
-@dataclass
-class ActionEnum(ABC): ...
+        return replace(
+            self,
+            mapping=mapping if mapping is not None else self.mapping,
+            first_index=first_index if first_index is not None else self.first_index,
+            next_index=next_index if next_index is not None else self.next_index,
+        )
 
 
-@dataclass
-class PopFirst(ActionEnum): ...
+class ShareState(ABC):
+    pass
 
 
-@dataclass
-class ShareState: ...
+@dataclass(frozen=True)
+class ErrorState(ShareState):
+    msg: str
 
 
-# class Subscribe(ShareState):
-#     pass
+@dataclass(frozen=True)
+class ActiveState(ShareState):
+    counter: int
 
-
-
-@dataclass
-class Active(ShareState):
     # Maps each downstream to its current buffer item
     buffer_map: BufferMap
 
-    # requested_ids: tuple[int, ...]
     is_completed: bool
 
     cancelled_certs: tuple[ContCert, ...]
 
     def copy(
         self, 
+        counter: int | None = None,
         buffer_map: BufferMap | None = None,
         is_completed: bool | None = None,
     ):
-        def gen_args():
-            if is_completed is not None:
-                yield 'is_completed', is_completed
-
-            if buffer_map is not None:
-                yield 'buffer_map', buffer_map
-
-        return replace(self, **dict(gen_args()))
+        return replace(
+            self,
+            counter=counter if counter is not None else self.counter,
+            buffer_map=buffer_map if buffer_map is not None else self.buffer_map,
+            is_completed=is_completed if is_completed is not None else self.is_completed,
+        )
 
 
-# todo: Holds no values -> remove?
-@dataclass
-class Completed(ShareState): ...
-    # Flowable completed or errored, or all downstream Flowables cancelled
+@dataclass(frozen=True)
+class CompletedState(ShareState):
+    pass
 
-@dataclass
-class Error(ShareState):
-    msg: str
 
+@dataclass(frozen=True, slots=True)
+class StopContinuationState(ShareState):
+    index: int

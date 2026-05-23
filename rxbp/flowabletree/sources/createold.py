@@ -192,7 +192,7 @@ class Create[S: State, A, U](FlowableNode[S, U]):
                     observer=args.observer,
                 ),
                 virtual_count=args.virtual_count,
-                context=args.async_index,
+                async_index=args.async_index,
             )
         )
 

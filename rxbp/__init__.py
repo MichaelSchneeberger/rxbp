@@ -10,6 +10,7 @@ from rxbp.flowabletree.sources.create.operations import (
 # from rxbp.flowabletree.subscriptionresult import (
 #     init_subscription_result as _init_subscription_result,
 # )
+from rxbp.flowabletree.operations.asyncshare.subject import init_async_share_subject as _init_async_share_subject
 from rxbp.flowable.from_ import (
 #     connectable as _connectable,
 #     count as _count,
@@ -36,6 +37,7 @@ from rxbp.flowabletree.run import run as _run
 # init_state = _init_state
 # init_subscribe_args = _init_subscribe_args
 # init_subscription_result = _init_subscription_result
+init_async_share_subject = _init_async_share_subject
 #
 #
 # # Create a Flowables
@@ -69,5 +71,5 @@ on_completed = _on_completed
 
 # Output functions
 
-run = _run
+run_and_block = _run
 # to_rx = _to_rx

@@ -21,19 +21,19 @@ from rxbp.flowabletree.operations.zip.observer import ZipObserver
 
 
 @dataclass(frozen=True)
-class ControlledZipFlowableNode[S: State, U, A, E](MultiChildrenFlowableNode[S, U, A, E]):
+class ControlledZipFlowableNode[S: State, A: SubscribeArgs, U, V, E](MultiChildrenFlowableNode[S, A, U, V, E]):
     children: tuple[FlowableNode[S, U, E], ...]
-    zip_func: Callable[[dict[int, U], A], tuple[A, set[int]]]
-    acc: A
+    zip_func: Callable[[dict[int, U], V], tuple[V, set[int]]]
+    acc: V
 
     @override
     def unsafe_subscribe(
         self,
         state: S,
-        observer: Observer[A, E],
-        args: SubscribeArgs,
+        observer: Observer[V, E],
+        args: A,
     ) -> tuple[S, SubscriptionResult]:
-        shared = ZipSharedMemory[U, A, E](
+        shared = ZipSharedMemory[U, V, E](
             downstream=observer,
             zip_func=self.zip_func,
             acc=self.acc,
@@ -94,14 +94,14 @@ class ControlledZipFlowableNode[S: State, U, A, E](MultiChildrenFlowableNode[S, 
         return self.children
 
 
-def init_zip_flowable_node[S: State, U, E](
-    children: tuple[FlowableNode[S, U, E], ...],
+def init_zip_flowable_node[S: State, A, U, E](
+    children: tuple[FlowableNode[S, A, U, E], ...],
 ):
     def zip_func(val: dict[int, U], acc: tuple[U, ...]):
         _, zipped_values = zip(*sorted(val.items()))
         return tuple(zipped_values), set(range(len(children)))
 
-    return ControlledZipFlowableNode[S, U, tuple[U, ...], E](
+    return ControlledZipFlowableNode[S, U, A, tuple[U, ...], E](
         children=children,
         zip_func=zip_func,
         acc=None,  # pyright: ignore[reportArgumentType]

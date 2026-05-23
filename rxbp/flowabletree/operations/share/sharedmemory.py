@@ -21,7 +21,7 @@ from rxbp.flowabletree.operations.share.statetransitions import (
 class ShareSharedMemory[U, E]:
     virtual_count_partition: dict[int, int]
     virtual_count: int
-    context: int
+    async_index: int
 
     upstream: RxSingleObserver[None, Never]
     cancellable: Cancellable
